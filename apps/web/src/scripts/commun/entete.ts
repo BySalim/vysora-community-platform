@@ -2,7 +2,7 @@
    (prototype/commun.js : initHeader et monterCompte). Chargé par toutes les pages. */
 
 import { estProblemeApi } from '@vysora/shared';
-import { $, icon, toast } from './outils';
+import { $, CLE_MESSAGE, icon, messageApresChargement, toast } from './outils';
 
 const racine = document.documentElement;
 
@@ -104,17 +104,6 @@ function initialiserCompte(): void {
       toast('La déconnexion n’a pas abouti. Réessayez dans un instant.', 'alert');
     }
   });
-}
-
-const CLE_MESSAGE = 'vysora-message';
-
-/** Message à montrer une fois la page suivante chargée (déconnexion, puis rechargement). */
-function messageApresChargement(message: string): void {
-  try {
-    sessionStorage.setItem(CLE_MESSAGE, message);
-  } catch {
-    // Stockage indisponible (navigation privée stricte) : le message est simplement perdu.
-  }
 }
 
 function afficherMessageEnAttente(): void {

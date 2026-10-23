@@ -34,6 +34,18 @@ export function toast(message: string, nomIcone = 'check'): void {
   }, 2600);
 }
 
+export const CLE_MESSAGE = 'vysora-message';
+
+/** Message à montrer une fois la page suivante chargée (après un rechargement : déconnexion,
+    conditions acceptées). L'en-tête l'affiche (scripts/commun/entete.ts). */
+export function messageApresChargement(message: string): void {
+  try {
+    sessionStorage.setItem(CLE_MESSAGE, message);
+  } catch {
+    // Stockage indisponible (navigation privée stricte) : le message est simplement perdu.
+  }
+}
+
 /** Applique la typographie française aux textes d'une zone (hors code et champs de saisie). */
 export function corrigerTypographie(zone: Node): void {
   const parcours = document.createTreeWalker(zone, NodeFilter.SHOW_TEXT, {

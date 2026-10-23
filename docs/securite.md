@@ -25,7 +25,7 @@
 | Sessions : jeton aléatoire de 32 octets dans un cookie `HttpOnly`, `SameSite=Lax`, `Secure` et préfixe `__Host-` en production ; seule l'empreinte SHA-256 en base ; expiration glissante de 30 jours ; session de l'appareil fermée et rouverte à la connexion (fixation) ; cookie périmé effacé | `SessionsService`, `ChargementSession`, ADR-0005 |
 | Connexion : message unique (« Adresse e-mail ou mot de passe incorrect. ») ; temporisation après 5 échecs consécutifs (30 s, doublée à chaque échec, 15 min au plus), comptée sur l'empreinte de l'adresse saisie, que le compte existe ou non ; compte banni refusé après vérification du mot de passe ; 20 essais par minute et par IP | `ConnexionService`, `TemporisationService` (F-03) |
 | Inscription limitée à 10 par quart d'heure et par IP ; vérifications de disponibilité limitées (adresse : 20 par quart d'heure, pseudo : 60 par minute) | `ComptesController` |
-| Droits contrôlés par l'API : `@Exige(action)` + `DroitsGuard` appliquent `raisonRefus` (session, e-mail vérifié, conditions acceptées, suspension, niveau, rôle) ; refus 401/403 avec la raison | `modules/auth/droits.ts` (AUTH-06) |
+| Droits contrôlés par l'API : `@Exige(action)` + `DroitsGuard` appliquent `raisonRefus` (session, e-mail vérifié, conditions acceptées, suspension, niveau, rôle) ; refus 401/403 avec la raison ; le site n'en tire que l'affichage (dialogue d'accès), textes et adresses échappés, retour après connexion limité aux pages du site (`cheminInterne`) | `modules/auth/droits.ts` (AUTH-06), `web/src/lib/acces.ts` (AUTH-07) |
 | État du visiteur inséré dans la page en JSON avec `<` échappé (aucune valeur ne peut fermer la balise `<script>`) | `layouts/Base.astro` |
 
 ## 2. À mettre en place (par ordre d'arrivée)

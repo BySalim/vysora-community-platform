@@ -16,11 +16,10 @@
 
 ## Prochaines tâches (ordre conseillé)
 
-1. **AUTH-07** — Dialogue d'accès côté site (`exiger`, `accesBloc`) et boutons du bandeau (« Renvoyer l'e-mail », « Accepter ») : les refus de l'API portent déjà leur `raison`, les routes existent (`/comptes/verification/renvoi`, `/moi/acceptations`).
-2. **LEG-01** puis le reste d'**AUTH-05** — Pages légales portées (les liens « conditions » de la connexion et de l'inscription y mènent sans script) ; e-mail à la date d'effet d'une nouvelle version.
-3. **DEMO-01** — Données de démonstration tirées du prototype (développement et préproduction).
-4. **CREA-01** puis **CREA-02**, **CREA-03** — Créations : API, éditeur, fiche.
-5. **INV-01** — Code d'invitation de la bêta (champ déjà présent, masqué, sur l'inscription).
+1. **LEG-01** puis le reste d'**AUTH-05** — Pages légales portées (les liens « conditions » de la connexion et de l'inscription, et « Lire les changements » du bandeau et du dialogue d'accès, y mènent sans script) ; e-mail à la date d'effet d'une nouvelle version (RG-90).
+2. **DEMO-01** — Données de démonstration tirées du prototype (développement et préproduction).
+3. **CREA-01** puis **CREA-02**, **CREA-03** — Créations : API, éditeur, fiche. L'éditeur ouvert par une visiteuse montre `accesBloc` (rendu serveur possible avec `lib/acces.ts`) ; chaque appel refusé passe par `presenterRefus`.
+4. **INV-01** — Code d'invitation de la bêta (champ déjà présent, masqué, sur l'inscription).
 
 ---
 
@@ -48,9 +47,9 @@
 | AUTH-02 | Vérification de l'e-mail | P0 | ✅ 2026-10-23 | **Fait** : lien envoyé à l'inscription (24 h, usage unique, empreinte seule), `POST /api/v1/comptes/verification` (lu par le serveur du site à l'ouverture de `/inscription?verifier=…` ; un lien déjà utilisé confirme encore), `POST /api/v1/comptes/verification/renvoi` (session, ou jeton d'un lien expiré), correction de l'adresse avant vérification (`PATCH /moi { email }`). **Périmètre initial** : Jeton 24 h, renvoi du lien, compte en lecture seule tant que non vérifié (bandeau déjà prêt). F-01, RG-02 |
 | AUTH-03 | Mot de passe oublié et réinitialisation | P0 | ✅ 2026-10-23 | **Fait** : `POST /api/v1/mot-de-passe/oubli` (202 dans tous les cas, envoi sans attendre), `POST /api/v1/mot-de-passe/lien`, `PUT /api/v1/mot-de-passe` (RG-04, sessions fermées, adresse vérifiée du même coup, temporisation levée). **Périmètre initial** : Lien 1 h, message identique que l'e-mail existe ou non, sessions fermées après changement. F-03 |
 | AUTH-04 | Pages Connexion et Inscription portées | P0 | ✅ 2026-10-23 | **Fait** : `/connexion` et `/inscription` à l’identique (enveloppe « auth » du gabarit, fond WebGL, `auth.css` inchangé), tous les écrans branchés sauf ceux listés dans « Écarts au prototype » ; comparées au prototype à 1280, 820 et 375 px. **Périmètre initial** : proto `connexion.html`, `inscription.html`, `auth.css`, `auth.js`, `auth-data.js` ; retour à la page d'origine (`?retour=`, `?pour=`) ; pseudos réservés ; boutons GitHub et Google présents mais branchés par AUTH-08 |
-| AUTH-05 | Acceptation versionnée des documents légaux | P0 | 🔄 2026-10-23 | **Fait** : acceptation datée à l’inscription, `GET /api/v1/documents-legaux`, `POST /api/v1/moi/acceptations`, écran « Nouvelles conditions » de la connexion. **Reste** : bouton « Accepter » du bandeau (AUTH-07), e-mail à la date d’effet (RG-90). **Périmètre initial** : À l'inscription et à chaque nouvelle version (`/accepter-documents`, bandeau « conditions ») ; confidentialité informative (voir Points à trancher). F-04, RG-03, RG-112 |
+| AUTH-05 | Acceptation versionnée des documents légaux | P0 | 🔄 2026-10-23 | **Fait** : acceptation datée à l’inscription, `GET /api/v1/documents-legaux`, `POST /api/v1/moi/acceptations`, écran « Nouvelles conditions » de la connexion, bouton « Accepter » du bandeau et du dialogue d’accès (AUTH-07). **Reste** : e-mail à la date d’effet (RG-90). **Périmètre initial** : À l'inscription et à chaque nouvelle version (`/accepter-documents`, bandeau « conditions ») ; confidentialité informative (voir Points à trancher). F-04, RG-03, RG-112 |
 | AUTH-06 | Garde des droits côté API | P0 | ✅ 2026-10-23 | **Fait** : `@Exige(action)` + `DroitsGuard` (global, après origine et débit) + `@SessionCourante()` ; refus 401/403 avec `raison` ; tests unitaires de chaque refus et e2e sur `PATCH /moi`. Reste : double authentification pour moderer et administrer (SEC-02). **Périmètre initial** : Décorateur ou garde `@Exige('contribuer' | 'moderer' | 'administrer' | 'proposer-cas')` fondé sur `raisonRefus` + état du compte (e-mail, conditions, suspension) ; tests de refus |
-| AUTH-07 | Dialogue d'accès côté site | P0 | ⬜ | Porter `exiger`, `accesBloc`, `invitation` et les gardes de liens de `commun.js` (`data-exige`) |
+| AUTH-07 | Dialogue d'accès côté site | P0 | ✅ 2026-10-23 | **Fait** : `scripts/commun/acces.ts` (chargé par le gabarit) : `exiger`, `accesBloc`, `invitation`, gardes des liens (`/creations/nouvelle`, `/forum/nouveau`, `data-exige`), boutons `data-acces-bouton` (« Renvoyer l’e-mail » → `POST /comptes/verification/renvoi` ; « Accepter » → `POST /moi/acceptations` puis rechargement), `presenterRefus` pour les refus 401/403 de l’API ; textes et liens dans `lib/acces.ts` (sans DOM, 19 tests) ; dates de la session transmises à la page. **Périmètre initial** : Porter `exiger`, `accesBloc`, `invitation` et les gardes de liens de `commun.js` (`data-exige`) |
 | LEG-01 | Pages légales portées | P0 | ⬜ | `cgu`, `confidentialite`, `charte-communautaire`, `cookies`, `mentions-legales` + `documents-legaux.js` ; version et date affichées depuis `document_legal` |
 | INV-01 | Bêta fermée sur invitation | P1 | ⬜ | Code d'invitation à l'inscription (proto : `auth-data.js`, `invitation`), table `invitation`, création des codes par l'administration ; badge PIONNIER |
 | DEMO-01 | Données de démonstration | P1 | ⬜ | Script `pnpm db:demo` (jamais en production) : membres, créations avec parcours, sujets, cas, défis, votes, tirés des `*-data.js` du prototype ; avatars et images de `prototype/assets` servis par le stockage des médias |
@@ -170,7 +169,19 @@
 - Après une connexion qui aboutit sur un écran de réussite sans départ (e-mail à confirmer, suspension), l’en-tête reste celui d’une visiteuse jusqu’à la page suivante (le prototype le mettait à jour).
 - Le lien de vérification et celui de réinitialisation sont lus par le serveur (pas d’écran intermédiaire) ; le jeton est retiré de la barre d’adresse.
 
+## Écarts au prototype (dialogue d’accès et bandeau du compte)
+
+- « Accepter » (bandeau ou dialogue) enregistre l’acceptation puis recharge la page, rendue de nouveau par le serveur ; « Conditions acceptées. » s’affiche après le rechargement (le prototype changeait l’état sur place).
+- Échecs que le prototype ne simulait pas : adresse confirmée entre-temps (rechargement et « Votre adresse e-mail est déjà confirmée. »), trop de demandes de renvoi, service indisponible (message bref), session expirée (dialogue « Connectez-vous pour continuer »).
+- Un refus de l’API peut révéler un état apparu après l’affichage de la page (suspension, nouvelles conditions) : sans date connue, le dialogue dit « Votre compte est suspendu » ou « … ont changé. », sans date.
+- Le retour après la connexion garde la requête et l’ancre de la page d’origine (`/contact?sujet=…#formulaire`).
+
 ## Journal
+
+### 2026-10-23 — Dialogue d’accès et bandeau du compte (AUTH-07, AUTH-05)
+- Site : `lib/acces.ts` (motifs, actions, invitation, lecture d’un refus RFC 9457 : `raisonDuRefus`), `scripts/commun/acces.ts` (dialogue, gardes, boutons, `presenterRefus`), dates de suspension et de conditions transmises à la page (`etats.dates()`), `messageApresChargement` partagé (`outils.ts`), route `nouveauSujet`, icône `flag` dans le sprite commun. 19 tests unitaires (site : 32).
+- Vérifié dans le navigateur (site sur 127.0.0.1:4400, API sur :3100, à côté des serveurs de la copie principale) : dialogue de connexion d’une visiteuse sur « Publier » (balisage et styles calculés identiques au prototype), bandeau et dialogue « e-mail » (renvoi réel, bouton inactif pendant l’envoi), bandeau et dialogue « conditions » (acceptation, rechargement, message), dialogues « niveau » et « rôle » par `data-exige`, refus 401 réel de l’API présenté par `presenterRefus`, membre actif laissé passer. Le dialogue « suspendu » n’a été vérifié que par les tests et par comparaison du balisage avec le prototype : une suspension demande une décision de modération, immuable en base (MOD-01).
+- Le panneau du navigateur était masqué : une seule capture ; les comparaisons portent sur le balisage et les styles calculés.
 
 ### 2026-10-23 — Connexion et inscription portées, liens par e-mail (AUTH-02 à AUTH-05)
 - API : liens à usage unique (`JetonsService`), vérification de l’adresse et renvoi, mot de passe oublié, documents en vigueur et acceptation ; code d’erreur `LIEN_EXPIRE` (410) ; bouton d’action dans les e-mails. 20 tests de bout en bout de plus (50 au total).

@@ -47,6 +47,7 @@
 - Une page = un fichier dans `src/pages/`, qui utilise `layouts/Base.astro` et importe ses feuilles de style du prototype.
 - Données : appelées côté serveur dans la page (`appelerApi`) pour un rendu complet et indexable ; côté navigateur seulement pour les interactions (`fetch('/api/v1/…')`).
 - Scripts de page dans `src/scripts/<page>.ts`, importés par `<script>` dans la page ; outils communs dans `src/scripts/commun/` (`$`, `icon`, `toast`, `etats`…).
+- Action réservée : avant l'appel, `exiger('contribuer', 'voter')` (`scripts/commun/acces.ts`) ouvre le dialogue d'accès si l'état de la page ne la permet pas ; après l'appel, un refus de l'API passe par `presenterRefus(probleme, 'voter')`, qui ouvre le même dialogue d'après la `raison` (l'API reste seule juge). Un lien ou un bouton réservé peut aussi porter `data-exige="action"` et `data-exige-quoi="…"`.
 - Styles : les fichiers du prototype restent identiques à l'original dans `src/styles/` ; les ajouts vont dans `socle.css` ou dans un fichier nouveau, jamais en modifiant un fichier repris sans le noter.
 - Icônes : `src/lib/icones.ts` et le composant `Sprite` (la page déclare ses icônes).
 

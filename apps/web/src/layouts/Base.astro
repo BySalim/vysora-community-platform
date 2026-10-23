@@ -82,6 +82,8 @@ const etatClient = JSON.stringify({
   etat: Astro.locals.etat,
   membre: Astro.locals.membre,
   nonLues: Astro.locals.nonLues,
+  suspensionJusqua: Astro.locals.suspensionJusqua,
+  conditionsDepuis: Astro.locals.conditionsDepuis,
 }).replaceAll('<', '\\u003c');
 ---
 
@@ -145,6 +147,7 @@ const etatClient = JSON.stringify({
     <script type="application/json" id="etat-visiteur" set:html={etatClient} />
     <script>
       import '../scripts/commun/entete';
+      import '../scripts/commun/acces';
     </script>
   </body>
 </html>
