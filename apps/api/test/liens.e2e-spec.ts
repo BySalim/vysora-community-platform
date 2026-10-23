@@ -306,6 +306,10 @@ describe('Liens envoyés par e-mail et documents légaux', () => {
           agent,
         ).expect(200);
         expect((await agent.get('/api/v1/session')).body.etat.compte).toBe('conditions');
+        // Seule la charte a changé : les conditions d'utilisation, acceptées à l'inscription, ne sont pas redemandées.
+        expect((await agent.get('/api/v1/moi/acceptations').expect(200)).body).toEqual({
+          aAccepter: ['CHARTE'],
+        });
 
         const sansCase = await envoyer('post', '/api/v1/moi/acceptations', {}, agent).expect(400);
         expect(sansCase.body.erreurs).toEqual({
@@ -319,8 +323,12 @@ describe('Liens envoyés par e-mail et documents légaux', () => {
         ).expect(200);
         expect(reponse.body.etat.compte).toBe('actif');
         expect(reponse.body.conditionsDepuis).toBeNull();
+        expect((await agent.get('/api/v1/moi/acceptations').expect(200)).body).toEqual({
+          aAccepter: [],
+        });
 
         await envoyer('post', '/api/v1/moi/acceptations', { accepte: true }).expect(401);
+        await request(serveur()).get('/api/v1/moi/acceptations').expect(401);
       } finally {
         await contexte.db
           .delete(acceptationDocument)

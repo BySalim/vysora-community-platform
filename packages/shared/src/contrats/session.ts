@@ -67,3 +67,8 @@ export interface DocumentLegalApi {
   acceptationRequise: boolean;
   resumeChangements: string | null;
 }
+
+/** Réponse de GET /api/v1/moi/acceptations : documents en vigueur que le membre n'a pas encore acceptés (RG-03). */
+export interface AcceptationsApi {
+  aAccepter: TypeDocumentLegal[];
+}

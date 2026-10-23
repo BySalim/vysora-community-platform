@@ -1,0 +1,196 @@
+---
+/* Page d'information légale (LEG-01), commune aux conditions d'utilisation, à la politique de
+   confidentialité, à la charte communautaire, aux cookies et aux mentions légales : balisage de
+   prototype/cgu.html et des pages voisines, rendu par le serveur avec les fonctions de
+   lib/pages-legales.ts (portage de prototype/documents-legaux.js). La page fournit son texte (sections
+   .lg-article) ; la version en vigueur vient de l'API, les documents à accepter aussi (RG-03, RG-112). */
+import type { AcceptationsApi, DocumentLegalApi, TypeDocumentLegal } from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { appelerApi } from '../lib/api';
+import { PAGES_LEGALES, type ClePageLegale } from '../lib/documents-legaux';
+import { adresseRetour } from '../lib/navigation';
+import {
+  preparerArticles,
+  rendreAcceptation,
+  rendreChangement,
+  rendreDocuments,
+  rendreEssentiel,
+  rendreMeta,
+  rendreSommaire,
+  rendreSommaireTete,
+  type ContextePageLegale,
+} from '../lib/pages-legales';
+import '../styles/documents-legaux.css';
+
+interface Props {
+  cle: ClePageLegale;
+  description: string;
+  /** Article vers lequel renvoie « Ce qui change dans cette version » (data-lg-changement du prototype). */
+  changement?: string;
+  /** Articles cités par les points de « L'essentiel », dans l'ordre (data-renvois du prototype). */
+  renvois?: string[];
+  /** Section « Acceptation » : documents qui s'acceptent (conditions d'utilisation, charte). */
+  acceptation?: boolean;
+  /** Icônes du texte de la page, en plus de celles des pages légales. */
+  icones?: string[];
+}
+
+const {
+  cle,
+  description,
+  changement,
+  renvois = [],
+  acceptation = false,
+  icones = [],
+} = Astro.props;
+const page = PAGES_LEGALES[cle];
+const { etat, conditionsDepuis } = Astro.locals;
+const membre = etat.session === 'membre';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const [documents, aAccepter] = await Promise.all([
+  appelerApi<DocumentLegalApi[]>('/api/v1/documents-legaux', { adresseClient }).catch(
+    (erreur: unknown) => {
+      // La page reste lisible sans l'API : seules les versions manquent.
+      console.error('Documents légaux non chargés :', erreur);
+      return [] as DocumentLegalApi[];
+    },
+  ),
+  membre && etat.compte === 'conditions'
+    ? appelerApi<AcceptationsApi>('/api/v1/moi/acceptations', {
+        requete: Astro.request,
+        adresseClient,
+      })
+        .then((reponse) => reponse.aAccepter)
+        .catch((erreur: unknown) => {
+          console.error('Documents à accepter non chargés :', erreur);
+          return [] as TypeDocumentLegal[];
+        })
+    : ([] as TypeDocumentLegal[]),
+]);
+
+const contexte: ContextePageLegale = {
+  cle,
+  documents,
+  membre,
+  aAccepter,
+  conditionsDepuis,
+  retour: adresseRetour(Astro.url),
+};
+const { html: texte, infos } = preparerArticles(await Astro.slots.render('default'));
+const cibleChangement = infos.find((info) => info.id === changement);
+const htmlChangement = changement ? rendreChangement(contexte, cibleChangement) : '';
+// Données du script de la page, pour rendre de nouveau l'en-tête et l'acceptation après l'acceptation.
+const donnees = JSON.stringify({
+  contexte,
+  cibleChangement: cibleChangement ?? null,
+}).replaceAll('<', '\\u003c');
+---
+
+<Base
+  titre={page.titre}
+  description={description}
+  classeCorps="lg"
+  donneesCorps={{ document: cle }}
+  reglages={{ lecture: 'standard', texte: 'standard', sommaire: 'colonne', eyebrow: 'icon' }}
+  icones={[
+    'check-circle',
+    'calendar',
+    'history',
+    'up',
+    'chevron-down',
+    'link',
+    'printer',
+    ...icones,
+  ]}
+>
+  <script type="application/json" id="lg-donnees" slot="head" set:html={donnees} />
+  <header class="lg-tete">
+    <div class="container">
+      <p class="kicker lg-entree" style="--i:0">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-doc"></use>
+        </svg>
+        Informations légales
+      </p>
+      <h1 class="lg-titre lg-entree" id="lg-titre" style="--i:1">
+        {page.titre}
+      </h1>
+      <ul class="lg-meta lg-entree" style="--i:2" data-lg-meta set:html={rendreMeta(contexte)} />
+      {changement && (
+        <div
+          class="lg-changement lg-entree"
+          id="changements"
+          style="--i:3"
+          data-lg-changement={changement}
+          hidden={!htmlChangement}
+          set:html={htmlChangement}
+        />
+      )}
+      <div class="lg-actions lg-entree" style="--i:4">
+        <button class="btn btn-secondary btn-sm" type="button" data-lg-imprimer>
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-printer"></use>
+          </svg>
+          Imprimer
+        </button>
+        <button class="btn btn-quiet btn-sm" type="button" data-lg-lien>
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-link"></use>
+          </svg>
+          Copier le lien
+        </button>
+      </div>
+    </div>
+    <div class="lg-documents-bande">
+      <nav
+        class="container lg-documents"
+        aria-label="Documents légaux"
+        data-lg-documents
+        set:html={rendreDocuments(contexte)}
+      />
+    </div>
+  </header>
+
+  <div class="container lg-corps">
+    <nav
+      class="lg-rail"
+      aria-labelledby="lg-sommaire-titre"
+      data-lg-sommaire
+      set:html={rendreSommaire(infos)}
+    />
+
+    <article class="lg-texte" aria-labelledby="lg-titre">
+      <details class="lg-sommaire-tete" set:html={rendreSommaireTete(infos)} />
+      {page.points && (
+        <section
+          class="lg-essentiel"
+          aria-labelledby="lg-essentiel-titre"
+          data-lg-essentiel
+          data-renvois={renvois.join(' ')}
+          set:html={rendreEssentiel(cle, infos, renvois)}
+        />
+      )}
+      <Fragment set:html={texte} />
+      {acceptation && (
+        <section
+          class="lg-acceptation"
+          id="acceptation"
+          aria-labelledby="acceptation-titre"
+          data-lg-acceptation
+          set:html={rendreAcceptation(contexte)}
+        />
+      )}
+    </article>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/documents-legaux';
+</script>

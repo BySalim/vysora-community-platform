@@ -92,7 +92,7 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `referentiels` | Référentiels publics (outils, catégories, licences, niveaux, badges) | Fait (lecture) |
 | `contact` | Messages à l'équipe, signalement sans compte | Fait |
 | `email` | Envoi SMTP, gabarit | Fait (envoi direct, file d'attente à venir) |
-| `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes ; garde des droits (`@Exige`) | Fait : comptes, sessions, connexion, droits, vérification de l’adresse, mot de passe oublié, documents en vigueur (AUTH-01 à AUTH-06). À faire : double authentification (SEC-02), Google et GitHub (S-10) |
+| `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes ; garde des droits (`@Exige`) | Fait : comptes, sessions, connexion, droits, vérification de l’adresse, mot de passe oublié, documents en vigueur et documents à accepter (AUTH-01 à AUTH-06, LEG-01). À faire : double authentification (SEC-02), Google et GitHub (S-10) |
 | `membres` | Profil public, paramètres, export, suppression | À faire |
 | `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | À faire |
 | `decouverte` | Recherche, filtres, accueil, catégories, étiquettes | À faire |

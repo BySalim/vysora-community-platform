@@ -1,9 +1,9 @@
 /* Outils des scripts de page, repris de prototype/commun.js (window.Vysora) :
    sélecteurs, icônes, notification passagère, typographie du contenu affiché. */
 
-import { t, typo } from '../../lib/texte';
+import { icon, t, typo } from '../../lib/texte';
 
-export { esc, fmt, pluriel, t, typo } from '../../lib/texte';
+export { esc, fmt, icon, pluriel, t, typo } from '../../lib/texte';
 
 export const $ = <E extends Element = HTMLElement>(
   selecteur: string,
@@ -13,10 +13,6 @@ export const $$ = <E extends Element = HTMLElement>(
   selecteur: string,
   zone: ParentNode = document,
 ) => [...zone.querySelectorAll<E>(selecteur)];
-
-/** Icône du sprite de la page : <svg class="icon icon-sm"><use href="#i-nom"/></svg>. */
-export const icon = (nom: string, classe = 'icon-sm') =>
-  `<svg class="icon ${classe}" aria-hidden="true"><use href="#i-${nom}"/></svg>`;
 
 let minuterieToast: ReturnType<typeof setTimeout> | undefined;
 /** Message bref en bas de l'écran (zone [data-toast], annoncée aux lecteurs d'écran). */

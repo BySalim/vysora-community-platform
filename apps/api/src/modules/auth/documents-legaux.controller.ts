@@ -1,5 +1,10 @@
 import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
-import { schemaAcceptationDocuments, type DocumentLegalApi, type SessionApi } from '@vysora/shared';
+import {
+  schemaAcceptationDocuments,
+  type AcceptationsApi,
+  type DocumentLegalApi,
+  type SessionApi,
+} from '@vysora/shared';
 import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
 import { Exige, SessionCourante } from './droits.js';
@@ -26,6 +31,14 @@ export class DocumentsLegauxController {
       acceptationRequise: document.acceptationRequise,
       resumeChangements: document.resumeChangements,
     }));
+  }
+
+  /** GET /api/v1/moi/acceptations : documents en vigueur que le membre doit encore accepter (RG-03), pour les pages légales. */
+  @Get('moi/acceptations')
+  @Exige('parametres')
+  async aAccepter(@SessionCourante() session: SessionOuverte): Promise<AcceptationsApi> {
+    const documents = await this.documents.aAccepter(session.utilisateur.id);
+    return { aAccepter: documents.map((document) => document.type) };
   }
 
   /** POST /api/v1/moi/acceptations : le membre accepte les versions en vigueur (RG-03) ; le compte sort de la lecture seule. */

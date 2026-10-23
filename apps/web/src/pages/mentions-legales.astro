@@ -1,0 +1,75 @@
+---
+/* Page Mentions légales, portée de prototype/mentions-legales.html. */
+import DocumentLegal from '../components/DocumentLegal.astro';
+import { ROUTES } from '../lib/navigation';
+---
+
+<DocumentLegal
+  cle="mentions"
+  description="Mentions légales de Vysora : éditeur, hébergeur, propriété intellectuelle, signalement et crédits."
+>
+  <section class="lg-article" id="editeur">
+    <h2>Éditeur</h2>
+    <p>
+      Vysora est édité par <strong>NeoCoders</strong>, groupe de développeurs établi au Sénégal, qui
+      en assure la publication.
+    </p>
+    <p>
+      Contact : <a href={ROUTES.contact}>formulaire de contact</a>.
+    </p>
+  </section>
+
+  <section class="lg-article" id="hebergement">
+    <h2>Hébergement</h2>
+    <p>
+      <strong>OVH SARL</strong>, société à responsabilité limitée au capital de 8 000 000 FCFA,
+      immatriculée au registre du commerce de Dakar sous le numéro SN DKR 2006 B 7407.
+      <br />
+      Siège social : avenue Abdoulaye Fadiga, immeuble Lahad Mbacké, BP 50505, Dakar, Sénégal.
+    </p>
+    <p>Les données sont stockées dans des centres de données situés en France.</p>
+  </section>
+
+  <section class="lg-article" id="propriete">
+    <h2>Propriété intellectuelle</h2>
+    <p>
+      Le nom Vysora, son logo et l’interface du site appartiennent à NeoCoders. Toute reproduction
+      sans autorisation est interdite.
+    </p>
+    <p>
+      Les contenus publiés par les membres restent leur propriété et sont diffusés sous la licence
+      choisie par chacun (
+      <a href={`${ROUTES.cgu}#licences`}>conditions générales d’utilisation, article 5</a>).
+    </p>
+  </section>
+
+  <section class="lg-article" id="signalement">
+    <h2>Signaler un contenu illicite</h2>
+    <p>
+      Toute personne peut nous signaler un contenu qu’elle estime illicite depuis le{' '}
+      <a href={`${ROUTES.contact}?motif=signalement`}>formulaire de contact</a>, en indiquant
+      l’adresse du contenu et les raisons de son caractère illicite.
+    </p>
+  </section>
+
+  <section class="lg-article" id="donnees">
+    <h2>Données personnelles</h2>
+    <p>
+      Le traitement des données personnelles est décrit dans la{' '}
+      <a href={ROUTES.confidentialite}>politique de confidentialité</a>, et l’usage des cookies dans
+      la <a href={ROUTES.cookies}>politique relative aux cookies</a>.
+    </p>
+  </section>
+
+  <section class="lg-article" id="credits">
+    <h2>Crédits</h2>
+    <ul>
+      <li>Polices : Montserrat et Montserrat Alternates, sous licence SIL Open Font License.</li>
+      <li>
+        Logos des outils d’IA : Lobe Icons, sous licence MIT. Chaque marque appartient à son
+        propriétaire.
+      </li>
+      <li>Photographies : Unsplash, sous licence Unsplash.</li>
+    </ul>
+  </section>
+</DocumentLegal>

@@ -17,7 +17,7 @@
 ## Prochaines tâches (ordre conseillé)
 
 1. **AUTH-07** — Dialogue d'accès côté site (`exiger`, `accesBloc`) et boutons du bandeau (« Renvoyer l'e-mail », « Accepter ») : les refus de l'API portent déjà leur `raison`, les routes existent (`/comptes/verification/renvoi`, `/moi/acceptations`).
-2. **LEG-01** puis le reste d'**AUTH-05** — Pages légales portées (les liens « conditions » de la connexion et de l'inscription y mènent sans script) ; e-mail à la date d'effet d'une nouvelle version.
+2. Le reste d'**AUTH-05** — E-mail à la date d'effet d'une nouvelle version (RG-90) ; bandeau « conditions » et écran « Nouvelles conditions » de la connexion fondés sur les documents réellement à accepter (`GET /api/v1/moi/acceptations`, voir les tâches découvertes de LEG-01).
 3. **DEMO-01** — Données de démonstration tirées du prototype (développement et préproduction).
 4. **CREA-01** puis **CREA-02**, **CREA-03** — Créations : API, éditeur, fiche.
 5. **INV-01** — Code d'invitation de la bêta (champ déjà présent, masqué, sur l'inscription).
@@ -48,10 +48,10 @@
 | AUTH-02 | Vérification de l'e-mail | P0 | ✅ 2026-10-23 | **Fait** : lien envoyé à l'inscription (24 h, usage unique, empreinte seule), `POST /api/v1/comptes/verification` (lu par le serveur du site à l'ouverture de `/inscription?verifier=…` ; un lien déjà utilisé confirme encore), `POST /api/v1/comptes/verification/renvoi` (session, ou jeton d'un lien expiré), correction de l'adresse avant vérification (`PATCH /moi { email }`). **Périmètre initial** : Jeton 24 h, renvoi du lien, compte en lecture seule tant que non vérifié (bandeau déjà prêt). F-01, RG-02 |
 | AUTH-03 | Mot de passe oublié et réinitialisation | P0 | ✅ 2026-10-23 | **Fait** : `POST /api/v1/mot-de-passe/oubli` (202 dans tous les cas, envoi sans attendre), `POST /api/v1/mot-de-passe/lien`, `PUT /api/v1/mot-de-passe` (RG-04, sessions fermées, adresse vérifiée du même coup, temporisation levée). **Périmètre initial** : Lien 1 h, message identique que l'e-mail existe ou non, sessions fermées après changement. F-03 |
 | AUTH-04 | Pages Connexion et Inscription portées | P0 | ✅ 2026-10-23 | **Fait** : `/connexion` et `/inscription` à l’identique (enveloppe « auth » du gabarit, fond WebGL, `auth.css` inchangé), tous les écrans branchés sauf ceux listés dans « Écarts au prototype » ; comparées au prototype à 1280, 820 et 375 px. **Périmètre initial** : proto `connexion.html`, `inscription.html`, `auth.css`, `auth.js`, `auth-data.js` ; retour à la page d'origine (`?retour=`, `?pour=`) ; pseudos réservés ; boutons GitHub et Google présents mais branchés par AUTH-08 |
-| AUTH-05 | Acceptation versionnée des documents légaux | P0 | 🔄 2026-10-23 | **Fait** : acceptation datée à l’inscription, `GET /api/v1/documents-legaux`, `POST /api/v1/moi/acceptations`, écran « Nouvelles conditions » de la connexion. **Reste** : bouton « Accepter » du bandeau (AUTH-07), e-mail à la date d’effet (RG-90). **Périmètre initial** : À l'inscription et à chaque nouvelle version (`/accepter-documents`, bandeau « conditions ») ; confidentialité informative (voir Points à trancher). F-04, RG-03, RG-112 |
+| AUTH-05 | Acceptation versionnée des documents légaux | P0 | 🔄 2026-10-23 | **Fait** : acceptation datée à l’inscription, `GET /api/v1/documents-legaux`, `POST /api/v1/moi/acceptations`, `GET /api/v1/moi/acceptations` (documents encore à accepter), écran « Nouvelles conditions » de la connexion, acceptation depuis `/cgu` et `/charte-communautaire` (LEG-01). **Reste** : bouton « Accepter » du bandeau (AUTH-07), e-mail à la date d’effet (RG-90), bandeau et écran de la connexion fondés sur les documents réellement à accepter. **Périmètre initial** : À l'inscription et à chaque nouvelle version (`/accepter-documents`, bandeau « conditions ») ; confidentialité informative (voir Points à trancher). F-04, RG-03, RG-112 |
 | AUTH-06 | Garde des droits côté API | P0 | ✅ 2026-10-23 | **Fait** : `@Exige(action)` + `DroitsGuard` (global, après origine et débit) + `@SessionCourante()` ; refus 401/403 avec `raison` ; tests unitaires de chaque refus et e2e sur `PATCH /moi`. Reste : double authentification pour moderer et administrer (SEC-02). **Périmètre initial** : Décorateur ou garde `@Exige('contribuer' | 'moderer' | 'administrer' | 'proposer-cas')` fondé sur `raisonRefus` + état du compte (e-mail, conditions, suspension) ; tests de refus |
 | AUTH-07 | Dialogue d'accès côté site | P0 | ⬜ | Porter `exiger`, `accesBloc`, `invitation` et les gardes de liens de `commun.js` (`data-exige`) |
-| LEG-01 | Pages légales portées | P0 | ⬜ | `cgu`, `confidentialite`, `charte-communautaire`, `cookies`, `mentions-legales` + `documents-legaux.js` ; version et date affichées depuis `document_legal` |
+| LEG-01 | Pages légales portées | P0 | ✅ 2026-10-23 | **Fait** : `/cgu`, `/confidentialite`, `/charte-communautaire`, `/cookies`, `/mentions-legales` à l’identique (composant `DocumentLegal`, `documents-legaux.css` inchangé) ; version, date d’effet et changements (`#changements`) depuis l’API ; « L’essentiel », sommaire et liens d’articles rendus par le serveur (`lib/pages-legales.ts`) ; script `documents-legaux.ts` (sommaire qui suit la lecture, article visé, liens copiés, impression, acceptation, choix sur la mesure d’audience) ; `GET /api/v1/moi/acceptations`. `<main>` comparé au prototype (balisage et géométrie) à 1280, 820 et 375 px. Tests : 15 unitaires (site), 1 de bout en bout enrichi (API). **Périmètre initial** : `cgu`, `confidentialite`, `charte-communautaire`, `cookies`, `mentions-legales` + `documents-legaux.js` ; version et date affichées depuis `document_legal` |
 | INV-01 | Bêta fermée sur invitation | P1 | ⬜ | Code d'invitation à l'inscription (proto : `auth-data.js`, `invitation`), table `invitation`, création des codes par l'administration ; badge PIONNIER |
 | DEMO-01 | Données de démonstration | P1 | ⬜ | Script `pnpm db:demo` (jamais en production) : membres, créations avec parcours, sujets, cas, défis, votes, tirés des `*-data.js` du prototype ; avatars et images de `prototype/assets` servis par le stockage des médias |
 
@@ -119,6 +119,7 @@
 | S-13 | Masquage automatique au seuil de signalements | ⬜ | F-93, RG-101 |
 | S-14 | Tableau de bord des indicateurs (EC-26) | ⬜ | F-97 |
 | S-15 | Interface en anglais | ⬜ | D-06, ENF-11 |
+| S-16 | Mesure d’audience sans cookie : statistiques anonymes (page, provenance, type d’appareil), qui respectent le refus retenu par le cookie `vysora_mesure_audience` (page Cookies) et, pour un membre, `utilisateur.refus_mesure_audience` | ⬜ | ENF-12, F-97 ; le choix existe déjà sur `/cookies` (LEG-01) |
 
 ## Industrialisation (à mener en parallèle, sans attendre la fin)
 
@@ -160,6 +161,17 @@
 | Caractères permis dans un pseudo | Le prototype accepte les lettres accentuées (`p{L}`), RG-01 et le schéma partagé se limitent à `A-Z a-z 0-9 - _`. | Garder l'ASCII : pas de pseudos qui se ressemblent à l'œil (homoglyphes), adresses de profil lisibles. Écart au prototype à confirmer |
 | Boutons Google et GitHub avant S-10 | Le prototype les montre ; la connexion par ces services n’existe pas encore. | Les garder, avec le message « La connexion avec Google n’est pas encore ouverte. Utilisez votre adresse e-mail. » au clic ; les masquer serait l’autre choix |
 | Durcissement de la temporisation | Un tiers qui connaît une adresse peut maintenir le compte temporisé (15 min au plus) en échouant exprès. | Accepter pour la bêta ; si cela arrive, ajouter une limite par adresse IP sur les échecs et lever la temporisation après une réinitialisation du mot de passe (AUTH-03) |
+| Texte des documents légaux | Le texte vit dans les pages du site (`pages/cgu.astro`…) ; la colonne `document_legal.texte` (Markdown) reste vide. Publier une version demande donc un déploiement (texte) et une ligne en base (version, date d’effet, résumé). | Garder le texte dans les pages jusqu’à l’administration des documents (ADM-01), puis décider s’il passe en base (rendu Markdown assaini, SEC-01) |
+| Cookies et mentions légales | Ces deux pages n’ont pas de version en base (`TYPES_DOCUMENT_LEGAL` : CGU, confidentialité, charte) ; leur date « Mise à jour le » est écrite dans `lib/documents-legaux.ts`. | La garder dans le code (elles ne s’acceptent pas) ; ajouter des types en base seulement si l’administration doit les publier |
+
+## Écarts au prototype (pages légales)
+
+- Liens « Créer un compte » et « Se connecter » de la section « Acceptation » : ils ramènent à la page lue (`?retour=`), comme ceux de l’en-tête du site ; dans le prototype, rendus après `initHeader`, ils n’en avaient pas.
+- Documents « À accepter » : ceux que l’API désigne pour le membre (`GET /api/v1/moi/acceptations`), et non tous les documents qui portent un résumé de changements ; un document déjà accepté affiche « Vous avez accepté cette version. » et renvoie vers celui qui reste à accepter.
+- Textes accordés quand un seul document a changé : « Ce document a changé le … », « J’accepte la nouvelle version de ce document. », « Accepter la nouvelle version », « Nouvelle version acceptée. » (le prototype n’avait que le pluriel, deux documents changeant toujours ensemble).
+- « Version du » donne la date de la version et « En vigueur depuis le » sa date d’effet quand elles diffèrent (annonce 30 jours avant, article 11) ; le prototype n’avait qu’une date.
+- Refus de la mesure d’audience retenu par un cookie de 13 mois (`vysora_mesure_audience`), comme l’annonce la politique relative aux cookies, et lu par le serveur au rendu ; le prototype le gardait dans `localStorage`.
+- Sans réponse de l’API, la page s’affiche sans version ni changements (texte complet, onglets sans date).
 
 ## Écarts au prototype (connexion et inscription)
 
@@ -171,6 +183,13 @@
 - Le lien de vérification et celui de réinitialisation sont lus par le serveur (pas d’écran intermédiaire) ; le jeton est retiré de la barre d’adresse.
 
 ## Journal
+
+### 2026-10-23 — Pages légales portées (LEG-01)
+- Site : `/cgu`, `/confidentialite`, `/charte-communautaire`, `/cookies`, `/mentions-legales` ; composant `DocumentLegal` (en-tête, onglets, sommaire, « L’essentiel », acceptation), fonctions de rendu partagées par le serveur et le script (`lib/pages-legales.ts`, portage de `documents-legaux.js`), script `documents-legaux.ts`. Les pages gardent le texte du prototype ; les liens passent par `ROUTES`. Les points « essentiels » ont une seule source (`lib/documents-legaux.ts`, avec la fenêtre de la connexion) ; `icon` rejoint `lib/texte.ts` pour servir au serveur et aux scripts.
+- API : `GET /api/v1/moi/acceptations` (documents en vigueur que le membre doit encore accepter), pour que la page ne dise « Vous avez accepté cette version » que si c’est vrai ; test de bout en bout enrichi.
+- Vérifié dans le navigateur : `<main>` identique au prototype (balisage normalisé et géométrie des blocs) sur les cinq pages à 1280, 820 et 375 px ; article visé (`#contestation`), liens copiés, sommaire qui suit la lecture ; choix sur la mesure d’audience (cookie posé, retiré, relu par le serveur) ; parcours d’un membre dont seule la charte change (base jetable) : onglet « À accepter », renvoi depuis les conditions, case non cochée, acceptation, bandeau retiré, état confirmé après rechargement.
+- Tâches découvertes : bandeau « conditions » (texte toujours « conditions d’utilisation et charte », lien vers `/cgu#changements`) et écran « Nouvelles conditions » de la connexion (tous les documents qui s’acceptent) à fonder sur `GET /api/v1/moi/acceptations` ; mesure d’audience (S-16).
+- Poste de travail : serveurs du worktree sur d’autres ports (API 3001, site 4322, prototype 5174) ; le panneau du navigateur masqué suspend les animations et `requestAnimationFrame`, d’où des captures prises avec les animations coupées.
 
 ### 2026-10-23 — Connexion et inscription portées, liens par e-mail (AUTH-02 à AUTH-05)
 - API : liens à usage unique (`JetonsService`), vérification de l’adresse et renvoi, mot de passe oublié, documents en vigueur et acceptation ; code d’erreur `LIEN_EXPIRE` (410) ; bouton d’action dans les e-mails. 20 tests de bout en bout de plus (50 au total).

@@ -1,8 +1,10 @@
 import type { TypeDocumentLegal } from '@vysora/shared';
+import { ROUTES } from './navigation';
 
-/* Résumé des documents légaux montré dans la fenêtre « Documents en vigueur » de la connexion et de
-   l'inscription (prototype/auth-data.js, `documents`). Le texte complet est celui des pages légales
-   (LEG-01) ; la version et la date d'effet viennent de l'API (GET /api/v1/documents-legaux). */
+/* Résumé des documents légaux, seule source des points « essentiels » : fenêtre « Documents en vigueur »
+   de la connexion et de l'inscription (prototype/auth-data.js, `documents`) et encadré « L'essentiel »
+   des pages légales (LEG-01, prototype/documents-legaux.js). Le texte complet est celui des pages ;
+   la version et la date d'effet viennent de l'API (GET /api/v1/documents-legaux). */
 
 export type CleDocument = 'cgu' | 'confidentialite' | 'charte';
 
@@ -57,5 +59,72 @@ export const RESUMES_DOCUMENTS: Record<CleDocument, ResumeDocument> = {
       'Le contournement des protections des outils et les instructions dangereuses sont interdits.',
       'Signalez ce qui pose problème : la modération examine chaque signalement en visant un délai de 72 heures.',
     ],
+  },
+};
+
+/** Pages des informations légales (LEG-01) : les trois documents versionnés, les cookies et les mentions légales. */
+export type ClePageLegale = CleDocument | 'cookies' | 'mentions';
+
+export interface PageLegale {
+  titre: string;
+  /** Libellé de l'onglet, dans la bande des documents. */
+  onglet: string;
+  route: string;
+  /** Points de « L'essentiel », reliés aux articles de la page. */
+  points?: string[];
+  /** Document versionné en base, dont l'API donne la version en vigueur. */
+  type?: TypeDocumentLegal;
+  /** Page sans version en base : date de la dernière mise à jour de son texte (AAAA-MM-JJ). */
+  miseAJour?: string;
+  /** Complément de « Les nouvelles versions … sont à accepter » (« des conditions générales d'utilisation »). */
+  des?: string;
+  /** Lien vers le document depuis la section « Acceptation » d'une autre page. */
+  lire?: string;
+}
+
+/** Ordre des onglets (prototype/documents-legaux.js, ORDRE). */
+export const ORDRE_PAGES_LEGALES: ClePageLegale[] = [
+  'cgu',
+  'confidentialite',
+  'cookies',
+  'charte',
+  'mentions',
+];
+
+export const PAGES_LEGALES: Record<ClePageLegale, PageLegale> = {
+  cgu: {
+    ...RESUMES_DOCUMENTS.cgu,
+    route: ROUTES.cgu,
+    des: 'des conditions générales d’utilisation',
+    lire: 'Lire les conditions générales d’utilisation',
+  },
+  confidentialite: {
+    ...RESUMES_DOCUMENTS.confidentialite,
+    route: ROUTES.confidentialite,
+    des: 'de la politique de confidentialité',
+    lire: 'Lire la politique de confidentialité',
+  },
+  cookies: {
+    titre: 'Politique relative aux cookies',
+    onglet: 'Cookies',
+    route: ROUTES.cookies,
+    miseAJour: '2026-10-19',
+    points: [
+      'Seuls des cookies strictement nécessaires sont déposés : ils ne demandent pas votre accord.',
+      'La fréquentation est mesurée sans cookie, et vous pouvez refuser d’y être compté.',
+      'Vysora ne dépose aucun cookie publicitaire et n’intègre aucun outil de mesure d’un tiers.',
+    ],
+  },
+  charte: {
+    ...RESUMES_DOCUMENTS.charte,
+    route: ROUTES.charte,
+    des: 'de la charte communautaire',
+    lire: 'Lire la charte communautaire',
+  },
+  mentions: {
+    titre: 'Mentions légales',
+    onglet: 'Mentions légales',
+    route: ROUTES.mentionsLegales,
+    miseAJour: '2026-10-19',
   },
 };

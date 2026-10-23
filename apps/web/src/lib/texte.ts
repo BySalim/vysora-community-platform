@@ -25,6 +25,10 @@ export const typo = (valeur: unknown): string =>
 /** Typographie puis échappement : pour tout texte inséré dans un gabarit HTML. */
 export const t = (valeur: unknown): string => esc(typo(valeur));
 
+/** Icône du sprite de la page : <svg class="icon icon-sm"><use href="#i-nom"/></svg>. */
+export const icon = (nom: string, classe = 'icon-sm'): string =>
+  `<svg class="icon ${classe}" aria-hidden="true"><use href="#i-${nom}"/></svg>`;
+
 const formatNombre = new Intl.NumberFormat('fr-FR');
 export const fmt = (valeur: number): string => formatNombre.format(valeur);
 export const pluriel = (nombre: number, un: string, plusieurs: string): string =>

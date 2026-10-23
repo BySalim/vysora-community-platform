@@ -26,7 +26,9 @@
 | Connexion : message unique (« Adresse e-mail ou mot de passe incorrect. ») ; temporisation après 5 échecs consécutifs (30 s, doublée à chaque échec, 15 min au plus), comptée sur l'empreinte de l'adresse saisie, que le compte existe ou non ; compte banni refusé après vérification du mot de passe ; 20 essais par minute et par IP | `ConnexionService`, `TemporisationService` (F-03) |
 | Inscription limitée à 10 par quart d'heure et par IP ; vérifications de disponibilité limitées (adresse : 20 par quart d'heure, pseudo : 60 par minute) | `ComptesController` |
 | Droits contrôlés par l'API : `@Exige(action)` + `DroitsGuard` appliquent `raisonRefus` (session, e-mail vérifié, conditions acceptées, suspension, niveau, rôle) ; refus 401/403 avec la raison | `modules/auth/droits.ts` (AUTH-06) |
-| État du visiteur inséré dans la page en JSON avec `<` échappé (aucune valeur ne peut fermer la balise `<script>`) | `layouts/Base.astro` |
+| État du visiteur inséré dans la page en JSON avec `<` échappé (aucune valeur ne peut fermer la balise `<script>`) | `layouts/Base.astro`, `components/DocumentLegal.astro` |
+| Pages légales : textes et résumés des documents échappés à l'insertion (`t`) ; documents à accepter lus pour le membre seul (`GET /api/v1/moi/acceptations`, `@Exige('parametres')`) | `lib/pages-legales.ts`, LEG-01 |
+| Refus de la mesure d'audience : cookie `vysora_mesure_audience=refusee` posé par la page Cookies (13 mois, `SameSite=Lax`, `Secure` en HTTPS) ; strictement nécessaire, sans donnée personnelle, lisible par le script puisqu'il est posé par lui | `scripts/documents-legaux.ts` |
 
 ## 2. À mettre en place (par ordre d'arrivée)
 
