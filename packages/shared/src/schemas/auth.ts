@@ -42,12 +42,40 @@ export const schemaConnexion = z.object({
 
 export type Connexion = z.output<typeof schemaConnexion>;
 
-/** Première étape de l'inscription : l'adresse est-elle déjà associée à un compte ? */
-export const schemaDisponibiliteEmail = z.object({ email: champEmail });
+/** Une adresse seule : disponibilité (première étape de l'inscription), mot de passe oublié (F-03). */
+export const schemaAdresseEmail = z.object({ email: champEmail });
+export const schemaDisponibiliteEmail = schemaAdresseEmail;
 
-/** Modification par le membre de ses propres informations (pseudo, puis profil et paramètres). */
+/** Jeton reçu dans un lien envoyé par e-mail (vérification de l'adresse, réinitialisation). */
+const champJeton = z
+  .string({ error: 'Ce lien est incomplet.' })
+  .trim()
+  .min(1, { error: 'Ce lien est incomplet.' })
+  .max(200, { error: 'Ce lien est incomplet.' });
+
+export const schemaJeton = z.object({ jeton: champJeton });
+
+/** Renvoi du lien de vérification : par la session, ou par le jeton d'un lien expiré. */
+export const schemaRenvoiVerification = z.object({ jeton: champJeton.optional() });
+
+/** F-03 : nouveau mot de passe choisi depuis le lien reçu (RG-04 ; l'API vérifie le reste). */
+export const schemaReinitialisation = z.object({
+  jeton: champJeton,
+  motDePasse: champMotDePasse,
+});
+
+export type Reinitialisation = z.output<typeof schemaReinitialisation>;
+
+/** F-04, WF-03 : acceptation des nouvelles versions des documents légaux. */
+export const schemaAcceptationDocuments = z.object({
+  accepte: z.literal(true, { error: 'Cochez la case pour accepter les nouvelles versions.' }),
+});
+
+/** Modification par le membre de ses propres informations (pseudo, puis profil et paramètres).
+    L'adresse ne se modifie ici que tant qu'elle n'est pas vérifiée (inscription) ; ensuite, PARAM-01. */
 export const schemaModificationMembre = z.object({
   pseudo: champPseudo.optional(),
+  email: champEmail.optional(),
 });
 
 export type ModificationMembre = z.output<typeof schemaModificationMembre>;

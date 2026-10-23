@@ -19,6 +19,7 @@ import { DocumentsLegauxService } from './documents-legaux.service.js';
 import { MotsDePasseService } from './mots-de-passe.service.js';
 import type { ContexteConnexion } from './requete.js';
 import { SessionsService } from './sessions.service.js';
+import { VerificationEmailService } from './verification-email.service.js';
 
 export const MESSAGES_COMPTE = {
   emailPris: 'Cette adresse est déjà associée à un compte Vysora.',
@@ -35,9 +36,11 @@ export class ComptesService {
     private readonly motsDePasse: MotsDePasseService,
     private readonly sessions: SessionsService,
     private readonly documents: DocumentsLegauxService,
+    private readonly verification: VerificationEmailService,
   ) {}
 
-  /** Compte ACTIF, e-mail non vérifié (lecture seule, RG-02), rôle MEMBRE ; acceptations datées (RG-03) ; session ouverte. */
+  /** Compte ACTIF, e-mail non vérifié (lecture seule, RG-02), rôle MEMBRE ; acceptations datées (RG-03) ;
+      session ouverte ; lien de vérification envoyé (AUTH-02). */
   async inscrire(
     saisie: Inscription,
     contexte: ContexteConnexion,
@@ -58,8 +61,8 @@ export class ComptesService {
     for (let essai = 0; essai < 5; essai += 1) {
       const pseudo = saisie.pseudo ?? (await this.pseudoLibre());
       try {
-        return await this.db.transaction(async (tx) => {
-          const [cree] = await tx
+        const cree = await this.db.transaction(async (tx) => {
+          const [nouveau] = await tx
             .insert(utilisateur)
             .values({
               pseudo,
@@ -68,11 +71,13 @@ export class ComptesService {
               dateDerniereConnexion: new Date(),
             })
             .returning({ id: utilisateur.id });
-          if (!cree) throw new Error('Compte non créé');
-          await this.documents.accepterEnVigueur(cree.id, tx);
-          const session = await this.sessions.ouvrir(cree.id, contexte, tx);
-          return { utilisateurId: cree.id, ...session };
+          if (!nouveau) throw new Error('Compte non créé');
+          await this.documents.accepterEnVigueur(nouveau.id, tx);
+          const session = await this.sessions.ouvrir(nouveau.id, contexte, tx);
+          return { utilisateurId: nouveau.id, ...session };
         });
+        await this.verification.envoyer(cree.utilisateurId, saisie.email);
+        return cree;
       } catch (erreur) {
         // Inscriptions simultanées : l'unicité est garantie par la base (RG-01, RG-02).
         if (estViolationUnicite(erreur, 'utilisateur_email_unique'))
@@ -109,10 +114,15 @@ export class ComptesService {
     };
   }
 
-  /** Le membre modifie ses informations : pour l'instant, son pseudo (inscription, paramètres). */
+  /** Le membre modifie ses informations : son pseudo ; son adresse tant qu'elle n'est pas vérifiée. */
   async modifier(utilisateurId: number, modification: ModificationMembre): Promise<void> {
-    const { pseudo } = modification;
-    if (pseudo === undefined) return;
+    if (modification.pseudo !== undefined)
+      await this.modifierPseudo(utilisateurId, modification.pseudo);
+    if (modification.email !== undefined)
+      await this.modifierEmail(utilisateurId, modification.email);
+  }
+
+  private async modifierPseudo(utilisateurId: number, pseudo: string): Promise<void> {
     if (estPseudoReserve(pseudo)) throw erreurValidation({ pseudo: MESSAGES_COMPTE.pseudoReserve });
     if (await this.pseudoPris(pseudo, utilisateurId))
       throw conflit(undefined, { pseudo: MESSAGES_COMPTE.pseudoPris });
@@ -123,6 +133,29 @@ export class ComptesService {
         throw conflit(undefined, { pseudo: MESSAGES_COMPTE.pseudoPris });
       throw erreur;
     }
+  }
+
+  /** Écran « Confirmez votre adresse » : une faute de frappe se corrige avant la vérification, et un
+      nouveau lien part à la bonne adresse. Une adresse vérifiée se change depuis les paramètres (PARAM-01). */
+  private async modifierEmail(utilisateurId: number, email: string): Promise<void> {
+    const [compte] = await this.db
+      .select({ email: utilisateur.email, emailVerifie: utilisateur.emailVerifie })
+      .from(utilisateur)
+      .where(eq(utilisateur.id, utilisateurId));
+    if (compte?.emailVerifie)
+      throw conflit('Votre adresse est déjà confirmée : modifiez-la depuis vos paramètres.');
+    if (compte?.email?.toLowerCase() !== email.toLowerCase()) {
+      if (await this.emailPris(email))
+        throw conflit(undefined, { email: MESSAGES_COMPTE.emailPris });
+      try {
+        await this.db.update(utilisateur).set({ email }).where(eq(utilisateur.id, utilisateurId));
+      } catch (erreur) {
+        if (estViolationUnicite(erreur, 'utilisateur_email_unique'))
+          throw conflit(undefined, { email: MESSAGES_COMPTE.emailPris });
+        throw erreur;
+      }
+    }
+    await this.verification.envoyer(utilisateurId, email);
   }
 
   private async emailPris(email: string): Promise<boolean> {

@@ -1,3 +1,4 @@
+import type { TypeDocumentLegal } from '../enums';
 import type { EtatVisiteur } from '../permissions';
 
 /* Contrats de la session (ADR-0005) : GET, POST et DELETE /api/v1/session, POST /api/v1/comptes,
@@ -44,4 +45,25 @@ export interface DisponibilitePseudo {
 /** Réponse de POST /api/v1/comptes/disponibilite. */
 export interface DisponibiliteEmail {
   disponible: boolean;
+}
+
+/** Réponse de POST /api/v1/comptes/verification/renvoi : adresse à laquelle le nouveau lien est parti. */
+export interface LienEnvoye {
+  email: string;
+}
+
+/** Réponse de POST /api/v1/mot-de-passe/lien : compte concerné par un lien de réinitialisation valable. */
+export interface LienReinitialisation {
+  email: string;
+}
+
+/** Version en vigueur d'un document légal (GET /api/v1/documents-legaux). */
+export interface DocumentLegalApi {
+  type: TypeDocumentLegal;
+  version: string;
+  /** AAAA-MM-JJ */
+  dateEffet: string;
+  url: string;
+  acceptationRequise: boolean;
+  resumeChangements: string | null;
 }
