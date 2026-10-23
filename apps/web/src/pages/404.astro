@@ -1,0 +1,46 @@
+---
+/* Contenu introuvable (sitemap, section 13) : adresse inconnue, contenu supprimé ou réservé. */
+import Base from '../layouts/Base.astro';
+import { ROUTES } from '../lib/navigation';
+import '../styles/documents-legaux.css';
+
+Astro.response.status = 404;
+---
+
+<Base
+  titre="Page introuvable"
+  description="Cette page n’existe pas ou n’est plus disponible sur Vysora."
+  classeCorps="lg"
+  reglages={{ lecture: 'standard', texte: 'standard', sommaire: 'colonne', eyebrow: 'icon' }}
+  icones={['compass', 'arrow']}
+  nonIndexee
+>
+  <header class="lg-tete">
+    <div class="container">
+      <p class="kicker lg-entree" style="--i:0">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-compass"></use>
+        </svg>
+        Page introuvable
+      </p>
+      <h1 class="lg-titre lg-entree" style="--i:1">
+        Cette page n’existe pas ou n’est plus disponible
+      </h1>
+      <p class="ct-intro lg-entree" style="--i:2">
+        L’adresse est peut-être incomplète, ou le contenu a été retiré par son auteur. Les
+        créations, les sujets du forum et les cas Bon réflexe restent accessibles depuis Explorer.
+      </p>
+      <p class="lg-entree" style="--i:3; display:flex; flex-wrap:wrap; gap:10px; margin-top:24px">
+        <a class="btn btn-primary" href={ROUTES.explorer}>
+          Explorer les créations
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-arrow"></use>
+          </svg>
+        </a>
+        <a class="btn btn-secondary" href={ROUTES.accueil}>
+          Retour à l’accueil
+        </a>
+      </p>
+    </div>
+  </header>
+</Base>

@@ -1,0 +1,20 @@
+# Références en lecture seule
+prototype/
+docs/produit/
+
+# Fichiers générés
+pnpm-lock.yaml
+dist/
+.astro/
+coverage/
+apps/api/drizzle/
+
+# Styles et scripts portés du prototype : gardés au plus près de l'original pour faciliter la comparaison
+apps/web/src/styles/
+apps/web/public/
+
+# Registre d’icônes généré par scripts/extraire-icones.mjs
+apps/web/src/lib/icones.ts
+
+# Documentation rédigée à la main (tableaux lisibles en texte brut)
+*.md

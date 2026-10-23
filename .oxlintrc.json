@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-extraneous-class": ["warn", { "allowWithDecorator": true }],
+    "import/no-cycle": "off",
+    "import/no-unassigned-import": "off",
+    "import/no-named-as-default-member": "off",
+    "unicorn/consistent-function-scoping": "off"
+  },
+  "overrides": [
+    {
+      "files": ["apps/api/src/db/**", "apps/api/test/**", "scripts/**"],
+      "rules": { "no-console": "off" }
+    }
+  ],
+  "ignorePatterns": ["prototype/**", "**/dist/**", "**/.astro/**", "apps/api/drizzle/**"]
+}

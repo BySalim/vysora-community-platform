@@ -1,0 +1,68 @@
+---
+/* Page d'attente du socle technique, remplacée par le portage de l'accueil (registre : ACC-01).
+   Elle vérifie la chaîne complète : rendu serveur → API → base de données. */
+import type { ReferentielsApi } from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { appelerApi } from '../lib/api';
+import { ROUTES } from '../lib/navigation';
+import { fmt } from '../lib/texte';
+import '../styles/documents-legaux.css';
+
+let referentiels: ReferentielsApi | null = null;
+try {
+  referentiels = await appelerApi<ReferentielsApi>('/api/v1/referentiels', {
+    requete: Astro.request,
+  });
+} catch {
+  referentiels = null;
+}
+const familles = referentiels ? new Set(referentiels.outils.map((o) => o.famille)).size : 0;
+---
+
+<Base
+  titre="Socle technique"
+  description="Vysora : voir comment l’IA crée, apprendre à créer avec elle."
+  classeCorps="lg"
+  reglages={{ lecture: 'standard', texte: 'standard', sommaire: 'colonne', eyebrow: 'icon' }}
+  icones={['layers', 'arrow']}
+  nonIndexee
+>
+  <header class="lg-tete">
+    <div class="container">
+      <p class="kicker lg-entree" style="--i:0">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-layers"></use>
+        </svg>
+        Socle technique
+      </p>
+      <h1 class="lg-titre lg-entree" style="--i:1">
+        Voir comment l’IA crée. Apprendre à créer avec elle.
+      </h1>
+      <p class="ct-intro lg-entree" style="--i:2">
+        {referentiels ? (
+          <>
+            Site, API et base de données reliés : {fmt(referentiels.outils.length)} outils en{' '}
+            {familles} familles, {referentiels.categories.length} catégories,{' '}
+            {referentiels.licences.length} licences et {referentiels.badges.length} badges chargés.
+          </>
+        ) : (
+          <>L’API ne répond pas. Lancez-la avec « pnpm dev » après « pnpm infra:up ».</>
+        )}
+      </p>
+      <p class="lg-entree" style="--i:3; display:flex; flex-wrap:wrap; gap:10px; margin-top:24px">
+        <a class="btn btn-primary" href={ROUTES.contact}>
+          Page Contact portée
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-arrow"></use>
+          </svg>
+        </a>
+        <a class="btn btn-secondary" href="http://localhost:5173/index.html">
+          Prototype (pnpm prototype)
+        </a>
+        <a class="btn btn-secondary" href="http://localhost:8025">
+          E-mails capturés (Mailpit)
+        </a>
+      </p>
+    </div>
+  </header>
+</Base>

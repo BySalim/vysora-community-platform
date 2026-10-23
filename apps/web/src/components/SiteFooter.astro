@@ -1,0 +1,138 @@
+---
+/* Pied de page commun (prototype : <footer class="site-footer"> complété par commun.js :
+   cookies, mentions légales et contact ; liens du membre à la place de l'inscription). */
+import { ROUTES } from '../lib/navigation';
+
+const { etat, membre } = Astro.locals;
+const chemin = Astro.url.pathname;
+const courant = (href: string) => (chemin === href ? 'page' : undefined);
+const estMembre = etat.session === 'membre' && membre;
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <img
+        src="/assets/logos/vysora%20bleu-white.png"
+        alt="Vysora"
+        width="337"
+        height="122"
+        loading="lazy"
+      />
+      <p>
+        Voir comment l’IA crée.
+        <br />
+        Apprendre à créer avec elle.
+      </p>
+    </div>
+    <nav class="footer-nav" aria-label="Découvrir">
+      <p class="footer-heading">Découvrir</p>
+      <ul>
+        <li>
+          <a href={ROUTES.explorer} aria-current={courant(ROUTES.explorer)}>
+            Explorer
+          </a>
+        </li>
+        <li>
+          <a href={ROUTES.classements} aria-current={courant(ROUTES.classements)}>
+            Classements
+          </a>
+        </li>
+        <li>
+          <a href={ROUTES.defis} aria-current={courant(ROUTES.defis)}>
+            Défis
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <nav class="footer-nav" aria-label="Apprendre">
+      <p class="footer-heading">Apprendre</p>
+      <ul>
+        <li>
+          <a href={ROUTES.bonReflexe}>Bon réflexe</a>
+        </li>
+        <li>
+          <a href={ROUTES.clinique}>Clinique du prompt</a>
+        </li>
+        <li>
+          <a href={ROUTES.forum} aria-current={courant(ROUTES.forum)}>
+            Forum
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <nav class="footer-nav" aria-label="Participer">
+      <p class="footer-heading">Participer</p>
+      <ul>
+        <li>
+          <a href={ROUTES.publier}>Publier une création</a>
+        </li>
+        {estMembre ? (
+          <>
+            <li>
+              <a href={ROUTES.profil(membre.pseudo)}>Mon profil</a>
+            </li>
+            <li>
+              <a href={ROUTES.mesContenus}>Mes contenus</a>
+            </li>
+          </>
+        ) : (
+          <>
+            <li>
+              <a href={ROUTES.inscription}>Créer un compte</a>
+            </li>
+            <li>
+              <a href={ROUTES.connexion}>Se connecter</a>
+            </li>
+          </>
+        )}
+      </ul>
+    </nav>
+    <nav class="footer-nav" aria-label="Informations légales">
+      <p class="footer-heading">Informations</p>
+      <ul>
+        <li>
+          <a href={ROUTES.cgu} aria-current={courant(ROUTES.cgu)}>
+            Conditions générales d’utilisation
+          </a>
+        </li>
+        <li>
+          <a href={ROUTES.confidentialite} aria-current={courant(ROUTES.confidentialite)}>
+            Politique de confidentialité
+          </a>
+        </li>
+        <li>
+          <a href={ROUTES.cookies} aria-current={courant(ROUTES.cookies)}>
+            Cookies
+          </a>
+        </li>
+        <li>
+          <a href={ROUTES.charte} aria-current={courant(ROUTES.charte)}>
+            Charte communautaire
+          </a>
+        </li>
+        <li>
+          <a href={ROUTES.mentionsLegales} aria-current={courant(ROUTES.mentionsLegales)}>
+            Mentions légales
+          </a>
+        </li>
+        <li>
+          <a href={ROUTES.contact} aria-current={courant(ROUTES.contact)}>
+            Contact
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="container">
+    <div class="footer-bottom">
+      <p>© {new Date().getFullYear()} Vysora</p>
+      <a class="footer-top" href="#contenu">
+        Haut de page
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-arrow-up-right"></use>
+        </svg>
+      </a>
+    </div>
+  </div>
+</footer>

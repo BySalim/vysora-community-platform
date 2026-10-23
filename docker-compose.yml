@@ -1,0 +1,39 @@
+# Services de développement : base de données et capture des e-mails.
+# Démarrage : pnpm infra:up · Arrêt : pnpm infra:down
+name: vysora
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: vysora
+      POSTGRES_PASSWORD: vysora
+      POSTGRES_DB: vysora
+    ports:
+      - '5432:5432'
+    volumes:
+      # Depuis PostgreSQL 18, l'image range les données dans /var/lib/postgresql/<version>/docker
+      - postgres-donnees:/var/lib/postgresql
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vysora -d vysora']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      # Sans résolution DNS inverse, chaque envoi prend quelques millisecondes au lieu de plusieurs secondes.
+      MP_SMTP_DISABLE_RDNS: 'true'
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-donnees:

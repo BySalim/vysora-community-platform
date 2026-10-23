@@ -1,0 +1,87 @@
+---
+/* Bandeau sous l'en-tête quand le compte est en lecture seule (prototype : commun.js, rendreBandeau).
+   Les dates (suspension, nouvelles conditions) viendront de la session (registre : AUTH-01). */
+import { ROUTES } from '../lib/navigation';
+import { typo } from '../lib/texte';
+
+interface Props {
+  dateSuspension?: string;
+  dateConditions?: string;
+}
+
+const { etat } = Astro.locals;
+const { dateSuspension = '', dateConditions = '' } = Astro.props;
+const motif = etat.session === 'membre' && etat.compte !== 'actif' ? etat.compte : null;
+---
+
+{motif && (
+  <div class="etat-bandeau" role="status" data-etat-bandeau data-motif={motif}>
+    <div class="container etat-bandeau-in">
+      {motif === 'email' && (
+        <>
+          <span class="etat-bandeau-icone" aria-hidden="true">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-mail"></use>
+            </svg>
+          </span>
+          <p>
+            <b>{typo('Confirmez votre adresse e-mail.')}</b>{' '}
+            {typo(
+              'Vous pourrez ensuite publier, voter et répondre. Le lien reçu à l’inscription reste valable 24 heures.',
+            )}
+          </p>
+          <div class="etat-bandeau-actions">
+            <button class="btn btn-secondary btn-sm" type="button" data-acces-bouton="email">
+              Renvoyer l’e-mail
+            </button>
+          </div>
+        </>
+      )}
+      {motif === 'conditions' && (
+        <>
+          <span class="etat-bandeau-icone" aria-hidden="true">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-doc"></use>
+            </svg>
+          </span>
+          <p>
+            <b>
+              {typo(
+                `Les conditions d’utilisation et la charte communautaire ont changé le ${dateConditions}.`,
+              )}
+            </b>{' '}
+            {typo('Acceptez-les pour continuer à publier et à participer.')}
+          </p>
+          <div class="etat-bandeau-actions">
+            <a class="btn btn-quiet btn-sm" href={`${ROUTES.cgu}#changements`}>
+              Lire les changements
+            </a>
+            <button class="btn btn-primary btn-sm" type="button" data-acces-bouton="conditions">
+              Accepter
+            </button>
+          </div>
+        </>
+      )}
+      {motif === 'suspendu' && (
+        <>
+          <span class="etat-bandeau-icone" aria-hidden="true">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-lock"></use>
+            </svg>
+          </span>
+          <p>
+            <b>{typo(`Votre compte est suspendu jusqu’au ${dateSuspension}.`)}</b>{' '}
+            {typo(
+              'Vous pouvez lire les contenus et gérer vos paramètres ; publier et participer redeviendront possibles à cette date.',
+            )}
+          </p>
+          <div class="etat-bandeau-actions">
+            <a class="btn btn-secondary btn-sm" href={ROUTES.notifications}>
+              Voir la décision
+            </a>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+)}

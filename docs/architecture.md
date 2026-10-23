@@ -1,0 +1,126 @@
+# Architecture de Vysora
+
+> Document vivant. Il décrit ce qui existe et la direction prise ; chaque session le corrige quand la réalité change.
+> Les choix structurants sont justifiés dans [`decisions/`](decisions/README.md).
+
+## 1. Vue d'ensemble
+
+Vysora est une application web communautaire : un **site** rendu côté serveur qui reproduit fidèlement le prototype, une **API** qui porte toutes les règles de gestion, une **base PostgreSQL**. La plateforme n'appelle aucun modèle d'IA (C-02, PR-07).
+
+```mermaid
+flowchart LR
+  N[Navigateur] -->|pages HTML| W[Site<br/>Astro SSR · Node]
+  N -->|/api/* même origine| W
+  W -->|relais /api/*<br/>rendu des pages| A[API<br/>NestJS · Node]
+  A --> P[(PostgreSQL 18)]
+  A -->|SMTP| M[E-mails<br/>Mailpit en dev]
+  A --> S[(Images<br/>disque, puis stockage S3)]
+```
+
+| Bloc | Rôle | Ne fait pas |
+|---|---|---|
+| `apps/web` (Astro) | Rend chaque page du prototype en HTML côté serveur, avec les données de l'API ; scripts de page pour les interactions ; relais `/api/*` vers l'API. | Aucune règle de gestion, aucun accès direct à la base. |
+| `apps/api` (NestJS) | Seule porte d'accès aux données et **seule autorité** sur les droits et les règles (RG-xx) ; authentification, validation, e-mails, tâches. | Aucun rendu HTML. |
+| `packages/shared` | Vocabulaire commun : énumérations du MCD, règles chiffrées, droits (`raisonRefus`), schémas Zod, contrats des réponses. | Aucun effet de bord, aucune dépendance au framework. |
+| PostgreSQL | Données, contraintes d'intégrité (CI-xx), recherche plein texte (`vysora_fr`). | — |
+
+## 2. Stack technique de départ
+
+Versions installées au démarrage du projet (octobre 2026) ; les mises à jour mineures se font librement, les majeures font l'objet d'une note dans le registre.
+
+| Domaine | Choix | Pourquoi |
+|---|---|---|
+| Langage | TypeScript 6 (strict), Node.js 24 LTS | Un seul langage du navigateur à la base ; TypeScript 7 attend l'écosystème (typescript-eslint, astro check). |
+| Dépôt | pnpm 10, espaces de travail (`apps/*`, `packages/*`) | Paquet partagé sans publication, installation rapide. |
+| Site | Astro 7, rendu serveur (`@astrojs/node`), scripts TypeScript natifs | Le prototype est un site multipage HTML/CSS/JS : Astro le reproduit page pour page, avec SEO et performances (ADR-0002). |
+| API | NestJS 12 (ESM) sur Express 5 | Structure par modules, injection de dépendances, gardes, filtres : un cadre « pro » que chaque session retrouve (ADR-0003). |
+| Base | PostgreSQL 18 | Contraintes riches, recherche plein texte française, JSONB, fiabilité. |
+| Accès aux données | Drizzle ORM 0.45 + drizzle-kit | Schéma TypeScript lisible (MLD vivant), SQL maîtrisé, migrations versionnées (ADR-0004). |
+| Validation | Zod 4, schémas partagés | Mêmes règles et mêmes messages côté navigateur et côté API. |
+| Erreurs | RFC 9457 (`application/problem+json`) | Format standard, code stable + message par champ. |
+| Journalisation | pino (nestjs-pino) | Journaux JSON, sans cookie ni IP ni corps de requête. |
+| E-mails | Nodemailer + SMTP ; Mailpit en développement | Fournisseur interchangeable (Brevo, Scaleway TEM, Mailjet…). |
+| Tests | Vitest 5, Supertest ; base `vysora_test` | Tests unitaires rapides, tests de bout en bout sur une vraie base. |
+| Qualité | oxlint, Prettier, `astro check`, `tsc` | Rapide ; `pnpm verifier` enchaîne tout. |
+| Infra de développement | Docker Compose : PostgreSQL, Mailpit | Démarrage en une commande. |
+
+Prévus mais non installés (ajoutés quand une tâche en a besoin) : `sharp` (images), `@node-rs/argon2` (mots de passe), `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), un moteur de rendu Markdown assaini, Playwright (tests de navigateur).
+
+## 3. Arborescence
+
+```text
+apps/
+  api/
+    drizzle/                 migrations SQL versionnées (générées + manuelles)
+    src/
+      main.ts, application.ts, app.module.ts
+      config/                variables d'environnement validées (Zod)
+      db/                    client, schéma (MLD), migrations, chargement des référentiels
+      commun/                erreurs, filtre RFC 9457, validation Zod, garde d'origine, sécurité
+      modules/<domaine>/     contrôleur (HTTP) → service (règles) → base
+    test/                    tests de bout en bout (*.e2e-spec.ts)
+  web/
+    public/assets/           polices, logos, logos d'outils (repris du prototype)
+    src/
+      layouts/Base.astro     <head>, en-tête, pied de page, sprite, état du visiteur
+      components/            composants partagés (en-tête, pied de page, bandeau, sprite…)
+      pages/                 une route par écran (plan du site) ; pages/api/[...chemin].ts = relais
+      scripts/               scripts de page (portés du JS du prototype) ; scripts/commun/
+      styles/                CSS du prototype, recopiées sans modification ; socle.css pour les ajouts
+      lib/                   accès API côté serveur, session, routes, typographie, icônes
+packages/shared/src/         enums, règles, droits, schémas, contrats
+prototype/                   référence visuelle, en lecture seule (pnpm prototype)
+docs/                        produit (01 à 08), architecture, MLD, conventions, sécurité, registre
+infra/                       configuration des services (PostgreSQL)
+```
+
+## 4. Parcours d'une requête
+
+**Affichage d'une page.** Le navigateur demande `/contact`. Le middleware du site charge la personne qui consulte (`Astro.locals.etat`, `membre`, `nonLues`) ; la page appelle l'API côté serveur si elle a besoin de données (`appelerApi`, cookie transmis) ; le gabarit `Base.astro` pose sur `<html>` les attributs d'état (`data-session`, `data-role`…) que lisent les feuilles de style du prototype. Le HTML part complet : indexable, sans attente de JavaScript.
+
+**Action du visiteur.** Le script de page envoie `fetch('/api/v1/…')` sur la même origine. Le relais du site transmet la requête à l'API (corps, cookie, adresse du visiteur). L'API vérifie l'origine (CSRF), la limite de débit, valide l'entrée avec le schéma partagé, applique les règles, écrit en base dans une transaction, puis répond (JSON, ou erreur RFC 9457 que le script affiche champ par champ).
+
+**En production**, un serveur frontal (Caddy) termine HTTPS et peut envoyer `/api/*` directement à l'API ; le relais du site reste une solution de repli.
+
+## 5. Découpage de l'API en modules
+
+Un module par domaine du MCD. Chaque module expose un contrôleur (routes, validation, codes HTTP) et un ou plusieurs services (règles, transactions). Les services s'appellent entre eux par injection ; les règles transverses (réputation, notifications) sont des services dédiés appelés par les autres.
+
+| Module | Contenu | État |
+|---|---|---|
+| `sante` | `GET /api/health` | Fait |
+| `referentiels` | Référentiels publics (outils, catégories, licences, niveaux, badges) | Fait (lecture) |
+| `contact` | Messages à l'équipe, signalement sans compte | Fait |
+| `email` | Envoi SMTP, gabarit | Fait (envoi direct, file d'attente à venir) |
+| `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes | À faire |
+| `membres` | Profil public, paramètres, export, suppression | À faire |
+| `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | À faire |
+| `decouverte` | Recherche, filtres, accueil, catégories, étiquettes | À faire |
+| `interactions` | Votes, reproductions, enregistrements, obsolescence, commentaires, vues | À faire |
+| `forum` | Sujets, réponses, acceptation, fermeture | À faire |
+| `apprentissage` | Bon réflexe, défis | À faire |
+| `progression` | Réputation, niveaux, badges, classements, statistiques | À faire |
+| `notifications` | Notifications, préférences, regroupement | À faire |
+| `moderation` | Signalements, décisions, masquage automatique | À faire |
+| `administration` | Référentiels, rôles, documents légaux, journal, indicateurs | À faire |
+| `medias` | Téléversement, contrôle, déclinaisons, stockage | À faire |
+
+## 6. Principes transverses
+
+- **Fidélité au prototype.** Chaque page du site reprend le balisage, les classes et les feuilles de style de sa page du prototype ; les réglages du panneau Tweaks sont figés sur leurs valeurs par défaut. Méthode : [`portage-prototype.md`](portage-prototype.md).
+- **L'API décide, le site affiche.** Le site peut masquer un bouton (`peut()`), seule l'API autorise. Une route réservée vérifie toujours le rôle et l'état du compte côté serveur.
+- **Vocabulaire du domaine en français**, celui du MCD et des règles (ADR-0006).
+- **Règles nommées.** Une règle de gestion implémentée cite son identifiant (`RG-xx`, `CI-xx`) dans le code et dans son test.
+- **Données calculées non stockées** au départ (réputation, compteurs, niveaux) ; un cache dénormalisé est permis plus tard, mis à jour dans la même transaction, si les mesures le justifient.
+- **Sécurité par défaut** : voir [`securite.md`](securite.md).
+
+## 7. Évolutions anticipées
+
+| Sujet | Direction |
+|---|---|
+| Carnéo (V2) | L'API REST versionnée (`/api/v1`) accueillera des jetons d'accès personnels pour l'outil de traçage. |
+| Anglais (D-06) | Textes d'interface externalisés au fil du portage ; dictionnaires par langue ; `langue_interface` déjà en base. |
+| Recherche | PostgreSQL (`recherche_document`, configuration `vysora_fr`) au MVP ; un moteur dédié (Meilisearch) si le volume l'exige. |
+| Tâches différées | `pg-boss` (file sur PostgreSQL, sans Redis) pour e-mails, exports, suppressions à 30 jours, nettoyage. |
+| Images | Disque local, puis stockage objet compatible S3 (Scaleway, Cloudflare R2) derrière une interface `Stockage`. |
+| Hébergement | Un serveur en Europe avec Docker Compose (Caddy, web, api, PostgreSQL, sauvegardes) : ADR-0008, à confirmer. |

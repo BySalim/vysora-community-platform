@@ -1,0 +1,120 @@
+---
+/* Gabarit commun à toutes les pages : même <head>, mêmes feuilles de style de base, même en-tête et
+   même pied de page que le prototype. Les réglages du panneau Tweaks sont figés sur leurs valeurs
+   par défaut (attributs data-* de <html>), le panneau lui-même n'est pas repris. */
+import EtatBandeau from '../components/EtatBandeau.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import Sprite from '../components/Sprite.astro';
+import type { Icone } from '../lib/icones';
+import { attributsEtat } from '../lib/session';
+import '../styles/styles.css';
+import '../styles/commun.css';
+import '../styles/etats.css';
+import '../styles/socle.css';
+
+interface Props {
+  /** Titre de la page, suivi de « · Vysora ». */
+  titre: string;
+  description: string;
+  /** Classes de <body> reprises de la page du prototype (ex. « lg ct »). */
+  classeCorps?: string;
+  /** Attributs data-* de <body> (ex. { document: 'contact' }). */
+  donneesCorps?: Record<string, string>;
+  /** Classe de <main> reprise de la page du prototype (ex. « auth-scene »). */
+  classeMain?: string;
+  /** Réglages propres à la page, en plus des réglages communs (ex. { lecture: 'standard' }). */
+  reglages?: Record<string, string>;
+  /** Icônes utilisées par la page (voir src/lib/icones.ts). */
+  icones?: string[];
+  remplacementsIcones?: Record<string, Icone>;
+  /** Contenu à ne pas indexer (brouillon, page privée). */
+  nonIndexee?: boolean;
+}
+
+const {
+  titre,
+  description,
+  classeCorps,
+  donneesCorps = {},
+  classeMain,
+  reglages = {},
+  icones = [],
+  remplacementsIcones,
+  nonIndexee = false,
+} = Astro.props;
+
+const REGLAGES_COMMUNS = {
+  accent: 'blue',
+  density: 'standard',
+  radius: 'charte',
+  effects: 'standard',
+  motion: 'full',
+};
+const attributsHtml = Object.fromEntries([
+  ...Object.entries({ ...REGLAGES_COMMUNS, ...reglages }).map(([nom, valeur]) => [
+    `data-${nom}`,
+    valeur,
+  ]),
+  ...Object.entries(attributsEtat(Astro.locals)),
+]);
+const attributsCorps = Object.fromEntries(
+  Object.entries(donneesCorps).map(([nom, valeur]) => [`data-${nom}`, valeur]),
+);
+const canonique = new URL(Astro.url.pathname, Astro.site).href;
+const etatClient = JSON.stringify({
+  etat: Astro.locals.etat,
+  membre: Astro.locals.membre,
+  nonLues: Astro.locals.nonLues,
+});
+---
+
+<!doctype html>
+<html lang="fr" {...attributsHtml}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content={description} />
+    {nonIndexee && <meta name="robots" content="noindex, nofollow" />}
+    <title>{`${titre} · Vysora`}</title>
+    <link rel="canonical" href={canonique} />
+    <link rel="icon" href="/favicon.png" />
+    <meta property="og:site_name" content="Vysora" />
+    <meta property="og:title" content={titre} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonique} />
+    <meta property="og:locale" content="fr_FR" />
+    <link rel="stylesheet" href="/assets/fonts/fonts.css" />
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        var motion = root.getAttribute('data-motion');
+        var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        root.setAttribute(
+          'data-motion-effective',
+          motion === 'none' ? 'none' : reduce || motion === 'reduced' ? 'reduced' : 'full',
+        );
+        root.classList.add('js');
+      })();
+    </script>
+    <slot name="head" />
+  </head>
+  <body class={classeCorps} {...attributsCorps}>
+    <Sprite noms={icones} remplacements={remplacementsIcones} />
+    <a class="skip-link" href="#contenu">
+      Aller au contenu
+    </a>
+    <SiteHeader />
+    <EtatBandeau />
+    <main id="contenu" class={classeMain} tabindex="-1">
+      <slot />
+    </main>
+    <SiteFooter />
+    <div class="toast" role="status" aria-live="polite" data-toast></div>
+    <script type="application/json" id="etat-visiteur" set:html={etatClient} />
+    <script>
+      import '../scripts/commun/entete';
+    </script>
+  </body>
+</html>

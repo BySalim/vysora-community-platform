@@ -1,0 +1,235 @@
+---
+/* Page Contact, portée de prototype/contact.html : point de contact unique de Vysora
+   (question, données personnelles, signalement d'un contenu illicite, contestation d'une décision).
+   Le formulaire est envoyé à POST /api/v1/contact. */
+import Base from '../layouts/Base.astro';
+import { ROUTES } from '../lib/navigation';
+import '../styles/documents-legaux.css';
+import '../styles/contact.css';
+---
+
+<Base
+  titre="Contact"
+  description="Contacter l’équipe Vysora : question, données personnelles, signalement d’un contenu illicite ou contestation d’une décision de modération."
+  classeCorps="lg ct"
+  donneesCorps={{ document: 'contact' }}
+  reglages={{ lecture: 'standard', texte: 'standard', sommaire: 'colonne', eyebrow: 'icon' }}
+  icones={[
+    'check-circle',
+    'calendar',
+    'history',
+    'up',
+    'chevron-down',
+    'link',
+    'printer',
+    'send',
+    'message',
+  ]}
+>
+  <header class="lg-tete ct-tete">
+    <div class="container">
+      <p class="kicker lg-entree" style="--i:0">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-mail"></use>
+        </svg>
+        Contact
+      </p>
+      <h1 class="lg-titre lg-entree" id="ct-titre" style="--i:1">
+        Nous contacter
+      </h1>
+      <p class="ct-intro lg-entree" style="--i:2">
+        Une question, une demande sur vos données, un contenu illicite à signaler ou une décision de
+        modération à contester : ce formulaire est le point de contact unique de Vysora. Nous
+        répondons par e-mail, en français.
+      </p>
+    </div>
+  </header>
+
+  <div class="container ct-corps">
+    <section class="ct-zone" aria-labelledby="ct-titre" data-ct-zone>
+      <form class="ct-form" novalidate data-ct-form>
+        <fieldset class="ct-motifs">
+          <legend>Objet de votre message</legend>
+          <label class="ct-motif">
+            <input type="radio" name="motif" value="question" required />
+            <span>
+              <b>Question ou suggestion</b>
+              <small>Fonctionnement de Vysora, compte, idée d’amélioration.</small>
+            </span>
+          </label>
+          <label class="ct-motif">
+            <input type="radio" name="motif" value="donnees" />
+            <span>
+              <b>Données personnelles</b>
+              <small>
+                Accès, rectification, opposition ou toute autre demande sur vos données.
+              </small>
+            </span>
+          </label>
+          <label class="ct-motif">
+            <input type="radio" name="motif" value="signalement" />
+            <span>
+              <b>Signaler un contenu illicite</b>
+              <small>Contenu contraire à la loi, signalable même sans compte.</small>
+            </span>
+          </label>
+          <label class="ct-motif">
+            <input type="radio" name="motif" value="contestation" />
+            <span>
+              <b>Contester une décision</b>
+              <small>
+                Mesure de modération ou suite donnée à un signalement, dans les 6&nbsp;mois.
+              </small>
+            </span>
+          </label>
+          <label class="ct-motif">
+            <input type="radio" name="motif" value="autre" />
+            <span>
+              <b>Autre demande</b>
+              <small>Presse, partenariat ou tout autre sujet.</small>
+            </span>
+          </label>
+          <p class="ct-erreur" id="ct-motif-erreur" hidden></p>
+        </fieldset>
+
+        <div class="ct-champs">
+          <div class="ct-champ">
+            <label for="ct-nom">Nom</label>
+            <input
+              id="ct-nom"
+              name="nom"
+              type="text"
+              autocomplete="name"
+              required
+              aria-describedby="ct-nom-erreur"
+            />
+            <p class="ct-erreur" id="ct-nom-erreur" hidden></p>
+          </div>
+          <div class="ct-champ">
+            <label for="ct-email">Adresse e-mail</label>
+            <input
+              id="ct-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              inputmode="email"
+              spellcheck="false"
+              required
+              aria-describedby="ct-email-aide ct-email-erreur"
+            />
+            <p class="ct-aide" id="ct-email-aide">
+              Nous vous répondons à cette adresse.
+            </p>
+            <p class="ct-erreur" id="ct-email-erreur" hidden></p>
+          </div>
+          <div class="ct-champ" data-ct-contenu hidden>
+            <label for="ct-contenu" data-ct-contenu-label>
+              Adresse du contenu
+            </label>
+            <input
+              id="ct-contenu"
+              name="contenu"
+              type="url"
+              inputmode="url"
+              spellcheck="false"
+              placeholder="https://"
+              aria-describedby="ct-contenu-aide ct-contenu-erreur"
+            />
+            <p class="ct-aide" id="ct-contenu-aide" data-ct-contenu-aide>
+              Copiez l’adresse de la page où figure le contenu.
+            </p>
+            <p class="ct-erreur" id="ct-contenu-erreur" hidden></p>
+          </div>
+          <div class="ct-champ">
+            <label for="ct-message" data-ct-message-label>
+              Votre message
+            </label>
+            <textarea
+              id="ct-message"
+              name="message"
+              rows="7"
+              required
+              aria-describedby="ct-message-erreur"
+            ></textarea>
+            <p class="ct-erreur" id="ct-message-erreur" hidden></p>
+          </div>
+          <div class="ct-champ" data-ct-bonne-foi hidden>
+            <div class="lg-case">
+              <input
+                type="checkbox"
+                id="ct-bonne-foi"
+                name="bonneFoi"
+                aria-describedby="ct-bonne-foi-erreur"
+              />
+              <label for="ct-bonne-foi">
+                Je déclare de bonne foi que les informations de ce signalement sont exactes et
+                complètes.
+              </label>
+            </div>
+            <p class="ct-erreur ct-erreur-case" id="ct-bonne-foi-erreur" hidden></p>
+          </div>
+          <div class="champ-piege" aria-hidden="true">
+            <label for="ct-site">Site web</label>
+            <input id="ct-site" name="siteWeb" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="ct-envoi">
+          <button class="btn btn-primary" type="submit" data-ct-envoyer>
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-send"></use>
+            </svg>
+            <span data-ct-envoyer-label>Envoyer le message</span>
+          </button>
+          <p class="ct-info">
+            Ces informations servent uniquement à traiter votre demande et sont conservées 1 an
+            après notre réponse. <a href={ROUTES.confidentialite}>Politique de confidentialité</a>
+          </p>
+        </div>
+      </form>
+    </section>
+
+    <aside class="ct-aside" aria-labelledby="ct-aside-titre">
+      <h2 id="ct-aside-titre">Avant d’écrire</h2>
+      <ul class="ct-raccourcis">
+        <li>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-lock"></use>
+          </svg>
+          <p>
+            <b>Vos données</b>Depuis vos paramètres, vous téléchargez vos données ou supprimez votre
+            compte, sans attendre de réponse.
+          </p>
+        </li>
+        <li>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-shield"></use>
+          </svg>
+          <p>
+            <b>Signaler sur Vysora</b>Connecté, utilisez le bouton « Signaler » du contenu : la
+            modération le reçoit avec son contexte.
+          </p>
+        </li>
+        <li>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-message"></use>
+          </svg>
+          <p>
+            <b>Délais de réponse</b>Signalement : examen visé sous 72&nbsp;heures. Contestation :
+            15&nbsp;jours. Demande sur vos données : un mois au plus.
+          </p>
+        </li>
+      </ul>
+      <p class="ct-docs">
+        Les règles de Vysora : <a href={ROUTES.cgu}>conditions d’utilisation</a>,{' '}
+        <a href={ROUTES.charte}>charte communautaire</a>,{' '}
+        <a href={ROUTES.confidentialite}>confidentialité</a>,{' '}
+        <a href={ROUTES.mentionsLegales}>mentions légales</a>.
+      </p>
+    </aside>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/contact';
+</script>

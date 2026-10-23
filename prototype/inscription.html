@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="fr" data-accent="blue" data-density="standard" data-radius="charte" data-effects="standard" data-motion="full" data-auth-motif="relief" data-auth-fond="bleu" data-auth-ambiance="profondeur" data-auth-voile="assombri" data-auth-teinte="pale" data-auth-largeur="standard" data-auth-services="avant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1D4ED8">
+<title>Créer un compte · Vysora</title>
+<meta name="description" content="Créez votre compte Vysora gratuitement : publiez vos créations avec le chemin parcouru et apprenez de celles de la communauté.">
+<link rel="icon" href="assets/logos/vysora%20logo%20bleu.png">
+<link rel="stylesheet" href="assets/fonts/fonts.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="commun.css">
+<link rel="stylesheet" href="etats.css"><script src="etats.js"></script><link rel="stylesheet" href="auth.css">
+<script src="data.js" defer></script><script src="auth-data.js" defer></script><script src="commun.js" defer></script><script src="auth.js" defer></script><script src="inscription.js" defer></script>
+</head>
+<body class="auth" data-page="inscription" data-sans-garde>
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M15.1 14c.2-1 .7-1.7 1.4-2.5A4.7 4.7 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.4 2.5"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 22V4"/><path d="M5 15s1.2-1 4-1 5 2 8 2 3-1 3-1V4s-.5 1-3 1-5-2-8-2-4 1-4 1"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2.5 9.5 5L12 12.5 2.5 7.5z"/><path d="m2.5 12 9.5 5 9.5-5M2.5 16.5l9.5 5 9.5-5"/></symbol>
+  <symbol id="i-utile" viewBox="0 0 24 24"><path d="M7 10v11"/><path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9Z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6h.01"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1.5 14h5M9.5 8h5M17.5 16h5"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 12h8"/></symbol>
+</svg>
+<a class="skip-link" href="#contenu">Aller au formulaire</a>
+<div class="fond" data-fond aria-hidden="true"></div>
+
+<div class="auth-page">
+  <header class="auth-tete" data-header>
+    <a class="auth-marque" href="index.html" aria-label="Vysora, accueil"><img src="assets/logos/vysora%20white%20all.png" alt="" width="337" height="122"></a>
+    <div class="header-actions">
+      <a class="auth-retour" href="index.html" data-retour><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg><span>Retour à l’accueil</span></a>
+    </div>
+  </header>
+
+  <main id="contenu" class="auth-scene" tabindex="-1">
+    <div class="carte" data-carte>
+      <div class="carte-contenu" data-carte-contenu data-vues>
+
+        <section class="auth-vue" data-vue="compte" data-pied aria-labelledby="t-compte">
+          <p class="auth-repere" data-repere hidden></p>
+          <p class="invitation" data-invitation hidden></p>
+          <h1 id="t-compte" tabindex="-1">Créer un compte</h1>
+          <p class="auth-intro" data-intro-beta hidden>Pendant la bêta, l’inscription se fait sur invitation.</p>
+          <div class="champ auth-bloc" data-champ-code hidden>
+            <label for="in-code">Code d’invitation</label>
+            <div class="saisie"><input class="majuscules" id="in-code" name="invitation" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="11" placeholder="VYS-XXXX-XX" aria-describedby="in-code-erreur"></div>
+            <p class="message is-erreur" id="in-code-erreur" hidden></p>
+          </div>
+          <div class="entrees">
+            <div class="services">
+              <button class="service" type="button" data-service="google" aria-label="Continuer avec Google"><span class="service-logo" data-logo="google"></span>Google</button>
+              <button class="service" type="button" data-service="github" aria-label="Continuer avec GitHub"><span class="service-logo" data-logo="github"></span>GitHub</button>
+            </div>
+            <p class="ou"><span data-ou="avant">ou avec votre e-mail</span><span data-ou="apres">ou continuer avec</span></p>
+            <form id="form-compte" novalidate>
+              <div class="champ">
+                <label for="in-email">Adresse e-mail</label>
+                <div class="saisie"><input id="in-email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" required aria-describedby="in-email-erreur in-email-suggestion"></div>
+                <p class="message is-erreur" id="in-email-erreur" hidden></p>
+                <p class="message" id="in-email-suggestion" hidden></p>
+              </div>
+              <div class="alerte" role="alert" data-alerte hidden></div>
+              <button class="action action-principale" type="submit"><span class="action-libelle">Continuer</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </form>
+          </div>
+          <p class="consentement">En continuant, vous confirmez avoir au moins 15 ans et vous acceptez les <a href="cgu.html" data-document="cgu">conditions d’utilisation</a> et la <a href="charte-communautaire.html" data-document="charte">charte communautaire</a>. La <a href="confidentialite.html" data-document="confidentialite">politique de confidentialité</a> explique comment vos données sont traitées.</p>
+        </section>
+
+        <section class="auth-vue" data-vue="mot-de-passe" data-pied aria-labelledby="t-mdp" hidden>
+          <button class="retour" type="button" data-aller="compte"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Retour</button>
+          <h1 id="t-mdp" tabindex="-1">Choisissez un mot de passe</h1>
+          <p class="auth-intro">Pour <b data-email-rappel></b></p>
+          <form class="auth-bloc" id="form-mdp" novalidate>
+            <input class="sr-only" type="email" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" data-email-cache>
+            <div class="champ">
+              <label for="in-mdp">Mot de passe</label>
+              <div class="saisie a-oeil" data-mdp>
+                <input id="in-mdp" name="new-password" type="password" autocomplete="new-password" required aria-describedby="in-mdp-aide in-mdp-maj in-mdp-erreur">
+                <button class="saisie-oeil" type="button" aria-controls="in-mdp" aria-pressed="false" aria-label="Afficher le mot de passe" data-voir></button>
+              </div>
+              <div class="force-ligne">
+                <div class="force" data-force aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                <p class="message force-texte" id="in-mdp-aide" data-aide-mdp>12 caractères minimum</p>
+              </div>
+              <p class="message is-alerte" id="in-mdp-maj" hidden><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Majuscules verrouillées</p>
+              <p class="message is-erreur" id="in-mdp-erreur" hidden></p>
+              <p class="sr-only" aria-live="polite" data-annonce></p>
+            </div>
+            <div class="champ">
+              <label for="in-mdp-confirmation">Confirmation du mot de passe</label>
+              <div class="saisie a-oeil a-etat" data-mdp>
+                <input id="in-mdp-confirmation" name="confirmation" type="password" autocomplete="new-password" required aria-describedby="in-mdp-confirmation-maj in-mdp-confirmation-erreur">
+                <span class="saisie-etat" data-confirmation-etat aria-hidden="true"></span>
+                <button class="saisie-oeil" type="button" aria-controls="in-mdp-confirmation" aria-pressed="false" aria-label="Afficher la confirmation du mot de passe" data-voir></button>
+              </div>
+              <p class="message is-alerte" id="in-mdp-confirmation-maj" hidden><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Majuscules verrouillées</p>
+              <p class="message is-erreur" id="in-mdp-confirmation-erreur" hidden></p>
+              <p class="sr-only" aria-live="polite" data-confirmation-annonce></p>
+            </div>
+            <div class="alerte" role="alert" data-alerte hidden></div>
+            <button class="action action-principale" type="submit"><span class="action-libelle">Créer mon compte</span></button>
+          </form>
+        </section>
+
+        <section class="auth-vue" data-vue="pseudo" aria-labelledby="t-pseudo" hidden>
+          <p class="auth-repere is-ok" data-repere-cree><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Compte créé</span></p>
+          <h1 id="t-pseudo" tabindex="-1">Votre pseudo</h1>
+          <p class="auth-intro">Choisi au hasard : gardez-le ou modifiez-le.</p>
+          <form class="auth-bloc" id="form-pseudo" novalidate>
+            <div class="identite" data-identite hidden></div>
+            <div class="champ" data-champ-pseudo>
+              <label for="in-pseudo">Pseudo</label>
+              <div class="saisie a-etat a-de"><input id="in-pseudo" name="pseudo" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="30" required aria-describedby="in-pseudo-aide in-pseudo-erreur"><span class="saisie-etat" data-pseudo-etat aria-hidden="true"></span><button class="saisie-oeil saisie-de" type="button" aria-label="Proposer un autre pseudo" data-autre-pseudo><svg class="icon" aria-hidden="true"><use href="#i-shuffle"/></svg></button></div>
+              <p class="message indice" id="in-pseudo-aide" data-pseudo-aide hidden>3 à 30 caractères : lettres, chiffres et tirets.</p>
+              <p class="message is-erreur" id="in-pseudo-erreur" hidden></p>
+              <div class="propositions" data-propositions hidden></div>
+              <p class="sr-only" aria-live="polite" data-pseudo-annonce></p>
+            </div>
+            <div class="alerte" role="alert" data-alerte hidden></div>
+            <button class="action action-principale" type="submit"><span class="action-libelle">Continuer</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          </form>
+        </section>
+
+        <section class="auth-vue" data-vue="verification" aria-labelledby="t-verification" hidden>
+          <span class="picto" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="dessin" pathLength="1" d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm-1.5 2 8.5 6 8.5-6"/></svg></span>
+          <h1 id="t-verification" tabindex="-1">Confirmez votre adresse</h1>
+          <p class="auth-intro">Lien envoyé à <b data-email-envoye></b>.</p>
+          <div data-messagerie></div>
+          <form class="modifier" id="form-modifier" novalidate hidden>
+            <div class="champ">
+              <label for="in-email-modif">Nouvelle adresse e-mail</label>
+              <div class="saisie"><input id="in-email-modif" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" aria-describedby="in-email-modif-erreur in-email-modif-suggestion"></div>
+              <p class="message is-erreur" id="in-email-modif-erreur" hidden></p>
+              <p class="message" id="in-email-modif-suggestion" hidden></p>
+            </div>
+            <button class="action action-principale" type="submit"><span class="action-libelle">Envoyer le lien</span></button>
+            <button class="action action-secondaire" type="button" data-annuler-modif>Annuler</button>
+          </form>
+          <a class="action action-secondaire" href="index.html" data-plus-tard><span class="action-libelle">Confirmer plus tard</span></a>
+          <p class="liens"><button class="lien" type="button" data-renvoyer>Renvoyer le lien</button><button class="lien" type="button" data-modifier-email>Modifier l’adresse</button></p>
+        </section>
+
+        <section class="auth-vue" data-vue="lien" aria-labelledby="t-lien" hidden>
+          <svg class="moment" viewBox="0 0 108 76" aria-hidden="true" focusable="false"><path class="m-ligne" pathLength="1" d="M4 56H32"/><circle class="m-etape" cx="14" cy="56" r="4"/><circle class="m-halo" cx="45" cy="56" r="12.5"/><path class="m-fleche" pathLength="1" d="m54 47 38-38"/><path class="m-pointe" pathLength="1" d="M78 9h14v14"/><circle class="m-anneau" pathLength="1" cx="45" cy="56" r="12.5"/></svg>
+          <h1 id="t-lien" tabindex="-1">Adresse confirmée</h1>
+          <p class="auth-intro">Votre compte est actif.</p>
+          <a class="action action-principale" href="index.html" data-continuer><span class="action-libelle">Continuer</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        </section>
+
+        <section class="auth-vue" data-vue="pret" aria-labelledby="t-pret" hidden>
+          <svg class="moment" viewBox="0 0 108 76" aria-hidden="true" focusable="false"><path class="m-ligne" pathLength="1" d="M4 56H32"/><circle class="m-etape" cx="14" cy="56" r="4"/><circle class="m-halo" cx="45" cy="56" r="12.5"/><path class="m-fleche" pathLength="1" d="m54 47 38-38"/><path class="m-pointe" pathLength="1" d="M78 9h14v14"/><circle class="m-anneau" pathLength="1" cx="45" cy="56" r="12.5"/></svg>
+          <h1 id="t-pret" tabindex="-1" data-pret-titre>Bienvenue</h1>
+          <p class="auth-intro">Votre compte est prêt.</p>
+          <a class="action action-principale" href="index.html" data-continuer><span class="action-libelle">Continuer</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <p class="liens"><a class="lien" href="profil.html" data-profil-lien>Compléter mon profil</a></p>
+        </section>
+
+        <section class="auth-vue" data-vue="lien-expire" aria-labelledby="t-lien-expire" hidden>
+          <span class="picto is-attente" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="dessin" pathLength="1" d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 4v5l3 2"/></svg></span>
+          <h1 id="t-lien-expire" tabindex="-1">Lien expiré</h1>
+          <p class="auth-intro">Les liens de confirmation restent valables 24 heures.</p>
+          <button class="action action-principale" type="button" data-nouveau-lien><span class="action-libelle">Recevoir un nouveau lien</span></button>
+        </section>
+
+        <section class="auth-vue" data-vue="deja" aria-labelledby="t-deja" hidden>
+          <div class="qui" data-qui></div>
+          <h1 id="t-deja" tabindex="-1">Vous êtes déjà connecté</h1>
+          <a class="action action-principale" href="index.html" data-continuer><span class="action-libelle">Continuer</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <p class="liens"><button class="lien" type="button" data-autre-compte>Créer un autre compte</button></p>
+        </section>
+      </div>
+      <div class="carte-bas">
+        <p class="carte-pied" data-carte-pied>Déjà un compte ?<a href="connexion.html" data-auth-lien="connexion">Se connecter</a></p>
+        <ul class="carte-liens">
+          <li><button type="button" data-document="cgu">Conditions</button></li>
+          <li><button type="button" data-document="confidentialite">Confidentialité</button></li>
+          <li><button type="button" data-document="charte">Charte</button></li>
+          <li><button type="button" data-aide>Aide</button></li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

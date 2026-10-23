@@ -1,0 +1,26 @@
+{
+  "name": "@vysora/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Site de Vysora (Astro, rendu serveur) : reproduction fidèle du prototype, alimentée par l'API.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "start": "node dist/server/entry.mjs",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.9",
+    "@vysora/shared": "workspace:*",
+    "astro": "^7.4.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@types/node": "^24.0.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

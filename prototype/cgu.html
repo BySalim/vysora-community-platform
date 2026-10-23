@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="fr" data-accent="blue" data-density="standard" data-radius="charte" data-effects="standard" data-motion="full" data-lecture="standard" data-texte="standard" data-sommaire="colonne" data-eyebrow="icon">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Conditions générales d’utilisation de Vysora : compte, règles d’usage, contenus et licences, modération, contestation, responsabilité et droit applicable.">
+  <title>Conditions générales d’utilisation · Vysora</title>
+  <link rel="icon" href="assets/logos/vysora%20logo%20bleu.png">
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="commun.css">
+  <link rel="stylesheet" href="etats.css">
+  <script src="etats.js"></script>
+  <link rel="stylesheet" href="documents-legaux.css">
+  <script>
+    (function () {
+      var root = document.documentElement;
+      try {
+        var saved = JSON.parse(localStorage.getItem('vysora-documents-legaux-reglages-v1') || '{}');
+        for (var key in saved) root.setAttribute('data-' + key, saved[key]);
+      } catch (e) {}
+      var motion = root.getAttribute('data-motion');
+      var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      root.setAttribute('data-motion-effective', motion === 'none' ? 'none' : (reduce || motion === 'reduced') ? 'reduced' : 'full');
+      root.classList.add('js');
+    })();
+  </script>
+  <script src="data.js" defer></script>
+  <script src="auth-data.js" defer></script>
+  <script src="commun.js" defer></script>
+  <script src="documents-legaux.js" defer></script>
+</head>
+<body class="lg" data-document="cgu">
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-arrow-up-right" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3L3.5 8.2"/><path d="M3.5 3.5v4.7h4.7"/><path d="M12 8v4.2l2.8 1.8"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-printer" viewBox="0 0 24 24"><path d="M7 9V3.5h10V9"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6.5H7z"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.6C10.2 5.1 7.6 4.5 3.5 4.5v14c4.1 0 6.7.6 8.5 2 1.8-1.4 4.4-2 8.5-2v-14c-4.1 0-6.7.6-8.5 2.1z"/><path d="M12 6.6v13.9"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M5 21h14M6 7h12"/><path d="m6 7-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  </svg>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+  <header class="site-header" data-header>
+    <div class="scroll-progress" aria-hidden="true"><span data-scroll-progress></span></div>
+    <div class="container header-bar">
+      <a class="brand" href="index.html" aria-label="Vysora, accueil">
+        <img src="assets/logos/vysora%20Bleu-Black.png" alt="" width="337" height="122">
+      </a>
+      <nav class="main-nav" aria-label="Navigation principale">
+        <ul>
+          <li><a href="explorer.html">Explorer</a></li>
+          <li><a href="forum.html">Forum</a></li>
+          <li><a href="apprendre.html">Apprendre</a></li>
+          <li><a href="classements.html">Classements</a></li>
+          <li><a href="defis.html">Défis</a></li>
+        </ul>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" type="button" aria-label="Rechercher sur Vysora" aria-haspopup="dialog" aria-expanded="false" aria-keyshortcuts="Control+K Meta+K" data-recherche-ouvrir><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
+        <a class="btn btn-quiet btn-sm header-publish" href="nouvelle-creation.html"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-plus"/></svg><span>Publier</span></a>
+        <span class="header-sep" aria-hidden="true"></span>
+        <a class="btn btn-quiet btn-sm header-login" href="connexion.html">Se connecter</a>
+        <a class="btn btn-primary btn-sm" href="inscription.html">S’inscrire</a>
+        <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-panel" aria-label="Ouvrir le menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      </div>
+    </div>
+    <div class="mobile-panel" id="mobile-panel" hidden>
+      <nav class="container" aria-label="Navigation mobile">
+        <ul class="mobile-links">
+          <li><a href="explorer.html">Explorer</a></li>
+          <li><a href="forum.html">Forum</a></li>
+          <li><a href="apprendre.html">Apprendre</a></li>
+          <li><a href="classements.html">Classements</a></li>
+          <li><a href="defis.html">Défis</a></li>
+          <li><a href="nouvelle-creation.html">Publier une création</a></li>
+        </ul>
+        <div class="mobile-actions">
+          <a class="btn btn-primary" href="inscription.html">S’inscrire</a>
+          <a class="btn btn-secondary" href="connexion.html">Se connecter</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenu" tabindex="-1">
+    <header class="lg-tete">
+      <div class="container">
+        <p class="kicker lg-entree" style="--i:0"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg>Informations légales</p>
+        <h1 class="lg-titre lg-entree" id="lg-titre" style="--i:1">Conditions générales d’utilisation</h1>
+        <ul class="lg-meta lg-entree" style="--i:2" data-lg-meta></ul>
+        <div class="lg-changement lg-entree" id="changements" style="--i:3" data-lg-changement="usage"></div>
+        <div class="lg-actions lg-entree" style="--i:4">
+          <button class="btn btn-secondary btn-sm" type="button" data-lg-imprimer><svg class="icon icon-sm" aria-hidden="true"><use href="#i-printer"/></svg>Imprimer</button>
+          <button class="btn btn-quiet btn-sm" type="button" data-lg-lien><svg class="icon icon-sm" aria-hidden="true"><use href="#i-link"/></svg>Copier le lien</button>
+        </div>
+      </div>
+      <div class="lg-documents-bande">
+        <nav class="container lg-documents" aria-label="Documents légaux" data-lg-documents></nav>
+      </div>
+    </header>
+
+    <div class="container lg-corps">
+      <nav class="lg-rail" aria-labelledby="lg-sommaire-titre" data-lg-sommaire></nav>
+
+      <article class="lg-texte" aria-labelledby="lg-titre">
+        <section class="lg-essentiel" aria-labelledby="lg-essentiel-titre" data-lg-essentiel data-renvois="compte contenus contenus contenus usage"></section>
+
+        <section class="lg-article" id="objet">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg>Article 1</span>Objet et acceptation</h2>
+          <p>Vysora est une plateforme communautaire et gratuite de partage et d’apprentissage sur l’IA générative, éditée par NeoCoders (<a href="mentions-legales.html">mentions légales</a>). Les membres y publient ce qu’ils ont créé avec l’IA, avec le chemin parcouru, et apprennent les uns des autres.</p>
+          <p>Les présentes conditions générales d’utilisation fixent les règles applicables à toute personne qui utilise Vysora. La <a href="charte-communautaire.html">charte communautaire</a> en fait partie intégrante. La <a href="confidentialite.html">politique de confidentialité</a> explique comment vos données sont traitées.</p>
+          <p>En créant un compte, vous acceptez les présentes conditions et la charte communautaire, dans leur version en vigueur. Chaque acceptation est enregistrée avec sa date. Si vous consultez Vysora sans compte, les règles d’usage de l’article 4 s’appliquent également.</p>
+        </section>
+
+        <section class="lg-article" id="definitions">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>Article 2</span>Définitions</h2>
+          <dl class="lg-definitions">
+            <div><dt>Nous</dt><dd>NeoCoders, qui édite et administre Vysora.</dd></div>
+            <div><dt>Visiteur</dt><dd>Toute personne qui consulte Vysora sans être connectée à un compte.</dd></div>
+            <div><dt>Membre</dt><dd>Toute personne titulaire d’un compte Vysora.</dd></div>
+            <div><dt>Contenu</dt><dd>Tout ce qu’un membre publie : création, sujet, réponse, commentaire, reproduction, cas Bon réflexe et informations de profil.</dd></div>
+            <div><dt>Création</dt><dd>Ce qu’un membre a produit avec l’IA et qu’il publie avec le chemin parcouru : prompts, outils, modèles, résultats et moments clés.</dd></div>
+            <div><dt>Modération</dt><dd>L’examen des contenus et des comptes signalés, et les mesures prises lorsque les présentes conditions ou la charte ne sont pas respectées.</dd></div>
+          </dl>
+        </section>
+
+        <section class="lg-article" id="compte">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>Article 3</span>Accès au service et compte</h2>
+          <p>Vysora est gratuit. Sans compte, vous pouvez consulter et rechercher les contenus publiés et les profils publics. Publier, voter, commenter, déclarer une reproduction ou signaler un contenu depuis la plateforme demandent un compte.</p>
+          <ul>
+            <li><strong>Âge.</strong> Vous devez avoir au moins 15 ans pour créer un compte. Entre 15 et 18 ans, vous devez avoir l’accord d’un parent ou de votre représentant légal.</li>
+            <li><strong>Un compte par personne.</strong> Les informations que vous fournissez sont exactes. Votre adresse e-mail doit être confirmée : d’ici là, votre compte reste en lecture seule.</li>
+            <li><strong>Identifiants.</strong> Vous gardez votre mot de passe confidentiel et vous êtes responsable de l’usage de votre compte. En cas d’utilisation que vous n’avez pas autorisée, prévenez-nous sans délai depuis le <a href="contact.html?motif=question">formulaire de contact</a>.</li>
+            <li><strong>Connexion avec GitHub ou Google.</strong> Si vous choisissez ce mode de connexion, les conditions de ces services s’appliquent aussi à leur utilisation.</li>
+          </ul>
+        </section>
+
+        <section class="lg-article" id="usage">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-scale"/></svg>Article 4</span>Règles d’usage</h2>
+          <p>Vous utilisez Vysora dans le respect de la loi, des présentes conditions et de la <a href="charte-communautaire.html">charte communautaire</a>, qui détaille les comportements attendus et les contenus interdits. En particulier, vous vous interdisez de&nbsp;:</p>
+          <ul>
+            <li>publier un contenu illicite ou qui porte atteinte aux droits d’autrui ;</li>
+            <li>créer plusieurs comptes pour contourner une limite ou une sanction, ou manipuler les votes et les reproductions ;</li>
+            <li>vous faire passer pour une autre personne ;</li>
+            <li>collecter les données personnelles d’autres membres ;</li>
+            <li>perturber le fonctionnement du service ou tenter d’accéder à des données ou à des comptes qui ne sont pas les vôtres.</li>
+          </ul>
+          <p>Le nombre de publications par 24 heures dépend de votre niveau et augmente avec votre réputation. Les limites en vigueur vous sont indiquées au moment de publier.</p>
+        </section>
+
+        <section class="lg-article" id="contenus">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Article 5</span>Vos contenus</h2>
+          <h3>Publication</h3>
+          <p>Chaque création commence en brouillon privé : rien n’est publié sans votre accord. Au moment de publier, vous confirmez que votre contenu ne contient aucune donnée personnelle d’un tiers ni aucun secret, comme une clé d’API ou un mot de passe. Si Vysora repère un élément de ce type, il vous le signale avant la publication. Vous pouvez modifier, retirer ou supprimer vos contenus à tout moment.</p>
+          <h3>Vos droits et vos garanties</h3>
+          <p>Vous restez titulaire des droits sur vos contenus. Vous garantissez disposer des droits nécessaires sur ce que vous publiez, y compris les textes, images et codes obtenus avec des outils d’IA, et respecter les conditions d’utilisation de ces outils. Vous ne publiez le contenu d’une autre personne qu’avec son accord.</p>
+          <h3 id="licences">Licences</h3>
+          <p>Chaque création est publiée sous la licence que vous choisissez avant la publication. La licence proposée par défaut est CC BY 4.0 : chacun peut la réutiliser en vous créditant. Vous pouvez aussi choisir CC BY-SA 4.0, CC BY-NC 4.0, CC0 1.0 ou « Tous droits réservés » ; dans ce dernier cas, personne ne peut en proposer de variante sur Vysora. La licence s’affiche sur la fiche de la création, avec un lien vers son texte.</p>
+          <p>Vos sujets, réponses, commentaires, reproductions et cas Bon réflexe sont publiés sous licence CC BY 4.0, pour que la communauté puisse s’en servir et les citer.</p>
+          <h3>Droits accordés à Vysora</h3>
+          <p>Pour faire fonctionner le service, vous accordez à NeoCoders, gratuitement et pour le monde entier, le droit non exclusif d’héberger, de reproduire, d’afficher et d’adapter techniquement vos contenus (formats, miniatures, aperçus de partage), uniquement pour les présenter sur Vysora et dans les aperçus des liens partagés. Ce droit prend fin lorsque vous supprimez le contenu, sous réserve des sauvegardes, effacées en 30 jours, et des contributions conservées sous un pseudo anonyme après la suppression d’un compte (article 8).</p>
+        </section>
+
+        <section class="lg-article" id="moderation">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Article 6</span>Signalement et modération</h2>
+          <h3>Signaler un contenu</h3>
+          <p>Les membres signalent un contenu avec le bouton « Signaler », en choisissant un motif. Toute personne, même sans compte, peut nous signaler un contenu qu’elle estime illicite depuis le <a href="contact.html?motif=signalement">formulaire de contact</a>, en indiquant son adresse, les raisons pour lesquelles il est illicite, son nom et son adresse e-mail, et en déclarant agir de bonne foi. Nous accusons réception de chaque signalement et informons son auteur de la suite donnée.</p>
+          <h3>Examen</h3>
+          <p>Les signalements sont examinés par l’équipe de modération, composée de membres nommés par NeoCoders, en visant un délai de 72 heures. Un contenu manifestement illicite est retiré sans attendre. Un modérateur ne se prononce jamais sur ses propres contenus ni sur son propre compte.</p>
+          <p>Deux outils automatisés assistent la modération. Avant la publication, Vysora repère les clés d’API, jetons d’accès, adresses e-mail et numéros de téléphone, et vous alerte sans bloquer la publication. Un contenu signalé par trois membres de niveau Apprenti ou plus est masqué à titre provisoire, puis examiné par un modérateur. Aucune sanction n’est décidée sans examen humain.</p>
+          <h3>Mesures</h3>
+          <p>Selon la gravité et la répétition du manquement, la modération peut masquer ou supprimer un contenu, adresser un avertissement, suspendre un compte pour une durée de 1 à 90 jours ou, pour les manquements les plus graves, fermer définitivement un compte. Ces mesures sont appliquées de façon proportionnée, en tenant compte des droits de chacun, dont la liberté d’expression.</p>
+          <p>Toute mesure qui vous concerne vous est notifiée sur Vysora et par e-mail. La notification indique la mesure et sa durée, les faits retenus, la règle concernée, le recours éventuel à un outil automatisé et la manière de contester la décision. Les signalements manifestement infondés et répétés peuvent eux-mêmes donner lieu à une mesure.</p>
+        </section>
+
+        <section class="lg-article" id="contestation">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-message"/></svg>Article 7</span>Contester une décision</h2>
+          <p>Vous pouvez contester une décision de modération qui vous concerne, ou la suite donnée à votre signalement, dans les 6 mois qui suivent sa notification, depuis le <a href="contact.html?motif=contestation">formulaire de contact</a>. Votre demande est examinée par un modérateur qui n’a pas pris la décision initiale. Nous vous répondons dans un délai de 15 jours. Si la contestation est fondée, la décision est annulée et, le cas échéant, le contenu est rétabli.</p>
+          <p>Cette démarche ne vous prive pas de la possibilité de saisir les juridictions compétentes (article 12).</p>
+        </section>
+
+        <section class="lg-article" id="fermeture">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>Article 8</span>Suspension et fermeture du compte</h2>
+          <h3>À votre initiative</h3>
+          <p>Vous pouvez supprimer votre compte à tout moment depuis vos paramètres, après avoir téléchargé vos données si vous le souhaitez. La suppression devient définitive 30 jours après votre demande ; une reconnexion pendant ce délai l’annule. Vos données personnelles sont alors effacées et vos contributions restent visibles sous un pseudo anonyme, sauf vos créations si vous avez demandé leur suppression.</p>
+          <h3>À notre initiative</h3>
+          <p>Un compte suspendu garde l’accès à la lecture et à ses paramètres, mais ne peut ni publier ni interagir jusqu’à la fin de la suspension. La fermeture définitive est réservée aux manquements graves ou répétés et fait l’objet d’une notification motivée (article 6).</p>
+          <p>Un compte sans aucune connexion pendant 2 ans est supprimé, dans les conditions ci-dessus. Nous vous prévenons par e-mail 30 jours avant : il suffit de vous connecter pour le conserver.</p>
+          <p>Si Vysora devait cesser son activité, nous vous en informerions au moins 30 jours à l’avance pour vous permettre de télécharger vos données.</p>
+        </section>
+
+        <section class="lg-article" id="responsabilite">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>Article 9</span>Disponibilité et responsabilité</h2>
+          <p>Nous faisons le nécessaire pour que Vysora reste accessible et sûr. Le service peut toutefois être interrompu pour une maintenance, annoncée lorsque c’est possible, ou en cas d’incident.</p>
+          <p>Chaque membre est responsable des contenus qu’il publie. En tant qu’hébergeur, NeoCoders n’est pas responsable des contenus publiés par les membres, sauf s’il n’a pas agi promptement pour retirer un contenu manifestement illicite qui lui a été signalé.</p>
+          <p>Les créations et les méthodes partagées reflètent l’expérience de leur auteur, avec un outil, un modèle et à une date donnés. Vérifiez-les avant de les appliquer, en particulier le code et les instructions destinées à un agent ayant accès à vos fichiers ou à vos services. Les liens vers d’autres sites relèvent de la responsabilité de ces sites.</p>
+          <p>Rien dans les présentes conditions ne limite les droits que la loi vous garantit et auxquels il ne peut être dérogé.</p>
+        </section>
+
+        <section class="lg-article" id="donnees">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Article 10</span>Données personnelles</h2>
+          <p>Le traitement de vos données personnelles est décrit dans la <a href="confidentialite.html">politique de confidentialité</a> : données traitées, finalités, durées de conservation, destinataires et droits dont vous disposez. L’usage des cookies est décrit dans la <a href="cookies.html">politique relative aux cookies</a>.</p>
+        </section>
+
+        <section class="lg-article" id="evolution">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>Article 11</span>Modification des conditions</h2>
+          <p>Nous pouvons faire évoluer les présentes conditions et la charte communautaire. Toute modification importante vous est annoncée par e-mail et sur Vysora au moins 30 jours avant son entrée en vigueur, avec un résumé des changements. Seules les modifications imposées par la loi ou par la sécurité du service peuvent s’appliquer plus tôt.</p>
+          <p>À votre première connexion après l’entrée en vigueur, il vous est demandé d’accepter la nouvelle version ; d’ici là, votre compte reste en lecture seule. Si vous la refusez, vous pouvez télécharger vos données et supprimer votre compte. Les versions antérieures sont conservées et vous sont communiquées sur demande.</p>
+        </section>
+
+        <section class="lg-article" id="droit">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-globe"/></svg>Article 12</span>Droit applicable et litiges</h2>
+          <p>Les présentes conditions sont régies par le droit sénégalais. Si vous résidez dans un autre pays, vous conservez la protection que vous accordent les dispositions impératives de la loi de votre pays de résidence.</p>
+          <p>En cas de difficulté, écrivez-nous d’abord depuis le <a href="contact.html">formulaire de contact</a> : nous recherchons une solution amiable. À défaut, le litige est porté devant les juridictions de Dakar, sauf règle impérative attribuant compétence à une autre juridiction.</p>
+        </section>
+
+        <section class="lg-article" id="contact">
+          <h2><span class="lg-num"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg>Article 13</span>Nous contacter</h2>
+          <p>Le <a href="contact.html">formulaire de contact</a> est le point de contact unique de Vysora pour toute question, demande relative à vos données, signalement ou contestation. Nous vous répondons en français, par e-mail.</p>
+        </section>
+
+        <section class="lg-acceptation" id="acceptation" aria-labelledby="acceptation-titre" data-lg-acceptation></section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <img src="assets/logos/vysora%20bleu-white.png" alt="Vysora" width="337" height="122" loading="lazy">
+        <p>Voir comment l’IA crée.<br>Apprendre à créer avec elle.</p>
+      </div>
+      <nav class="footer-nav" aria-label="Découvrir"><p class="footer-heading">Découvrir</p><ul><li><a href="explorer.html">Explorer</a></li><li><a href="classements.html">Classements</a></li><li><a href="defis.html">Défis</a></li></ul></nav>
+      <nav class="footer-nav" aria-label="Apprendre"><p class="footer-heading">Apprendre</p><ul><li><a href="apprendre.html?rubrique=bon-reflexe">Bon réflexe</a></li><li><a href="forum.html?type=clinique">Clinique du prompt</a></li><li><a href="forum.html">Forum</a></li></ul></nav>
+      <nav class="footer-nav" aria-label="Participer"><p class="footer-heading">Participer</p><ul><li><a href="nouvelle-creation.html">Publier une création</a></li><li><a href="inscription.html">Créer un compte</a></li><li><a href="connexion.html">Se connecter</a></li></ul></nav>
+      <nav class="footer-nav" aria-label="Informations légales"><p class="footer-heading">Informations</p><ul><li><a href="cgu.html" aria-current="page">Conditions générales d’utilisation</a></li><li><a href="confidentialite.html">Politique de confidentialité</a></li><li><a href="cookies.html">Cookies</a></li><li><a href="charte-communautaire.html">Charte communautaire</a></li><li><a href="mentions-legales.html">Mentions légales</a></li><li><a href="contact.html">Contact</a></li></ul></nav>
+    </div>
+    <div class="container"><div class="footer-bottom"><p>© 2026 Vysora</p><a class="footer-top" href="#contenu">Haut de page<svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow-up-right"/></svg></a></div></div>
+  </footer>
+
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@vysora/api", "run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@vysora/web", "run", "dev"],
+      "port": 4321
+    },
+    {
+      "name": "prototype",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/serveur-prototype.mjs", "--port", "5173"],
+      "port": 5173
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "updated_on": "2026-10-13",
+  "license_url": "https://unsplash.com/fr/licence",
+  "images": [
+    {
+      "files": [
+        "bissap-1280.webp",
+        "bissap-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/tasse-en-ceramique-blanche-avec-liquide-rouge-d2l4XbFILG8",
+      "author": "Gabi Miranda",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "vagues-3d-1280.webp",
+        "vagues-3d-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/vagues-superposees-bleues-abstraites-egWTpKFu8rU",
+      "author": "SIMON LEE",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "scene-festival-1280.webp",
+        "scene-festival-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/projecteurs-de-boite-de-nuit-sarcelle-et-violet-QOajY0MNp8Y",
+      "author": "Scarlett Alt",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "goree-1280.webp",
+        "goree-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/batiment-rose-avec-des-palmiers-et-bateau-sur-leau-JwWRuR0t_4s",
+      "author": "Sweder Breet",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "spirale-1280.webp",
+        "spirale-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/structure-spirale-avec-bords-sarcelle-irn9H9-Kfq4",
+      "author": "Dynamic Wang",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "formes-pastel-1280.webp",
+        "formes-pastel-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/blue-and-white-round-illustration-LpbyDENbQQg",
+      "author": "Sebastian Svenson",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "pour-vous-2000.webp",
+        "pour-vous-1200.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/woman-and-man-sitting-in-front-of-monitor-IgUR1iX0mqM",
+      "author": "X (@disruptxn)",
+      "license": "Unsplash",
+      "note": "Traitement bichrome bleu appliqué pour le prototype"
+    },
+    {
+      "files": [
+        "outils-vagues-2000.webp",
+        "outils-vagues-1200.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/architecture-abstraite-ondulee-bleu-et-blanc-dOG0z4-gqp0",
+      "author": "Debora Pilati",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "affiche-chefchaouen-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/une-ruelle-bleue-avec-des-oranges-suspendues-pBj2S4CpKRY",
+      "author": "Marcel L.",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "affiche-saint-louis-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/des-bateaux-de-peche-colores-amarres-dans-un-port-avec-des-palmiers-3CHwHTZGJiU",
+      "author": "Mohamed Habib Mbodj",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "cite-imaginaire-1280.webp",
+        "cite-imaginaire-720.webp",
+        "portrait-indigo-1280.webp",
+        "portrait-indigo-720.webp",
+        "silence-alpes-1280.webp",
+        "silence-alpes-720.webp"
+      ],
+      "source": "generation.json",
+      "author": "Images générées pour le projet",
+      "license": "Projet Vysora"
+    },
+    {
+      "files": [
+        "ziguinchor-photo-1280.webp",
+        "ziguinchor-photo-720.webp"
+      ],
+      "source": "https://unsplash.com/fr/photos/des-gens-dans-des-bateaux-en-bois-sur-leau-fpnHvvC9ceg",
+      "author": "Omar Hakeem",
+      "license": "Unsplash"
+    },
+    {
+      "files": [
+        "affiche-ziguinchor-1280.webp",
+        "affiche-ziguinchor-720.webp",
+        "affiche-ziguinchor-essai-1280.webp",
+        "affiche-ziguinchor-essai-720.webp",
+        "bolongs-reservation-1280.webp",
+        "bolongs-reservation-720.webp"
+      ],
+      "source": "Dessins SVG et maquette HTML réalisés pour la page Publier (polices Montserrat et Montserrat Alternates du prototype)",
+      "author": "Projet Vysora",
+      "license": "Projet Vysora"
+    }
+  ]
+}

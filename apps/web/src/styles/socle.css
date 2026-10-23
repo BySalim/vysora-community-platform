@@ -1,0 +1,10 @@
+/* ==========================================================================
+   Ajouts du socle, absents du prototype : rien ici ne change le rendu d'une page portée.
+   Les styles repris du prototype restent dans leurs fichiers d'origine, inchangés.
+   ========================================================================== */
+
+/* Champ piège des formulaires publics : invisible et hors du parcours au clavier. */
+.champ-piege { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Bouton pendant un envoi au serveur. */
+.btn[aria-busy="true"] { cursor: progress; opacity: 0.72; }

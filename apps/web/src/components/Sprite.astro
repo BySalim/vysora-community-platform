@@ -1,0 +1,46 @@
+---
+/* Symboles SVG de la page, comme le sprite en tête de chaque page du prototype.
+   La page liste les icônes qu'elle utilise ; celles de l'en-tête, du pied de page et du compte s'y ajoutent.
+   `remplacements` reprend une icône dessinée autrement sur une page du prototype. */
+import { ICONES, type Icone } from '../lib/icones';
+
+interface Props {
+  noms?: string[];
+  remplacements?: Record<string, Icone>;
+}
+
+const { noms = [], remplacements = {} } = Astro.props;
+
+const ICONES_COMMUNES = [
+  'search',
+  'plus',
+  'menu',
+  'close',
+  'arrow-up-right',
+  'check',
+  'alert',
+  'bell',
+  'user',
+  'folder',
+  'settings',
+  'shield',
+  'panel',
+  'logout',
+  'mail',
+  'doc',
+  'lock',
+];
+
+const liste = [...new Set([...ICONES_COMMUNES, ...noms])];
+const symboles = liste.map((nom) => {
+  const icone = remplacements[nom] ?? ICONES[nom];
+  if (!icone) throw new Error(`Icône inconnue : « ${nom} ». Ajoutez-la dans src/lib/icones.ts.`);
+  return { nom, ...icone };
+});
+---
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+  {symboles.map((s) => (
+    <symbol id={`i-${s.nom}`} viewBox={s.viewBox} set:html={s.corps} />
+  ))}
+</svg>

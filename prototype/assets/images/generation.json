@@ -1,0 +1,18 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "generated_on": "2026-10-11",
+  "assets": [
+    {
+      "file": "cite-imaginaire.png",
+      "prompt": "Use case: stylized-concept. Create a high quality wide landscape artwork for a creative AI community portfolio called Vysora. A breathtaking fantastical Mediterranean city built around monumental slender towers and arched sandstone architecture on a rocky island, cobalt blue ocean, tiny cypress trees, peach apricot sky at sunset, elegant dreamy architectural illustration, richly detailed, painterly three-dimensional texture, warm terracotta and golden sun contrasting with rich blue water. Sophisticated editorial concept art, cinematic composition, main towers centered, full bleed 3:2 landscape, no text, no logos, no frame, no interface. This image will be featured as a creation titled 'Une cité entre ciel et mer'."
+    },
+    {
+      "file": "portrait-indigo.png",
+      "prompt": "Use case: stylized-concept. Create a refined painterly editorial portrait illustration of a fictional young adult Black woman with a richly patterned orange and cobalt blue headwrap and statement small gold earrings. Thoughtful direct gaze, elegant natural face with realistic proportions and soft stylized brushwork, shoulders visible, modern African textile artistry, deep teal plain background with a few subtle botanical shapes, luxurious warm lighting, saffron orange and dark peacock blue palette, tactile gouache and oil digital painting, sophisticated art direction. Close portrait composition with head and shoulders contained, square canvas, no text, no signature, no frame, no logo. A high quality creative portfolio piece."
+    },
+    {
+      "file": "silence-alpes.png",
+      "prompt": "Use case: stylized-concept. A stunning tranquil alpine emerald lake between lush dark evergreen forests and soaring rugged pale limestone mountains, a tiny rust red wooden cabin beside the water, small canoe near foreground, mist threading through distant mountain peaks, light sky at dawn. Sophisticated cinematic landscape art, painterly yet detailed, rich natural emerald greens and cool pale blues, beautiful reflected light and depth, refined travel editorial illustration, wide 3:2 landscape full bleed. No text, no watermark, no border, no interface. For a portfolio artwork named 'Le silence des Alpes'."
+    }
+  ]
+}
