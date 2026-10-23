@@ -1,0 +1,95 @@
+---
+/* Politique relative aux cookies, portée de prototype/cookies.html : le texte du document ; l'en-tête, le sommaire,
+   « L'essentiel » et l'acceptation sont rendus par PageLegale (versions lues dans l'API). */
+import PageLegale from '../components/PageLegale.astro';
+import { ROUTES } from '../lib/navigation';
+---
+
+<PageLegale
+  cle="cookies"
+  description="Cookies déposés par Vysora, mesure d’audience sans cookie et refus de la mesure d’audience."
+  renvois={['liste', 'audience', 'liste']}
+>
+  <section class="lg-article" id="principe">
+    <h2>1. Ce que nous déposons sur votre appareil</h2>
+    <p>
+      Un cookie est un petit fichier enregistré par votre navigateur lorsque vous consultez un site.
+      Vysora n’en dépose que lorsqu’ils sont strictement nécessaires au service que vous demandez :
+      rester connecté, sécuriser les formulaires, retenir votre choix sur la mesure d’audience. Ces
+      cookies ne demandent pas votre accord, et c’est pourquoi aucun bandeau ne s’affiche.
+    </p>
+  </section>
+
+  <section class="lg-article" id="liste">
+    <h2>2. Cookies utilisés</h2>
+    <div class="lg-defile" role="region" aria-labelledby="cookies-liste" tabindex="0">
+      <table class="lg-tableau lg-tableau-compact lg-tableau-empile">
+        <caption id="cookies-liste">Cookies déposés par Vysora</caption>
+        <thead>
+          <tr>
+            <th scope="col">Cookie</th>
+            <th scope="col">Rôle</th>
+            <th scope="col">Durée</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Session</th>
+            <td>Garder votre connexion active pendant votre visite</td>
+            <td>Jusqu’à la déconnexion ou la fin de la session</td>
+          </tr>
+          <tr>
+            <th scope="row">Sécurité</th>
+            <td>Protéger les formulaires contre les envois frauduleux</td>
+            <td>Fin de la session</td>
+          </tr>
+          <tr>
+            <th scope="row">Choix sur la mesure d’audience</th>
+            <td>Retenir votre refus d’être compté dans les statistiques, si vous l’exprimez</td>
+            <td>13 mois</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Vysora ne dépose aucun cookie publicitaire et n’intègre ni bouton de réseau social, ni outil
+      de mesure d’un tiers. Si vous vous connectez avec GitHub ou Google, ces services déposent
+      leurs propres cookies sur leur site, selon leurs conditions.
+    </p>
+  </section>
+
+  <section class="lg-article" id="audience">
+    <h2>3. Mesure d’audience</h2>
+    <p>
+      Pour savoir quelles pages sont consultées et améliorer Vysora, nous comptons les visites sans
+      cookie, à partir des données de navigation transmises par votre navigateur : page consultée,
+      page de provenance, type d’appareil. Ces données sont rendues anonymes et ne servent qu’à
+      produire des statistiques pour NeoCoders ; elles ne sont ni croisées avec votre compte ni
+      transmises à des tiers. Les statistiques sont conservées 25 mois.
+    </p>
+    <p>
+      Cette mesure repose sur notre intérêt légitime à améliorer le service. Vous pouvez vous y
+      opposer à tout moment, sans conséquence sur votre utilisation de Vysora.
+    </p>
+    <div class="lg-choix" data-lg-audience></div>
+  </section>
+
+  <section class="lg-article" id="navigateur">
+    <h2>4. Gérer les cookies dans votre navigateur</h2>
+    <p>
+      Les réglages de votre navigateur vous permettent de consulter, de supprimer ou de bloquer les
+      cookies. Si vous bloquez le cookie de session, vous ne pourrez plus vous connecter à votre
+      compte ; la consultation des contenus publiés reste possible.
+    </p>
+  </section>
+
+  <section class="lg-article" id="evolution">
+    <h2>5. Évolution de cette page</h2>
+    <p>
+      Si Vysora devait un jour utiliser un cookie qui n’est pas strictement nécessaire, nous vous
+      demanderions votre accord avant de le déposer, avec la possibilité de refuser aussi simplement
+      que d’accepter, et cette page serait mise à jour. Le traitement de vos données est décrit dans
+      la <a href={ROUTES.confidentialite}>politique de confidentialité</a>.
+    </p>
+  </section>
+</PageLegale>

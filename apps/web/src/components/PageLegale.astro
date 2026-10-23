@@ -1,0 +1,337 @@
+---
+/* Gabarit des pages légales (prototype : cgu.html et suivantes, documents-legaux.js et .css).
+   La page fournit le texte (sections .lg-article) ; ce composant rend l'en-tête (version, changements,
+   onglets des documents), le sommaire, « L'essentiel » et, pour les conditions et la charte,
+   l'acceptation selon l'état du compte. Versions, dates et documents à accepter : GET /api/v1/documents-legaux. */
+import type { DocumentLegalApi } from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { appelerApi } from '../lib/api';
+import { ROUTES } from '../lib/navigation';
+import {
+  DES,
+  DOCUMENTS_ACCEPTES,
+  LIRE,
+  ORDRE_PAGES_LEGALES,
+  PAGES_LEGALES,
+  articlesDuTexte,
+  dateHtml,
+  etatDocuments,
+  libelleSection,
+  preparerTexte,
+  renvoi,
+  typographie,
+  typographieHtml,
+  type ArticleLegal,
+  type CleDocumentLegal,
+} from '../lib/pages-legales';
+import { t } from '../lib/texte';
+import '../styles/documents-legaux.css';
+
+interface Props {
+  cle: CleDocumentLegal;
+  description: string;
+  /** Icônes des intertitres propres à la page. */
+  icones?: string[];
+  /** Section vers laquelle mène « Ce qui change dans cette version » (conditions, charte). */
+  changementVers?: string;
+  /** Section citée par chaque point de « L'essentiel », dans l'ordre des points. */
+  renvois?: string[];
+}
+
+const { cle, description, icones = [], changementVers, renvois } = Astro.props;
+const { etat, conditionsDepuis } = Astro.locals;
+const page = PAGES_LEGALES[cle];
+const membre = etat.session === 'membre';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+let versions: DocumentLegalApi[] = [];
+try {
+  // Le cookie du visiteur accompagne la requête : l'API dit quelles versions il reste à accepter.
+  versions = await appelerApi<DocumentLegalApi[]>('/api/v1/documents-legaux', {
+    requete: Astro.request,
+    adresseClient,
+  });
+} catch {
+  // Sans l'API, le texte s'affiche sans les dates des versions.
+}
+const documents = etatDocuments(versions);
+const doc = documents[cle];
+
+const brut = await Astro.slots.render('default');
+const articles = articlesDuTexte(brut);
+const texte = preparerTexte(brut, articles);
+const parId = new Map(articles.map((a) => [a.id, a]));
+const icone = (nom: string, classe = 'icon-sm') =>
+  `<svg class="icon${classe ? ` ${classe}` : ''}" aria-hidden="true"><use href="#i-${nom}"/></svg>`;
+
+/* En-tête : version et changements ------------------------------------------------------------- */
+
+let meta = '';
+if (doc.date && doc.miseAJour)
+  meta = `<li>${icone('calendar')}<span>Mise à jour le <b>${dateHtml(doc.date)}</b></span></li>`;
+else if (doc.date) {
+  const vigueur = !doc.modifie
+    ? 'Version en vigueur'
+    : !doc.dateEffet || doc.dateEffet === doc.date
+      ? 'En vigueur depuis cette date'
+      : `En vigueur depuis le ${dateHtml(doc.dateEffet)}`;
+  meta = `<li>${icone('calendar')}<span>Version du <b>${dateHtml(doc.date)}</b></span></li><li>${icone('check-circle')}<span>${vigueur}</span></li>`;
+}
+
+const lectureSeule = membre && etat.compte === 'conditions';
+let changement = '';
+if (changementVers !== undefined && doc.modifie && doc.changement) {
+  const cible = parId.get(changementVers);
+  const lien = cible ? ` <a href="#${cible.id}">Lire ${t(renvoi(cible))}</a>` : '';
+  const lecture =
+    doc.aAccepter && lectureSeule
+      ? '<span class="lg-lecture-seule">Votre compte est en lecture seule jusqu’à l’acceptation de cette version. <a href="#acceptation">Accepter cette version</a></span>'
+      : '';
+  changement = `<span class="lg-changement-icone" aria-hidden="true">${icone('history', '')}</span><p><b>Ce qui change dans cette version.</b> ${t(doc.changement)}${lien}${lecture}</p>`;
+}
+
+/* Onglets des documents : « À accepter » remplacé par la version une fois l'acceptation faite. */
+const versionHtml = (c: CleDocumentLegal) => {
+  const d = documents[c];
+  if (!d.date) return '';
+  return `<span class="lg-doc-prefixe">${d.miseAJour ? 'Mise à jour le ' : 'Version du '}</span>${dateHtml(d.date)}`;
+};
+const ongletsHtml = `<ul>${ORDRE_PAGES_LEGALES.map((c) => {
+  const p = PAGES_LEGALES[c];
+  const version = versionHtml(c);
+  const statut = documents[c].aAccepter
+    ? `<span class="lg-doc-version is-a-accepter" data-lg-a-accepter>À accepter</span>${version ? `<span class="lg-doc-version" hidden data-lg-accepte>${version}</span>` : ''}`
+    : version
+      ? `<span class="lg-doc-version">${version}</span>`
+      : '';
+  return `<li><a href="${p.route}"${c === cle ? ' aria-current="page"' : ''}><span class="lg-doc-nom">${t(p.onglet)}</span>${statut}</a></li>`;
+}).join('')}</ul>`;
+
+/* Sommaire et « L'essentiel » ------------------------------------------------------------------ */
+
+const lienSommaire = (a: ArticleLegal) =>
+  `<li><a href="#${a.id}" data-lg-vers="${a.id}"><span>${a.num}.</span><span>${t(a.titre)}</span></a></li>`;
+const liens = articles.map(lienSommaire).join('');
+const rail = `<p class="lg-rail-titre" id="lg-sommaire-titre">Sommaire</p><ol class="lg-sommaire">${liens}<span class="lg-repere" aria-hidden="true" data-lg-repere></span></ol><p class="lg-rail-fin"><a href="#contenu">${icone('up')}Haut de page</a></p>`;
+const sommaireTete = `<summary>Sommaire<svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg></summary><nav aria-label="Sommaire du document"><ol>${liens}</ol></nav>`;
+
+const essentiel =
+  renvois && page.points
+    ? `<h2 id="lg-essentiel-titre">L’essentiel</h2><ul>${page.points
+        .map((point, i) => {
+          const a = parId.get(renvois[i] ?? '');
+          const vers = a
+            ? `<a href="#${a.id}" aria-label="${t(`Lire ${renvoi(a)}`)}">${t(libelleSection(a))}</a>`
+            : '';
+          return `<li>${icone('check')}<p>${t(point)}</p>${vers}</li>`;
+        })
+        .join('')}</ul>`
+    : '';
+
+/* Acceptation (conditions et charte) ----------------------------------------------------------- */
+
+const acceptable = DOCUMENTS_ACCEPTES.includes(cle);
+const aAccepter = DOCUMENTS_ACCEPTES.filter((c) => documents[c].aAccepter);
+const depuis =
+  conditionsDepuis ??
+  aAccepter
+    .flatMap((c) => documents[c].dateEffet ?? [])
+    .toSorted()
+    .at(-1) ??
+  null;
+const desAutres = aAccepter.map((c) => DES[c]).join(' et ');
+const introAccord = `Ces documents ont changé${depuis ? ` le ${dateHtml(depuis)}` : ''}.${
+  lectureSeule
+    ? t(' Votre compte reste en lecture seule jusqu’à l’acceptation de leurs nouvelles versions.')
+    : ''
+}`;
+---
+
+<Base
+  titre={page.titre}
+  description={description}
+  classeCorps="lg"
+  donneesCorps={{ document: cle }}
+  reglages={{ lecture: 'standard', texte: 'standard', sommaire: 'colonne', eyebrow: 'icon' }}
+  icones={[
+    'check-circle',
+    'calendar',
+    'history',
+    'up',
+    'chevron-down',
+    'link',
+    'printer',
+    ...icones,
+  ]}
+>
+  <header class="lg-tete">
+    <div class="container">
+      <p class="kicker lg-entree" style="--i:0">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-doc"></use>
+        </svg>
+        Informations légales
+      </p>
+      <h1 class="lg-titre lg-entree" id="lg-titre" style="--i:1">
+        {typographie(page.titre)}
+      </h1>
+      <ul class="lg-meta lg-entree" style="--i:2" data-lg-meta set:html={typographieHtml(meta)} />
+      {changementVers !== undefined && (
+        <div
+          class="lg-changement lg-entree"
+          id="changements"
+          style="--i:3"
+          data-lg-changement={changementVers}
+          hidden={!changement}
+          set:html={typographieHtml(changement)}
+        />
+      )}
+      <div class="lg-actions lg-entree" style="--i:4">
+        <button class="btn btn-secondary btn-sm" type="button" data-lg-imprimer>
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-printer"></use>
+          </svg>
+          Imprimer
+        </button>
+        <button class="btn btn-quiet btn-sm" type="button" data-lg-lien>
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-link"></use>
+          </svg>
+          Copier le lien
+        </button>
+      </div>
+    </div>
+    <div class="lg-documents-bande">
+      <nav
+        class="container lg-documents"
+        aria-label="Documents légaux"
+        data-lg-documents
+        set:html={typographieHtml(ongletsHtml)}
+      />
+    </div>
+  </header>
+
+  <div class="container lg-corps">
+    <nav
+      class="lg-rail"
+      aria-labelledby="lg-sommaire-titre"
+      data-lg-sommaire
+      set:html={typographieHtml(rail)}
+    />
+
+    <article class="lg-texte" aria-labelledby="lg-titre">
+      <details class="lg-sommaire-tete" set:html={typographieHtml(sommaireTete)} />
+      {essentiel && (
+        <section
+          class="lg-essentiel"
+          aria-labelledby="lg-essentiel-titre"
+          data-lg-essentiel
+          data-renvois={renvois?.join(' ')}
+          set:html={typographieHtml(essentiel)}
+        />
+      )}
+      <Fragment set:html={texte} />
+      {acceptable && (
+        <section
+          class="lg-acceptation"
+          id="acceptation"
+          aria-labelledby="acceptation-titre"
+          data-lg-acceptation
+        >
+          <h2 id="acceptation-titre" tabindex="-1">
+            Acceptation
+          </h2>
+          {!membre ? (
+            <>
+              <p>
+                {typographie(
+                  'L’inscription demande d’accepter les conditions générales d’utilisation et la charte communautaire, dans leur version en vigueur. Chaque acceptation est enregistrée avec sa date.',
+                )}
+              </p>
+              <div class="lg-boutons">
+                <a class="btn btn-primary" href={ROUTES.inscription}>
+                  Créer un compte
+                </a>
+                <a class="btn btn-secondary" href={ROUTES.connexion}>
+                  Se connecter
+                </a>
+              </div>
+            </>
+          ) : doc.aAccepter ? (
+            <>
+              <form class="lg-accord" novalidate data-lg-accord>
+                <p set:html={typographieHtml(introAccord)} />
+                <ul class="lg-a-accepter">
+                  {aAccepter.map((c) => (
+                    <li>
+                      <b>{typographie(PAGES_LEGALES[c].titre)}</b>
+                      {documents[c].changement && (
+                        <span>{typographie(documents[c].changement)}</span>
+                      )}
+                      {c !== cle && (
+                        <a href={PAGES_LEGALES[c].route}>{typographie(LIRE[c] ?? '')}</a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <div class="lg-case">
+                  <input
+                    type="checkbox"
+                    id="lg-accord"
+                    name="accord"
+                    aria-describedby="lg-accord-erreur"
+                  />
+                  <label for="lg-accord">J’accepte les nouvelles versions de ces documents.</label>
+                </div>
+                <p class="lg-erreur" id="lg-accord-erreur" hidden />
+                <button class="btn btn-primary" type="submit">
+                  Accepter les nouvelles versions
+                </button>
+              </form>
+              <div class="lg-statut" hidden data-lg-acceptee>
+                <Fragment set:html={icone('check-circle', '')} />
+                <p>
+                  <b>Vous avez accepté cette version.</b>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div class="lg-statut">
+                <Fragment set:html={icone('check-circle', '')} />
+                <p>
+                  <b>Vous avez accepté cette version.</b>
+                </p>
+              </div>
+              {aAccepter.length > 0 && (
+                <>
+                  <p class="lg-autres" data-lg-autres>
+                    {typographie(
+                      `Les nouvelles versions ${desAutres} sont à accepter pour continuer à publier et à participer.`,
+                    )}
+                  </p>
+                  <div class="lg-boutons" data-lg-autres>
+                    {aAccepter.map((c) => (
+                      <a class="btn btn-secondary" href={`${PAGES_LEGALES[c].route}#acceptation`}>
+                        {typographie(LIRE[c] ?? '')}
+                      </a>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </section>
+      )}
+    </article>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/documents-legaux';
+</script>

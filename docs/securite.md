@@ -27,6 +27,8 @@
 | Inscription limitée à 10 par quart d'heure et par IP ; vérifications de disponibilité limitées (adresse : 20 par quart d'heure, pseudo : 60 par minute) | `ComptesController` |
 | Droits contrôlés par l'API : `@Exige(action)` + `DroitsGuard` appliquent `raisonRefus` (session, e-mail vérifié, conditions acceptées, suspension, niveau, rôle) ; refus 401/403 avec la raison | `modules/auth/droits.ts` (AUTH-06) |
 | État du visiteur inséré dans la page en JSON avec `<` échappé (aucune valeur ne peut fermer la balise `<script>`) | `layouts/Base.astro` |
+| Messages d'accès (dialogue, bloc, invitation) construits avec échappement de chaque texte et de chaque adresse ; retour après la connexion limité aux chemins internes | `lib/acces.ts`, `lib/retour.ts` (AUTH-07) |
+| Pages légales : seul le balisage écrit dans le dépôt est transformé (typographie, liens de section) ; les textes venus de l'API (résumés des changements) sont échappés | `lib/pages-legales.ts`, `PageLegale.astro` (LEG-01) |
 
 ## 2. À mettre en place (par ordre d'arrivée)
 
@@ -53,7 +55,7 @@
 - [ ] Supervision : disponibilité, erreurs 5xx, alertes.
 
 **Données personnelles (C-05, ENF-07)**
-- [ ] Registre des traitements, durées de conservation (messages de contact : 1 an après réponse), cookies strictement nécessaires uniquement.
+- [ ] Registre des traitements, durées de conservation (messages de contact : 1 an après réponse), cookies strictement nécessaires uniquement. Cookies déposés aujourd'hui : la session (`vysora_session`, ADR-0005) et, seulement si le visiteur refuse la mesure d'audience sur la page Cookies, `vysora_audience=refusee` (13 mois, sans donnée personnelle, lisible par le navigateur). La liste publiée sur `/cookies` mentionne aussi un cookie « Sécurité » qui n'existe pas (la protection des formulaires passe par l'origine) : voir les points à trancher du registre.
 - [ ] Export (F-07) et suppression (F-08, D-09) complets, testés.
 - [ ] Hébergement dans l'Union européenne (ou conforme à la loi du pays d'établissement).
 

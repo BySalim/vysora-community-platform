@@ -306,6 +306,18 @@ describe('Liens envoyés par e-mail et documents légaux', () => {
           agent,
         ).expect(200);
         expect((await agent.get('/api/v1/session')).body.etat.compte).toBe('conditions');
+        const aAccepter = async (requeteur: { get: (chemin: string) => request.Test }) =>
+          Object.fromEntries(
+            (await requeteur.get('/api/v1/documents-legaux').expect(200)).body.map(
+              (d: { type: string; aAccepter: boolean }) => [d.type, d.aAccepter],
+            ),
+          );
+        expect(await aAccepter(agent)).toEqual({
+          CGU: false,
+          CHARTE: true,
+          CONFIDENTIALITE: false,
+        });
+        expect(Object.values(await aAccepter(request(serveur())))).not.toContain(true);
 
         const sansCase = await envoyer('post', '/api/v1/moi/acceptations', {}, agent).expect(400);
         expect(sansCase.body.erreurs).toEqual({
@@ -319,6 +331,7 @@ describe('Liens envoyés par e-mail et documents légaux', () => {
         ).expect(200);
         expect(reponse.body.etat.compte).toBe('actif');
         expect(reponse.body.conditionsDepuis).toBeNull();
+        expect(Object.values(await aAccepter(agent))).not.toContain(true);
 
         await envoyer('post', '/api/v1/moi/acceptations', { accepte: true }).expect(401);
       } finally {

@@ -1,0 +1,429 @@
+---
+/* Conditions générales d’utilisation, portée de prototype/cgu.html : le texte du document ; l'en-tête, le sommaire,
+   « L'essentiel » et l'acceptation sont rendus par PageLegale (versions lues dans l'API). */
+import PageLegale from '../components/PageLegale.astro';
+import { ROUTES } from '../lib/navigation';
+---
+
+<PageLegale
+  cle="cgu"
+  description="Conditions générales d’utilisation de Vysora : compte, règles d’usage, contenus et licences, modération, contestation, responsabilité et droit applicable."
+  icones={['compass', 'book', 'scale', 'send', 'message', 'trash', 'globe']}
+  changementVers="usage"
+  renvois={['compte', 'contenus', 'contenus', 'contenus', 'usage']}
+>
+  <section class="lg-article" id="objet">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-compass"></use>
+        </svg>
+        Article 1
+      </span>
+      Objet et acceptation
+    </h2>
+    <p>
+      Vysora est une plateforme communautaire et gratuite de partage et d’apprentissage sur l’IA
+      générative, éditée par NeoCoders (<a href={ROUTES.mentionsLegales}>mentions légales</a>). Les
+      membres y publient ce qu’ils ont créé avec l’IA, avec le chemin parcouru, et apprennent les
+      uns des autres.
+    </p>
+    <p>
+      Les présentes conditions générales d’utilisation fixent les règles applicables à toute
+      personne qui utilise Vysora. La <a href={ROUTES.charte}>charte communautaire</a> en fait
+      partie intégrante. La <a href={ROUTES.confidentialite}>politique de confidentialité</a>{' '}
+      explique comment vos données sont traitées.
+    </p>
+    <p>
+      En créant un compte, vous acceptez les présentes conditions et la charte communautaire, dans
+      leur version en vigueur. Chaque acceptation est enregistrée avec sa date. Si vous consultez
+      Vysora sans compte, les règles d’usage de l’article 4 s’appliquent également.
+    </p>
+  </section>
+
+  <section class="lg-article" id="definitions">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-book"></use>
+        </svg>
+        Article 2
+      </span>
+      Définitions
+    </h2>
+    <dl class="lg-definitions">
+      <div>
+        <dt>Nous</dt>
+        <dd>NeoCoders, qui édite et administre Vysora.</dd>
+      </div>
+      <div>
+        <dt>Visiteur</dt>
+        <dd>Toute personne qui consulte Vysora sans être connectée à un compte.</dd>
+      </div>
+      <div>
+        <dt>Membre</dt>
+        <dd>Toute personne titulaire d’un compte Vysora.</dd>
+      </div>
+      <div>
+        <dt>Contenu</dt>
+        <dd>
+          Tout ce qu’un membre publie : création, sujet, réponse, commentaire, reproduction, cas Bon
+          réflexe et informations de profil.
+        </dd>
+      </div>
+      <div>
+        <dt>Création</dt>
+        <dd>
+          Ce qu’un membre a produit avec l’IA et qu’il publie avec le chemin parcouru : prompts,
+          outils, modèles, résultats et moments clés.
+        </dd>
+      </div>
+      <div>
+        <dt>Modération</dt>
+        <dd>
+          L’examen des contenus et des comptes signalés, et les mesures prises lorsque les présentes
+          conditions ou la charte ne sont pas respectées.
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="lg-article" id="compte">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-user"></use>
+        </svg>
+        Article 3
+      </span>
+      Accès au service et compte
+    </h2>
+    <p>
+      Vysora est gratuit. Sans compte, vous pouvez consulter et rechercher les contenus publiés et
+      les profils publics. Publier, voter, commenter, déclarer une reproduction ou signaler un
+      contenu depuis la plateforme demandent un compte.
+    </p>
+    <ul>
+      <li>
+        <strong>Âge.</strong> Vous devez avoir au moins 15 ans pour créer un compte. Entre 15 et 18
+        ans, vous devez avoir l’accord d’un parent ou de votre représentant légal.
+      </li>
+      <li>
+        <strong>Un compte par personne.</strong> Les informations que vous fournissez sont exactes.
+        Votre adresse e-mail doit être confirmée : d’ici là, votre compte reste en lecture seule.
+      </li>
+      <li>
+        <strong>Identifiants.</strong> Vous gardez votre mot de passe confidentiel et vous êtes
+        responsable de l’usage de votre compte. En cas d’utilisation que vous n’avez pas autorisée,
+        prévenez-nous sans délai depuis le{' '}
+        <a href={`${ROUTES.contact}?motif=question`}>formulaire de contact</a>.
+      </li>
+      <li>
+        <strong>Connexion avec GitHub ou Google.</strong> Si vous choisissez ce mode de connexion,
+        les conditions de ces services s’appliquent aussi à leur utilisation.
+      </li>
+    </ul>
+  </section>
+
+  <section class="lg-article" id="usage">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-scale"></use>
+        </svg>
+        Article 4
+      </span>
+      Règles d’usage
+    </h2>
+    <p>
+      Vous utilisez Vysora dans le respect de la loi, des présentes conditions et de la{' '}
+      <a href={ROUTES.charte}>charte communautaire</a>, qui détaille les comportements attendus et
+      les contenus interdits. En particulier, vous vous interdisez de&nbsp;:
+    </p>
+    <ul>
+      <li>publier un contenu illicite ou qui porte atteinte aux droits d’autrui ;</li>
+      <li>
+        créer plusieurs comptes pour contourner une limite ou une sanction, ou manipuler les votes
+        et les reproductions ;
+      </li>
+      <li>vous faire passer pour une autre personne ;</li>
+      <li>collecter les données personnelles d’autres membres ;</li>
+      <li>
+        perturber le fonctionnement du service ou tenter d’accéder à des données ou à des comptes
+        qui ne sont pas les vôtres.
+      </li>
+    </ul>
+    <p>
+      Le nombre de publications par 24 heures dépend de votre niveau et augmente avec votre
+      réputation. Les limites en vigueur vous sont indiquées au moment de publier.
+    </p>
+  </section>
+
+  <section class="lg-article" id="contenus">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-send"></use>
+        </svg>
+        Article 5
+      </span>
+      Vos contenus
+    </h2>
+    <h3>Publication</h3>
+    <p>
+      Chaque création commence en brouillon privé : rien n’est publié sans votre accord. Au moment
+      de publier, vous confirmez que votre contenu ne contient aucune donnée personnelle d’un tiers
+      ni aucun secret, comme une clé d’API ou un mot de passe. Si Vysora repère un élément de ce
+      type, il vous le signale avant la publication. Vous pouvez modifier, retirer ou supprimer vos
+      contenus à tout moment.
+    </p>
+    <h3>Vos droits et vos garanties</h3>
+    <p>
+      Vous restez titulaire des droits sur vos contenus. Vous garantissez disposer des droits
+      nécessaires sur ce que vous publiez, y compris les textes, images et codes obtenus avec des
+      outils d’IA, et respecter les conditions d’utilisation de ces outils. Vous ne publiez le
+      contenu d’une autre personne qu’avec son accord.
+    </p>
+    <h3 id="licences">Licences</h3>
+    <p>
+      Chaque création est publiée sous la licence que vous choisissez avant la publication. La
+      licence proposée par défaut est CC BY 4.0 : chacun peut la réutiliser en vous créditant. Vous
+      pouvez aussi choisir CC BY-SA 4.0, CC BY-NC 4.0, CC0 1.0 ou « Tous droits réservés » ; dans ce
+      dernier cas, personne ne peut en proposer de variante sur Vysora. La licence s’affiche sur la
+      fiche de la création, avec un lien vers son texte.
+    </p>
+    <p>
+      Vos sujets, réponses, commentaires, reproductions et cas Bon réflexe sont publiés sous licence
+      CC BY 4.0, pour que la communauté puisse s’en servir et les citer.
+    </p>
+    <h3>Droits accordés à Vysora</h3>
+    <p>
+      Pour faire fonctionner le service, vous accordez à NeoCoders, gratuitement et pour le monde
+      entier, le droit non exclusif d’héberger, de reproduire, d’afficher et d’adapter techniquement
+      vos contenus (formats, miniatures, aperçus de partage), uniquement pour les présenter sur
+      Vysora et dans les aperçus des liens partagés. Ce droit prend fin lorsque vous supprimez le
+      contenu, sous réserve des sauvegardes, effacées en 30 jours, et des contributions conservées
+      sous un pseudo anonyme après la suppression d’un compte (article 8).
+    </p>
+  </section>
+
+  <section class="lg-article" id="moderation">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-shield"></use>
+        </svg>
+        Article 6
+      </span>
+      Signalement et modération
+    </h2>
+    <h3>Signaler un contenu</h3>
+    <p>
+      Les membres signalent un contenu avec le bouton « Signaler », en choisissant un motif. Toute
+      personne, même sans compte, peut nous signaler un contenu qu’elle estime illicite depuis le{' '}
+      <a href={`${ROUTES.contact}?motif=signalement`}>formulaire de contact</a>, en indiquant son
+      adresse, les raisons pour lesquelles il est illicite, son nom et son adresse e-mail, et en
+      déclarant agir de bonne foi. Nous accusons réception de chaque signalement et informons son
+      auteur de la suite donnée.
+    </p>
+    <h3>Examen</h3>
+    <p>
+      Les signalements sont examinés par l’équipe de modération, composée de membres nommés par
+      NeoCoders, en visant un délai de 72 heures. Un contenu manifestement illicite est retiré sans
+      attendre. Un modérateur ne se prononce jamais sur ses propres contenus ni sur son propre
+      compte.
+    </p>
+    <p>
+      Deux outils automatisés assistent la modération. Avant la publication, Vysora repère les clés
+      d’API, jetons d’accès, adresses e-mail et numéros de téléphone, et vous alerte sans bloquer la
+      publication. Un contenu signalé par trois membres de niveau Apprenti ou plus est masqué à
+      titre provisoire, puis examiné par un modérateur. Aucune sanction n’est décidée sans examen
+      humain.
+    </p>
+    <h3>Mesures</h3>
+    <p>
+      Selon la gravité et la répétition du manquement, la modération peut masquer ou supprimer un
+      contenu, adresser un avertissement, suspendre un compte pour une durée de 1 à 90 jours ou,
+      pour les manquements les plus graves, fermer définitivement un compte. Ces mesures sont
+      appliquées de façon proportionnée, en tenant compte des droits de chacun, dont la liberté
+      d’expression.
+    </p>
+    <p>
+      Toute mesure qui vous concerne vous est notifiée sur Vysora et par e-mail. La notification
+      indique la mesure et sa durée, les faits retenus, la règle concernée, le recours éventuel à un
+      outil automatisé et la manière de contester la décision. Les signalements manifestement
+      infondés et répétés peuvent eux-mêmes donner lieu à une mesure.
+    </p>
+  </section>
+
+  <section class="lg-article" id="contestation">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-message"></use>
+        </svg>
+        Article 7
+      </span>
+      Contester une décision
+    </h2>
+    <p>
+      Vous pouvez contester une décision de modération qui vous concerne, ou la suite donnée à votre
+      signalement, dans les 6 mois qui suivent sa notification, depuis le{' '}
+      <a href={`${ROUTES.contact}?motif=contestation`}>formulaire de contact</a>. Votre demande est
+      examinée par un modérateur qui n’a pas pris la décision initiale. Nous vous répondons dans un
+      délai de 15 jours. Si la contestation est fondée, la décision est annulée et, le cas échéant,
+      le contenu est rétabli.
+    </p>
+    <p>
+      Cette démarche ne vous prive pas de la possibilité de saisir les juridictions compétentes
+      (article 12).
+    </p>
+  </section>
+
+  <section class="lg-article" id="fermeture">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-trash"></use>
+        </svg>
+        Article 8
+      </span>
+      Suspension et fermeture du compte
+    </h2>
+    <h3>À votre initiative</h3>
+    <p>
+      Vous pouvez supprimer votre compte à tout moment depuis vos paramètres, après avoir téléchargé
+      vos données si vous le souhaitez. La suppression devient définitive 30 jours après votre
+      demande ; une reconnexion pendant ce délai l’annule. Vos données personnelles sont alors
+      effacées et vos contributions restent visibles sous un pseudo anonyme, sauf vos créations si
+      vous avez demandé leur suppression.
+    </p>
+    <h3>À notre initiative</h3>
+    <p>
+      Un compte suspendu garde l’accès à la lecture et à ses paramètres, mais ne peut ni publier ni
+      interagir jusqu’à la fin de la suspension. La fermeture définitive est réservée aux
+      manquements graves ou répétés et fait l’objet d’une notification motivée (article 6).
+    </p>
+    <p>
+      Un compte sans aucune connexion pendant 2 ans est supprimé, dans les conditions ci-dessus.
+      Nous vous prévenons par e-mail 30 jours avant : il suffit de vous connecter pour le conserver.
+    </p>
+    <p>
+      Si Vysora devait cesser son activité, nous vous en informerions au moins 30 jours à l’avance
+      pour vous permettre de télécharger vos données.
+    </p>
+  </section>
+
+  <section class="lg-article" id="responsabilite">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-alert"></use>
+        </svg>
+        Article 9
+      </span>
+      Disponibilité et responsabilité
+    </h2>
+    <p>
+      Nous faisons le nécessaire pour que Vysora reste accessible et sûr. Le service peut toutefois
+      être interrompu pour une maintenance, annoncée lorsque c’est possible, ou en cas d’incident.
+    </p>
+    <p>
+      Chaque membre est responsable des contenus qu’il publie. En tant qu’hébergeur, NeoCoders n’est
+      pas responsable des contenus publiés par les membres, sauf s’il n’a pas agi promptement pour
+      retirer un contenu manifestement illicite qui lui a été signalé.
+    </p>
+    <p>
+      Les créations et les méthodes partagées reflètent l’expérience de leur auteur, avec un outil,
+      un modèle et à une date donnés. Vérifiez-les avant de les appliquer, en particulier le code et
+      les instructions destinées à un agent ayant accès à vos fichiers ou à vos services. Les liens
+      vers d’autres sites relèvent de la responsabilité de ces sites.
+    </p>
+    <p>
+      Rien dans les présentes conditions ne limite les droits que la loi vous garantit et auxquels
+      il ne peut être dérogé.
+    </p>
+  </section>
+
+  <section class="lg-article" id="donnees">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-lock"></use>
+        </svg>
+        Article 10
+      </span>
+      Données personnelles
+    </h2>
+    <p>
+      Le traitement de vos données personnelles est décrit dans la{' '}
+      <a href={ROUTES.confidentialite}>politique de confidentialité</a> : données traitées,
+      finalités, durées de conservation, destinataires et droits dont vous disposez. L’usage des
+      cookies est décrit dans la <a href={ROUTES.cookies}>politique relative aux cookies</a>.
+    </p>
+  </section>
+
+  <section class="lg-article" id="evolution">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-calendar"></use>
+        </svg>
+        Article 11
+      </span>
+      Modification des conditions
+    </h2>
+    <p>
+      Nous pouvons faire évoluer les présentes conditions et la charte communautaire. Toute
+      modification importante vous est annoncée par e-mail et sur Vysora au moins 30 jours avant son
+      entrée en vigueur, avec un résumé des changements. Seules les modifications imposées par la
+      loi ou par la sécurité du service peuvent s’appliquer plus tôt.
+    </p>
+    <p>
+      À votre première connexion après l’entrée en vigueur, il vous est demandé d’accepter la
+      nouvelle version ; d’ici là, votre compte reste en lecture seule. Si vous la refusez, vous
+      pouvez télécharger vos données et supprimer votre compte. Les versions antérieures sont
+      conservées et vous sont communiquées sur demande.
+    </p>
+  </section>
+
+  <section class="lg-article" id="droit">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-globe"></use>
+        </svg>
+        Article 12
+      </span>
+      Droit applicable et litiges
+    </h2>
+    <p>
+      Les présentes conditions sont régies par le droit sénégalais. Si vous résidez dans un autre
+      pays, vous conservez la protection que vous accordent les dispositions impératives de la loi
+      de votre pays de résidence.
+    </p>
+    <p>
+      En cas de difficulté, écrivez-nous d’abord depuis le{' '}
+      <a href={ROUTES.contact}>formulaire de contact</a> : nous recherchons une solution amiable. À
+      défaut, le litige est porté devant les juridictions de Dakar, sauf règle impérative attribuant
+      compétence à une autre juridiction.
+    </p>
+  </section>
+
+  <section class="lg-article" id="contact">
+    <h2>
+      <span class="lg-num">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-mail"></use>
+        </svg>
+        Article 13
+      </span>
+      Nous contacter
+    </h2>
+    <p>
+      Le <a href={ROUTES.contact}>formulaire de contact</a> est le point de contact unique de Vysora
+      pour toute question, demande relative à vos données, signalement ou contestation. Nous vous
+      répondons en français, par e-mail.
+    </p>
+  </section>
+</PageLegale>

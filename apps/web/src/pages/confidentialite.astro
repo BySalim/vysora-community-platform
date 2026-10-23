@@ -1,0 +1,303 @@
+---
+/* Politique de confidentialité, portée de prototype/confidentialite.html : le texte du document ; l'en-tête, le sommaire,
+   « L'essentiel » et l'acceptation sont rendus par PageLegale (versions lues dans l'API). */
+import PageLegale from '../components/PageLegale.astro';
+import { ROUTES } from '../lib/navigation';
+---
+
+<PageLegale
+  cle="confidentialite"
+  description="Politique de confidentialité de Vysora : données traitées, usages et durées, destinataires, hébergement, cookies, sécurité et droits."
+  renvois={['traitements', 'public', 'cookies', 'destinataires', 'droits']}
+>
+  <section class="lg-article" id="responsable">
+    <h2>1. Qui traite vos données</h2>
+    <p>
+      Vos données sont traitées par NeoCoders, groupe de développeurs établi au Sénégal qui édite
+      Vysora (<a href={ROUTES.mentionsLegales}>mentions légales</a>). Pour toute question sur vos
+      données, écrivez-nous depuis le{' '}
+      <a href={`${ROUTES.contact}?motif=donnees`}>formulaire de contact</a>, motif « Données
+      personnelles ».
+    </p>
+    <p>
+      Ces traitements respectent la loi sénégalaise n° 2008-12 du 25 janvier 2008 sur la protection
+      des données à caractère personnel et, pour les personnes qui résident dans l’Union européenne,
+      le règlement général sur la protection des données (RGPD).
+    </p>
+  </section>
+
+  <section class="lg-article" id="traitements">
+    <h2>2. Données, usages et durées</h2>
+    <p>
+      Nous ne traitons que les données utiles au fonctionnement de Vysora. Le pseudo, l’adresse
+      e-mail et le mot de passe sont nécessaires pour créer un compte ; sans eux, l’inscription
+      n’est pas possible. Les autres informations du profil sont facultatives.
+    </p>
+    <div class="lg-defile" role="region" aria-labelledby="traitements-tableau" tabindex="0">
+      <table class="lg-tableau lg-tableau-empile lg-tableau-traitements">
+        <caption id="traitements-tableau">Ce que nous faisons de vos données</caption>
+        <thead>
+          <tr>
+            <th scope="col">Usage</th>
+            <th scope="col">Données</th>
+            <th scope="col">Fondement</th>
+            <th scope="col">Durée de conservation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Créer et gérer votre compte</th>
+            <td>
+              Pseudo, adresse e-mail, empreinte du mot de passe, langue, préférences de
+              notification, dates d’inscription et de connexion, compte GitHub ou Google lié
+            </td>
+            <td>Exécution des conditions d’utilisation</td>
+            <td>
+              Tant que le compte existe ; effacement 30 jours après une demande de suppression ou
+              après 2 ans sans connexion
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Publier vos contributions et votre profil</th>
+            <td>
+              Contributions, avatar, biographie, lien personnel, niveau, badges, statistiques
+              publiques
+            </td>
+            <td>Exécution des conditions d’utilisation</td>
+            <td>
+              Tant qu’elles sont publiées ; anonymisées à la suppression du compte (section 9)
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Faire fonctionner la progression et vos listes</th>
+            <td>
+              Votes émis, enregistrements, réponses aux cas Bon réflexe, mouvements de réputation
+            </td>
+            <td>Exécution des conditions d’utilisation</td>
+            <td>Tant que le compte existe</td>
+          </tr>
+          <tr>
+            <th scope="row">Vous informer</th>
+            <td>Notifications, e-mails liés au compte</td>
+            <td>Exécution des conditions d’utilisation</td>
+            <td>Notifications : 12 mois</td>
+          </tr>
+          <tr>
+            <th scope="row">Traiter les signalements et les contestations</th>
+            <td>Signalements, décisions de modération, historique de modération, échanges</td>
+            <td>
+              Exécution des conditions d’utilisation et obligation légale de retrait des contenus
+              manifestement illicites
+            </td>
+            <td>1 an après la décision</td>
+          </tr>
+          <tr>
+            <th scope="row">Sécuriser le service et répondre aux autorités judiciaires</th>
+            <td>
+              Adresse IP, dates et heures de connexion et de publication, tentatives de connexion
+              échouées
+            </td>
+            <td>
+              Obligation légale de conserver les données d’identification des auteurs de contenus et
+              obligation de sécurité
+            </td>
+            <td>1 an</td>
+          </tr>
+          <tr>
+            <th scope="row">Prouver l’acceptation des conditions</th>
+            <td>Version acceptée, date et heure</td>
+            <td>Obligation de preuve</td>
+            <td>
+              Tant que le compte existe, puis 10 ans en archive, durée de la prescription de droit
+              commun au Sénégal
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Répondre à vos messages et demandes</th>
+            <td>Nom, adresse e-mail, motif, message</td>
+            <td>
+              Exécution des conditions d’utilisation et obligation légale pour les demandes
+              relatives aux données
+            </td>
+            <td>1 an après la réponse</td>
+          </tr>
+          <tr>
+            <th scope="row">Mesurer la fréquentation</th>
+            <td>
+              Page consultée, page de provenance, type d’appareil, collectés sans cookie et rendus
+              anonymes
+            </td>
+            <td>
+              Intérêt légitime à améliorer le service ; vous pouvez vous y opposer depuis la{' '}
+              <a href={`${ROUTES.cookies}#audience`}>page Cookies</a>
+            </td>
+            <td>Statistiques : 25 mois</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Les sauvegardes quotidiennes sont conservées 30 jours : une donnée effacée disparaît des
+      sauvegardes au plus tard à ce terme.
+    </p>
+  </section>
+
+  <section class="lg-article" id="public">
+    <h2>3. Ce qui est visible des autres</h2>
+    <ul>
+      <li>
+        Votre profil public, vos contributions publiées et vos statistiques publiques (créations
+        publiées, reproductions reçues, réponses acceptées, votes « Utile » reçus, vues) sont
+        visibles de tous, visiteurs compris.
+      </li>
+      <li>Votre adresse e-mail n’apparaît jamais sur votre profil public.</li>
+      <li>
+        Vos brouillons, vos enregistrements, vos réponses aux cas Bon réflexe et les reproductions
+        que vous déclarez dans vos statistiques ne sont visibles que de vous.
+      </li>
+      <li>
+        Les créations publiées, les sujets, les cas validés et les profils peuvent apparaître dans
+        les moteurs de recherche ; les brouillons et les contenus masqués n’y apparaissent pas.
+      </li>
+    </ul>
+  </section>
+
+  <section class="lg-article" id="destinataires">
+    <h2>4. Qui accède à vos données</h2>
+    <ul>
+      <li>
+        <strong>L’équipe NeoCoders</strong>, selon ses missions, et <strong>les modérateurs</strong>
+        , pour les seuls contenus et comptes signalés.
+      </li>
+      <li>
+        <strong>Notre hébergeur</strong>, OVH (
+        <a href={`${ROUTES.mentionsLegales}#hebergement`}>mentions légales</a>), et notre
+        prestataire d’envoi d’e-mails, qui agissent uniquement sur nos instructions et sont tenus à
+        la confidentialité.
+      </li>
+      <li>
+        <strong>GitHub ou Google</strong>, si vous choisissez de vous connecter avec leur compte :
+        ils nous transmettent votre adresse e-mail vérifiée et l’identifiant de votre compte, selon
+        leurs propres conditions.
+      </li>
+      <li>
+        <strong>Les autorités judiciaires</strong>, sur réquisition et dans les conditions prévues
+        par la loi.
+      </li>
+    </ul>
+    <p>Vos données ne sont ni vendues ni louées, et ne servent à aucune publicité.</p>
+  </section>
+
+  <section class="lg-article" id="transferts">
+    <h2>5. Lieu d’hébergement</h2>
+    <p>
+      Vos données sont hébergées dans l’Union européenne, en France, qui assure un niveau de
+      protection suffisant au sens de l’article 49 de la loi n° 2008-12. Si vous vous connectez avec
+      GitHub ou Google, ces services peuvent traiter vos données hors de l’Union européenne, selon
+      leurs propres conditions.
+    </p>
+  </section>
+
+  <section class="lg-article" id="cookies">
+    <h2>6. Cookies</h2>
+    <p>
+      Vysora ne dépose que des cookies strictement nécessaires : la session, la sécurité des
+      formulaires et, si vous refusez la mesure d’audience, le cookie qui retient ce choix. Ils ne
+      demandent pas votre consentement. La{' '}
+      <a href={ROUTES.cookies}>politique relative aux cookies</a> les détaille et vous permet de
+      refuser d’être compté dans la mesure d’audience.
+    </p>
+  </section>
+
+  <section class="lg-article" id="securite">
+    <h2>7. Sécurité</h2>
+    <p>
+      Toutes les pages sont servies en connexion chiffrée (HTTPS). Les mots de passe sont
+      enregistrés sous forme d’empreinte, jamais en clair. L’accès aux données est réservé aux
+      personnes habilitées, et l’équipe comme les modérateurs se connectent avec une double
+      authentification. En cas de violation de données susceptible de vous exposer, nous vous en
+      informons dans les meilleurs délais.
+    </p>
+  </section>
+
+  <section class="lg-article" id="droits">
+    <h2>8. Vos droits</h2>
+    <p>Vous pouvez à tout moment&nbsp;:</p>
+    <ul>
+      <li>
+        <strong>accéder</strong> à vos données et en obtenir une copie ;
+      </li>
+      <li>
+        <strong>les rectifier</strong> ou les compléter ;
+      </li>
+      <li>
+        <strong>les faire effacer</strong>, notamment en supprimant votre compte ;
+      </li>
+      <li>
+        <strong>vous opposer</strong> à un traitement pour des motifs légitimes, par exemple à la
+        mesure d’audience depuis la <a href={`${ROUTES.cookies}#audience`}>page Cookies</a>, ou en
+        demander la limitation ;
+      </li>
+      <li>
+        <strong>les récupérer</strong> dans un format lisible par machine.
+      </li>
+    </ul>
+    <p>
+      Depuis vos paramètres, vous modifiez vos informations, téléchargez vos données au format JSON
+      et supprimez votre compte. Pour toute autre demande, utilisez le{' '}
+      <a href={`${ROUTES.contact}?motif=donnees`}>formulaire de contact</a> ; nous pouvons vous
+      demander de justifier de votre identité. Ces démarches sont gratuites et reçoivent une réponse
+      sous un mois.
+    </p>
+    <p>
+      Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la Commission de
+      protection des données personnelles du Sénégal (
+      <a href="https://www.cdp.sn" rel="noopener">
+        cdp.sn
+      </a>
+      ). Si vous résidez dans l’Union européenne, vous pouvez aussi saisir l’autorité de protection
+      des données de votre pays, par exemple la CNIL en France.
+    </p>
+  </section>
+
+  <section class="lg-article" id="suppression">
+    <h2>9. Suppression du compte</h2>
+    <p>
+      Après votre demande de suppression, votre compte n’est plus visible des autres. Si vous ne
+      vous reconnectez pas dans les 30 jours, vos données personnelles, dont votre adresse e-mail,
+      sont effacées. Vos contributions restent visibles sous un pseudo anonyme, pour préserver les
+      discussions dont d’autres membres dépendent ; vos créations sont supprimées si vous l’avez
+      demandé.
+    </p>
+  </section>
+
+  <section class="lg-article" id="automatisation">
+    <h2>10. Traitements automatisés</h2>
+    <p>
+      Votre niveau et vos limites de publication sont calculés automatiquement à partir de votre
+      réputation. Un contenu signalé par trois membres est masqué automatiquement à titre
+      provisoire, puis examiné par un modérateur. Aucune décision qui vous affecte n’est prise sur
+      le seul fondement d’un traitement automatisé : vous pouvez toujours présenter vos observations
+      et contester une décision (
+      <a href={`${ROUTES.cgu}#contestation`}>article 7 des conditions d’utilisation</a>).
+    </p>
+  </section>
+
+  <section class="lg-article" id="mineurs">
+    <h2>11. Mineurs</h2>
+    <p>
+      Vysora est ouvert à partir de 15 ans. Entre 15 et 18 ans, l’inscription suppose l’accord d’un
+      parent ou du représentant légal, qui peut exercer les droits décrits à la section 8 au nom du
+      mineur.
+    </p>
+  </section>
+
+  <section class="lg-article" id="evolution">
+    <h2>12. Mise à jour de la politique</h2>
+    <p>
+      Lorsque nous modifions la présente politique, nous vous en informons par e-mail et sur Vysora
+      avant l’entrée en vigueur des changements. La date de la version en vigueur figure en haut de
+      cette page.
+    </p>
+  </section>
+</PageLegale>

@@ -88,33 +88,40 @@ async function renvoyerEmail(): Promise<void> {
   else toast('L’envoi n’a pas abouti. Réessayez dans un instant.', 'alert');
 }
 
-/** RG-03 : acceptation des versions en vigueur ; le compte sort de la lecture seule. */
-async function accepterConditions(): Promise<void> {
+/** Événement émis sur document quand le membre a accepté les versions en vigueur (pages légales). */
+export const DOCUMENTS_ACCEPTES = 'vysora:documents-acceptes';
+
+/** RG-03 : acceptation des versions en vigueur ; le compte sort de la lecture seule.
+    Vrai si l'acceptation est enregistrée (le message est alors affiché). */
+export async function accepterDocuments(message: string): Promise<boolean> {
   const reponse = await api<SessionApi>('POST', '/api/v1/moi/acceptations', { accepte: true });
   if (!reponse.ok) {
     if (reponse.probleme.status === 401)
       recharger('Votre session a pris fin. Connectez-vous de nouveau.');
     else
       toast('L’enregistrement est momentanément indisponible. Réessayez dans un instant.', 'alert');
-    return;
+    return false;
   }
   const session = reponse.donnees;
-  // Un bloc d'accès rendu par le serveur tient la place du contenu : seule une nouvelle page le montre.
-  if (session.etat.compte !== 'actif' || $('[data-acces-bloc]')) {
-    recharger('Conditions acceptées.');
-    return;
+  // Une version entrée en vigueur entre-temps, ou un bloc d'accès rendu par le serveur à la place
+  // du contenu : seule une nouvelle page montre le bon état.
+  if (session.etat.compte === 'conditions' || $('[data-acces-bloc]')) {
+    recharger(message);
+    return true;
   }
-  const bandeau = $('[data-etat-bandeau]');
+  const bandeau = $('[data-etat-bandeau][data-motif="conditions"]');
   const focusDansBandeau = bandeau?.contains(document.activeElement) ?? false;
   etats.appliquer(session);
   bandeau?.remove();
   if (focusDansBandeau) $<HTMLElement>('#contenu')?.focus({ preventScroll: true });
-  toast('Conditions acceptées.');
+  document.dispatchEvent(new CustomEvent(DOCUMENTS_ACCEPTES));
+  toast(message);
+  return true;
 }
 
-const BOUTONS: Record<BoutonAcces, () => Promise<void>> = {
+const BOUTONS: Record<BoutonAcces, () => Promise<unknown>> = {
   email: renvoyerEmail,
-  conditions: accepterConditions,
+  conditions: () => accepterDocuments('Conditions acceptées.'),
 };
 const enCours = new Set<BoutonAcces>();
 

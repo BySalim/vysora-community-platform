@@ -66,4 +66,6 @@ export interface DocumentLegalApi {
   url: string;
   acceptationRequise: boolean;
   resumeChangements: string | null;
+  /** RG-03 : vrai si le membre connecté doit encore accepter cette version (faux sans session). */
+  aAccepter: boolean;
 }

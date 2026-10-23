@@ -1,0 +1,185 @@
+---
+/* Charte communautaire, portée de prototype/charte-communautaire.html : le texte du document ; l'en-tête, le sommaire,
+   « L'essentiel » et l'acceptation sont rendus par PageLegale (versions lues dans l'API). */
+import PageLegale from '../components/PageLegale.astro';
+import { ROUTES } from '../lib/navigation';
+---
+
+<PageLegale
+  cle="charte"
+  description="Charte communautaire de Vysora : l’esprit de la communauté, les comportements attendus, les contenus interdits, le signalement et les mesures."
+  changementVers="personnes"
+  renvois={['esprit', 'honnetete', 'personnes', 'interdits', 'signaler']}
+>
+  <section class="lg-article" id="esprit">
+    <h2>L’esprit de Vysora</h2>
+    <p>
+      Vysora est un espace pour apprendre à créer avec l’IA, du premier prompt au projet complet. On
+      y vient montrer comment on a travaillé et comprendre comment les autres s’y prennent. Les
+      débutants doivent s’y sentir à leur place : la qualité se signale par des votes positifs, et
+      il n’existe pas de vote négatif.
+    </p>
+    <p>
+      Cette charte fait partie des <a href={ROUTES.cgu}>conditions générales d’utilisation</a>. Elle
+      s’applique à tout ce que vous publiez et à tous vos échanges sur Vysora. La modération la fait
+      respecter.
+    </p>
+  </section>
+
+  <section class="lg-article" id="attendu">
+    <h2>Ce que nous attendons de chacun</h2>
+    <ul>
+      <li>Respectez les autres membres, quel que soit leur niveau.</li>
+      <li>Critiquez les idées et les méthodes, jamais les personnes.</li>
+      <li>Aidez les débutants sans condescendance : chacun a commencé un jour.</li>
+      <li>Reconnaissez vos erreurs et corrigez vos contenus quand on vous les signale.</li>
+      <li>Face à une provocation, ne répondez pas : signalez.</li>
+    </ul>
+  </section>
+
+  <section class="lg-article" id="honnetete">
+    <h2>Publier honnêtement</h2>
+    <p>La valeur de Vysora tient à la fiabilité de ce qui y est montré.</p>
+    <ul>
+      <li>
+        Présentez le chemin parcouru tel qu’il s’est passé, avec l’outil et le modèle utilisés.
+      </li>
+      <li>
+        Pour une création « 1 prompt », indiquez le nombre d’essais et le mode de sélection : garder
+        la meilleure de plusieurs réponses au même message reste un « 1 prompt », à condition de le
+        dire.
+      </li>
+      <li>
+        Ne présentez jamais comme vôtre la création d’une autre personne. Une variante cite toujours
+        la création dont elle part.
+      </li>
+      <li>Respectez la licence choisie par l’auteur de chaque création.</li>
+      <li>
+        Déclarez vos essais tels qu’ils se sont passés, y compris les échecs, et indiquez quand un
+        contenu ne fonctionne plus avec un modèle.
+      </li>
+      <li>
+        Si votre création contient des instructions destinées à un agent ayant accès à des fichiers,
+        des commandes ou des services, activez l’avertissement prévu à cet effet.
+      </li>
+    </ul>
+  </section>
+
+  <section class="lg-article" id="personnes">
+    <h2>Protéger les personnes et les données</h2>
+    <ul>
+      <li>
+        Ne publiez ni clé d’API, ni mot de passe, ni donnée personnelle dans vos prompts. Un prompt
+        qui contient une clé d’API ou une donnée personnelle est masqué jusqu’à sa correction.
+      </li>
+      <li>
+        Ne publiez aucune information personnelle sur autrui : adresse, téléphone, documents, photos
+        privées.
+      </li>
+      <li>
+        Ne créez ni ne partagez d’image, de voix ou de vidéo qui représente une personne réelle de
+        façon sexuelle, humiliante ou trompeuse, ou qui pourrait être prise pour un document
+        authentique.
+      </li>
+      <li>Ne vous faites pas passer pour une autre personne, une marque ou l’équipe Vysora.</li>
+    </ul>
+  </section>
+
+  <section class="lg-article" id="interdits">
+    <h2>Ce qui est interdit</h2>
+    <p>
+      Le contournement des protections des outils et les instructions dangereuses sont interdits.
+      Plus largement, Vysora n’accepte pas&nbsp;:
+    </p>
+    <dl class="lg-definitions lg-interdits">
+      <div>
+        <dt>Contenus illicites</dt>
+        <dd>
+          Apologie de crimes, incitation à la haine ou à la violence, menaces, diffamation. Tout
+          contenu sexuel impliquant un mineur, réel ou généré par l’IA, est supprimé et signalé aux
+          autorités.
+        </dd>
+      </div>
+      <div>
+        <dt>Haine et harcèlement</dt>
+        <dd>
+          Propos ou contenus qui attaquent une personne ou un groupe en raison de son origine, de sa
+          religion, de son sexe, de son orientation sexuelle, de son handicap ou de son apparence ;
+          harcèlement et intimidation.
+        </dd>
+      </div>
+      <div>
+        <dt>Contenus explicites</dt>
+        <dd>
+          Contenus sexuellement explicites et violence choquante, Vysora étant ouvert à partir de 15
+          ans.
+        </dd>
+      </div>
+      <div>
+        <dt>Détournement de l’IA</dt>
+        <dd>
+          Techniques pour contourner les protections des outils d’IA, instructions pour fabriquer
+          des armes ou nuire, prompts d’agent conçus pour détruire des données ou des systèmes.
+        </dd>
+      </div>
+      <div>
+        <dt>Logiciels malveillants</dt>
+        <dd>Code malveillant, hameçonnage, liens piégés.</dd>
+      </div>
+      <div>
+        <dt>Spam et manipulation</dt>
+        <dd>
+          Messages répétitifs, autopromotion insistante, vente de prompts, comptes multiples,
+          échanges de votes et fausses reproductions.
+        </dd>
+      </div>
+      <div>
+        <dt>Atteintes aux droits</dt>
+        <dd>Plagiat et publication de contenus d’une autre personne sans son accord.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="lg-article" id="signaler">
+    <h2>Signaler un problème</h2>
+    <p>
+      Signalez ce qui pose problème avec le bouton « Signaler », en choisissant le motif qui
+      correspond : spam, contenu illicite, contenu dangereux, données personnelles, plagiat,
+      harcèlement, hors sujet ou autre. La modération examine chaque signalement en visant un délai
+      de 72 heures.
+    </p>
+    <p>
+      Sans compte, vous pouvez signaler un contenu illicite depuis le{' '}
+      <a href={`${ROUTES.contact}?motif=signalement`}>formulaire de contact</a>. Signalez de bonne
+      foi : les signalements abusifs et répétés peuvent eux-mêmes être sanctionnés.
+    </p>
+  </section>
+
+  <section class="lg-article" id="sanctions">
+    <h2>Ce qui se passe en cas de manquement</h2>
+    <p>
+      La modération agit de façon proportionnée à la gravité et à la répétition du manquement&nbsp;:
+    </p>
+    <ol>
+      <li>un rappel ou un avertissement ;</li>
+      <li>le masquage ou la suppression du contenu ;</li>
+      <li>la suspension du compte, de 1 à 90 jours ;</li>
+      <li>la fermeture définitive du compte, pour les manquements graves ou répétés.</li>
+    </ol>
+    <p>
+      Les contenus les plus graves, comme les menaces ou les contenus sexuels impliquant des
+      mineurs, sont supprimés sans avertissement préalable. Chaque mesure vous est notifiée avec ses
+      raisons, et vous pouvez la contester dans les 6 mois (
+      <a href={`${ROUTES.cgu}#contestation`}>article 7 des conditions d’utilisation</a>).
+    </p>
+  </section>
+
+  <section class="lg-article" id="evolution">
+    <h2>Évolution de la charte</h2>
+    <p>
+      Toute modification importante de la charte est annoncée par e-mail et sur Vysora au moins 30
+      jours avant son entrée en vigueur, avec un résumé des changements. Il vous est ensuite demandé
+      de l’accepter à votre connexion suivante.
+    </p>
+  </section>
+</PageLegale>
