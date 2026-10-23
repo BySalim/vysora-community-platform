@@ -12,6 +12,9 @@ const ARGON2: Options = { algorithm: 2, memoryCost: 19_456, timeCost: 2, paralle
 const SERVICE_FUITES = 'https://api.pwnedpasswords.com/range/';
 const DELAI_SERVICE_FUITES_MS = 3_000;
 
+/** Empreinte Argon2id d'un mot de passe (comptes, données de démonstration). */
+export const hacherMotDePasse = (motDePasse: string): Promise<string> => hash(motDePasse, ARGON2);
+
 @Injectable()
 export class MotsDePasseService {
   private readonly journal = new Logger(MotsDePasseService.name);
@@ -20,7 +23,7 @@ export class MotsDePasseService {
   constructor(@Inject(CONFIG) private readonly config: Configuration) {}
 
   hacher(motDePasse: string): Promise<string> {
-    return hash(motDePasse, ARGON2);
+    return hacherMotDePasse(motDePasse);
   }
 
   /** Sans empreinte (compte inconnu, compte externe), le calcul a lieu quand même : la durée de

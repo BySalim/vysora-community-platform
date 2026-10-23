@@ -49,6 +49,7 @@ On privilégie la **vitesse** pour rendre le produit utilisable au plus tôt, en
 | `pnpm install` | Dépendances (Node 24, pnpm 10) |
 | `pnpm infra:up` / `pnpm infra:down` | PostgreSQL et Mailpit (Docker) |
 | `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:reset` | Migrations · référentiels · base remise à zéro (développement) |
+| `pnpm db:demo` | Données de démonstration du prototype (membres, créations, forum, cas, défis, votes), après `db:seed` ; idempotent, refusé en production. Comptes `<pseudo>@example.test` (par exemple `clarisse-mendy`, le membre simulé du prototype), mot de passe dans `apps/api/src/db/demo/identifiants.ts` |
 | `pnpm db:generate` | Migration SQL depuis le schéma Drizzle (à relire) |
 | `pnpm dev` | Paquet partagé, API (:3000) et site (:4321) en mode développement |
 | `pnpm prototype` | Prototype de référence sur :5173 |

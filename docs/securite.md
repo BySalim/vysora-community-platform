@@ -29,6 +29,7 @@
 | État du visiteur inséré dans la page en JSON avec `<` échappé (aucune valeur ne peut fermer la balise `<script>`) | `layouts/Base.astro` |
 | Messages d'accès (dialogue, bloc, invitation) construits avec échappement de chaque texte et de chaque adresse ; retour après la connexion limité aux chemins internes | `lib/acces.ts`, `lib/retour.ts` (AUTH-07) |
 | Pages légales : seul le balisage écrit dans le dépôt est transformé (typographie, liens de section) ; les textes venus de l'API (résumés des changements) sont échappés | `lib/pages-legales.ts`, `PageLegale.astro` (LEG-01) |
+| Données de démonstration refusées en production (la fonction et la commande vérifient `NODE_ENV`) ; comptes en `@example.test` (domaine réservé), mot de passe de développement commun consigné dans le dépôt et haché en Argon2id comme les vrais ; deux comptes d'équipe (modération, administration) qui ne doivent exister que hors production | `db/demo/` (DEMO-01) |
 
 ## 2. À mettre en place (par ordre d'arrivée)
 

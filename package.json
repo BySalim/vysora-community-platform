@@ -25,6 +25,7 @@
     "db:generate": "pnpm --filter @vysora/api run db:generate",
     "db:migrate": "pnpm --filter @vysora/api run db:migrate",
     "db:seed": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run db:seed",
+    "db:demo": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run db:demo",
     "db:reset": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run db:reset",
     "db:studio": "pnpm --filter @vysora/api run db:studio",
     "prototype": "node scripts/serveur-prototype.mjs --port 5173"

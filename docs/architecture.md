@@ -55,7 +55,8 @@ apps/
     src/
       main.ts, application.ts, app.module.ts
       config/                variables d'environnement validées (Zod)
-      db/                    client, schéma (MLD), migrations, chargement des référentiels
+      db/                    client, schéma (MLD), migrations, chargement des référentiels (seed/)
+      db/demo/               données de démonstration tirées du prototype (pnpm db:demo, jamais en production)
       commun/                erreurs, filtre RFC 9457, validation Zod, garde d'origine, sécurité
       modules/<domaine>/     contrôleur (HTTP) → service (règles) → base
     test/                    tests de bout en bout (*.e2e-spec.ts)

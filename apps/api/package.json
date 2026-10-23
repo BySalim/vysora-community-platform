@@ -10,6 +10,7 @@
     "start": "node dist/main.js",
     "start:migrate": "node dist/db/migrer.js",
     "start:seed": "node dist/db/seed/index.js",
+    "start:demo": "node dist/db/demo/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -17,6 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrer.ts",
     "db:seed": "tsx src/db/seed/index.ts",
+    "db:demo": "tsx src/db/demo/index.ts",
     "db:reset": "tsx src/db/reinitialiser.ts",
     "db:studio": "drizzle-kit studio"
   },
