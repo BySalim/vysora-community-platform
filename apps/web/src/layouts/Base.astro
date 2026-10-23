@@ -1,7 +1,10 @@
 ---
 /* Gabarit commun à toutes les pages : même <head>, mêmes feuilles de style de base, même en-tête et
    même pied de page que le prototype. Les réglages du panneau Tweaks sont figés sur leurs valeurs
-   par défaut (attributs data-* de <html>), le panneau lui-même n'est pas repris. */
+   par défaut (attributs data-* de <html>), le panneau lui-même n'est pas repris.
+   L'enveloppe « auth » est celle de la connexion et de l'inscription : fond animé, en-tête réduit
+   (logo et lien de retour), pas de pied de page. */
+import AuthTete from '../components/AuthTete.astro';
 import EtatBandeau from '../components/EtatBandeau.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
@@ -30,6 +33,14 @@ interface Props {
   remplacementsIcones?: Record<string, Icone>;
   /** Contenu à ne pas indexer (brouillon, page privée). */
   nonIndexee?: boolean;
+  /** « site » (en-tête et pied de page communs) ou « auth » (connexion, inscription). */
+  enveloppe?: 'site' | 'auth';
+  /** Couleur de la barre du navigateur mobile (bleu sur la connexion et l'inscription). */
+  couleurTheme?: string;
+  /** Texte du lien d'évitement (« Aller au formulaire » sur la connexion). */
+  lienEvitement?: string;
+  /** Enveloppe « auth » : lien de retour de l'en-tête. */
+  retour?: { href: string; libelle: string };
 }
 
 const {
@@ -42,6 +53,10 @@ const {
   icones = [],
   remplacementsIcones,
   nonIndexee = false,
+  enveloppe = 'site',
+  couleurTheme = '#ffffff',
+  lienEvitement = 'Aller au contenu',
+  retour = { href: '/', libelle: 'Retour à l’accueil' },
 } = Astro.props;
 
 const REGLAGES_COMMUNS = {
@@ -75,7 +90,7 @@ const etatClient = JSON.stringify({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content={couleurTheme} />
     <meta name="description" content={description} />
     {nonIndexee && <meta name="robots" content="noindex, nofollow" />}
     <title>{`${titre} · Vysora`}</title>
@@ -104,14 +119,28 @@ const etatClient = JSON.stringify({
   <body class={classeCorps} {...attributsCorps}>
     <Sprite noms={icones} remplacements={remplacementsIcones} />
     <a class="skip-link" href="#contenu">
-      Aller au contenu
+      {lienEvitement}
     </a>
-    <SiteHeader />
-    <EtatBandeau />
-    <main id="contenu" class={classeMain} tabindex="-1">
-      <slot />
-    </main>
-    <SiteFooter />
+    {enveloppe === 'auth' ? (
+      <>
+        <div class="fond" data-fond aria-hidden="true" />
+        <div class="auth-page">
+          <AuthTete retour={retour} />
+          <main id="contenu" class={classeMain} tabindex="-1">
+            <slot />
+          </main>
+        </div>
+      </>
+    ) : (
+      <>
+        <SiteHeader />
+        <EtatBandeau />
+        <main id="contenu" class={classeMain} tabindex="-1">
+          <slot />
+        </main>
+        <SiteFooter />
+      </>
+    )}
     <div class="toast" role="status" aria-live="polite" data-toast></div>
     <script type="application/json" id="etat-visiteur" set:html={etatClient} />
     <script>

@@ -1,0 +1,27 @@
+---
+/* En-tête de la connexion et de l'inscription (prototype : <header class="auth-tete">) :
+   le logo blanc, le lien de retour vers la page d'origine et, pour un membre, la zone du compte. */
+import { ROUTES } from '../lib/navigation';
+import CompteMenu from './CompteMenu.astro';
+
+interface Props {
+  retour: { href: string; libelle: string };
+}
+
+const { retour } = Astro.props;
+---
+
+<header class="auth-tete" data-header>
+  <a class="auth-marque" href={ROUTES.accueil} aria-label="Vysora, accueil">
+    <img src="/assets/logos/vysora%20white%20all.png" alt="" width="337" height="122" />
+  </a>
+  <div class="header-actions">
+    <a class="auth-retour" href={retour.href} data-retour>
+      <svg class="icon" aria-hidden="true">
+        <use href="#i-arrow-left"></use>
+      </svg>
+      <span>{retour.libelle}</span>
+    </a>
+    <CompteMenu />
+  </div>
+</header>

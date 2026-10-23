@@ -1,19 +1,14 @@
 ---
 /* En-tête commun (prototype : <header class="site-header"> de chaque page, complété par commun.js :
    menu, liens de retour, zone du compte). Rendu côté serveur selon la personne qui consulte. */
-import { NIVEAUX } from '@vysora/shared';
 import { NAVIGATION, ROUTES, adresseRetour } from '../lib/navigation';
-import { fmt } from '../lib/texte';
+import CompteMenu from './CompteMenu.astro';
 
-const { etat, membre, nonLues } = Astro.locals;
 const chemin = Astro.url.pathname;
 const retour = adresseRetour(Astro.url);
 const pageCompte = [ROUTES.accueil, ROUTES.connexion, ROUTES.inscription].includes(chemin as never);
 const versConnexion = pageCompte ? ROUTES.connexion : `${ROUTES.connexion}?retour=${retour}`;
 const versInscription = pageCompte ? ROUTES.inscription : `${ROUTES.inscription}?retour=${retour}`;
-const niveau = NIVEAUX.find((n) => n.code === etat.niveau) ?? NIVEAUX[0];
-const ROLES = { membre: 'Membre', moderateur: 'Modérateur', admin: 'Administrateur' } as const;
-const estMembre = etat.session === 'membre' && membre;
 ---
 
 <header class="site-header" data-header>
@@ -62,148 +57,7 @@ const estMembre = etat.session === 'membre' && membre;
       <a class="btn btn-primary btn-sm" href={versInscription} data-pour="visiteur">
         S’inscrire
       </a>
-      {estMembre && (
-        <div class="compte" data-pour="membre">
-          <a
-            class="icon-btn compte-notifs"
-            href={ROUTES.notifications}
-            data-compte-notifs
-            aria-label={nonLues ? `Notifications, ${nonLues} non lues` : 'Notifications'}
-          >
-            <svg class="icon" aria-hidden="true">
-              <use href="#i-bell"></use>
-            </svg>
-            <span class="compte-pastille" data-compte-nb>
-              {nonLues ? String(nonLues) : ''}
-            </span>
-          </a>
-          <button
-            class:list={['compte-btn', { 'has-unread': nonLues > 0 }]}
-            type="button"
-            aria-expanded="false"
-            aria-controls="compte-menu"
-            data-compte-btn
-          >
-            {membre.avatar ? (
-              <img
-                class="avatar compte-avatar"
-                src={membre.avatar}
-                alt=""
-                width="34"
-                height="34"
-                style="width:34px;height:34px"
-                decoding="async"
-              />
-            ) : (
-              <span class="avatar compte-avatar" style="width:34px;height:34px" aria-hidden="true">
-                <svg class="icon" aria-hidden="true">
-                  <use href="#i-user"></use>
-                </svg>
-              </span>
-            )}
-            <span class="sr-only">Votre compte</span>
-          </button>
-          <div class="compte-menu" id="compte-menu" hidden data-compte-menu>
-            <div class="compte-qui">
-              {membre.avatar ? (
-                <img
-                  class="avatar compte-avatar"
-                  src={membre.avatar}
-                  alt=""
-                  width="40"
-                  height="40"
-                  style="width:40px;height:40px"
-                  decoding="async"
-                />
-              ) : (
-                <span
-                  class="avatar compte-avatar"
-                  style="width:40px;height:40px"
-                  aria-hidden="true"
-                >
-                  <svg class="icon" aria-hidden="true">
-                    <use href="#i-user"></use>
-                  </svg>
-                </span>
-              )}
-              <p>
-                <b>{membre.nom}</b>
-                <span>{`${niveau?.libelle} · ${fmt(membre.points)} points`}</span>
-                {etat.role !== 'membre' && <em>{ROLES[etat.role]}</em>}
-              </p>
-            </div>
-            <ul class="compte-liens">
-              <li>
-                <a href={ROUTES.profil(membre.pseudo)}>
-                  <svg class="icon icon-sm" aria-hidden="true">
-                    <use href="#i-user"></use>
-                  </svg>
-                  Mon profil
-                </a>
-              </li>
-              <li>
-                <a href={ROUTES.mesContenus}>
-                  <svg class="icon icon-sm" aria-hidden="true">
-                    <use href="#i-folder"></use>
-                  </svg>
-                  Mes contenus
-                </a>
-              </li>
-              <li>
-                <a href={ROUTES.notifications}>
-                  <svg class="icon icon-sm" aria-hidden="true">
-                    <use href="#i-bell"></use>
-                  </svg>
-                  Notifications
-                  {nonLues > 0 && (
-                    <span class="compte-nb" aria-label={`${nonLues} non lues`}>
-                      {nonLues}
-                    </span>
-                  )}
-                </a>
-              </li>
-              <li>
-                <a href={ROUTES.parametres}>
-                  <svg class="icon icon-sm" aria-hidden="true">
-                    <use href="#i-settings"></use>
-                  </svg>
-                  Paramètres
-                </a>
-              </li>
-            </ul>
-            {etat.role !== 'membre' && (
-              <ul class="compte-liens">
-                <li>
-                  <a href={ROUTES.moderation}>
-                    <svg class="icon icon-sm" aria-hidden="true">
-                      <use href="#i-shield"></use>
-                    </svg>
-                    Modération
-                  </a>
-                </li>
-                {etat.role === 'admin' && (
-                  <li>
-                    <a href={ROUTES.administration}>
-                      <svg class="icon icon-sm" aria-hidden="true">
-                        <use href="#i-panel"></use>
-                      </svg>
-                      Administration
-                    </a>
-                  </li>
-                )}
-              </ul>
-            )}
-            <div class="compte-fin">
-              <button class="compte-sortir" type="button" data-deconnexion>
-                <svg class="icon icon-sm" aria-hidden="true">
-                  <use href="#i-logout"></use>
-                </svg>
-                Se déconnecter
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CompteMenu />
       <button
         class="icon-btn menu-toggle"
         type="button"

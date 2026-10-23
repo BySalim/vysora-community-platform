@@ -1,0 +1,35 @@
+---
+/* Membre déjà connecté, sur la connexion et l'inscription (prototype : écran « deja », bloc .qui) :
+   avatar, nom, niveau et points. */
+import { NIVEAUX } from '@vysora/shared';
+import { fmt, typo } from '../lib/texte';
+
+const { etat, membre } = Astro.locals;
+const niveau = NIVEAUX.find((n) => n.code === etat.niveau) ?? NIVEAUX[0];
+---
+
+{membre && (
+  <>
+    {membre.avatar ? (
+      <img
+        class="avatar compte-avatar"
+        src={membre.avatar}
+        alt=""
+        width="44"
+        height="44"
+        style="width:44px;height:44px"
+        decoding="async"
+      />
+    ) : (
+      <span class="avatar compte-avatar" style="width:44px;height:44px" aria-hidden="true">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-user" />
+        </svg>
+      </span>
+    )}
+    <p>
+      <b>{membre.nom}</b>
+      <span>{typo(`${niveau?.libelle} · ${fmt(membre.points)} points`)}</span>
+    </p>
+  </>
+)}

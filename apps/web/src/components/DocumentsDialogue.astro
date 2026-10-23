@@ -1,0 +1,69 @@
+---
+/* Fenêtre « Documents en vigueur » de la connexion et de l'inscription (prototype/auth.js, `documents`) :
+   un onglet par document, ses points essentiels et sa date d'effet. Ouverte par scripts/auth/commun.ts
+   depuis tout lien [data-document]. */
+import type { DocumentLegalApi } from '@vysora/shared';
+import { CLE_DOCUMENT, ORDRE_DOCUMENTS, RESUMES_DOCUMENTS } from '../lib/documents-legaux';
+import { dateLongue, typo } from '../lib/texte';
+
+interface Props {
+  /** Versions en vigueur (GET /api/v1/documents-legaux) ; sans elles, la date n'est pas affichée. */
+  documents: DocumentLegalApi[];
+}
+
+const { documents } = Astro.props;
+const dateEffet = Object.fromEntries(
+  documents.map((document) => [CLE_DOCUMENT[document.type], document.dateEffet]),
+);
+---
+
+<dialog class="dialogue" aria-labelledby="doc-titre" data-documents>
+  <div class="dialogue-tete">
+    <h2 id="doc-titre">Documents en vigueur</h2>
+    <button class="icon-btn" type="button" aria-label="Fermer" data-fermer>
+      <svg class="icon" aria-hidden="true">
+        <use href="#i-close"></use>
+      </svg>
+    </button>
+  </div>
+  <div class="onglets" role="tablist" aria-label="Documents">
+    {ORDRE_DOCUMENTS.map((cle) => (
+      <button
+        type="button"
+        role="tab"
+        id={`doc-onglet-${cle}`}
+        aria-controls={`doc-${cle}`}
+        data-doc={cle}
+      >
+        {typo(RESUMES_DOCUMENTS[cle].onglet)}
+      </button>
+    ))}
+  </div>
+  {ORDRE_DOCUMENTS.map((cle) => (
+    <section
+      class="document"
+      id={`doc-${cle}`}
+      role="tabpanel"
+      aria-labelledby={`doc-onglet-${cle}`}
+      tabindex="0"
+      hidden
+    >
+      <h3>{typo(RESUMES_DOCUMENTS[cle].titre)}</h3>
+      {dateEffet[cle] && (
+        <p class="document-version">{typo(`En vigueur depuis le ${dateLongue(dateEffet[cle])}`)}</p>
+      )}
+      <ul>
+        {RESUMES_DOCUMENTS[cle].points.map((point) => (
+          <li>
+            <span>{typo(point)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+  <div class="dialogue-pied">
+    <button class="action action-principale" type="button" data-fermer>
+      Fermer
+    </button>
+  </div>
+</dialog>

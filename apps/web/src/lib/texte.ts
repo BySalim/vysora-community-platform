@@ -46,3 +46,9 @@ const formatDateLongue = new Intl.DateTimeFormat('fr-FR', {
 /** « 23 octobre 2026 », « 1er septembre 2026 » : date ISO (AAAA-MM-JJ ou instant) lue en temps universel. */
 export const dateLongue = (valeur: string | Date): string =>
   formatDateLongue.format(new Date(valeur)).replace(/^1 /, '1er ');
+
+/** « c•••••@gmail.com » : une adresse rappelée à l'écran sans être révélée entière. */
+export function masquerEmail(email: string): string {
+  const [local = '', domaine = ''] = email.split('@');
+  return `${local.slice(0, 1)}${'•'.repeat(Math.max(3, Math.min(local.length - 1, 8)))}@${domaine}`;
+}

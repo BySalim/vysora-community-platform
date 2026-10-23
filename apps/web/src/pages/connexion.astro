@@ -1,0 +1,605 @@
+---
+/* Page Connexion, portée de prototype/connexion.html (connexion.js, auth.js, auth.css) : identifiants,
+   nouvelles conditions, mot de passe oublié, lien envoyé, nouveau mot de passe, lien expiré, réussite,
+   session déjà ouverte. Le serveur choisit l'écran de départ (lien de réinitialisation lu ici).
+   Restent à brancher : la vérification en deux étapes (SEC-02) et Google et GitHub (S-10). */
+import type { DocumentLegalApi, LienReinitialisation } from '@vysora/shared';
+import DocumentsDialogue from '../components/DocumentsDialogue.astro';
+import MembreConnecte from '../components/MembreConnecte.astro';
+import Base from '../layouts/Base.astro';
+import { ErreurApi, appelerApi } from '../lib/api';
+import { CLE_DOCUMENT, RESUMES_DOCUMENTS } from '../lib/documents-legaux';
+import { ROUTES } from '../lib/navigation';
+import { contexteArrivee } from '../lib/retour';
+import { dateLongue, masquerEmail, typo } from '../lib/texte';
+import '../styles/auth.css';
+
+const contexte = contexteArrivee(Astro.url.searchParams);
+const { etat } = Astro.locals;
+const jeton = Astro.url.searchParams.get('jeton');
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+let documents: DocumentLegalApi[] = [];
+try {
+  documents = await appelerApi<DocumentLegalApi[]>('/api/v1/documents-legaux', { adresseClient });
+} catch {
+  // Sans l'API, la fenêtre des documents s'affiche sans dates.
+}
+
+/** Lien de réinitialisation (F-03) : valable, l'écran du nouveau mot de passe ; sinon « Lien expiré ». */
+let lien: LienReinitialisation | null = null;
+let ecran = etat.session === 'membre' ? 'deja' : 'identifiants';
+if (jeton) {
+  try {
+    lien = await appelerApi<LienReinitialisation>('/api/v1/mot-de-passe/lien', {
+      corps: { jeton },
+      requete: Astro.request,
+      adresseClient,
+    });
+    ecran = 'nouveau-mdp';
+  } catch (erreur) {
+    const expire =
+      erreur instanceof ErreurApi && ['LIEN_EXPIRE', 'VALIDATION'].includes(erreur.probleme.code);
+    if (!expire) console.error('Lien de réinitialisation non lu :', erreur);
+    ecran = expire ? 'lien-expire' : 'nouveau-mdp';
+  }
+}
+
+const aAccepter = documents.filter((document) => document.acceptationRequise);
+const miseAJour = aAccepter
+  .map((document) => document.dateEffet)
+  .toSorted()
+  .at(-1);
+const versInscription = `${ROUTES.inscription}${contexte.requete ? `?${contexte.requete}` : ''}`;
+const continuer = contexte.actif ? 'Reprendre où vous en étiez' : 'Continuer';
+const TEXTE_DEJA: Record<string, string> = {
+  email: 'Confirmez votre adresse e-mail pour publier, voter et répondre.',
+  conditions: 'Acceptez les nouvelles conditions pour publier et participer.',
+  suspendu: Astro.locals.suspensionJusqua
+    ? `Votre compte est suspendu jusqu’au ${dateLongue(Astro.locals.suspensionJusqua)}.`
+    : '',
+};
+const texteDeja = etat.session === 'membre' ? (TEXTE_DEJA[etat.compte] ?? '') : '';
+const visible = (nom: string) => nom === ecran;
+---
+
+<Base
+  titre="Se connecter"
+  description="Connectez-vous à Vysora pour retrouver vos créations, vos essais et votre progression."
+  enveloppe="auth"
+  couleurTheme="#1D4ED8"
+  lienEvitement="Aller au formulaire"
+  retour={{ href: contexte.destination, libelle: contexte.libelleRetour }}
+  classeCorps="auth"
+  donneesCorps={{ page: 'connexion', 'sans-garde': '' }}
+  classeMain="auth-scene"
+  reglages={{
+    'auth-motif': 'relief',
+    'auth-fond': 'bleu',
+    'auth-ambiance': 'profondeur',
+    'auth-voile': 'assombri',
+    'auth-teinte': 'pale',
+    'auth-largeur': 'standard',
+    'auth-services': 'avant',
+  }}
+  icones={[
+    'arrow',
+    'arrow-left',
+    'lock',
+    'bookmark',
+    'repeat',
+    'message',
+    'bulb',
+    'flag',
+    'trophy',
+    'layers',
+    'utile',
+    'info',
+    'external',
+  ]}
+  nonIndexee={Boolean(jeton)}
+>
+  <div
+    class="carte"
+    data-carte
+    data-destination={contexte.destination}
+    data-contexte-actif={contexte.actif ? 'oui' : undefined}
+  >
+    <div class="carte-contenu" data-carte-contenu data-vues>
+      <section
+        class="auth-vue"
+        data-vue="identifiants"
+        data-pied
+        aria-labelledby="t-identifiants"
+        hidden={!visible('identifiants')}
+      >
+        <p class="auth-repere" data-repere hidden={!contexte.actif}>
+          {contexte.actif && (
+            <>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href={`#i-${contexte.icone}`} />
+              </svg>
+              <span>{typo(`Pour ${contexte.pour}`)}</span>
+            </>
+          )}
+        </p>
+        <h1 id="t-identifiants" tabindex="-1">
+          Se connecter
+        </h1>
+        <div class="entrees">
+          <div class="services">
+            <button
+              class="service"
+              type="button"
+              data-service="google"
+              aria-label="Continuer avec Google"
+            >
+              <span class="service-logo" data-logo="google"></span>Google
+            </button>
+            <button
+              class="service"
+              type="button"
+              data-service="github"
+              aria-label="Continuer avec GitHub"
+            >
+              <span class="service-logo" data-logo="github"></span>GitHub
+            </button>
+          </div>
+          <p class="ou">
+            <span data-ou="avant">ou avec votre e-mail</span>
+            <span data-ou="apres">ou continuer avec</span>
+          </p>
+          <form id="form-identifiants" novalidate>
+            <div class="champ">
+              <label for="cx-email">Adresse e-mail</label>
+              <div class="saisie">
+                <input
+                  id="cx-email"
+                  name="email"
+                  type="email"
+                  autocomplete="username"
+                  inputmode="email"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  required
+                  aria-describedby="cx-email-erreur cx-email-suggestion"
+                />
+              </div>
+              <p class="message is-erreur" id="cx-email-erreur" hidden></p>
+              <p class="message" id="cx-email-suggestion" hidden></p>
+            </div>
+            <div class="champ">
+              <label for="cx-mdp">Mot de passe</label>
+              <div class="saisie a-oeil" data-mdp>
+                <input
+                  id="cx-mdp"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  aria-describedby="cx-mdp-maj cx-mdp-erreur"
+                />
+                <button
+                  class="saisie-oeil"
+                  type="button"
+                  aria-controls="cx-mdp"
+                  aria-pressed="false"
+                  aria-label="Afficher le mot de passe"
+                  data-voir
+                ></button>
+              </div>
+              <p class="message is-erreur" id="cx-mdp-erreur" hidden></p>
+              <div class="champ-pied">
+                <p class="message is-alerte" id="cx-mdp-maj" hidden>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-info"></use>
+                  </svg>
+                  Majuscules verrouillées
+                </p>
+                <button class="lien" type="button" data-aller="oubli">
+                  Mot de passe oublié ?
+                </button>
+              </div>
+            </div>
+            <div class="alerte" role="alert" data-alerte hidden></div>
+            <button class="action action-principale" type="submit">
+              <span class="action-libelle">Se connecter</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section class="auth-vue" data-vue="deux-facteurs" aria-labelledby="t-code" hidden>
+        <p class="auth-repere">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-shield"></use>
+          </svg>
+          <span data-role-libelle>Compte de modération</span>
+        </p>
+        <h1 id="t-code" tabindex="-1">
+          Vérification en deux étapes
+        </h1>
+        <p class="auth-intro" data-code-intro>
+          Saisissez le code affiché par votre application d’authentification.
+        </p>
+        <form class="auth-bloc" id="form-code" novalidate>
+          <div class="champ" data-mode-code="appli">
+            <label for="cx-code">Code à six chiffres</label>
+            <div class="otp" data-otp>
+              <input
+                id="cx-code"
+                name="code"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                spellcheck="false"
+                aria-describedby="cx-code-erreur"
+              />
+              <div class="otp-cases" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <p class="message is-erreur" id="cx-code-erreur" hidden></p>
+          </div>
+          <div class="champ" data-mode-code="secours" hidden>
+            <label for="cx-secours">Code de secours</label>
+            <div class="saisie">
+              <input
+                class="code-secours"
+                id="cx-secours"
+                name="secours"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="9"
+                placeholder="ABCD-EFGH"
+                aria-describedby="cx-secours-erreur"
+              />
+            </div>
+            <p class="message is-erreur" id="cx-secours-erreur" hidden></p>
+          </div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Vérifier</span>
+          </button>
+        </form>
+        <p class="liens">
+          <button class="lien" type="button" data-basculer-code>
+            Utiliser un code de secours
+          </button>
+          <button class="lien" type="button" data-aller="identifiants">
+            Changer de compte
+          </button>
+        </p>
+      </section>
+
+      <section class="auth-vue" data-vue="documents" aria-labelledby="t-documents" hidden>
+        <span class="picto" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              class="dessin"
+              pathLength="1"
+              d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"
+            ></path>
+          </svg>
+        </span>
+        <h1 id="t-documents" tabindex="-1">
+          Nouvelles conditions
+        </h1>
+        <p class="auth-intro" data-mise-a-jour>
+          {miseAJour ? typo(`Mises à jour le ${dateLongue(miseAJour)}.`) : ''}
+        </p>
+        <ul class="changements" data-changements>
+          {aAccepter.map((document) => (
+            <li>
+              <b>{typo(RESUMES_DOCUMENTS[CLE_DOCUMENT[document.type]].titre)}</b>
+              {document.resumeChangements && <span>{typo(document.resumeChangements)}</span>}
+              <button class="lien" type="button" data-document={CLE_DOCUMENT[document.type]}>
+                Lire le document
+              </button>
+            </li>
+          ))}
+        </ul>
+        <form class="auth-bloc" id="form-documents" novalidate>
+          <div class="case-champ">
+            <div class="case">
+              <input
+                type="checkbox"
+                id="cx-accord"
+                name="accord"
+                aria-describedby="cx-accord-erreur"
+              />
+              <label for="cx-accord">J’accepte les nouvelles versions de ces documents.</label>
+            </div>
+            <p class="message is-erreur" id="cx-accord-erreur" hidden></p>
+          </div>
+          <div class="alerte" role="alert" data-alerte hidden></div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Accepter et continuer</span>
+          </button>
+        </form>
+        <p class="liens">
+          <button class="lien" type="button" data-plus-tard>
+            Plus tard
+          </button>
+        </p>
+      </section>
+
+      <section class="auth-vue" data-vue="oubli" data-pied aria-labelledby="t-oubli" hidden>
+        <button class="retour" type="button" data-aller="identifiants">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-arrow-left"></use>
+          </svg>
+          Retour
+        </button>
+        <h1 id="t-oubli" tabindex="-1">
+          Mot de passe oublié
+        </h1>
+        <p class="auth-intro">Recevez un lien pour en choisir un nouveau.</p>
+        <form class="auth-bloc" id="form-oubli" novalidate>
+          <div class="champ">
+            <label for="cx-oubli-email">Adresse e-mail</label>
+            <div class="saisie">
+              <input
+                id="cx-oubli-email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
+                required
+                aria-describedby="cx-oubli-email-erreur cx-oubli-email-suggestion"
+              />
+            </div>
+            <p class="message is-erreur" id="cx-oubli-email-erreur" hidden></p>
+            <p class="message" id="cx-oubli-email-suggestion" hidden></p>
+          </div>
+          <div class="alerte" role="alert" data-alerte hidden></div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Envoyer le lien</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="auth-vue" data-vue="oubli-envoye" aria-labelledby="t-envoye" hidden>
+        <span class="picto" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              class="dessin"
+              pathLength="1"
+              d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm-1.5 2 8.5 6 8.5-6"
+            ></path>
+          </svg>
+        </span>
+        <h1 id="t-envoye" tabindex="-1">
+          Vérifiez votre boîte mail
+        </h1>
+        <p class="auth-intro">
+          Si un compte existe pour <b data-email-oubli></b>, un lien valable une heure vient d’y
+          être envoyé.
+        </p>
+        <div data-messagerie></div>
+        <p class="liens">
+          <button class="lien" type="button" data-renvoyer-oubli>
+            Renvoyer le lien
+          </button>
+          <button class="lien" type="button" data-aller="identifiants">
+            Retour à la connexion
+          </button>
+        </p>
+      </section>
+
+      <section
+        class="auth-vue"
+        data-vue="nouveau-mdp"
+        aria-labelledby="t-nouveau"
+        hidden={!visible('nouveau-mdp')}
+      >
+        <h1 id="t-nouveau" tabindex="-1">
+          Nouveau mot de passe
+        </h1>
+        {lien && (
+          <p class="auth-intro">
+            Pour <b>{masquerEmail(lien.email)}</b>
+          </p>
+        )}
+        <form class="auth-bloc" id="form-nouveau" novalidate>
+          <input type="hidden" name="jeton" value={jeton ?? ''} />
+          <input
+            class="sr-only"
+            type="email"
+            name="username"
+            autocomplete="username"
+            value={lien?.email ?? ''}
+            tabindex="-1"
+            aria-hidden="true"
+            readonly
+          />
+          <div class="champ">
+            <label for="cx-nouveau">Mot de passe</label>
+            <div class="saisie a-oeil" data-mdp>
+              <input
+                id="cx-nouveau"
+                name="new-password"
+                type="password"
+                autocomplete="new-password"
+                required
+                aria-describedby="cx-nouveau-aide cx-nouveau-maj cx-nouveau-erreur"
+              />
+              <button
+                class="saisie-oeil"
+                type="button"
+                aria-controls="cx-nouveau"
+                aria-pressed="false"
+                aria-label="Afficher le mot de passe"
+                data-voir
+              ></button>
+            </div>
+            <div class="force-ligne">
+              <div class="force" data-force aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <p class="message force-texte" id="cx-nouveau-aide" data-aide-mdp>
+                12 caractères minimum
+              </p>
+            </div>
+            <p class="message is-alerte" id="cx-nouveau-maj" hidden>
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-info"></use>
+              </svg>
+              Majuscules verrouillées
+            </p>
+            <p class="message is-erreur" id="cx-nouveau-erreur" hidden></p>
+            <p class="sr-only" aria-live="polite" data-annonce></p>
+          </div>
+          <div class="alerte" role="alert" data-alerte hidden></div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Enregistrer</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="auth-vue" data-vue="nouveau-ok" aria-labelledby="t-nouveau-ok" hidden>
+        <span class="picto" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path class="dessin" pathLength="1" d="m5 12.5 4.5 4.5L19 7.5"></path>
+          </svg>
+        </span>
+        <h1 id="t-nouveau-ok" tabindex="-1">
+          Mot de passe modifié
+        </h1>
+        <p class="auth-intro">Connectez-vous avec votre nouveau mot de passe.</p>
+        <button class="action action-principale" type="button" data-aller="identifiants">
+          <span class="action-libelle">Se connecter</span>
+        </button>
+      </section>
+
+      <section
+        class="auth-vue"
+        data-vue="lien-expire"
+        aria-labelledby="t-expire"
+        hidden={!visible('lien-expire')}
+      >
+        <span class="picto is-attente" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              class="dessin"
+              pathLength="1"
+              d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 4v5l3 2"
+            ></path>
+          </svg>
+        </span>
+        <h1 id="t-expire" tabindex="-1">
+          Lien expiré
+        </h1>
+        <p class="auth-intro">Les liens de réinitialisation restent valables une heure.</p>
+        <button class="action action-principale" type="button" data-aller="oubli">
+          <span class="action-libelle">Recevoir un nouveau lien</span>
+        </button>
+        <p class="liens">
+          <button class="lien" type="button" data-aller="identifiants">
+            Retour à la connexion
+          </button>
+        </p>
+      </section>
+
+      <section class="auth-vue" data-vue="succes" aria-labelledby="t-succes" hidden>
+        <svg class="moment" viewBox="0 0 108 76" aria-hidden="true" focusable="false">
+          <path class="m-ligne" pathLength="1" d="M4 56H32"></path>
+          <circle class="m-etape" cx="14" cy="56" r="4"></circle>
+          <circle class="m-halo" cx="45" cy="56" r="12.5"></circle>
+          <path class="m-fleche" pathLength="1" d="m54 47 38-38"></path>
+          <path class="m-pointe" pathLength="1" d="M78 9h14v14"></path>
+          <circle class="m-anneau" pathLength="1" cx="45" cy="56" r="12.5"></circle>
+        </svg>
+        <span class="picto is-attente" data-picto-suspendu aria-hidden="true" hidden>
+          <svg viewBox="0 0 24 24">
+            <path
+              class="dessin"
+              pathLength="1"
+              d="M6 11h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2zM8 11V7a4 4 0 0 1 8 0v4"
+            ></path>
+          </svg>
+        </span>
+        <h1 id="t-succes" tabindex="-1" data-succes-titre>
+          Bon retour
+        </h1>
+        <p class="auth-intro" data-succes-texte hidden></p>
+        <p class="attente-texte" data-succes-attente hidden></p>
+        <div data-succes-actions></div>
+      </section>
+
+      <section class="auth-vue" data-vue="deja" aria-labelledby="t-deja" hidden={!visible('deja')}>
+        <div class="qui" data-qui>
+          <MembreConnecte />
+        </div>
+        <h1 id="t-deja" tabindex="-1">
+          Vous êtes connecté
+        </h1>
+        <p class="auth-intro" data-deja-texte hidden={!texteDeja}>
+          {typo(texteDeja)}
+        </p>
+        <a class="action action-principale" href={contexte.destination} data-continuer>
+          <span class="action-libelle">{continuer}</span>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-arrow"></use>
+          </svg>
+        </a>
+        <p class="liens">
+          <button class="lien" type="button" data-autre-compte>
+            Changer de compte
+          </button>
+        </p>
+      </section>
+    </div>
+    <div class="carte-bas">
+      <p class="carte-pied" data-carte-pied>
+        Pas encore de compte ?
+        <a href={versInscription} data-auth-lien="inscription">
+          Créer un compte
+        </a>
+      </p>
+      <ul class="carte-liens">
+        <li>
+          <button type="button" data-document="cgu">
+            Conditions
+          </button>
+        </li>
+        <li>
+          <button type="button" data-document="confidentialite">
+            Confidentialité
+          </button>
+        </li>
+        <li>
+          <button type="button" data-document="charte">
+            Charte
+          </button>
+        </li>
+        <li>
+          <button type="button" data-aide>
+            Aide
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <DocumentsDialogue documents={documents} />
+</Base>
+
+<script>
+  import '../scripts/connexion';
+</script>

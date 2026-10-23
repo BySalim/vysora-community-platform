@@ -1,0 +1,547 @@
+---
+/* Page Inscription, portée de prototype/inscription.html (inscription.js, auth.js, auth.css) :
+   adresse e-mail, mot de passe, pseudo proposé, confirmation de l'adresse, session déjà ouverte.
+   Le lien de vérification reçu par e-mail (?verifier=…) est lu ici par le serveur.
+   Restent à brancher : le code d'invitation de la bêta (INV-01) et Google et GitHub (S-10). */
+import type { DocumentLegalApi } from '@vysora/shared';
+import DocumentsDialogue from '../components/DocumentsDialogue.astro';
+import MembreConnecte from '../components/MembreConnecte.astro';
+import Base from '../layouts/Base.astro';
+import { ErreurApi, appelerApi } from '../lib/api';
+import { ROUTES } from '../lib/navigation';
+import { contexteArrivee } from '../lib/retour';
+import '../styles/auth.css';
+
+const contexte = contexteArrivee(Astro.url.searchParams);
+const { etat } = Astro.locals;
+const verifier = Astro.url.searchParams.get('verifier');
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+let documents: DocumentLegalApi[] = [];
+try {
+  documents = await appelerApi<DocumentLegalApi[]>('/api/v1/documents-legaux', { adresseClient });
+} catch {
+  // Sans l'API, la fenêtre des documents s'affiche sans dates.
+}
+
+/** Lien de vérification (AUTH-02) : l'adresse est confirmée à l'ouverture, comme dans le prototype. */
+let ecran = etat.session === 'membre' ? 'deja' : 'compte';
+if (verifier) {
+  try {
+    await appelerApi('/api/v1/comptes/verification', {
+      corps: { jeton: verifier },
+      requete: Astro.request,
+      adresseClient,
+    });
+    ecran = 'lien';
+  } catch (erreur) {
+    if (erreur instanceof ErreurApi && ['LIEN_EXPIRE', 'VALIDATION'].includes(erreur.probleme.code))
+      ecran = 'lien-expire';
+    else console.error('Lien de vérification non lu :', erreur);
+  }
+}
+
+const versConnexion = `${ROUTES.connexion}${contexte.requete ? `?${contexte.requete}` : ''}`;
+const continuer = contexte.actif ? 'Reprendre où vous en étiez' : 'Continuer';
+const visible = (nom: string) => nom === ecran;
+---
+
+<Base
+  titre="Créer un compte"
+  description="Créez votre compte Vysora gratuitement : publiez vos créations avec le chemin parcouru et apprenez de celles de la communauté."
+  enveloppe="auth"
+  couleurTheme="#1D4ED8"
+  lienEvitement="Aller au formulaire"
+  retour={{ href: contexte.destination, libelle: contexte.libelleRetour }}
+  classeCorps="auth"
+  donneesCorps={{ page: 'inscription', 'sans-garde': '' }}
+  classeMain="auth-scene"
+  reglages={{
+    'auth-motif': 'relief',
+    'auth-fond': 'bleu',
+    'auth-ambiance': 'profondeur',
+    'auth-voile': 'assombri',
+    'auth-teinte': 'pale',
+    'auth-largeur': 'standard',
+    'auth-services': 'avant',
+  }}
+  icones={[
+    'arrow',
+    'arrow-left',
+    'lock',
+    'bookmark',
+    'repeat',
+    'message',
+    'bulb',
+    'flag',
+    'trophy',
+    'layers',
+    'utile',
+    'info',
+    'external',
+    'shuffle',
+  ]}
+  nonIndexee={Boolean(verifier)}
+>
+  <div
+    class="carte"
+    data-carte
+    data-destination={contexte.destination}
+    data-contexte-actif={contexte.actif ? 'oui' : undefined}
+  >
+    <div class="carte-contenu" data-carte-contenu data-vues>
+      <section
+        class="auth-vue"
+        data-vue="compte"
+        data-pied
+        aria-labelledby="t-compte"
+        hidden={!visible('compte')}
+      >
+        <p class="auth-repere" data-repere hidden={!contexte.actif}>
+          {contexte.actif && (
+            <>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href={`#i-${contexte.icone}`} />
+              </svg>
+              <span>{`Pour ${contexte.pour}`}</span>
+            </>
+          )}
+        </p>
+        <p class="invitation" data-invitation hidden></p>
+        <h1 id="t-compte" tabindex="-1">
+          Créer un compte
+        </h1>
+        <p class="auth-intro" data-intro-beta hidden>
+          Pendant la bêta, l’inscription se fait sur invitation.
+        </p>
+        <div class="champ auth-bloc" data-champ-code hidden>
+          <label for="in-code">Code d’invitation</label>
+          <div class="saisie">
+            <input
+              class="majuscules"
+              id="in-code"
+              name="invitation"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength="11"
+              placeholder="VYS-XXXX-XX"
+              aria-describedby="in-code-erreur"
+            />
+          </div>
+          <p class="message is-erreur" id="in-code-erreur" hidden></p>
+        </div>
+        <div class="entrees">
+          <div class="services">
+            <button
+              class="service"
+              type="button"
+              data-service="google"
+              aria-label="Continuer avec Google"
+            >
+              <span class="service-logo" data-logo="google"></span>Google
+            </button>
+            <button
+              class="service"
+              type="button"
+              data-service="github"
+              aria-label="Continuer avec GitHub"
+            >
+              <span class="service-logo" data-logo="github"></span>GitHub
+            </button>
+          </div>
+          <p class="ou">
+            <span data-ou="avant">ou avec votre e-mail</span>
+            <span data-ou="apres">ou continuer avec</span>
+          </p>
+          <form id="form-compte" novalidate>
+            <div class="champ">
+              <label for="in-email">Adresse e-mail</label>
+              <div class="saisie">
+                <input
+                  id="in-email"
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  inputmode="email"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  required
+                  aria-describedby="in-email-erreur in-email-suggestion"
+                />
+              </div>
+              <p class="message is-erreur" id="in-email-erreur" hidden></p>
+              <p class="message" id="in-email-suggestion" hidden></p>
+            </div>
+            <div class="alerte" role="alert" data-alerte hidden></div>
+            <button class="action action-principale" type="submit">
+              <span class="action-libelle">Continuer</span>
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-arrow"></use>
+              </svg>
+            </button>
+          </form>
+        </div>
+        <p class="consentement">
+          En continuant, vous confirmez avoir au moins 15 ans et vous acceptez les{' '}
+          <a href={ROUTES.cgu} data-document="cgu">
+            conditions d’utilisation
+          </a>{' '}
+          et la{' '}
+          <a href={ROUTES.charte} data-document="charte">
+            charte communautaire
+          </a>
+          . La{' '}
+          <a href={ROUTES.confidentialite} data-document="confidentialite">
+            politique de confidentialité
+          </a>{' '}
+          explique comment vos données sont traitées.
+        </p>
+      </section>
+
+      <section class="auth-vue" data-vue="mot-de-passe" data-pied aria-labelledby="t-mdp" hidden>
+        <button class="retour" type="button" data-aller="compte">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-arrow-left"></use>
+          </svg>
+          Retour
+        </button>
+        <h1 id="t-mdp" tabindex="-1">
+          Choisissez un mot de passe
+        </h1>
+        <p class="auth-intro">
+          Pour <b data-email-rappel></b>
+        </p>
+        <form class="auth-bloc" id="form-mdp" novalidate>
+          <input
+            class="sr-only"
+            type="email"
+            name="username"
+            autocomplete="username"
+            tabindex="-1"
+            aria-hidden="true"
+            data-email-cache
+          />
+          <div class="champ">
+            <label for="in-mdp">Mot de passe</label>
+            <div class="saisie a-oeil" data-mdp>
+              <input
+                id="in-mdp"
+                name="new-password"
+                type="password"
+                autocomplete="new-password"
+                required
+                aria-describedby="in-mdp-aide in-mdp-maj in-mdp-erreur"
+              />
+              <button
+                class="saisie-oeil"
+                type="button"
+                aria-controls="in-mdp"
+                aria-pressed="false"
+                aria-label="Afficher le mot de passe"
+                data-voir
+              ></button>
+            </div>
+            <div class="force-ligne">
+              <div class="force" data-force aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <p class="message force-texte" id="in-mdp-aide" data-aide-mdp>
+                12 caractères minimum
+              </p>
+            </div>
+            <p class="message is-alerte" id="in-mdp-maj" hidden>
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-info"></use>
+              </svg>
+              Majuscules verrouillées
+            </p>
+            <p class="message is-erreur" id="in-mdp-erreur" hidden></p>
+            <p class="sr-only" aria-live="polite" data-annonce></p>
+          </div>
+          <div class="champ">
+            <label for="in-mdp-confirmation">Confirmation du mot de passe</label>
+            <div class="saisie a-oeil a-etat" data-mdp>
+              <input
+                id="in-mdp-confirmation"
+                name="confirmation"
+                type="password"
+                autocomplete="new-password"
+                required
+                aria-describedby="in-mdp-confirmation-maj in-mdp-confirmation-erreur"
+              />
+              <span class="saisie-etat" data-confirmation-etat aria-hidden="true"></span>
+              <button
+                class="saisie-oeil"
+                type="button"
+                aria-controls="in-mdp-confirmation"
+                aria-pressed="false"
+                aria-label="Afficher la confirmation du mot de passe"
+                data-voir
+              ></button>
+            </div>
+            <p class="message is-alerte" id="in-mdp-confirmation-maj" hidden>
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-info"></use>
+              </svg>
+              Majuscules verrouillées
+            </p>
+            <p class="message is-erreur" id="in-mdp-confirmation-erreur" hidden></p>
+            <p class="sr-only" aria-live="polite" data-confirmation-annonce></p>
+          </div>
+          <div class="alerte" role="alert" data-alerte hidden></div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Créer mon compte</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="auth-vue" data-vue="pseudo" aria-labelledby="t-pseudo" hidden>
+        <p class="auth-repere is-ok" data-repere-cree>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-check"></use>
+          </svg>
+          <span>Compte créé</span>
+        </p>
+        <h1 id="t-pseudo" tabindex="-1">
+          Votre pseudo
+        </h1>
+        <p class="auth-intro">Choisi au hasard : gardez-le ou modifiez-le.</p>
+        <form class="auth-bloc" id="form-pseudo" novalidate>
+          <div class="identite" data-identite hidden></div>
+          <div class="champ" data-champ-pseudo>
+            <label for="in-pseudo">Pseudo</label>
+            <div class="saisie a-etat a-de">
+              <input
+                id="in-pseudo"
+                name="pseudo"
+                autocomplete="nickname"
+                autocapitalize="none"
+                spellcheck="false"
+                maxlength="30"
+                required
+                aria-describedby="in-pseudo-aide in-pseudo-erreur"
+              />
+              <span class="saisie-etat" data-pseudo-etat aria-hidden="true"></span>
+              <button
+                class="saisie-oeil saisie-de"
+                type="button"
+                aria-label="Proposer un autre pseudo"
+                data-autre-pseudo
+              >
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-shuffle"></use>
+                </svg>
+              </button>
+            </div>
+            <p class="message indice" id="in-pseudo-aide" data-pseudo-aide hidden>
+              3 à 30 caractères : lettres, chiffres et tirets.
+            </p>
+            <p class="message is-erreur" id="in-pseudo-erreur" hidden></p>
+            <div class="propositions" data-propositions hidden></div>
+            <p class="sr-only" aria-live="polite" data-pseudo-annonce></p>
+          </div>
+          <div class="alerte" role="alert" data-alerte hidden></div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Continuer</span>
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-arrow"></use>
+            </svg>
+          </button>
+        </form>
+      </section>
+
+      <section class="auth-vue" data-vue="verification" aria-labelledby="t-verification" hidden>
+        <span class="picto" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              class="dessin"
+              pathLength="1"
+              d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm-1.5 2 8.5 6 8.5-6"
+            ></path>
+          </svg>
+        </span>
+        <h1 id="t-verification" tabindex="-1">
+          Confirmez votre adresse
+        </h1>
+        <p class="auth-intro">
+          Lien envoyé à <b data-email-envoye></b>.
+        </p>
+        <div data-messagerie></div>
+        <form class="modifier" id="form-modifier" novalidate hidden>
+          <div class="champ">
+            <label for="in-email-modif">Nouvelle adresse e-mail</label>
+            <div class="saisie">
+              <input
+                id="in-email-modif"
+                name="email"
+                type="email"
+                autocomplete="email"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
+                aria-describedby="in-email-modif-erreur in-email-modif-suggestion"
+              />
+            </div>
+            <p class="message is-erreur" id="in-email-modif-erreur" hidden></p>
+            <p class="message" id="in-email-modif-suggestion" hidden></p>
+          </div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Envoyer le lien</span>
+          </button>
+          <button class="action action-secondaire" type="button" data-annuler-modif>
+            Annuler
+          </button>
+        </form>
+        <a class="action action-secondaire" href={contexte.destination} data-plus-tard>
+          <span class="action-libelle">Confirmer plus tard</span>
+        </a>
+        <p class="liens">
+          <button class="lien" type="button" data-renvoyer>
+            Renvoyer le lien
+          </button>
+          <button class="lien" type="button" data-modifier-email>
+            Modifier l’adresse
+          </button>
+        </p>
+      </section>
+
+      <section class="auth-vue" data-vue="lien" aria-labelledby="t-lien" hidden={!visible('lien')}>
+        <svg class="moment" viewBox="0 0 108 76" aria-hidden="true" focusable="false">
+          <path class="m-ligne" pathLength="1" d="M4 56H32"></path>
+          <circle class="m-etape" cx="14" cy="56" r="4"></circle>
+          <circle class="m-halo" cx="45" cy="56" r="12.5"></circle>
+          <path class="m-fleche" pathLength="1" d="m54 47 38-38"></path>
+          <path class="m-pointe" pathLength="1" d="M78 9h14v14"></path>
+          <circle class="m-anneau" pathLength="1" cx="45" cy="56" r="12.5"></circle>
+        </svg>
+        <h1 id="t-lien" tabindex="-1">
+          Adresse confirmée
+        </h1>
+        <p class="auth-intro">Votre compte est actif.</p>
+        <a class="action action-principale" href={contexte.destination} data-continuer>
+          <span class="action-libelle">{continuer}</span>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-arrow"></use>
+          </svg>
+        </a>
+      </section>
+
+      <section class="auth-vue" data-vue="pret" aria-labelledby="t-pret" hidden>
+        <svg class="moment" viewBox="0 0 108 76" aria-hidden="true" focusable="false">
+          <path class="m-ligne" pathLength="1" d="M4 56H32"></path>
+          <circle class="m-etape" cx="14" cy="56" r="4"></circle>
+          <circle class="m-halo" cx="45" cy="56" r="12.5"></circle>
+          <path class="m-fleche" pathLength="1" d="m54 47 38-38"></path>
+          <path class="m-pointe" pathLength="1" d="M78 9h14v14"></path>
+          <circle class="m-anneau" pathLength="1" cx="45" cy="56" r="12.5"></circle>
+        </svg>
+        <h1 id="t-pret" tabindex="-1" data-pret-titre>
+          Bienvenue
+        </h1>
+        <p class="auth-intro">Votre compte est prêt.</p>
+        <a class="action action-principale" href={contexte.destination} data-continuer>
+          <span class="action-libelle">{continuer}</span>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-arrow"></use>
+          </svg>
+        </a>
+        <p class="liens">
+          <a class="lien" href="/" data-profil-lien>
+            Compléter mon profil
+          </a>
+        </p>
+      </section>
+
+      <section
+        class="auth-vue"
+        data-vue="lien-expire"
+        aria-labelledby="t-lien-expire"
+        hidden={!visible('lien-expire')}
+      >
+        <span class="picto is-attente" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              class="dessin"
+              pathLength="1"
+              d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 4v5l3 2"
+            ></path>
+          </svg>
+        </span>
+        <h1 id="t-lien-expire" tabindex="-1">
+          Lien expiré
+        </h1>
+        <p class="auth-intro">Les liens de confirmation restent valables 24 heures.</p>
+        <input type="hidden" name="jeton" value={verifier ?? ''} data-jeton-verification />
+        <div class="alerte" role="alert" data-alerte hidden></div>
+        <button class="action action-principale" type="button" data-nouveau-lien>
+          <span class="action-libelle">Recevoir un nouveau lien</span>
+        </button>
+      </section>
+
+      <section class="auth-vue" data-vue="deja" aria-labelledby="t-deja" hidden={!visible('deja')}>
+        <div class="qui" data-qui>
+          <MembreConnecte />
+        </div>
+        <h1 id="t-deja" tabindex="-1">
+          Vous êtes déjà connecté
+        </h1>
+        <a class="action action-principale" href={contexte.destination} data-continuer>
+          <span class="action-libelle">{continuer}</span>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-arrow"></use>
+          </svg>
+        </a>
+        <p class="liens">
+          <button class="lien" type="button" data-autre-compte>
+            Créer un autre compte
+          </button>
+        </p>
+      </section>
+    </div>
+    <div class="carte-bas">
+      <p class="carte-pied" data-carte-pied>
+        Déjà un compte ?
+        <a href={versConnexion} data-auth-lien="connexion">
+          Se connecter
+        </a>
+      </p>
+      <ul class="carte-liens">
+        <li>
+          <button type="button" data-document="cgu">
+            Conditions
+          </button>
+        </li>
+        <li>
+          <button type="button" data-document="confidentialite">
+            Confidentialité
+          </button>
+        </li>
+        <li>
+          <button type="button" data-document="charte">
+            Charte
+          </button>
+        </li>
+        <li>
+          <button type="button" data-aide>
+            Aide
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <DocumentsDialogue documents={documents} />
+</Base>
+
+<script>
+  import '../scripts/inscription';
+</script>

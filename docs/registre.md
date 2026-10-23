@@ -16,12 +16,11 @@
 
 ## Prochaines tâches (ordre conseillé)
 
-1. **AUTH-04** — Pages Connexion et Inscription portées et branchées sur l'API d'AUTH-01 (routes et contrats prêts : voir AUTH-01).
-2. **AUTH-02**, **AUTH-03** — Vérification de l'e-mail (envoi à l'inscription, page du lien), mot de passe oublié : la table `jeton` et `SessionsService.fermerToutes` sont prêts.
-3. **LEG-01** puis **AUTH-05** — Pages légales portées, acceptation d'une nouvelle version (`DocumentsLegauxService` existe).
-4. **AUTH-07** — Dialogue d'accès côté site (`exiger`, `accesBloc`) : les refus de l'API portent déjà leur `raison`.
-5. **DEMO-01** — Données de démonstration tirées du prototype (développement et préproduction).
-6. **CREA-01** puis **CREA-02**, **CREA-03** — Créations : API, éditeur, fiche.
+1. **AUTH-07** — Dialogue d'accès côté site (`exiger`, `accesBloc`) et boutons du bandeau (« Renvoyer l'e-mail », « Accepter ») : les refus de l'API portent déjà leur `raison`, les routes existent (`/comptes/verification/renvoi`, `/moi/acceptations`).
+2. **LEG-01** puis le reste d'**AUTH-05** — Pages légales portées (les liens « conditions » de la connexion et de l'inscription y mènent sans script) ; e-mail à la date d'effet d'une nouvelle version.
+3. **DEMO-01** — Données de démonstration tirées du prototype (développement et préproduction).
+4. **CREA-01** puis **CREA-02**, **CREA-03** — Créations : API, éditeur, fiche.
+5. **INV-01** — Code d'invitation de la bêta (champ déjà présent, masqué, sur l'inscription).
 
 ---
 
@@ -46,10 +45,10 @@
 | ID | Tâche | Prio | Statut | Périmètre de base · références |
 |---|---|---|---|---|
 | AUTH-01 | Sessions et comptes | P0 | ✅ 2026-10-23 | **Fait** : `POST /api/v1/comptes` (inscription, pseudo tiré si absent, acceptations datées), `POST /api/v1/comptes/disponibilite` (adresse), `GET /api/v1/pseudos/:pseudo/disponibilite` (format, réservés, pris, variantes libres), `GET`·`POST`·`DELETE /api/v1/session`, `PATCH /api/v1/moi` (pseudo) ; WF-23 (reconnexion annule la suppression) ; site : `chargerSession`, cookies renouvelés renvoyés au navigateur, dates du bandeau, déconnexion du menu du compte. Tests ajoutés : 30 de bout en bout et 15 unitaires (API), 14 (paquet partagé), 1 (site) ; 92 au total. **Périmètre initial** : Argon2id, inscription par e-mail (pseudo RG-01, e-mail RG-02, mot de passe RG-04 avec liste de mots de passe compromis), connexion, déconnexion, cookie de session (ADR-0005), temporisation après 5 échecs, `GET /api/v1/session` → `EtatVisiteur` ; `chargerSession` du site branché ; menu du compte et déconnexion dans l'en-tête. F-01, F-03 |
-| AUTH-02 | Vérification de l'e-mail | P0 | ⬜ | Jeton 24 h, renvoi du lien, compte en lecture seule tant que non vérifié (bandeau déjà prêt). F-01, RG-02 |
-| AUTH-03 | Mot de passe oublié et réinitialisation | P0 | ⬜ | Lien 1 h, message identique que l'e-mail existe ou non, sessions fermées après changement. F-03 |
-| AUTH-04 | Pages Connexion et Inscription portées | P0 | ⬜ | proto `connexion.html`, `inscription.html`, `auth.css`, `auth.js`, `auth-data.js` ; retour à la page d'origine (`?retour=`, `?pour=`) ; pseudos réservés ; boutons GitHub et Google présents mais branchés par AUTH-08 |
-| AUTH-05 | Acceptation versionnée des documents légaux | P0 | ⬜ | À l'inscription et à chaque nouvelle version (`/accepter-documents`, bandeau « conditions ») ; confidentialité informative (voir Points à trancher). F-04, RG-03, RG-112 |
+| AUTH-02 | Vérification de l'e-mail | P0 | ✅ 2026-10-23 | **Fait** : lien envoyé à l'inscription (24 h, usage unique, empreinte seule), `POST /api/v1/comptes/verification` (lu par le serveur du site à l'ouverture de `/inscription?verifier=…` ; un lien déjà utilisé confirme encore), `POST /api/v1/comptes/verification/renvoi` (session, ou jeton d'un lien expiré), correction de l'adresse avant vérification (`PATCH /moi { email }`). **Périmètre initial** : Jeton 24 h, renvoi du lien, compte en lecture seule tant que non vérifié (bandeau déjà prêt). F-01, RG-02 |
+| AUTH-03 | Mot de passe oublié et réinitialisation | P0 | ✅ 2026-10-23 | **Fait** : `POST /api/v1/mot-de-passe/oubli` (202 dans tous les cas, envoi sans attendre), `POST /api/v1/mot-de-passe/lien`, `PUT /api/v1/mot-de-passe` (RG-04, sessions fermées, adresse vérifiée du même coup, temporisation levée). **Périmètre initial** : Lien 1 h, message identique que l'e-mail existe ou non, sessions fermées après changement. F-03 |
+| AUTH-04 | Pages Connexion et Inscription portées | P0 | ✅ 2026-10-23 | **Fait** : `/connexion` et `/inscription` à l’identique (enveloppe « auth » du gabarit, fond WebGL, `auth.css` inchangé), tous les écrans branchés sauf ceux listés dans « Écarts au prototype » ; comparées au prototype à 1280, 820 et 375 px. **Périmètre initial** : proto `connexion.html`, `inscription.html`, `auth.css`, `auth.js`, `auth-data.js` ; retour à la page d'origine (`?retour=`, `?pour=`) ; pseudos réservés ; boutons GitHub et Google présents mais branchés par AUTH-08 |
+| AUTH-05 | Acceptation versionnée des documents légaux | P0 | 🔄 2026-10-23 | **Fait** : acceptation datée à l’inscription, `GET /api/v1/documents-legaux`, `POST /api/v1/moi/acceptations`, écran « Nouvelles conditions » de la connexion. **Reste** : bouton « Accepter » du bandeau (AUTH-07), e-mail à la date d’effet (RG-90). **Périmètre initial** : À l'inscription et à chaque nouvelle version (`/accepter-documents`, bandeau « conditions ») ; confidentialité informative (voir Points à trancher). F-04, RG-03, RG-112 |
 | AUTH-06 | Garde des droits côté API | P0 | ✅ 2026-10-23 | **Fait** : `@Exige(action)` + `DroitsGuard` (global, après origine et débit) + `@SessionCourante()` ; refus 401/403 avec `raison` ; tests unitaires de chaque refus et e2e sur `PATCH /moi`. Reste : double authentification pour moderer et administrer (SEC-02). **Périmètre initial** : Décorateur ou garde `@Exige('contribuer' | 'moderer' | 'administrer' | 'proposer-cas')` fondé sur `raisonRefus` + état du compte (e-mail, conditions, suspension) ; tests de refus |
 | AUTH-07 | Dialogue d'accès côté site | P0 | ⬜ | Porter `exiger`, `accesBloc`, `invitation` et les gardes de liens de `commun.js` (`data-exige`) |
 | LEG-01 | Pages légales portées | P0 | ⬜ | `cgu`, `confidentialite`, `charte-communautaire`, `cookies`, `mentions-legales` + `documents-legaux.js` ; version et date affichées depuis `document_legal` |
@@ -144,6 +143,7 @@
 | R-04 | Limitation de débit partagée entre plusieurs instances | Une seule instance au départ (mémoire) |
 | R-05 | Îlots React pour les écrans les plus interactifs | Seulement si un script natif devient ingérable |
 | R-06 | Carnéo, revue de méthode, parcours guidés, abonnements… | V2 (document 01) |
+| R-08 | Écran « Bienvenue » après Google ou GitHub (`pret`) et vérification en deux étapes à la connexion | Balisage porté et masqué ; à brancher avec S-10 et SEC-02 |
 | R-07 | Lieu approximatif des sessions (« Ziguinchor, Sénégal » dans la liste des appareils) | Demande une base de géolocalisation des adresses IP ; la colonne `session.lieu` existe, vide pour l'instant |
 
 ## Points à trancher (porteur du projet)
@@ -158,9 +158,25 @@
 | Anglais | Au lancement ou après (D-06) ? | Après l'ouverture (S-15) |
 | Licence par défaut et suppression de compte | Avis juridique demandé (D-07, D-09) | En attente |
 | Caractères permis dans un pseudo | Le prototype accepte les lettres accentuées (`p{L}`), RG-01 et le schéma partagé se limitent à `A-Z a-z 0-9 - _`. | Garder l'ASCII : pas de pseudos qui se ressemblent à l'œil (homoglyphes), adresses de profil lisibles. Écart au prototype à confirmer |
+| Boutons Google et GitHub avant S-10 | Le prototype les montre ; la connexion par ces services n’existe pas encore. | Les garder, avec le message « La connexion avec Google n’est pas encore ouverte. Utilisez votre adresse e-mail. » au clic ; les masquer serait l’autre choix |
 | Durcissement de la temporisation | Un tiers qui connaît une adresse peut maintenir le compte temporisé (15 min au plus) en échouant exprès. | Accepter pour la bêta ; si cela arrive, ajouter une limite par adresse IP sur les échecs et lever la temporisation après une réinitialisation du mot de passe (AUTH-03) |
 
+## Écarts au prototype (connexion et inscription)
+
+- Lettres accentuées du pseudo converties à la saisie (« Essaï » → « Essai ») : RG-01 en ASCII, voir « Points à trancher ».
+- Zones d’alerte ajoutées (masquées) aux formulaires « Nouvelles conditions », « Mot de passe oublié », « Nouveau mot de passe » et à l’écran « Lien expiré », pour les erreurs de l’API.
+- Le focus va au premier champ visible d’un écran (dans le prototype, il visait le champ masqué du code d’invitation).
+- Retour accepté vers toute page interne du site (libellé « Retour à la page précédente » hors de la liste du prototype) ; jamais vers un autre site.
+- Après une connexion qui aboutit sur un écran de réussite sans départ (e-mail à confirmer, suspension), l’en-tête reste celui d’une visiteuse jusqu’à la page suivante (le prototype le mettait à jour).
+- Le lien de vérification et celui de réinitialisation sont lus par le serveur (pas d’écran intermédiaire) ; le jeton est retiré de la barre d’adresse.
+
 ## Journal
+
+### 2026-10-23 — Connexion et inscription portées, liens par e-mail (AUTH-02 à AUTH-05)
+- API : liens à usage unique (`JetonsService`), vérification de l’adresse et renvoi, mot de passe oublié, documents en vigueur et acceptation ; code d’erreur `LIEN_EXPIRE` (410) ; bouton d’action dans les e-mails. 20 tests de bout en bout de plus (50 au total).
+- Site : enveloppe « auth » du gabarit, `AuthTete`, `CompteMenu` (extrait de l’en-tête, partagé), `DocumentsDialogue`, `MembreConnecte` ; scripts `auth/commun.ts`, `auth/fond.ts`, `connexion.ts`, `inscription.ts`, `commun/api.ts` ; `lib/retour.ts` (retour sûr) ; `appelerApi` envoie en POST un corps sans méthode (la lecture des liens par le serveur échouait).
+- Vérifié dans le navigateur : connexion (erreur, compte à confirmer, renvoi du lien), inscription complète (suggestion d’adresse, jauge, pseudo pris et variantes, pseudo modifié, confirmation, correction de l’adresse, lien ouvert dans un autre onglet), mot de passe oublié jusqu’à la reconnexion, fenêtre des documents ; mêmes rendus que le prototype à 1280, 820 et 375 px.
+- Poste de travail : sans Docker, un récepteur SMTP minimal (hors dépôt) a remplacé Mailpit pour lire les liens.
 
 ### 2026-10-23 — Authentification : comptes, sessions, droits (AUTH-01, AUTH-06)
 - Paquet partagé : `evaluerMotDePasse` (RG-04, même jugement pour la jauge et l'API), pseudos réservés et tirés (« prisme-azur-42 »), schémas d'inscription et de connexion, contrat `SessionApi` ; code d'erreur `IDENTIFIANTS_INCORRECTS` et membres d'extension `raison`, `reessayerDans` (en-tête `Retry-After`).

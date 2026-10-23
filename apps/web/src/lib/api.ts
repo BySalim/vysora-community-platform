@@ -43,6 +43,8 @@ export async function appelerApiAvecCookies<T>(
 
   const reponse = await fetch(new URL(chemin, API_URL), {
     ...init,
+    // Un corps sans méthode précisée part en POST (fetch refuse un corps avec GET).
+    method: init.method ?? (corps === undefined ? 'GET' : 'POST'),
     headers: entetes,
     body: corps === undefined ? undefined : JSON.stringify(corps),
     signal: init.signal ?? AbortSignal.timeout(10_000),
