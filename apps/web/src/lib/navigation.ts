@@ -5,6 +5,7 @@ export const ROUTES = {
   accueil: '/',
   explorer: '/explorer',
   forum: '/forum',
+  nouveauSujet: '/forum/nouveau',
   clinique: '/forum?type=clinique',
   apprendre: '/apprendre',
   bonReflexe: '/apprendre?rubrique=bon-reflexe',

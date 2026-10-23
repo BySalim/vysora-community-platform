@@ -1,0 +1,25 @@
+---
+/* Contenu réservé, rendu par le serveur (prototype/commun.js : accesBloc) : le contenu de la page
+   si l'action est permise, sinon le message qui explique ce qui manque (connexion, e-mail,
+   conditions, suspension, niveau, rôle). L'API refuse de toute façon les actions non permises. */
+import { raisonRefus, type ActionReservee } from '@vysora/shared';
+import { blocAccesHtml, contexteServeur, messageAcces, type BaliseTitre } from '../lib/acces';
+
+interface Props {
+  action?: ActionReservee;
+  /** Fin de la phrase : « Connectez-vous pour publier une création ». */
+  quoi: string;
+  titre?: BaliseTitre;
+}
+
+const { action = 'contribuer', quoi, titre = 'h2' } = Astro.props;
+const raison = raisonRefus(action, Astro.locals.etat);
+const bloc = raison
+  ? blocAccesHtml(
+      messageAcces(raison, quoi, contexteServeur(Astro.locals, Astro.url, Astro.site)),
+      titre,
+    )
+  : '';
+---
+
+{bloc ? <Fragment set:html={bloc} /> : <slot />}

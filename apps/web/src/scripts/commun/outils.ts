@@ -56,3 +56,25 @@ export const animations = {
   completes: () =>
     (document.documentElement.getAttribute('data-motion-effective') ?? 'full') === 'full',
 };
+
+const CLE_MESSAGE = 'vysora-message';
+
+/** Message à montrer une fois la page suivante chargée (déconnexion, puis rechargement). */
+export function messageApresChargement(message: string): void {
+  try {
+    sessionStorage.setItem(CLE_MESSAGE, message);
+  } catch {
+    // Stockage indisponible (navigation privée stricte) : le message est simplement perdu.
+  }
+}
+
+/** Message laissé par la page précédente, lu une seule fois. */
+export function lireMessageEnAttente(): string | null {
+  try {
+    const message = sessionStorage.getItem(CLE_MESSAGE);
+    if (message) sessionStorage.removeItem(CLE_MESSAGE);
+    return message;
+  } catch {
+    return null;
+  }
+}

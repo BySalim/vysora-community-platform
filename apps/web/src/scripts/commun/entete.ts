@@ -2,7 +2,7 @@
    (prototype/commun.js : initHeader et monterCompte). Chargé par toutes les pages. */
 
 import { estProblemeApi } from '@vysora/shared';
-import { $, icon, toast } from './outils';
+import { $, icon, lireMessageEnAttente, messageApresChargement, toast } from './outils';
 
 const racine = document.documentElement;
 
@@ -106,28 +106,12 @@ function initialiserCompte(): void {
   });
 }
 
-const CLE_MESSAGE = 'vysora-message';
-
-/** Message à montrer une fois la page suivante chargée (déconnexion, puis rechargement). */
-function messageApresChargement(message: string): void {
-  try {
-    sessionStorage.setItem(CLE_MESSAGE, message);
-  } catch {
-    // Stockage indisponible (navigation privée stricte) : le message est simplement perdu.
-  }
-}
-
 function afficherMessageEnAttente(): void {
-  try {
-    const message = sessionStorage.getItem(CLE_MESSAGE);
-    if (!message) return;
-    sessionStorage.removeItem(CLE_MESSAGE);
-    toast(message);
-    // Comme dans le prototype : le focus revient sur « Se connecter ».
-    $<HTMLElement>('.header-login')?.focus();
-  } catch {
-    // Stockage indisponible : rien à montrer.
-  }
+  const message = lireMessageEnAttente();
+  if (!message) return;
+  toast(message);
+  // Comme dans le prototype : après la déconnexion, le focus revient sur « Se connecter ».
+  $<HTMLElement>('.header-login')?.focus();
 }
 
 initialiserEntete();
