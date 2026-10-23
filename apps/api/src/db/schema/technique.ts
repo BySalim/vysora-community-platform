@@ -91,12 +91,16 @@ export const tentativeConnexion = pgTable(
   {
     id: identifiant(),
     utilisateurId: reference().references(() => utilisateur.id, { onDelete: 'cascade' }),
+    /** Empreinte salée de l'adresse saisie : la temporisation s'applique de la même façon,
+        que l'adresse corresponde à un compte ou non (pas de révélation des comptes existants). */
+    empreinteIdentifiant: varchar({ length: 64 }),
     empreinteIp: varchar({ length: 64 }),
     reussie: boolean().notNull(),
     date: horodatage().notNull().defaultNow(),
   },
   (t) => [
     index('tentative_connexion_utilisateur_idx').on(t.utilisateurId, t.date),
+    index('tentative_connexion_identifiant_idx').on(t.empreinteIdentifiant, t.date),
     index('tentative_connexion_ip_idx').on(t.empreinteIp, t.date),
   ],
 );

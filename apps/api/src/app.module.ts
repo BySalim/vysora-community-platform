@@ -7,6 +7,8 @@ import { OrigineGuard } from './commun/http/origine.guard.js';
 import { CONFIG, ConfigurationModule } from './config/configuration.module.js';
 import type { Configuration } from './config/env.js';
 import { BaseDeDonneesModule } from './db/base-de-donnees.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
+import { DroitsGuard } from './modules/auth/droits.js';
 import { ContactModule } from './modules/contact/contact.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { ReferentielsModule } from './modules/referentiels/referentiels.module.js';
@@ -45,6 +47,7 @@ import { SanteModule } from './modules/sante/sante.module.js';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     BaseDeDonneesModule,
     EmailModule,
+    AuthModule,
     SanteModule,
     ReferentielsModule,
     ContactModule,
@@ -53,6 +56,8 @@ import { SanteModule } from './modules/sante/sante.module.js';
     { provide: APP_FILTER, useClass: FiltreErreurs },
     { provide: APP_GUARD, useClass: OrigineGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Après l'origine et le débit : droits de la personne connectée sur les routes réservées (AUTH-06).
+    { provide: APP_GUARD, useExisting: DroitsGuard },
   ],
 })
 export class AppModule {}

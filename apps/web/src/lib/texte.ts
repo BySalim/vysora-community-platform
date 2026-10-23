@@ -36,3 +36,13 @@ export const normaliser = (valeur: unknown): string =>
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
+
+const formatDateLongue = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+/** « 23 octobre 2026 », « 1er septembre 2026 » : date ISO (AAAA-MM-JJ ou instant) lue en temps universel. */
+export const dateLongue = (valeur: string | Date): string =>
+  formatDateLongue.format(new Date(valeur)).replace(/^1 /, '1er ');

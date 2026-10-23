@@ -1,20 +1,48 @@
-import { ETAT_VISITEUR, type EtatVisiteur } from '@vysora/shared';
+import { ETAT_VISITEUR, type SessionApi } from '@vysora/shared';
+import { appelerApiAvecCookies } from './api';
 
-export interface EtatSession {
-  etat: EtatVisiteur;
-  nonLues: number;
-  membre: App.Locals['membre'];
+export interface EtatSession extends SessionApi {
+  /** Cookies posés par l'API (échéance repoussée, cookie périmé effacé), à renvoyer au navigateur. */
+  cookies: string[];
 }
 
-/* Personne qui consulte la page. Tant que l'authentification n'existe pas (registre : AUTH-01),
-   tout le monde est un visiteur. La tâche d'authentification remplace ce corps par un appel à
-   GET /api/v1/session, avec le cookie transmis par appelerApi. */
-export async function chargerSession(_requete: Request): Promise<EtatSession> {
-  return { etat: ETAT_VISITEUR, nonLues: 0, membre: null };
+const VISITEUR: EtatSession = {
+  etat: ETAT_VISITEUR,
+  membre: null,
+  nonLues: 0,
+  suspensionJusqua: null,
+  conditionsDepuis: null,
+  cookies: [],
+};
+
+/** Cookie de session (ADR-0005) : préfixe __Host- en production. */
+const COOKIE_SESSION = /(?:^|;\s*)(?:__Host-)?vysora_session=/;
+
+/* Personne qui consulte la page : GET /api/v1/session avec le cookie du visiteur. Sans cookie de
+   session, c'est une visiteuse : aucun appel. Si l'API ne répond pas, la page s'affiche quand même,
+   comme pour une visiteuse. */
+export async function chargerSession(
+  requete: Request,
+  adresseClient?: string,
+): Promise<EtatSession> {
+  if (!COOKIE_SESSION.test(requete.headers.get('cookie') ?? '')) return VISITEUR;
+  try {
+    const { donnees, cookies } = await appelerApiAvecCookies<SessionApi>('/api/v1/session', {
+      requete,
+      adresseClient,
+    });
+    return { ...donnees, cookies };
+  } catch (erreur) {
+    console.error('Session non chargée :', erreur);
+    return VISITEUR;
+  }
 }
 
 /** Attributs data-* de <html> lus par prototype/etats.css (data-pour, compte, rôle). */
-export function attributsEtat({ etat, nonLues }: EtatSession): Record<string, string> {
+export function attributsEtat({
+  etat,
+  nonLues,
+}: Pick<SessionApi, 'etat' | 'nonLues'>): Record<string, string> {
   if (etat.session !== 'membre') return { 'data-session': 'visiteur' };
   return {
     'data-session': 'membre',

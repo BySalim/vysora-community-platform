@@ -7,6 +7,10 @@ declare namespace App {
     /** Notifications non lues (pastille de l'en-tête). */
     nonLues: number;
     /** Membre connecté : pseudo et nom affichés dans le menu du compte. */
-    membre: { pseudo: string; nom: string; points: number; avatar: string | null } | null;
+    membre: import('@vysora/shared').MembreConnecte | null;
+    /** Fin de la suspension en cours (ISO 8601), pour le bandeau du compte. */
+    suspensionJusqua: string | null;
+    /** Date d'effet des documents légaux à accepter (AAAA-MM-JJ), pour le bandeau du compte. */
+    conditionsDepuis: string | null;
   }
 }

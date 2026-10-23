@@ -29,6 +29,7 @@ export class FiltreErreurs implements ExceptionFilter {
     const reponse = host.switchToHttp().getResponse<Response>();
     const probleme = this.convertir(exception);
     if (probleme.status >= 500) this.journal.error(exception);
+    if (probleme.reessayerDans) reponse.setHeader('Retry-After', String(probleme.reessayerDans));
     reponse.status(probleme.status).type('application/problem+json').json(probleme);
   }
 
@@ -41,6 +42,7 @@ export class FiltreErreurs implements ExceptionFilter {
         code: exception.code,
         ...(exception.detail ? { detail: exception.detail } : {}),
         ...(exception.erreurs ? { erreurs: exception.erreurs } : {}),
+        ...exception.extensions,
       };
     }
     const statut = statutHttp(exception);

@@ -44,4 +44,15 @@ describe('FiltreErreurs', () => {
       code: 'ERREUR_INTERNE',
     });
   });
+
+  it('ajoute la raison d’un refus et le délai d’attente (RFC 9457, membres d’extension)', () => {
+    const refus = filtre.convertir(
+      new ErreurApplication('INTERDIT', undefined, undefined, { raison: 'email' }),
+    );
+    expect(refus).toMatchObject({ status: 403, raison: 'email' });
+    const attente = filtre.convertir(
+      new ErreurApplication('TROP_DE_REQUETES', undefined, undefined, { reessayerDans: 30 }),
+    );
+    expect(attente).toMatchObject({ status: 429, reessayerDans: 30 });
+  });
 });

@@ -4,6 +4,7 @@
 export const CODES_ERREUR = [
   'VALIDATION',
   'NON_AUTHENTIFIE',
+  'IDENTIFIANTS_INCORRECTS',
   'INTERDIT',
   'INTROUVABLE',
   'CONFLIT',
@@ -24,6 +25,10 @@ export interface ProblemeApi {
   detail?: string;
   /** Saisie invalide : message par champ (chemin pointé, par exemple « etapes.0.titre »). */
   erreurs?: Record<string, string>;
+  /** Action refusée : raison à présenter (raisonRefus : connexion, email, conditions, suspendu, niveau, role). */
+  raison?: string;
+  /** Tentatives temporisées : secondes à attendre avant de réessayer (F-03). */
+  reessayerDans?: number;
 }
 
 export const typeProbleme = (code: CodeErreur) => `urn:vysora:probleme:${code.toLowerCase()}`;

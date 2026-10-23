@@ -62,11 +62,12 @@ const attributsCorps = Object.fromEntries(
   Object.entries(donneesCorps).map(([nom, valeur]) => [`data-${nom}`, valeur]),
 );
 const canonique = new URL(Astro.url.pathname, Astro.site).href;
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte l'état.
 const etatClient = JSON.stringify({
   etat: Astro.locals.etat,
   membre: Astro.locals.membre,
   nonLues: Astro.locals.nonLues,
-});
+}).replaceAll('<', '\\u003c');
 ---
 
 <!doctype html>

@@ -5,12 +5,13 @@ import {
   raisonRefus,
   type ActionReservee,
   type EtatVisiteur,
+  type MembreConnecte,
   type RaisonRefus,
 } from '@vysora/shared';
 
 interface EtatPage {
   etat: EtatVisiteur;
-  membre: { pseudo: string; nom: string; points: number; avatar: string | null } | null;
+  membre: MembreConnecte | null;
   nonLues: number;
 }
 

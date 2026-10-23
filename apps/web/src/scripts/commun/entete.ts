@@ -1,7 +1,8 @@
 /* En-tête : progression et masquage au défilement, menu mobile, menu du compte
    (prototype/commun.js : initHeader et monterCompte). Chargé par toutes les pages. */
 
-import { $, icon } from './outils';
+import { estProblemeApi } from '@vysora/shared';
+import { $, icon, toast } from './outils';
 
 const racine = document.documentElement;
 
@@ -85,8 +86,50 @@ function initialiserCompte(): void {
   document.addEventListener('click', (evenement) => {
     if (!zone.contains(evenement.target as Node)) regler(false);
   });
-  // La déconnexion arrive avec l'authentification (registre : AUTH-01).
+
+  const sortir = $<HTMLButtonElement>('[data-deconnexion]', menu);
+  sortir?.addEventListener('click', async () => {
+    sortir.disabled = true;
+    try {
+      const reponse = await fetch('/api/v1/session', { method: 'DELETE' });
+      if (!reponse.ok && reponse.status !== 401) {
+        const probleme: unknown = await reponse.json().catch(() => null);
+        throw new Error(estProblemeApi(probleme) ? probleme.title : String(reponse.status));
+      }
+      // La page est rendue de nouveau par le serveur, pour une visiteuse ; le message suit.
+      messageApresChargement('Vous êtes déconnecté.');
+      location.reload();
+    } catch {
+      sortir.disabled = false;
+      toast('La déconnexion n’a pas abouti. Réessayez dans un instant.', 'alert');
+    }
+  });
+}
+
+const CLE_MESSAGE = 'vysora-message';
+
+/** Message à montrer une fois la page suivante chargée (déconnexion, puis rechargement). */
+function messageApresChargement(message: string): void {
+  try {
+    sessionStorage.setItem(CLE_MESSAGE, message);
+  } catch {
+    // Stockage indisponible (navigation privée stricte) : le message est simplement perdu.
+  }
+}
+
+function afficherMessageEnAttente(): void {
+  try {
+    const message = sessionStorage.getItem(CLE_MESSAGE);
+    if (!message) return;
+    sessionStorage.removeItem(CLE_MESSAGE);
+    toast(message);
+    // Comme dans le prototype : le focus revient sur « Se connecter ».
+    $<HTMLElement>('.header-login')?.focus();
+  } catch {
+    // Stockage indisponible : rien à montrer.
+  }
 }
 
 initialiserEntete();
 initialiserCompte();
+afficherMessageEnAttente();

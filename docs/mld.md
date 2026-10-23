@@ -100,7 +100,7 @@
 | `session` | Session ouverte sur un appareil ; identifiant = empreinte SHA-256 du jeton du cookie ; appareil, lieu approximatif, empreinte d'IP, double authentification validée. |
 | `jeton` | Liens à usage unique envoyés par e-mail (vérification, réinitialisation, changement d'e-mail, confirmation de suppression) ; seule l'empreinte est stockée. |
 | `double_authentification` | Secret TOTP chiffré, codes de secours hachés (ENF-05). |
-| `tentative_connexion` | Échecs et réussites, pour temporiser après 5 échecs (F-03). |
+| `tentative_connexion` | Échecs et réussites, pour temporiser après 5 échecs consécutifs (F-03). Désignées par l'empreinte salée de l'adresse saisie (`empreinte_identifiant`), qu'elle corresponde à un compte ou non : la temporisation ne révèle pas les comptes existants (migration `0002`). |
 | `journal_audit` | Changements de rôle et actions d'administration (ENF-09). |
 | `vue_contenu` | Une vue par visiteur et par jour (F-23) ; empreinte anonyme, purge rapide. |
 | `recherche_document` | Index plein texte des contenus publiés (RG-31). |

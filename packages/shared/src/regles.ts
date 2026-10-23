@@ -76,6 +76,7 @@ export const DELAIS = {
   lienVerificationEmailHeures: 24, // F-01
   lienReinitialisationMinutes: 60, // F-03
   echecsConnexionAvantTemporisation: 5, // F-03
+  temporisationConnexionSecondes: { initiale: 30, maximale: 15 * 60 }, // F-03, doublée à chaque nouvel échec
   retractationSuppressionJours: 30, // RG-05
   lienExportJours: 7, // F-07
   traitementDemandeDroitJours: 30, // RG-06

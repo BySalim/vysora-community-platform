@@ -32,7 +32,7 @@
 - Erreurs : RFC 9457 (`application/problem+json`) avec `code` stable et `erreurs` par champ ; lever une `ErreurApplication` (ou ses raccourcis `introuvable()`, `interdit()`, `conflit()`, `erreurValidation()`), jamais une réponse construite à la main.
 - Validation : `@Body(new ValidationZod(schema))` avec un schéma de `@vysora/shared` ; les messages du schéma sont ceux de l'interface.
 - Les types de réponse vivent dans `packages/shared/src/contrats/` pour que le site les réutilise.
-- Toute route qui modifie des données passe par la garde d'origine (globale) ; toute route réservée vérifie le rôle et l'état du compte (à venir avec l'authentification : `raisonRefus` côté API).
+- Toute route qui modifie des données passe par la garde d'origine (globale) ; toute route réservée déclare l'action demandée avec `@Exige('contribuer' | 'parametres' | 'proposer-cas' | 'moderer' | 'administrer')` et lit la personne connectée avec `@SessionCourante()` (`modules/auth/droits.ts`). La garde applique `raisonRefus` et répond 401 ou 403 avec la `raison`, que le site présente avec le bon dialogue.
 
 ## Code de l'API
 
@@ -60,7 +60,7 @@
 | Niveau | Où | Quand |
 |---|---|---|
 | Unitaire (règles, schémas, utilitaires) | `*.test.ts` (shared, web), `*.spec.ts` (api) | Toute règle de gestion, avec son identifiant dans le titre ou un commentaire |
-| Bout en bout API | `apps/api/test/*.e2e-spec.ts` | Chaque route : cas nominal, refus (droits, validation), effets en base |
+| Bout en bout API | `apps/api/test/*.e2e-spec.ts` | Chaque route : cas nominal, refus (droits, validation), effets en base. `creerMembre` crée un membre en base, `request.agent` garde le cookie de session, `ipDeTest()` isole les limites de débit par test |
 | Navigateur | à mettre en place (Playwright) | Parcours critiques et comparaison visuelle avec le prototype |
 
 `pnpm verifier` doit passer avant de considérer une tâche comme faite.

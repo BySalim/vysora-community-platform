@@ -31,6 +31,8 @@ const schemaEnvironnement = z
       error: 'CLE_CHIFFREMENT doit encoder 32 octets en base64url',
     }),
     STOCKAGE_DOSSIER: z.string().default('./stockage'),
+    /** RG-04 : refus des mots de passe présents dans des fuites connues (Have I Been Pwned, k-anonymat). */
+    VERIFIER_FUITES: z.stringbool().default(true),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;

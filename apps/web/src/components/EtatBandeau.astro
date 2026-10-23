@@ -1,16 +1,12 @@
 ---
 /* Bandeau sous l'en-tête quand le compte est en lecture seule (prototype : commun.js, rendreBandeau).
-   Les dates (suspension, nouvelles conditions) viendront de la session (registre : AUTH-01). */
+   Les dates (fin de la suspension, nouvelles conditions) viennent de la session (GET /api/v1/session). */
 import { ROUTES } from '../lib/navigation';
-import { typo } from '../lib/texte';
+import { dateLongue, typo } from '../lib/texte';
 
-interface Props {
-  dateSuspension?: string;
-  dateConditions?: string;
-}
-
-const { etat } = Astro.locals;
-const { dateSuspension = '', dateConditions = '' } = Astro.props;
+const { etat, suspensionJusqua, conditionsDepuis } = Astro.locals;
+const dateSuspension = suspensionJusqua ? dateLongue(suspensionJusqua) : '';
+const dateConditions = conditionsDepuis ? dateLongue(conditionsDepuis) : '';
 const motif = etat.session === 'membre' && etat.compte !== 'actif' ? etat.compte : null;
 ---
 

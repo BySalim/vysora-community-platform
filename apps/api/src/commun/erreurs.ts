@@ -1,4 +1,4 @@
-import type { CodeErreur } from '@vysora/shared';
+import type { CodeErreur, RaisonRefus } from '@vysora/shared';
 
 /* Erreurs applicatives : un service lève une ErreurApplication ; le filtre HTTP la traduit
    en réponse « problem details » (RFC 9457) avec le statut correspondant. */
@@ -6,6 +6,7 @@ import type { CodeErreur } from '@vysora/shared';
 export const STATUT_HTTP: Record<CodeErreur, number> = {
   VALIDATION: 400,
   NON_AUTHENTIFIE: 401,
+  IDENTIFIANTS_INCORRECTS: 401,
   INTERDIT: 403,
   ORIGINE_REFUSEE: 403,
   INTROUVABLE: 404,
@@ -19,6 +20,7 @@ export const STATUT_HTTP: Record<CodeErreur, number> = {
 export const TITRE_ERREUR: Record<CodeErreur, string> = {
   VALIDATION: 'Certaines informations sont à corriger.',
   NON_AUTHENTIFIE: 'Connectez-vous pour continuer.',
+  IDENTIFIANTS_INCORRECTS: 'Adresse e-mail ou mot de passe incorrect.',
   INTERDIT: 'Cette action ne vous est pas permise.',
   ORIGINE_REFUSEE: 'Cette requête a été refusée.',
   INTROUVABLE: 'Ce contenu est introuvable.',
@@ -28,11 +30,20 @@ export const TITRE_ERREUR: Record<CodeErreur, string> = {
   ERREUR_INTERNE: 'Une erreur est survenue de notre côté. Réessayez dans un instant.',
 };
 
+/** Membres d'extension de la réponse (RFC 9457, section 3.2). */
+export interface ExtensionsProbleme {
+  /** Action refusée : raison à présenter (raisonRefus). */
+  raison?: RaisonRefus;
+  /** Tentatives temporisées : secondes à attendre (repris dans l'en-tête Retry-After). */
+  reessayerDans?: number;
+}
+
 export class ErreurApplication extends Error {
   constructor(
     readonly code: CodeErreur,
     readonly detail?: string,
     readonly erreurs?: Record<string, string>,
+    readonly extensions: ExtensionsProbleme = {},
   ) {
     super(detail ?? TITRE_ERREUR[code]);
     this.name = 'ErreurApplication';

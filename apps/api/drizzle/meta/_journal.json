@@ -15,6 +15,13 @@
       "when": 1792733141361,
       "tag": "0001_contraintes-avancees",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792768544418,
+      "tag": "0002_temporisation-connexion",
+      "breakpoints": true
     }
   ]
 }

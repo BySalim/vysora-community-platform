@@ -21,6 +21,14 @@ export interface OptionsAppel extends Omit<RequestInit, 'body'> {
 }
 
 export async function appelerApi<T>(chemin: string, options: OptionsAppel = {}): Promise<T> {
+  return (await appelerApiAvecCookies<T>(chemin, options)).donnees;
+}
+
+/** Comme appelerApi, avec les cookies posés par l'API (Set-Cookie), à transmettre au navigateur. */
+export async function appelerApiAvecCookies<T>(
+  chemin: string,
+  options: OptionsAppel = {},
+): Promise<{ donnees: T; cookies: string[] }> {
   const { requete, adresseClient, corps, headers, ...init } = options;
   const entetes = new Headers(headers);
   entetes.set('Accept', 'application/json');
@@ -54,5 +62,5 @@ export async function appelerApi<T>(chemin: string, options: OptionsAppel = {}):
           },
     );
   }
-  return donnees as T;
+  return { donnees: donnees as T, cookies: reponse.headers.getSetCookie() };
 }
