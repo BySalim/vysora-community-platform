@@ -3,7 +3,7 @@
    L'API applique ces règles (seule autorité) ; le site s'en sert pour adapter l'affichage. */
 
 import type { Role, StatutCompte } from './enums';
-import { NIVEAUX, type CodeNiveau, type DefinitionNiveau } from './regles';
+import { LIMITES, NIVEAUX, type CodeNiveau, type DefinitionNiveau } from './regles';
 
 /** Valeurs reportées sur <html> en attributs data-* (prototype/etats.css s'en sert). */
 export type SessionAffichee = 'visiteur' | 'membre';
@@ -64,6 +64,17 @@ export function limiteQuotidienne(
         ? niveau?.sujetsPar24h
         : niveau?.reponsesEtCommentairesPar24h;
   return limite ?? Number.POSITIVE_INFINITY;
+}
+
+/** RG-85 et RG-16 : liens externes permis par contenu (2 au niveau Curieux, 10 sinon). Les
+    modérateurs et administrateurs échappent à RG-85, pas à RG-16. */
+export function liensMaximum(
+  etat: EtatVisiteur,
+  niveaux: readonly DefinitionNiveau[] = NIVEAUX,
+): number {
+  if (etat.role !== 'membre') return LIMITES.liensParCreation;
+  const niveau = niveaux.find((n) => n.code === etat.niveau);
+  return niveau?.liensParContenu ?? LIMITES.liensParCreation;
 }
 
 function niveauPermet(code: CodeNiveau, privilege: 'peutProposerUnCas'): boolean {

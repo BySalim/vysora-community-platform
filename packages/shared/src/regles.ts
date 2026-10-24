@@ -52,6 +52,12 @@ export const LIMITES = {
   pointsAAdapter: 5, // liste « À adapter » d'une création
   etiquettesParContenu: 5, // RG-10, RG-60, RG-70
   optionsParCas: { min: 2, max: 5 }, // RG-70
+  // Garde-fous d'une création (aucune règle ne les fixe) : protègent l'API d'un parcours démesuré.
+  etapesParCreation: 30,
+  configurationsParEtape: 10,
+  echangesParEtape: 50,
+  momentsParEtape: 50,
+  essaisParEchange: 1000,
 } as const;
 
 /** Seuils d'affichage et de déclenchement. */

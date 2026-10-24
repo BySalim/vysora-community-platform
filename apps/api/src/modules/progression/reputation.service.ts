@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SEUILS, type MotifMouvementReputation } from '@vysora/shared';
-import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Transaction } from '../../db/client.js';
 import { mouvementReputation, utilisateur } from '../../db/schema/index.js';
@@ -76,6 +76,33 @@ export class ReputationService {
       mouvementAnnuleId: initial.id,
       date: maintenant,
     });
+  }
+
+  /** RG-19, RG-82 : annule, action par action, les mouvements encore en cours nés de ces contenus
+      (création supprimée, avec ses commentaires et ses reproductions). Les ajustements de la
+      modération restent. */
+  async annulerContenus(tx: Transaction, contenuIds: number[], maintenant = new Date()) {
+    if (!contenuIds.length) return;
+    const annulation = alias(mouvementReputation, 'annulation');
+    const actions = await tx
+      .selectDistinct({
+        acteurId: mouvementReputation.acteurId,
+        contenuId: mouvementReputation.contenuId,
+        motif: mouvementReputation.motif,
+      })
+      .from(mouvementReputation)
+      .leftJoin(annulation, eq(annulation.mouvementAnnuleId, mouvementReputation.id))
+      .where(
+        and(
+          inArray(mouvementReputation.contenuId, contenuIds),
+          isNotNull(mouvementReputation.acteurId),
+          notInArray(mouvementReputation.motif, ['ANNULATION', 'AJUSTEMENT_MODERATION']),
+          isNull(annulation.id),
+        ),
+      );
+    for (const { acteurId, contenuId, motif } of actions)
+      if (acteurId !== null && contenuId !== null)
+        await this.annuler(tx, { acteurId, contenuId, motif }, maintenant);
   }
 
   /** Dernier mouvement de cette action qui n'a pas été annulé. */

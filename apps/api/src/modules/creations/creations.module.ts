@@ -1,11 +1,16 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module.js';
+import { ProgressionModule } from '../progression/progression.module.js';
 import { CreationsController } from './creations.controller.js';
 import { CreationsService } from './creations.service.js';
+import { EcritureCreationsService } from './ecriture.service.js';
 
-/* Créations (CREA-01) : lecture d'une fiche selon la visibilité (RG-30). */
+/* Créations : lecture d'une fiche selon la visibilité (CREA-01, RG-30) ; écriture par l'auteur
+   (CREA-05 : brouillon, publication, modification, dépublication, suppression). */
 @Module({
+  imports: [AuthModule, ProgressionModule],
   controllers: [CreationsController],
-  providers: [CreationsService],
+  providers: [CreationsService, EcritureCreationsService],
   exports: [CreationsService],
 })
 export class CreationsModule {}
