@@ -12,3 +12,4 @@ export * from './schemas/medias';
 export * from './contrats/referentiels';
 export * from './contrats/session';
 export * from './contrats/medias';
+export * from './contrats/creations';
