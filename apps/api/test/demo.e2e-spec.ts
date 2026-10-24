@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
-import type { SessionApi } from '@vysora/shared';
+import type { CreationFicheApi, SessionApi } from '@vysora/shared';
 import { isNotNull, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import request from 'supertest';
@@ -315,6 +315,91 @@ describe('Données de démonstration (DEMO-01, DEMO-02, pnpm db:demo)', () => {
         `Données de démonstration chargées : ${IMAGES_ATTENDUES} images, ${AVATARS_ATTENDUS} photos de profil.`,
       );
       expect(await compter()).toEqual({ ...avant, media: IMAGES_ATTENDUES });
+    }, 120_000);
+  });
+
+  describe('présentation du prototype', () => {
+    const etatDeLaPresentation = async () =>
+      (
+        await contexte.db.execute(
+          sql`select
+            (select count(*) from utilisateur where nom_affiche is not null)::int as noms,
+            (select count(*) from creation where format_resultat is not null)::int as formats,
+            (select count(*) from creation where cardinality(a_adapter) > 0)::int as a_adapter,
+            (select count(*) from echange where titre is not null)::int as echanges,
+            (select count(*) from moment_cle where titre is not null)::int as moments,
+            (select count(*) from sujet where outil_id is not null)::int as sujets,
+            (select count(*) from cas_bon_reflexe where outil_id is not null)::int as cas`,
+        )
+      ).rows[0];
+
+    it('reprend noms affichés, titres, formats, « À adapter » et outils du prototype', async () => {
+      expect(await etatDeLaPresentation()).toEqual({
+        noms: 53,
+        formats: 42,
+        a_adapter: 42,
+        echanges: 67,
+        moments: 14,
+        sujets: 17,
+        cas: 8,
+      });
+      const id = await valeur(
+        sql`select id from creation where titre = 'Prise de rendez-vous pour un salon de coiffure'`,
+      );
+      const fiche = (
+        await request(contexte.app.getHttpServer())
+          .get(`/api/v1/creations/${String(id)}`)
+          .expect(200)
+      ).body as CreationFicheApi;
+      expect(fiche).toMatchObject({
+        auteur: { pseudo: 'aissatou-ndiaye', nom: 'Aïssatou Ndiaye' },
+        formatResultat: 'Interface de réservation',
+        aAdapter: [
+          'Les prestations et leur durée',
+          'Les horaires du salon',
+          'Les informations demandées à la réservation',
+        ],
+      });
+      expect(fiche.etapes[0]?.echanges.map((e) => e.titre)).toEqual([
+        'Composer la réservation',
+        'Empêcher les doublons',
+        'Limiter les données conservées',
+      ]);
+      expect(fiche.etapes[0]?.moments.map((m) => m.titre)).toEqual([
+        'Vérifier les réservations simultanées',
+        null,
+      ]);
+      // Outil et modèle d'un sujet : ceux du prototype (« Midjourney · v7 »).
+      expect(
+        await valeur(
+          sql`select o.nom || ' · ' || m.nom_court from sujet s join outil o on o.id = s.outil_id join modele m on m.id = s.modele_id where s.titre = 'Mon personnage change de visage à chaque nouvelle image'`,
+        ),
+      ).toBe('Midjourney · v7');
+    });
+
+    it('complète une base chargée avant l’arrivée de ces champs, sans rien d’autre', async () => {
+      const attendu = await etatDeLaPresentation();
+      await contexte.db.execute(sql`update utilisateur set nom_affiche = null`);
+      await contexte.db.execute(
+        sql`update creation set format_resultat = null, a_adapter = '{}'::text[]`,
+      );
+      await contexte.db.execute(sql`update echange set titre = null`);
+      await contexte.db.execute(sql`update moment_cle set titre = null`);
+      await contexte.db.execute(
+        sql`update sujet set outil_id = null, modele_id = null, modele_non_reference = null`,
+      );
+      await contexte.db.execute(
+        sql`update cas_bon_reflexe set outil_id = null, modele_id = null, modele_non_reference = null`,
+      );
+      const avant = await compter();
+      const complement = await charger('test');
+      const total = Object.values(attendu ?? {}).reduce<number>((s, n) => s + Number(n), 0);
+      expect(complement).toMatchObject({ membres: 0, creations: 0, votes: 0, completes: total });
+      expect(decrireBilan(complement)).toBe(
+        `Données de démonstration chargées : ${total} éléments complétés.`,
+      );
+      expect(await etatDeLaPresentation()).toEqual(attendu);
+      expect(await compter()).toEqual(avant);
     }, 120_000);
   });
 

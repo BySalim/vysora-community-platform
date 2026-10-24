@@ -24,7 +24,7 @@ export interface ImageDemo {
 
 export interface MembreDemo {
   pseudo: string;
-  /** Non chargé : nom affiché par le prototype (« Claire Dubois »). */
+  /** Nom affiché par le prototype (« Claire Dubois »). */
   nom: string;
   /** Avatar du prototype (prototype/assets/avatars/<avatar>.webp). */
   avatar?: string;
@@ -51,7 +51,7 @@ export interface ConfigurationDemo {
 }
 
 export interface EchangeDemo {
-  /** Non chargé : titre de l'échange dans la fiche du prototype. */
+  /** Titre de l'échange dans la fiche du prototype. */
   titre?: string;
   prompt: string;
   reponse?: string;
@@ -64,7 +64,7 @@ export interface EchangeDemo {
 export interface MomentDemo {
   type: TypeMomentCle;
   explication: string;
-  /** Non chargé : titre du moment clé dans la fiche du prototype. */
+  /** Titre du moment clé dans la fiche du prototype (sinon, la fiche en donne un selon le type). */
   titre?: string;
   /** Rang de l'échange marqué, dans l'étape. */
   echange?: number;
@@ -100,6 +100,9 @@ export interface CreationDemo {
   titre: string;
   objectif: string;
   limites?: string;
+  /** Format du résultat (« Paysage · 4:3 ») et liste « À adapter » de la fiche du prototype. */
+  formatResultat?: string;
+  aAdapter?: string[];
   categorie: string;
   licence: string;
   etiquettes: string[];
@@ -143,7 +146,7 @@ export interface SujetDemo {
   /** Non chargé : résultats obtenus avant et après l'astuce. */
   resultatAvant?: string;
   resultatApres?: string;
-  /** Non chargé (sauf dans le corps d'une clinique) : outil et modèle affichés sur le sujet. */
+  /** Outil et modèle affichés sur le sujet (aussi dans le corps d'une clinique, RG-62). */
   outil?: string;
   modele?: string;
   etiquettes: string[];
@@ -167,7 +170,7 @@ export interface CasDemo {
   question: string;
   explication: string;
   difficulte: DifficulteCas;
-  /** Non chargé : outil et modèle de la réponse étudiée. */
+  /** Outil et modèle qui ont donné la réponse étudiée. */
   outil?: string;
   modele?: string;
   options: { libelle: string; correcte: boolean; explication: string }[];

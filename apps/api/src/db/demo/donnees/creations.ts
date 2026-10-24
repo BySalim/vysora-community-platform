@@ -15,6 +15,12 @@ export const CREATIONS: CreationDemo[] = [
       'Permettre aux clientes de choisir un créneau disponible et éviter les doubles réservations.',
     categorie: 'Application web',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Interface de réservation',
+    aAdapter: [
+      'Les prestations et leur durée',
+      'Les horaires du salon',
+      'Les informations demandées à la réservation',
+    ],
     etiquettes: ['Réservation', 'Formulaire', 'Sécurité'],
     publication: '2026-10-02T09:12',
     etapes: [
@@ -83,6 +89,12 @@ export const CREATIONS: CreationDemo[] = [
     limites: 'La disposition exacte des bâtiments varie d’un essai à l’autre.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Paysage · 4:3',
+    aAdapter: [
+      'La hauteur et la position des tours',
+      'L’heure et la lumière',
+      'La texture et le style pictural',
+    ],
     etiquettes: ['Paysage', 'Architecture', 'Peinture numérique'],
     publication: '2026-10-06T10:47',
     etapes: [
@@ -173,6 +185,8 @@ export const CREATIONS: CreationDemo[] = [
       'Un portrait éditorial avec une matière peinte visible, plutôt qu’un rendu photographique.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Image · 4:3',
+    aAdapter: ['La palette du portrait', 'La direction de la lumière', 'Le grain du papier'],
     etiquettes: ['Portrait', 'Peinture numérique', 'Éditorial'],
     publication: '2026-10-04T14:05',
     etapes: [
@@ -241,6 +255,12 @@ export const CREATIONS: CreationDemo[] = [
       'Suivre le chiffre d’affaires, les commandes et les retours d’une boutique sur quatre mois.',
     categorie: 'Analyse de données',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Tableau de bord',
+    aAdapter: [
+      'La période d’analyse',
+      'La devise de la boutique',
+      'Le traitement des remboursements',
+    ],
     etiquettes: ['E-commerce', 'Tableur', 'Indicateurs'],
     publication: '2026-09-29T16:38',
     etapes: [
@@ -326,6 +346,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Classer les factures reçues par e-mail et extraire leur montant TTC.',
     categorie: 'Automatisation',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Parcours d’automatisation',
+    aAdapter: ['Le dossier de réception', 'Les règles de classement', 'Les champs à vérifier'],
     etiquettes: ['Factures', 'E-mail', 'Comptabilité'],
     publication: '2026-10-01T18:20',
     etapes: [
@@ -404,6 +426,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une lettre de motivation qui s’appuie sur des faits précis du parcours.',
     categorie: 'Texte et rédaction',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Lettre',
+    aAdapter: ['Les missions du poste', 'Les réalisations vérifiables', 'Le ton de la candidature'],
     etiquettes: ['Emploi', 'Lettre', 'Ton'],
     publication: '2026-10-03T11:26',
     etapes: [
@@ -464,6 +488,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Répondre aux avis avec un ton chaleureux, sans que deux réponses se ressemblent.',
     categorie: 'Texte et rédaction',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Réponse à un avis',
+    aAdapter: ['Le nom du restaurant', 'La longueur de la réponse', 'Le ton de la maison'],
     etiquettes: ['Avis clients', 'Restauration', 'Ton'],
     publication: '2026-10-10T20:02',
     etapes: [
@@ -506,6 +532,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Nettoyer un fichier de contacts en gardant à part les cas douteux.',
     categorie: 'Analyse de données',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Fichier de contacts nettoyé',
+    aAdapter: ['Les colonnes comparées', 'Le format des numéros', 'Le seuil des cas douteux'],
     etiquettes: ['Tableur', 'Nettoyage', 'CRM'],
     publication: '2026-09-30T08:44',
     etapes: [
@@ -574,6 +602,12 @@ export const CREATIONS: CreationDemo[] = [
       'Présenter les menus, la galerie et recevoir des demandes de devis pour des réceptions.',
     categorie: 'Application web',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Site vitrine',
+    aAdapter: [
+      'Les formules et les menus',
+      'Les informations du devis',
+      'Le délai de réponse annoncé',
+    ],
     etiquettes: ['Site vitrine', 'Restauration', 'Formulaire'],
     publication: '2026-10-08T13:31',
     etapes: [
@@ -654,6 +688,8 @@ export const CREATIONS: CreationDemo[] = [
       'Relancer les devis sans réponse après sept jours, avec une validation avant chaque envoi.',
     categorie: 'Automatisation',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Scénario d’automatisation',
+    aAdapter: ['Le délai avant la relance', 'Le ton du message', 'La personne qui valide l’envoi'],
     etiquettes: ['Devis', 'E-mail', 'Relance'],
     publication: '2026-09-24T17:55',
     etapes: [
@@ -715,6 +751,8 @@ export const CREATIONS: CreationDemo[] = [
       'Une palette et une typographie cohérentes, lisibles sur l’emballage comme à l’écran.',
     categorie: 'Identité visuelle',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Palette et typographies',
+    aAdapter: ['Les couleurs de la marque', 'Les polices disponibles', 'Le support d’impression'],
     etiquettes: ['Charte graphique', 'Couleurs', 'Cosmétique'],
     publication: '2026-09-25T09:12',
     etapes: [
@@ -770,6 +808,12 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une extension de navigateur légère, qui ne demande que les permissions nécessaires.',
     categorie: 'Code et scripts',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Extension de navigateur',
+    aAdapter: [
+      'Les sites concernés',
+      'Les vidéos laissées en lecture',
+      'Les permissions demandées',
+    ],
     etiquettes: ['Extension', 'JavaScript', 'Navigateur'],
     publication: '2026-10-06T10:47',
     etapes: [
@@ -853,6 +897,12 @@ export const CREATIONS: CreationDemo[] = [
       'Un formulaire utilisable au clavier, avec des erreurs claires pour les lecteurs d’écran.',
     categorie: 'Application web',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Formulaire d’inscription',
+    aAdapter: [
+      'Les champs demandés',
+      'Les messages d’erreur',
+      'Le lecteur d’écran utilisé pour les tests',
+    ],
     etiquettes: ['Accessibilité', 'Formulaire', 'Association'],
     publication: '2026-10-09T14:05',
     etapes: [
@@ -921,6 +971,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Traduire en anglais sans perdre le vocabulaire précis du métier.',
     categorie: 'Texte et rédaction',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Fiches produits traduites',
+    aAdapter: ['La langue cible', 'Les termes du glossaire', 'La relecture finale'],
     etiquettes: ['Traduction', 'Glossaire', 'E-commerce'],
     publication: '2026-10-05T16:38',
     etapes: [
@@ -977,6 +1029,8 @@ export const CREATIONS: CreationDemo[] = [
       'Recevoir chaque matin les décisions, les questions ouvertes et les tâches de la veille.',
     categorie: 'Automatisation',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Résumé quotidien',
+    aAdapter: ['Les rubriques du résumé', 'L’heure d’envoi', 'Les messages à ignorer'],
     etiquettes: ['Résumé', 'Équipe', 'Messagerie'],
     publication: '2026-10-04T18:20',
     etapes: [
@@ -1033,6 +1087,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une photographie de façade pour illustrer un guide de voyage.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Photographie · 3:2',
+    aAdapter: ['Le lieu photographié', 'L’heure et la lumière', 'Les éléments du premier plan'],
     etiquettes: ['Voyage', 'Photographie', 'Architecture'],
     publication: '2026-10-07T11:26',
     etapes: [
@@ -1078,6 +1134,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Un générique instrumental reconnaissable, avec une fin nette.',
     categorie: 'Musique et son',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Générique de 10 secondes',
+    aAdapter: ['Les instruments', 'Le tempo', 'La durée de la version courte'],
     etiquettes: ['Podcast', 'Générique', 'Instrumental'],
     publication: '2026-09-27T20:02',
     etapes: [
@@ -1133,6 +1191,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Retrouver les clients sans commande récente pour une campagne de relance.',
     categorie: 'Code et scripts',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Requête SQL',
+    aAdapter: ['Le nom des tables', 'La durée d’inactivité', 'Les clients sans commande'],
     etiquettes: ['SQL', 'Base de données', 'Relance'],
     publication: '2026-10-11T08:44',
     etapes: [
@@ -1175,6 +1235,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Un quiz fidèle aux documents du cours, avec la source de chaque réponse.',
     categorie: 'Éducation',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Quiz de 10 questions',
+    aAdapter: ['Les documents fournis', 'Le niveau de la classe', 'Le nombre de questions'],
     etiquettes: ['Quiz', 'Histoire', 'Collège'],
     publication: '2026-10-09T13:31',
     etapes: [
@@ -1215,6 +1277,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Un graphique lisible, avec ses unités et sa source, à partir d’un fichier CSV.',
     categorie: 'Analyse de données',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Graphique',
+    aAdapter: ['Le fichier de données', 'La période affichée', 'La saison mise en évidence'],
     etiquettes: ['Graphique', 'Climat', 'CSV'],
     publication: '2026-10-02T17:55',
     etapes: [
@@ -1257,6 +1321,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une voix claire et chaleureuse, avec un rythme adapté aux étapes d’un tutoriel.',
     categorie: 'Musique et son',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Voix off',
+    aAdapter: ['La voix et la langue', 'Le débit', 'La durée des pauses'],
     etiquettes: ['Voix off', 'Tutoriel', 'Vidéo'],
     publication: '2026-09-21T09:12',
     etapes: [
@@ -1287,6 +1353,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une série d’affiches peintes aux couleurs constantes pour un office de tourisme.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Affiche · 2:3',
+    aAdapter: ['Le paysage représenté', 'Le code de style', 'Le format d’impression'],
     etiquettes: ['Affiche', 'Paysage', 'Tourisme'],
     publication: '2026-09-16T10:47',
     etapes: [
@@ -1347,6 +1415,8 @@ export const CREATIONS: CreationDemo[] = [
       'Faire apparaître un logo sans déformer les lettres, pour l’introduction d’une chaîne.',
     categorie: 'Vidéo',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Animation de 6 secondes',
+    aAdapter: ['Le logo animé', 'La durée du tracé', 'Le format de diffusion'],
     etiquettes: ['Animation', 'Logo', 'Introduction'],
     publication: '2026-10-11T14:05',
     etapes: [
@@ -1408,6 +1478,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une photo produit lumineuse pour la page d’une infusion artisanale.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Photo produit',
+    aAdapter: ['Le récipient', 'La direction de la lumière', 'La disposition des fleurs'],
     etiquettes: ['Photo produit', 'Alimentation', 'E-commerce'],
     publication: '2026-10-13T16:11',
     etapes: [
@@ -1451,6 +1523,8 @@ export const CREATIONS: CreationDemo[] = [
       'Renommer 248 photos selon leur date de prise de vue, sans risque de perdre un fichier.',
     categorie: 'Code et scripts',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Script Python',
+    aAdapter: ['Le dossier des photos', 'Le format du nom', 'Le traitement des fichiers sans date'],
     etiquettes: ['Python', 'Fichiers', 'Photos'],
     publication: '2026-10-13T15:54',
     etapes: [
@@ -1492,6 +1566,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une série d’icônes en relief, cohérentes entre elles.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Planche d’icônes',
+    aAdapter: ['Les objets représentés', 'La palette de l’application', 'L’angle de vue'],
     etiquettes: ['Icônes', '3D', 'Application mobile'],
     publication: '2026-10-13T15:32',
     etapes: [
@@ -1541,6 +1617,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Douze fiches de révision fidèles au cours de SVT.',
     categorie: 'Éducation',
     licence: 'CC-BY-4.0',
+    formatResultat: '12 fiches',
+    aAdapter: ['Le niveau scolaire', 'Le nombre de fiches', 'Le vocabulaire du cours'],
     etiquettes: ['Révisions', 'SVT', 'Lycée'],
     publication: '2026-10-13T15:20',
     etapes: [
@@ -1584,6 +1662,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Annoncer la programmation d’un festival avec un montage rythmé.',
     categorie: 'Vidéo',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Image extraite du teaser',
+    aAdapter: ['La durée des plans', 'Le rythme musical', 'Les informations de fin'],
     etiquettes: ['Teaser', 'Événement', 'Montage'],
     publication: '2026-10-13T14:20',
     etapes: [
@@ -1650,6 +1730,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Un logo lisible en petit format, avec le nom exact de la coopérative.',
     categorie: 'Identité visuelle',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Identité visuelle',
+    aAdapter: ['Le nom de la coopérative', 'La taille de l’étiquette', 'La version monochrome'],
     etiquettes: ['Logo', 'Coopérative', 'Agriculture'],
     publication: '2026-10-13T13:20',
     etapes: [
@@ -1693,6 +1775,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Un visuel abstrait aux couleurs de la conférence, avec la place pour le titre.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Fond de conférence',
+    aAdapter: ['La zone réservée au titre', 'Le format de projection', 'L’intensité des reliefs'],
     etiquettes: ['Événement', 'Abstrait', 'Présentation'],
     publication: '2026-10-13T12:20',
     etapes: [
@@ -1735,6 +1819,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Un motif hypnotique pour la pochette d’un album électronique.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Motif de pochette',
+    aAdapter: ['La couleur des arêtes', 'La densité de la spirale', 'Le cadrage de la pochette'],
     etiquettes: ['Pochette', 'Musique', 'Motif'],
     publication: '2026-10-13T11:20',
     etapes: [
@@ -1787,6 +1873,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Laisser les équipes réserver un créneau d’une heure et payer sur place.',
     categorie: 'Application web',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Application de réservation',
+    aAdapter: ['Les terrains et leurs horaires', 'Le fuseau horaire', 'Le texte du SMS'],
     etiquettes: ['Réservation', 'Sport', 'Calendrier'],
     publication: '2026-10-07T10:47',
     etapes: [
@@ -1875,6 +1963,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Proposer des séances de 30 ou 45 minutes selon le soin, sans chevauchement.',
     categorie: 'Application web',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Agenda en ligne',
+    aAdapter: ['Les soins et leur durée', 'Les horaires du cabinet', 'Les informations demandées'],
     etiquettes: ['Santé', 'Réservation', 'Agenda'],
     publication: '2026-10-09T14:05',
     etapes: [
@@ -1942,6 +2032,8 @@ export const CREATIONS: CreationDemo[] = [
       'Remplir chaque cours sans dépasser le nombre de places, et prévenir la personne suivante en cas d’annulation.',
     categorie: 'Application web',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Inscriptions avec liste d’attente',
+    aAdapter: ['Les cours et leurs places', 'Le délai de confirmation', 'Le message envoyé'],
     etiquettes: ['Réservation', 'Sport', 'Liste d’attente'],
     publication: '2026-09-28T16:38',
     etapes: [
@@ -2023,6 +2115,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Un logo simple, lisible sur une icône d’application, avec le nom exact.',
     categorie: 'Identité visuelle',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Logo d’application',
+    aAdapter: ['Le nom de l’application', 'Les couleurs du symbole', 'La taille de l’icône'],
     etiquettes: ['Logo', 'Finance', 'Application mobile'],
     publication: '2026-10-05T18:20',
     etapes: [
@@ -2083,6 +2177,8 @@ export const CREATIONS: CreationDemo[] = [
       'Ranger des centaines de fichiers par type, sans rien supprimer ni déplacer par erreur.',
     categorie: 'Code et scripts',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Script Python',
+    aAdapter: ['Le dossier à ranger', 'Les types de fichiers', 'Les fichiers à ignorer'],
     etiquettes: ['Python', 'Fichiers', 'Rangement'],
     publication: '2026-10-10T11:26',
     etapes: [
@@ -2127,6 +2223,8 @@ export const CREATIONS: CreationDemo[] = [
       'Une affiche de voyage pour Saint-Louis, où les pirogues peintes guident le regard vers le titre.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Affiche · 2:3',
+    aAdapter: ['Le lieu et son titre', 'La palette de l’affiche', 'Le texte de l’affiche'],
     etiquettes: ['Affiche', 'Tourisme', 'Voyage'],
     publication: '2026-10-12T09:10',
     defi: 'une-affiche-touristique-en-trois-echanges',
@@ -2135,17 +2233,17 @@ export const CREATIONS: CreationDemo[] = [
         configurations: [{ outil: 'Midjourney', modele: 'v7' }],
         echanges: [
           {
-            titre: 'Décrire le lieu et fixer la composition verticale.',
+            titre: 'Décrire le lieu et fixer la composition verticale',
             prompt:
               'Une affiche touristique de Saint-Louis au Sénégal. Pirogues peintes au premier plan, façades coloniales en arrière-plan. Composition verticale, lumière de fin de journée. Texte exact : « Saint-Louis ».',
           },
           {
-            titre: 'Réduire le nombre de pirogues pour dégager le titre.',
+            titre: 'Réduire le nombre de pirogues pour dégager le titre',
             prompt:
               'Réduis le nombre de pirogues à trois et dégage le haut de l’image pour le titre.',
           },
           {
-            titre: 'Corriger le texte et vérifier sa lisibilité en petit format.',
+            titre: 'Corriger le texte et vérifier sa lisibilité en petit format',
             prompt:
               'Le titre est mal orthographié. Écris exactement « Saint-Louis » et vérifie qu’il reste lisible en petit format.',
           },
@@ -2176,6 +2274,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une affiche épurée de Gorée, où une seule façade suffit à évoquer l’île.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Affiche · 2:3',
+    aAdapter: ['Le lieu et son titre', 'La palette de l’affiche', 'Le texte de l’affiche'],
     etiquettes: ['Affiche', 'Tourisme', 'Voyage'],
     publication: '2026-10-12T14:30',
     defi: 'une-affiche-touristique-en-trois-echanges',
@@ -2184,12 +2284,12 @@ export const CREATIONS: CreationDemo[] = [
         configurations: [{ outil: 'Flux', modele: '1.1 Pro' }],
         echanges: [
           {
-            titre: 'Décrire la façade et la palette du lieu.',
+            titre: 'Décrire la façade et la palette du lieu',
             prompt:
               'Affiche de voyage pour Gorée, Sénégal. Une façade ocre et des volets bleus, lumière douce, composition épurée. Réserver le haut de l’image au titre exact « Gorée ».',
           },
           {
-            titre: 'Simplifier l’arrière-plan et replacer le titre.',
+            titre: 'Simplifier l’arrière-plan et replacer le titre',
             prompt: 'Simplifie l’arrière-plan et replace le titre « Gorée » en haut de l’image.',
           },
         ],
@@ -2217,6 +2317,8 @@ export const CREATIONS: CreationDemo[] = [
       'Une affiche lumineuse de Chefchaouen, où un oranger équilibre les bleus de la ville.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Affiche · 2:3',
+    aAdapter: ['Le lieu et son titre', 'La palette de l’affiche', 'Le texte de l’affiche'],
     etiquettes: ['Affiche', 'Tourisme', 'Voyage'],
     publication: '2026-10-12T19:45',
     defi: 'une-affiche-touristique-en-trois-echanges',
@@ -2225,16 +2327,16 @@ export const CREATIONS: CreationDemo[] = [
         configurations: [{ outil: 'ChatGPT', modele: 'GPT Image 1' }],
         echanges: [
           {
-            titre: 'Définir le point de vue et les éléments du lieu.',
+            titre: 'Définir le point de vue et les éléments du lieu',
             prompt:
               'Une affiche touristique de Chefchaouen au Maroc. Ruelle aux murs bleus, escalier et oranger. Illustration lumineuse. Titre exact : « Chefchaouen ».',
           },
           {
-            titre: 'Ajouter un oranger pour équilibrer les bleus.',
+            titre: 'Ajouter un oranger pour équilibrer les bleus',
             prompt: 'Ajoute un oranger dans la ruelle pour équilibrer les bleus.',
           },
           {
-            titre: 'Agrandir le titre et retirer les petits textes inutiles.',
+            titre: 'Agrandir le titre et retirer les petits textes inutiles',
             prompt: 'Agrandis le titre « Chefchaouen » et retire les petits textes inutiles.',
           },
         ],
@@ -2264,6 +2366,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une affiche typographique de Cape Coast, construite autour du nom du lieu.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Affiche · 2:3',
+    aAdapter: ['Le lieu et son titre', 'La palette de l’affiche', 'Le texte de l’affiche'],
     etiquettes: ['Affiche', 'Tourisme', 'Voyage'],
     publication: '2026-10-13T08:20',
     defi: 'une-affiche-touristique-en-trois-echanges',
@@ -2272,12 +2376,12 @@ export const CREATIONS: CreationDemo[] = [
         configurations: [{ outil: 'Ideogram', modele: '3.0' }],
         echanges: [
           {
-            titre: 'Composer l’affiche autour du nom du lieu.',
+            titre: 'Composer l’affiche autour du nom du lieu',
             prompt:
               'Affiche typographique pour Cape Coast au Ghana. Nom du lieu très lisible, bleu profond et blanc. Sous-titre exact : « Au lever du jour ».',
           },
           {
-            titre: 'Ajuster les espacements et vérifier chaque lettre.',
+            titre: 'Ajuster les espacements et vérifier chaque lettre',
             prompt:
               'Augmente l’espace entre les lettres du titre et vérifie l’orthographe de chaque mot.',
           },
@@ -2302,6 +2406,8 @@ export const CREATIONS: CreationDemo[] = [
     objectif: 'Une affiche typographique de Grand-Bassam qui réserve une vraie place au texte.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Affiche · 2:3',
+    aAdapter: ['Le lieu et son titre', 'La palette de l’affiche', 'Le texte de l’affiche'],
     etiquettes: ['Affiche', 'Tourisme', 'Voyage'],
     publication: '2026-10-13T11:40',
     defi: 'une-affiche-touristique-en-trois-echanges',
@@ -2310,16 +2416,16 @@ export const CREATIONS: CreationDemo[] = [
         configurations: [{ outil: 'Midjourney', modele: 'v7' }],
         echanges: [
           {
-            titre: 'Poser le nom et le sous-titre.',
+            titre: 'Poser le nom et le sous-titre',
             prompt:
               'Affiche typographique touristique : « Grand-Bassam ». Sous-titre : « La plage du phare ». Bleu et blanc, composition verticale et grands espaces.',
           },
           {
-            titre: 'Réduire les éléments secondaires.',
+            titre: 'Réduire les éléments secondaires',
             prompt: 'Réduis les éléments secondaires : garde le phare et la ligne d’horizon.',
           },
           {
-            titre: 'Vérifier le contraste et l’orthographe.',
+            titre: 'Vérifier le contraste et l’orthographe',
             prompt:
               'Vérifie le contraste du titre sur le fond et l’orthographe de « Grand-Bassam ».',
           },
@@ -2345,6 +2451,8 @@ export const CREATIONS: CreationDemo[] = [
       'Une affiche de Ziguinchor qui part d’une photographie des bolongs pour ancrer l’image dans le lieu.',
     categorie: 'Image et illustration',
     licence: 'CC-BY-4.0',
+    formatResultat: 'Affiche · 2:3',
+    aAdapter: ['Le lieu et son titre', 'La palette de l’affiche', 'Le texte de l’affiche'],
     etiquettes: ['Affiche', 'Tourisme', 'Voyage'],
     publication: '2026-10-13T15:05',
     defi: 'une-affiche-touristique-en-trois-echanges',
@@ -2353,17 +2461,17 @@ export const CREATIONS: CreationDemo[] = [
         configurations: [{ outil: 'ChatGPT', modele: 'GPT Image 1' }],
         echanges: [
           {
-            titre: 'Partir d’une photographie du paysage.',
+            titre: 'Partir d’une photographie du paysage',
             prompt:
               'Créer une affiche touristique de Ziguinchor à partir d’une photographie des bolongs. Préserver le paysage. Texte exact : « Ziguinchor ». Composition verticale, titre lisible.',
           },
           {
-            titre: 'Simplifier la composition et poser le titre.',
+            titre: 'Simplifier la composition et poser le titre',
             prompt:
               'Simplifie la composition et place le titre « Ziguinchor » en haut de l’affiche.',
           },
           {
-            titre: 'Corriger le texte sans modifier le lieu.',
+            titre: 'Corriger le texte sans modifier le lieu',
             prompt: 'Corrige l’orthographe du titre sans modifier le paysage.',
           },
         ],

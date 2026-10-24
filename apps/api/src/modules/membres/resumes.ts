@@ -4,7 +4,8 @@ import type { BaseDeDonnees } from '../../db/client.js';
 import { mouvementReputation, niveau, utilisateur } from '../../db/schema/index.js';
 import type { Stockage } from '../medias/stockage.js';
 
-/** Membres tels que les pages les présentent à côté d'un contenu : pseudo, photo, niveau (RG-83, RG-84). */
+/** Membres tels que les pages les présentent à côté d'un contenu : nom affiché (à défaut le pseudo),
+    photo, niveau (RG-83, RG-84). */
 export async function resumerMembres(
   db: BaseDeDonnees,
   stockage: Stockage,
@@ -14,7 +15,12 @@ export async function resumerMembres(
   if (!uniques.length) return new Map();
   const [membres, reputations, niveaux] = await Promise.all([
     db
-      .select({ id: utilisateur.id, pseudo: utilisateur.pseudo, avatar: utilisateur.avatar })
+      .select({
+        id: utilisateur.id,
+        pseudo: utilisateur.pseudo,
+        nomAffiche: utilisateur.nomAffiche,
+        avatar: utilisateur.avatar,
+      })
       .from(utilisateur)
       .where(inArray(utilisateur.id, uniques)),
     db
@@ -37,7 +43,7 @@ export async function resumerMembres(
         {
           id: m.id,
           pseudo: m.pseudo,
-          nom: m.pseudo,
+          nom: m.nomAffiche ?? m.pseudo,
           avatar: m.avatar ? stockage.adresse(m.avatar) : null,
           niveau: { code: atteint.code, libelle: atteint.libelle },
         },

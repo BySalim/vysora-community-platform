@@ -252,5 +252,39 @@ describe('Comptes (F-01)', () => {
         .send({ pseudo: 'Awa-Sarr' })
         .expect(200);
     });
+
+    it('enregistre un nom affiché à la place du pseudo, puis le retire', async () => {
+      const agent = request.agent(serveur());
+      await agent
+        .post('/api/v1/comptes')
+        .set('Origin', ORIGINE_SITE)
+        .set('X-Forwarded-For', ip)
+        .send({ ...inscription, pseudo: 'awa-sarr' })
+        .expect(201);
+
+      const nomme = await agent
+        .patch('/api/v1/moi')
+        .set('Origin', ORIGINE_SITE)
+        .send({ nomAffiche: '  Awa   Sarr ' })
+        .expect(200);
+      expect(nomme.body.membre).toMatchObject({ pseudo: 'awa-sarr', nom: 'Awa Sarr' });
+      expect((await agent.get('/api/v1/session').expect(200)).body.membre.nom).toBe('Awa Sarr');
+
+      const trop = await agent
+        .patch('/api/v1/moi')
+        .set('Origin', ORIGINE_SITE)
+        .send({ nomAffiche: 'a'.repeat(61) })
+        .expect(400);
+      expect(trop.body.erreurs).toEqual({ nomAffiche: 'Votre nom compte 60 caractères au plus.' });
+
+      const retire = await agent
+        .patch('/api/v1/moi')
+        .set('Origin', ORIGINE_SITE)
+        .send({ nomAffiche: '' })
+        .expect(200);
+      expect(retire.body.membre.nom).toBe('awa-sarr');
+      const [membre] = await contexte.db.select().from(utilisateur);
+      expect(membre?.nomAffiche).toBeNull();
+    });
   });
 });

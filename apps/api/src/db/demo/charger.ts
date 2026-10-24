@@ -116,6 +116,8 @@ export interface BilanDemo {
   avatars: number;
   /** Résultats en texte ou en code ajoutés à des créations déjà en base. */
   resultats: number;
+  /** Noms affichés, titres, formats, listes « À adapter » et outils ajoutés à des données déjà en base. */
+  completes: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -135,6 +137,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     await chargerEnregistrements(ctx);
     await chargerImages(ctx, options.stockage);
     await completerResultats(ctx);
+    await completerFidelite(ctx);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
@@ -158,6 +161,7 @@ export function decrireBilan(bilan: BilanDemo): string {
     [bilan.images, 'image', 'images'],
     [bilan.avatars, 'photo de profil', 'photos de profil'],
     [bilan.resultats, 'résultat en texte ou en code', 'résultats en texte ou en code'],
+    [bilan.completes, 'élément complété', 'éléments complétés'],
   ];
   const ajoutes = parties.filter(([nombre]) => nombre > 0);
   if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
@@ -268,6 +272,7 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
       images: 0,
       avatars: 0,
       resultats: 0,
+      completes: 0,
     },
   };
 }
@@ -441,6 +446,16 @@ function modeleDe(
     : { modeleId: null, modeleNonReference: nomModele };
 }
 
+/** Outil et modèle d'un sujet ou d'un cas (comme une configuration, RG-14). */
+function outilEtModele(
+  ctx: Contexte,
+  nomOutil?: string,
+  nomModele?: string,
+): { outilId: number | null; modeleId: number | null; modeleNonReference: string | null } {
+  if (!nomOutil) return { outilId: null, modeleId: null, modeleNonReference: null };
+  return { outilId: outilDe(ctx, nomOutil), ...modeleDe(ctx, nomOutil, nomModele) };
+}
+
 /** Étiquettes du contenu ; une étiquette absente est ajoutée, comme à la saisie d'un membre. */
 async function etiqueter(ctx: Contexte, contenuId: number, libelles: string[]): Promise<void> {
   const ids: number[] = [];
@@ -496,6 +511,7 @@ async function chargerMembres(ctx: Contexte, documents: DocumentsLegauxService):
       .insert(utilisateur)
       .values({
         pseudo: m.pseudo,
+        nomAffiche: m.nom,
         email: emailDemo(m.pseudo),
         emailVerifie: true,
         empreinteMotDePasse: empreintes[i],
@@ -603,6 +619,8 @@ async function chargerCreation(ctx: Contexte, c: CreationDemo): Promise<void> {
     slug: titre ? slugifier(titre) : null,
     objectif: c.objectif || null,
     limites: c.limites,
+    formatResultat: c.formatResultat,
+    aAdapter: c.aAdapter ?? [],
     resultatTexte: c.resultat?.texte,
     resultatNature: c.resultat?.nature,
     resultatNom: c.resultat?.nom,
@@ -635,6 +653,7 @@ async function chargerCreation(ctx: Contexte, c: CreationDemo): Promise<void> {
           etapeId: ligneEtape.id,
           configurationId: configurations[ech.configuration ?? 0] ?? null,
           ordre: ordre + 1,
+          titre: ech.titre,
           prompt: ech.prompt,
           reponse: ech.reponse,
           nbEssais: essais,
@@ -650,6 +669,7 @@ async function chargerCreation(ctx: Contexte, c: CreationDemo): Promise<void> {
           etapeId: ligneEtape.id,
           echangeId: m.echange === undefined ? null : echanges[m.echange],
           type: m.type,
+          titre: m.titre,
           explication: m.explication,
         })),
       );
@@ -829,6 +849,7 @@ async function chargerSujet(ctx: Contexte, s: SujetDemo): Promise<void> {
     corps: s.corps,
     exempleAvant: s.exempleAvant,
     exempleApres: s.exempleApres,
+    ...outilEtModele(ctx, s.outil, s.modele),
     creationId: creationLiee,
     fermeurId: s.fermeture ? membre(ctx, s.fermeture.par).id : undefined,
     dateFermeture: s.fermeture ? dater(ctx, s.fermeture.date) : undefined,
@@ -903,6 +924,7 @@ async function chargerCas(ctx: Contexte, c: CasDemo): Promise<void> {
     question: c.question,
     explication: c.explication,
     difficulte: c.difficulte,
+    ...outilEtModele(ctx, c.outil, c.modele),
     statutValidation: 'VALIDE',
     examinateurId: examinateur.id,
     dateExamen,
@@ -977,6 +999,110 @@ async function completerResultats(ctx: Contexte): Promise<void> {
       .where(and(eq(creation.id, id), isNull(creation.resultatTexte)))
       .returning({ id: creation.id });
     if (complete) ctx.bilan.resultats += 1;
+  }
+}
+
+/** Ce que les données ont gagné pour suivre le prototype (nom affiché, titres des moments et des échanges,
+    format, « À adapter », outil des sujets et des cas), ajouté aux lignes déjà en base qui ne l'ont pas. */
+async function completerFidelite(ctx: Contexte): Promise<void> {
+  const compter = (lignes: unknown[]) => {
+    ctx.bilan.completes += lignes.length;
+  };
+  for (const m of MEMBRES) {
+    const existant = ctx.membres.get(m.pseudo);
+    if (!existant || ctx.nouveaux.has(m.pseudo)) continue;
+    compter(
+      await ctx.tx
+        .update(utilisateur)
+        .set({ nomAffiche: m.nom })
+        .where(and(eq(utilisateur.id, existant.id), isNull(utilisateur.nomAffiche)))
+        .returning({ id: utilisateur.id }),
+    );
+  }
+  for (const c of CREATIONS) {
+    const id = ctx.creations.get(c.cle);
+    if (!id || ctx.nouvelles.has(c.cle)) continue;
+    if (c.formatResultat)
+      compter(
+        await ctx.tx
+          .update(creation)
+          .set({ formatResultat: c.formatResultat })
+          .where(and(eq(creation.id, id), isNull(creation.formatResultat)))
+          .returning({ id: creation.id }),
+      );
+    if (c.aAdapter?.length)
+      compter(
+        await ctx.tx
+          .update(creation)
+          .set({ aAdapter: c.aAdapter })
+          .where(and(eq(creation.id, id), sql`cardinality(${creation.aAdapter}) = 0`))
+          .returning({ id: creation.id }),
+      );
+    for (const [rang, e] of c.etapes.entries()) {
+      const [ligneEtape] = await ctx.tx
+        .select({ id: etape.id })
+        .from(etape)
+        .where(and(eq(etape.creationId, id), eq(etape.ordre, rang + 1)));
+      if (!ligneEtape) continue;
+      const echanges = await ctx.tx
+        .select({ id: echange.id, ordre: echange.ordre })
+        .from(echange)
+        .where(eq(echange.etapeId, ligneEtape.id));
+      const echangeDe = (k: number) => echanges.find((x) => x.ordre === k + 1)?.id;
+      for (const [k, ech] of e.echanges.entries()) {
+        const echangeId = echangeDe(k);
+        if (!ech.titre || echangeId === undefined) continue;
+        compter(
+          await ctx.tx
+            .update(echange)
+            .set({ titre: ech.titre })
+            .where(and(eq(echange.id, echangeId), isNull(echange.titre)))
+            .returning({ id: echange.id }),
+        );
+      }
+      for (const m of e.moments) {
+        if (!m.titre) continue;
+        const echangeId = m.echange === undefined ? undefined : echangeDe(m.echange);
+        compter(
+          await ctx.tx
+            .update(momentCle)
+            .set({ titre: m.titre })
+            .where(
+              and(
+                eq(momentCle.etapeId, ligneEtape.id),
+                eq(momentCle.type, m.type),
+                echangeId === undefined
+                  ? isNull(momentCle.echangeId)
+                  : eq(momentCle.echangeId, echangeId),
+                isNull(momentCle.titre),
+              ),
+            )
+            .returning({ id: momentCle.id }),
+        );
+      }
+    }
+  }
+  for (const s of SUJETS) {
+    const id = ctx.sujets.get(s.cle);
+    if (!id || !s.outil) continue;
+    compter(
+      await ctx.tx
+        .update(sujet)
+        .set(outilEtModele(ctx, s.outil, s.modele))
+        .where(and(eq(sujet.id, id), isNull(sujet.outilId)))
+        .returning({ id: sujet.id }),
+    );
+  }
+  for (const c of CAS) {
+    const id = ctx.cas.get(c.cle);
+    if (!id || !c.outil) continue;
+    compter(
+      await ctx.tx
+        .update(casBonReflexe)
+        .set(outilEtModele(ctx, c.outil, c.modele))
+        .where(and(eq(casBonReflexe.id, id), isNull(casBonReflexe.outilId)))
+        .returning({ id: casBonReflexe.id }),
+    );
   }
 }
 

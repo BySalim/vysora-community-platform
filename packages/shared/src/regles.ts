@@ -5,6 +5,7 @@
 /** Bornes de longueur, en caractères. */
 export const LONGUEURS = {
   pseudo: { min: 3, max: 30 }, // RG-01
+  nomAffiche: { max: 60 }, // nom affiché à côté des contenus (prototype : « Claire Dubois »)
   email: { max: 254 },
   motDePasse: { min: 12, max: 128 }, // RG-04 (la borne haute évite un hachage coûteux)
   biographie: { max: 500 }, // F-05
@@ -20,6 +21,10 @@ export const LONGUEURS = {
   reponseIa: { max: 200_000 },
   resultatTexte: { max: 200_000 }, // résultat textuel de la création (texte ou code)
   resultatNom: { max: 120 }, // nom du fichier de code
+  formatResultat: { max: 60 }, // prototype : « Paysage · 4:3 », « Interface de réservation »
+  pointAAdapter: { max: 120 }, // prototype : liste « À adapter » de la fiche
+  echangeTitre: { max: 100 }, // prototype : titre d'un échange dans la fiche
+  momentCleTitre: { max: 100 }, // prototype : titre d'un moment clé dans la fiche
   momentCleExplication: { min: 20, max: 1000 }, // RG-15
   lienLibelle: { max: 100 },
   texteAlternatif: { max: 250 }, // ENF-01
@@ -44,6 +49,7 @@ export const LIMITES = {
   imagesParContenu: 5, // RG-16, sujet, réponse, reproduction, cas
   tailleImageOctets: 5 * 1024 * 1024, // RG-16
   liensParCreation: 10, // RG-16
+  pointsAAdapter: 5, // liste « À adapter » d'une création
   etiquettesParContenu: 5, // RG-10, RG-60, RG-70
   optionsParCas: { min: 2, max: 5 }, // RG-70
 } as const;

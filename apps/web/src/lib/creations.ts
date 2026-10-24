@@ -3,6 +3,7 @@ import type {
   CreationFicheApi,
   EchangeApi,
   MediaApi,
+  MomentCleApi,
   OutilResumeApi,
   ResultatReproduction,
   TypeCreation,
@@ -95,16 +96,26 @@ export function couverture(
 export const estPortrait = (image: Pick<MediaApi, 'largeur' | 'hauteur'>): boolean =>
   image.hauteur > image.largeur * 1.15;
 
-/** Légende du résultat (fiche-brouillon.js : essai). */
-export function formatResultat(fiche: Pick<CreationFicheApi, 'type' | 'etapes'>): string {
+/** Légende du résultat : le choix parmi plusieurs essais d'un « 1 prompt » (fiche-creation.html,
+    fiche-brouillon.js : essai), sinon le format du résultat (creation-page-data.js : format), sinon
+    « Résultat obtenu ». */
+export function legendeResultat(
+  fiche: Pick<CreationFicheApi, 'type' | 'etapes' | 'formatResultat'>,
+): string {
   const premier = echangesPresentes(fiche)[0];
-  return fiche.type === 'UN_PROMPT' &&
+  if (
+    fiche.type === 'UN_PROMPT' &&
     premier &&
     premier.nbEssais > 1 &&
     premier.modeSelection === 'MEILLEUR_ESSAI'
-    ? `Résultat retenu parmi ${premier.nbEssais} essais`
-    : 'Résultat obtenu';
+  )
+    return `Résultat retenu parmi ${premier.nbEssais} essais`;
+  return fiche.formatResultat?.trim() || 'Résultat obtenu';
 }
+
+/** Titre d'un moment clé : le sien, sinon celui de son type (fiche-brouillon.js : TITRES). */
+export const titreMoment = (moment: Pick<MomentCleApi, 'type' | 'titre'>): string =>
+  moment.titre?.trim() || MOMENTS[moment.type].titre;
 
 /** Où se situe un moment clé dans le parcours (fiche-brouillon.js : ou). */
 export function placeDuMoment(

@@ -30,7 +30,7 @@ import {
   echangesPresentes,
   estPortrait,
   extrait,
-  formatResultat,
+  legendeResultat,
   identifiantDeLAdresse,
   configurationsEssayables,
   longueurParcours,
@@ -39,6 +39,7 @@ import {
   outilsUtilises,
   phrases,
   placeDuMoment,
+  titreMoment,
 } from '../../lib/creations';
 import { rendreMarkdown } from '../../lib/markdown';
 import { ROUTES } from '../../lib/navigation';
@@ -127,13 +128,13 @@ const etapesFiche: EtapeFiche[] = !fiche
       }))
     : fiche.type === 'ITERATION'
       ? echanges.map((x) => ({
-          titre: `Échange ${x.ordre}`,
+          titre: x.titre ? typo(x.titre) : `Échange ${x.ordre}`,
           demandes: [{ prompt: x.prompt, reponse: null, images: x.images }],
           resultat: x.reponse,
         }))
       : [
           {
-            titre: 'Le prompt et le résultat',
+            titre: premier?.titre ? typo(premier.titre) : 'Le prompt et le résultat',
             demandes: [{ prompt: promptPrincipal, reponse: null, images: premier?.images ?? [] }],
             resultat: premier?.reponse ?? null,
           },
@@ -375,22 +376,35 @@ const icones = [
             </span>
           </button>
           <figcaption>
-            {formatResultat(fiche)} <span>{natureResultat}</span>
+            {typo(legendeResultat(fiche))} <span>{natureResultat}</span>
           </figcaption>
         </figure>
         <aside class="reproduce">
           <h2>{projet ? 'Comprendre le projet' : 'Pour reproduire'}</h2>
           <OutilsIa outils={outils} />
           <dl class="config-list">
-            <div>
-              <dt>
-                <svg class="icon" aria-hidden="true">
-                  <use href="#i-sliders" />
-                </svg>{' '}
-                Réglages
-              </dt>
-              <dd>{parametres ? extrait(parametres, 80) : 'Aucun'}</dd>
-            </div>
+            {fiche.formatResultat && (
+              <div>
+                <dt>
+                  <svg class="icon" aria-hidden="true">
+                    <use href={`#i-${fiche.categorie?.icone ?? 'image'}`} />
+                  </svg>{' '}
+                  Format
+                </dt>
+                <dd>{typo(fiche.formatResultat)}</dd>
+              </div>
+            )}
+            {(parametres || !fiche.formatResultat) && (
+              <div>
+                <dt>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-sliders" />
+                  </svg>{' '}
+                  Réglages
+                </dt>
+                <dd>{parametres ? extrait(parametres, 80) : 'Aucun'}</dd>
+              </div>
+            )}
             <div>
               <dt>
                 <svg class="icon" aria-hidden="true">
@@ -520,7 +534,7 @@ const icones = [
                     {MOMENTS[m.type].nature}
                     {moments.length > 1 && ` · ${m.ou}`}
                   </span>
-                  <h4>{MOMENTS[m.type].titre}</h4>
+                  <h4>{typo(titreMoment(m))}</h4>
                   {m.explication && <p>{typo(m.explication)}</p>}
                 </div>
               </div>
@@ -640,6 +654,16 @@ const icones = [
               </div>
             )}
           </dl>
+          {fiche.aAdapter.length > 0 && (
+            <>
+              <h3>À adapter</h3>
+              <ul>
+                {fiche.aAdapter.map((point) => (
+                  <li>{typo(point)}</li>
+                ))}
+              </ul>
+            </>
+          )}
           {fiche.limites?.trim() && (
             <>
               <h3>Limites constatées</h3>

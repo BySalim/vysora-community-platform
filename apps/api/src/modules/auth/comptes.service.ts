@@ -118,6 +118,11 @@ export class ComptesService {
   async modifier(utilisateurId: number, modification: ModificationMembre): Promise<void> {
     if (modification.pseudo !== undefined)
       await this.modifierPseudo(utilisateurId, modification.pseudo);
+    if (modification.nomAffiche !== undefined)
+      await this.db
+        .update(utilisateur)
+        .set({ nomAffiche: modification.nomAffiche })
+        .where(eq(utilisateur.id, utilisateurId));
     if (modification.email !== undefined)
       await this.modifierEmail(utilisateurId, modification.email);
   }

@@ -1,5 +1,5 @@
 import type { CreationFicheApi, ResultatReproduction, StatutContenu } from '@vysora/shared';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import {
   commentaire,
@@ -246,8 +246,50 @@ describe('Lecture d’une création (CREA-01, F-23, RG-30)', () => {
     expect(premiere?.echanges[0]?.images).toHaveLength(1);
     expect(premiere?.moments[0]).toMatchObject({
       type: 'DECOUVERTE',
+      titre: null,
       echangeId: premiere?.echanges[0]?.id,
     });
+    // Sans nom affiché, sans titres, sans format ni liste « À adapter » : le pseudo et les valeurs vides.
+    expect(fiche).toMatchObject({
+      auteur: { nom: 'lea-martin' },
+      formatResultat: null,
+      aAdapter: [],
+    });
+    expect(premiere?.echanges[0]?.titre).toBeNull();
+  });
+
+  it('reprend la présentation du prototype : nom affiché, titres, format et « À adapter »', async () => {
+    const auteur = await creerMembre(contexte, {
+      pseudo: 'lea-martin',
+      email: 'lea@example.com',
+      nomAffiche: 'Léa Martin',
+    });
+    const { id } = await creerCreation(auteur.id);
+    await db()
+      .update(creation)
+      .set({
+        formatResultat: 'Paysage · 4:3',
+        aAdapter: ['La hauteur et la position des tours', 'L’heure et la lumière'],
+      })
+      .where(eq(creation.id, id));
+    await db()
+      .update(echange)
+      .set({ titre: 'Composer la cité' })
+      .where(sql`${echange.etapeId} in (select id from etape where creation_id = ${id})`);
+    await db()
+      .update(momentCle)
+      .set({ titre: 'Donner un point d’ancrage à la composition' })
+      .where(sql`${momentCle.etapeId} in (select id from etape where creation_id = ${id})`);
+
+    const fiche = (await request(serveur()).get(`/api/v1/creations/${id}`).expect(200))
+      .body as CreationFicheApi;
+    expect(fiche).toMatchObject({
+      auteur: { pseudo: 'lea-martin', nom: 'Léa Martin' },
+      formatResultat: 'Paysage · 4:3',
+      aAdapter: ['La hauteur et la position des tours', 'L’heure et la lumière'],
+    });
+    expect(fiche.etapes[0]?.echanges[0]?.titre).toBe('Composer la cité');
+    expect(fiche.etapes[0]?.moments[0]?.titre).toBe('Donner un point d’ancrage à la composition');
   });
 
   it('ne montre un brouillon qu’à son auteur, sans commentaires ni reproductions (RG-17)', async () => {

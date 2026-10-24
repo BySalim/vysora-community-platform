@@ -73,6 +73,13 @@ export const creation = pgTable(
     resultatTexte: text(),
     resultatNature: text({ enum: NATURES_RESULTAT }),
     resultatNom: varchar({ length: 120 }),
+    /** Extension (prototype, fiche) : format du résultat (« Paysage · 4:3 », « Interface de réservation »). */
+    formatResultat: varchar({ length: 60 }),
+    /** Extension (prototype, fiche) : ce qu'il faut adapter pour réutiliser la création (« À adapter »). */
+    aAdapter: text()
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     statutPublication: text({ enum: STATUTS_PUBLICATION }).notNull().default('BROUILLON'),
     datePublication: horodatage(),
     /** Technique (F-16) : confirmation « aucune donnée personnelle de tiers ni aucun secret ». */
@@ -171,6 +178,8 @@ export const echange = pgTable(
       .references(() => etape.id, { onDelete: 'cascade' }),
     configurationId: reference().references(() => configurationIa.id, { onDelete: 'set null' }),
     ordre: smallint().notNull(),
+    /** Extension (prototype, fiche) : titre de l'échange dans le parcours (« Composer la réservation »). */
+    titre: varchar({ length: 100 }),
     prompt: text(),
     reponse: text(),
     nbEssais: smallint().notNull().default(1),
@@ -197,6 +206,8 @@ export const momentCle = pgTable(
       .references(() => etape.id, { onDelete: 'cascade' }),
     echangeId: reference().references(() => echange.id, { onDelete: 'set null' }),
     type: text({ enum: TYPES_MOMENT_CLE }).notNull(),
+    /** Extension (prototype, fiche) : titre propre (« Vérifier les réservations simultanées »). */
+    titre: varchar({ length: 100 }),
     explication: text(),
   },
   (t) => [

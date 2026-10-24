@@ -53,6 +53,7 @@ export class SessionsService {
         utilisateur: {
           id: utilisateur.id,
           pseudo: utilisateur.pseudo,
+          nomAffiche: utilisateur.nomAffiche,
           email: utilisateur.email,
           emailVerifie: utilisateur.emailVerifie,
           role: utilisateur.role,

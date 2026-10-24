@@ -20,7 +20,7 @@ import type { MediaApi } from './medias';
 export interface MembreResumeApi {
   id: number;
   pseudo: string;
-  /** Nom affiché : le pseudo, faute de nom distinct dans le MCD. */
+  /** Nom affiché (« Claire Dubois ») ; à défaut, le pseudo. */
   nom: string;
   avatar: string | null;
   niveau: { code: CodeNiveau; libelle: string };
@@ -53,6 +53,8 @@ export interface ConfigurationIaApi {
 export interface EchangeApi {
   id: number;
   ordre: number;
+  /** Titre de l’échange dans le parcours (« Composer la réservation »), s’il en a un. */
+  titre: string | null;
   prompt: string | null;
   reponse: string | null;
   nbEssais: number;
@@ -67,6 +69,8 @@ export interface EchangeApi {
 export interface MomentCleApi {
   id: number;
   type: TypeMomentCle;
+  /** Titre propre (« Vérifier les réservations simultanées ») ; à défaut, la fiche en donne un selon le type. */
+  titre: string | null;
   explication: string | null;
   echangeId: number | null;
 }
@@ -151,6 +155,10 @@ export interface CreationFicheApi {
   titre: string | null;
   objectif: string | null;
   limites: string | null;
+  /** Format du résultat (« Paysage · 4:3 », « Interface de réservation »), s’il est précisé. */
+  formatResultat: string | null;
+  /** Ce qu’il faut adapter pour réutiliser la création (liste « À adapter » de la fiche). */
+  aAdapter: string[];
   dateCreation: string;
   datePublication: string | null;
   /** RG-18 : date de dernière modification affichée. */

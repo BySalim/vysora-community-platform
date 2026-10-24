@@ -231,6 +231,8 @@ export class CreationsService {
       titre: c.titre,
       objectif: c.objectif,
       limites: c.limites,
+      formatResultat: c.formatResultat,
+      aAdapter: c.aAdapter,
       dateCreation: ligne.dateCreation.toISOString(),
       datePublication: iso(c.datePublication),
       dateModification: iso(ligne.dateModification),
@@ -266,6 +268,7 @@ export class CreationsService {
           .map(({ echange: x }) => ({
             id: x.id,
             ordre: x.ordre,
+            titre: x.titre,
             prompt: x.prompt,
             reponse: x.reponse,
             nbEssais: x.nbEssais,
@@ -278,6 +281,7 @@ export class CreationsService {
           .map(({ moment: m }) => ({
             id: m.id,
             type: m.type,
+            titre: m.titre,
             explication: m.explication,
             echangeId: m.echangeId,
           })),

@@ -8,7 +8,7 @@ import type { EtatVisiteur } from '../permissions';
 export interface MembreConnecte {
   id: number;
   pseudo: string;
-  /** Nom affiché : le pseudo, faute de nom distinct dans le MCD. */
+  /** Nom affiché (« Clarisse Mendy ») ; à défaut, le pseudo. */
   nom: string;
   /** Réputation (RG-83). */
   points: number;

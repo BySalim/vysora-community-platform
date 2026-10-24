@@ -7,6 +7,8 @@ import type { Request } from 'express';
 export interface UtilisateurConnecte {
   id: number;
   pseudo: string;
+  /** Nom affiché (null : le pseudo s'affiche). */
+  nomAffiche: string | null;
   email: string;
   emailVerifie: boolean;
   role: Role;

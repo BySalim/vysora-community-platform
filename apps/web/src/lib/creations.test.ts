@@ -6,12 +6,13 @@ import {
   contexteDeTravail,
   couverture,
   estPortrait,
-  formatResultat,
   identifiantDeLAdresse,
+  legendeResultat,
   longueurParcours,
   outilsUtilises,
   phrases,
   placeDuMoment,
+  titreMoment,
 } from './creations';
 
 const image = (id: number, largeur = 1280, hauteur = 960): MediaApi => ({
@@ -27,6 +28,7 @@ const image = (id: number, largeur = 1280, hauteur = 960): MediaApi => ({
 const echange = (id: number, valeurs: Partial<EchangeApi> = {}): EchangeApi => ({
   id,
   ordre: id,
+  titre: null,
   prompt: `Prompt ${id}`,
   reponse: null,
   nbEssais: 1,
@@ -104,14 +106,29 @@ describe('résultat présenté', () => {
     expect(estPortrait(image(1, 1280, 960))).toBe(false);
   });
 
-  it('précise le choix parmi plusieurs essais pour un « 1 prompt »', () => {
-    const fiche = (nbEssais: number, modeSelection: EchangeApi['modeSelection']): Fiche => ({
-      type: 'UN_PROMPT',
-      images: [],
+  it('légende le résultat : choix parmi plusieurs essais d’un « 1 prompt », sinon son format', () => {
+    const fiche = (
+      nbEssais: number,
+      modeSelection: EchangeApi['modeSelection'],
+      formatResultat: string | null = null,
+      type: CreationFicheApi['type'] = 'UN_PROMPT',
+    ) => ({
+      type,
+      formatResultat,
       etapes: [etape(1, { echanges: [echange(1, { nbEssais, modeSelection })] })],
     });
-    expect(formatResultat(fiche(4, 'MEILLEUR_ESSAI'))).toBe('Résultat retenu parmi 4 essais');
-    expect(formatResultat(fiche(1, 'PREMIER_ESSAI'))).toBe('Résultat obtenu');
+    expect(legendeResultat(fiche(4, 'MEILLEUR_ESSAI', 'Paysage · 4:3'))).toBe(
+      'Résultat retenu parmi 4 essais',
+    );
+    expect(legendeResultat(fiche(1, 'PREMIER_ESSAI', 'Photo produit'))).toBe('Photo produit');
+    expect(legendeResultat(fiche(1, 'PREMIER_ESSAI', null, 'ITERATION'))).toBe('Résultat obtenu');
+  });
+
+  it('titre un moment clé par son titre, sinon selon son type', () => {
+    expect(
+      titreMoment({ type: 'VERIFICATION', titre: 'Vérifier les réservations simultanées' }),
+    ).toBe('Vérifier les réservations simultanées');
+    expect(titreMoment({ type: 'REFUS', titre: null })).toBe('Refuser une proposition de l’IA');
   });
 });
 

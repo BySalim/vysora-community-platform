@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LONGUEURS } from '../regles';
 import { evaluerMotDePasse } from '../mots-de-passe';
-import { champEmail, champMotDePasse, champPseudo } from './commun';
+import { champEmail, champMotDePasse, champNomAffiche, champPseudo } from './commun';
 
 /* Comptes et sessions (F-01, F-03) : inscription, connexion, disponibilité, modification du pseudo. */
 
@@ -75,6 +75,8 @@ export const schemaAcceptationDocuments = z.object({
     L'adresse ne se modifie ici que tant qu'elle n'est pas vérifiée (inscription) ; ensuite, PARAM-01. */
 export const schemaModificationMembre = z.object({
   pseudo: champPseudo.optional(),
+  /** null ou vide : retire le nom affiché (le pseudo s'affiche). */
+  nomAffiche: champNomAffiche.nullable().optional(),
   email: champEmail.optional(),
 });
 

@@ -35,6 +35,8 @@ export const utilisateur = pgTable(
     id: identifiant(),
     /** RG-01 : unique sans distinction de casse ; remplacé par « membre-supprime-xxxx » à la suppression. */
     pseudo: varchar({ length: 30 }).notNull(),
+    /** Extension (prototype) : nom affiché à côté des contenus (« Claire Dubois ») ; à défaut, le pseudo. */
+    nomAffiche: varchar({ length: 60 }),
     /** RG-02 ; effacé à la suppression du compte (RG-05). */
     email: varchar({ length: 254 }),
     emailVerifie: boolean().notNull().default(false),

@@ -100,7 +100,7 @@ export class EtatCompteService {
       membre: {
         id: membre.id,
         pseudo: membre.pseudo,
-        nom: membre.pseudo,
+        nom: membre.nomAffiche ?? membre.pseudo,
         points,
         avatar: membre.avatar ? this.stockage.adresse(membre.avatar) : null,
       },

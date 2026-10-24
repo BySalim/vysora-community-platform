@@ -119,6 +119,10 @@ export class ComptesController {
       utilisateur: {
         ...session.utilisateur,
         pseudo: modification.pseudo ?? session.utilisateur.pseudo,
+        nomAffiche:
+          modification.nomAffiche === undefined
+            ? session.utilisateur.nomAffiche
+            : modification.nomAffiche,
       },
     });
   }

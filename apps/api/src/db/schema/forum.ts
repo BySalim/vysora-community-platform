@@ -18,9 +18,32 @@ import { horodatage, identifiant, reference, valeursPermises } from './_outils.j
 import { utilisateur } from './comptes.js';
 import { colonnesSousType, contraintesSousType } from './contenus.js';
 import { creation } from './creations.js';
+import { modele, outil } from './referentiels.js';
 
 /* Forum et Bon réflexe (MCD, section 4.4). L'état d'un sujet (ouvert, résolu, fermé) se déduit
    de la fermeture et de la réponse acceptée (CV-03). */
+
+/** Extension (prototype) : outil et modèle affichés sur un sujet ou un cas ; modèle du référentiel
+    ou texte libre, jamais les deux, et jamais sans outil (comme une configuration, RG-14). */
+const colonnesOutilModele = () => ({
+  outilId: reference().references(() => outil.id),
+  modeleId: reference().references(() => modele.id),
+  modeleNonReference: varchar({ length: 100 }),
+});
+
+function contraintesOutilModele(
+  table: string,
+  t: { outilId: AnyPgColumn; modeleId: AnyPgColumn; modeleNonReference: AnyPgColumn },
+) {
+  return [
+    index(`${table}_outil_idx`).on(t.outilId),
+    check(`${table}_modele_check`, sql`${t.modeleId} is null or ${t.modeleNonReference} is null`),
+    check(
+      `${table}_outil_check`,
+      sql`${t.outilId} is not null or (${t.modeleId} is null and ${t.modeleNonReference} is null)`,
+    ),
+  ];
+}
 
 export const sujet = pgTable(
   'sujet',
@@ -45,6 +68,7 @@ export const sujet = pgTable(
     /** FERMER (RG-65) : supprimée à la réouverture. */
     fermeurId: reference().references(() => utilisateur.id, { onDelete: 'set null' }),
     dateFermeture: horodatage(),
+    ...colonnesOutilModele(),
   },
   (t) => [
     ...contraintesSousType('sujet', t, 'SUJET'),
@@ -67,6 +91,7 @@ export const sujet = pgTable(
       sql`(${t.messageAccepteId} is null) = (${t.dateAcceptationReponse} is null)`,
     ),
     check('sujet_fermeture_check', sql`${t.fermeurId} is null or ${t.dateFermeture} is not null`),
+    ...contraintesOutilModele('sujet', t),
   ],
 );
 
@@ -105,6 +130,8 @@ export const casBonReflexe = pgTable(
     /** EXAMINER (CI-18) : présent si et seulement si le cas est validé ou refusé. */
     examinateurId: reference().references(() => utilisateur.id, { onDelete: 'set null' }),
     dateExamen: horodatage(),
+    /** Outil et modèle qui ont donné la réponse étudiée. */
+    ...colonnesOutilModele(),
   },
   (t) => [
     ...contraintesSousType('cas_bon_reflexe', t, 'CAS_BON_REFLEXE'),
@@ -119,6 +146,7 @@ export const casBonReflexe = pgTable(
       'cas_bon_reflexe_refus_check',
       sql`${t.statutValidation} <> 'REFUSE' or ${t.motifRefus} is not null`,
     ),
+    ...contraintesOutilModele('cas_bon_reflexe', t),
   ],
 );
 

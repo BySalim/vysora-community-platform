@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { erreursParChamp } from './commun';
-import { schemaConnexion, schemaInscription } from './auth';
+import { schemaConnexion, schemaInscription, schemaModificationMembre } from './auth';
 
 const inscription = {
   email: 'awa.sarr@example.com',
@@ -52,5 +52,32 @@ describe('schemaConnexion (F-03)', () => {
       email: 'Indiquez votre adresse e-mail.',
       motDePasse: 'Indiquez votre mot de passe.',
     });
+  });
+});
+
+describe('schemaModificationMembre : nom affiché', () => {
+  const nom = (nomAffiche: unknown) => schemaModificationMembre.safeParse({ nomAffiche });
+
+  it('accepte un nom avec accents et espaces, ramenés à un seul', () => {
+    const resultat = nom('  Aïssatou   Ndiaye ');
+    expect(resultat.success && resultat.data.nomAffiche).toBe('Aïssatou Ndiaye');
+  });
+
+  it('retire le nom vide ou nul : le pseudo s’affiche', () => {
+    const vide = nom('   ');
+    const nul = nom(null);
+    expect(vide.success && vide.data.nomAffiche).toBeNull();
+    expect(nul.success && nul.data.nomAffiche).toBeNull();
+  });
+
+  it('refuse un nom trop long ou des caractères invisibles', () => {
+    const long = nom('a'.repeat(61));
+    const invisible = nom('Claire​Dubois');
+    expect(long.success || erreursParChamp(long.error).nomAffiche).toBe(
+      'Votre nom compte 60 caractères au plus.',
+    );
+    expect(invisible.success || erreursParChamp(invisible.error).nomAffiche).toBe(
+      'Retirez les caractères invisibles de votre nom.',
+    );
   });
 });

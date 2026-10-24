@@ -29,6 +29,17 @@ export const champPseudo = z
     error: 'Utilisez seulement des lettres, des chiffres, le tiret et le tiret bas.',
   });
 
+/** Nom affiché à côté des contenus (« Claire Dubois »), en plus du pseudo qui sert d'adresse.
+    Vide, il est retiré : le pseudo s'affiche à sa place. */
+export const champNomAffiche = z
+  .string({ error: 'Indiquez le nom à afficher.' })
+  .trim()
+  .max(LONGUEURS.nomAffiche.max, {
+    error: `Votre nom compte ${LONGUEURS.nomAffiche.max} caractères au plus.`,
+  })
+  .regex(/^[^\p{Cc}\p{Cf}]*$/u, { error: 'Retirez les caractères invisibles de votre nom.' })
+  .transform((nom) => nom.replace(/\s+/g, ' ') || null);
+
 /** RG-04 : longueur minimale, sans règle de composition arbitraire (la liste des mots de passe compromis est contrôlée à part). */
 export const champMotDePasse = z
   .string({ error: 'Choisissez un mot de passe.' })

@@ -41,7 +41,7 @@
 
 | Table | Origine | Clés et contraintes notables |
 |---|---|---|
-| `utilisateur` | UTILISATEUR (+ `fuseau_horaire`, `refus_mesure_audience`) | pseudo unique sans casse ; e-mail unique sans casse (index partiel) et obligatoire sauf compte SUPPRIME ; `role`, `statut_compte`, `langue_interface` contrôlés ; `avatar` : clé de la photo de profil (WebP carré de 256 px au plus) |
+| `utilisateur` | UTILISATEUR (+ `fuseau_horaire`, `refus_mesure_audience`, `nom_affiche`) | pseudo unique sans casse ; `nom_affiche` facultatif (60 caractères, « Claire Dubois »), affiché à la place du pseudo (migration `0004`) ; e-mail unique sans casse (index partiel) et obligatoire sauf compte SUPPRIME ; `role`, `statut_compte`, `langue_interface` contrôlés ; `avatar` : clé de la photo de profil (WebP carré de 256 px au plus) |
 | `compte_externe` | COMPTE_EXTERNE (LIER) | unique `(fournisseur, identifiant_fournisseur)` et `(utilisateur_id, fournisseur)` |
 | `acceptation_document` | ACCEPTER | clé `(utilisateur_id, document_legal_id)`, date |
 | `demande_droit` | DEMANDE_DROIT (DEMANDER) | une demande EN_COURS par membre et par type (index partiel, CI-31) ; fichier d'export et expiration |
@@ -66,11 +66,11 @@
 
 | Table | Origine | Clés et contraintes notables |
 |---|---|---|
-| `creation` | CREATION (CLASSER, PLACER_SOUS, DERIVER, PARTICIPER) | sous-type de `contenu` ; résultat en texte ou en code au niveau de la création (`resultat_texte`, `resultat_nature` TEXTE ou CODE, `resultat_nom` : nom du fichier ; nature présente si et seulement si texte présent, extension du prototype, migration `0003`) ; `type_creation`, `statut_publication`, `avertissement_agent` ; `slug` ; `categorie_id`, `licence_id`, `source_id` (≠ id), `defi_id` + `rang_final_participation` ; complète si publiée |
+| `creation` | CREATION (CLASSER, PLACER_SOUS, DERIVER, PARTICIPER) | sous-type de `contenu` ; résultat en texte ou en code au niveau de la création (`resultat_texte`, `resultat_nature` TEXTE ou CODE, `resultat_nom` : nom du fichier ; nature présente si et seulement si texte présent, extension du prototype, migration `0003`) ; `format_resultat` (« Paysage · 4:3 ») et `a_adapter` (liste « À adapter », tableau de textes) repris de la fiche du prototype (migration `0004`) ; `type_creation`, `statut_publication`, `avertissement_agent` ; `slug` ; `categorie_id`, `licence_id`, `source_id` (≠ id), `defi_id` + `rang_final_participation` ; complète si publiée |
 | `etape` | ETAPE (COMPOSER) | `creation_id` (cascade) ; unique différé `(creation_id, ordre)` |
 | `configuration_ia` | CONFIGURATION_IA (EQUIPER, UTILISER_OUTIL, UTILISER_MODELE) | modèle référencé **ou** texte libre, jamais les deux |
-| `echange` | ECHANGE (CONTENIR, REALISER_AVEC) | unique différé `(etape_id, ordre)` ; `nb_essais ≥ 1` ; « premier essai » si un seul essai |
-| `moment_cle` | MOMENT_CLE (MARQUER_ETAPE, MARQUER_ECHANGE) | un échange porte au plus un moment clé (index unique partiel) |
+| `echange` | ECHANGE (CONTENIR, REALISER_AVEC) (+ `titre`) | unique différé `(etape_id, ordre)` ; `titre` facultatif (« Composer la réservation ») ; `nb_essais ≥ 1` ; « premier essai » si un seul essai |
+| `moment_cle` | MOMENT_CLE (MARQUER_ETAPE, MARQUER_ECHANGE) (+ `titre`) | un échange porte au plus un moment clé (index unique partiel) ; `titre` facultatif (« Vérifier les réservations simultanées »), sinon la fiche titre selon le type |
 | `lien_externe` | LIEN_EXTERNE (REFERENCER) | HTTPS uniquement |
 | `commentaire` | COMMENTAIRE (COMMENTER, REPONDRE_COMMENTAIRE, ANCRER_*) | sous-type ; un seul ancrage (étape ou échange) ; parent ≠ soi |
 | `reproduction` | REPRODUCTION (REPRODUIRE, REPRODUIRE_AVEC_*) | sous-type ; modèle exclusif ; retour ≥ 20 caractères si PARTIEL ou ECHEC (RG-42) |
@@ -80,9 +80,9 @@
 
 | Table | Origine | Clés et contraintes notables |
 |---|---|---|
-| `sujet` | SUJET (EVOQUER, ACCEPTER_REPONSE, FERMER) | sous-type ; `message_accepte_id` unique, réservé à QUESTION et CLINIQUE ; exemples avant/après obligatoires pour une ASTUCE ; fermeture datée |
+| `sujet` | SUJET (EVOQUER, ACCEPTER_REPONSE, FERMER) | sous-type ; `message_accepte_id` unique, réservé à QUESTION et CLINIQUE ; exemples avant/après obligatoires pour une ASTUCE ; fermeture datée ; outil et modèle facultatifs (`outil_id`, `modele_id` ou `modele_non_reference`, jamais les deux, jamais sans outil) comme dans le prototype (migration `0004`) |
 | `message` | MESSAGE (REPONDRE) | sous-type ; `sujet_id` |
-| `cas_bon_reflexe` | CAS_BON_REFLEXE (EXAMINER) | sous-type ; examen présent si et seulement si le cas est VALIDE ou REFUSE (CI-18) ; motif obligatoire si REFUSE |
+| `cas_bon_reflexe` | CAS_BON_REFLEXE (EXAMINER) | sous-type ; examen présent si et seulement si le cas est VALIDE ou REFUSE (CI-18) ; motif obligatoire si REFUSE ; outil et modèle de la réponse étudiée, mêmes règles que pour un sujet (migration `0004`) |
 | `option_reponse` | OPTION_REPONSE (PROPOSER) | unique différé `(cas_id, ordre)` ; au plus une option correcte par cas (index partiel) |
 | `choix_option` | CHOISIR | clé `(utilisateur_id, cas_id)` : une réponse définitive par cas (RG-72) ; clé étrangère `(option_id, cas_id)` qui garantit que l'option appartient au cas |
 
