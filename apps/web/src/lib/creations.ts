@@ -177,10 +177,10 @@ export function identifiantDeLAdresse(partie: string | undefined): number | null
   return Number.isSafeInteger(id) ? id : null;
 }
 
-/** Actions de la fiche déjà portées par l'API ; les autres restent masquées jusqu'à leur tâche
-    (registre : MOD-01, CREA-05). */
+/** Actions de la fiche déjà portées ; les autres restent masquées jusqu'à leur tâche (registre :
+    MOD-01 pour le signalement, CREA-02 pour « Modifier », qui ouvre l'éditeur). */
 export const ACTIONS_OUVERTES: Record<
-  'voter' | 'enregistrer' | 'essayer' | 'commenter' | 'signaler' | 'gerer',
+  'voter' | 'enregistrer' | 'essayer' | 'commenter' | 'signaler' | 'gerer' | 'modifier',
   boolean
 > = {
   voter: true,
@@ -188,7 +188,9 @@ export const ACTIONS_OUVERTES: Record<
   essayer: true,
   commenter: true,
   signaler: false,
-  gerer: false,
+  /** Publier, dépublier, supprimer (CREA-05). */
+  gerer: true,
+  modifier: false,
 };
 
 /** Configuration proposée dans « Partager mon essai » (outil et modèle). */

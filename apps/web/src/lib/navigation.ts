@@ -14,6 +14,8 @@ export const ROUTES = {
   publier: '/creations/nouvelle',
   /** Fiche d'une création : l'identifiant fait foi, le texte se lit (/creations/12-cite-imaginaire). */
   creation: (id: number, slug?: string | null) => `/creations/${id}${slug ? `-${slug}` : ''}`,
+  /** Éditeur d'une création existante (CREA-02). */
+  modifierCreation: (id: number) => `/creations/${id}/modifier`,
   connexion: '/connexion',
   inscription: '/inscription',
   notifications: '/notifications',

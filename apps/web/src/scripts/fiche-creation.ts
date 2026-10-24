@@ -1,10 +1,12 @@
 /* Fiche création (CREA-03), portée de prototype/fiche-creation.js : copie des prompts (F-24),
    partage du lien (F-26), image en grand, fenêtres, section courante de la navigation,
    vote « Utile » (F-30), enregistrement (F-34), reproductions (F-32), commentaires et réponses
-   (F-40, F-42). Le contenu est rendu par le serveur ; le signalement arrivera avec MOD-01. */
+   (F-40, F-42), actions de l'auteur (CREA-05). Le contenu est rendu par le serveur ; le signalement
+   arrivera avec MOD-01. */
 
 import type {
   CommentaireApi,
+  CreationFicheApi,
   EnregistrementApi,
   ProblemeApi,
   ReproductionDeclareeApi,
@@ -15,7 +17,7 @@ import { ISSUES, motReproductions, noteEchantillon } from '../lib/creations';
 import { dateCourte } from '../lib/texte';
 import { exiger } from './commun/acces';
 import { api } from './commun/api';
-import { $, $$, esc, icon, t, toast } from './commun/outils';
+import { $, $$, esc, icon, messageApresChargement, t, toast } from './commun/outils';
 
 /** Message d'une action refusée ou interrompue. */
 function signalerEchec(probleme: ProblemeApi): void {
@@ -268,6 +270,111 @@ if (fiche && fiche.dataset.affichage === 'creation') {
       if (x < cadre.left || x > cadre.right || y < cadre.top || y > cadre.bottom) fenetre.close();
     });
   $('.image-open')?.addEventListener('click', () => $<HTMLDialogElement>('#lightbox')?.showModal());
+
+  /* CREA-05 : actions de l'auteur (prototype : fiche-creation.js). La publication demande la case de
+     confirmation (RG-17) ; la page est rechargée ensuite, car votes, essais et commentaires
+     apparaissent ou disparaissent avec elle. La suppression montre l'écran « Création supprimée ». */
+  const fenetrePublication = $<HTMLDialogElement>('#publish-dialog');
+  const formulairePublication = $<HTMLFormElement>('#publish-form');
+  const casePublication = $<HTMLInputElement>('#publish-consent');
+  const erreurCase = $('#publish-consent-err');
+  const erreursPublication = $('#publish-errors');
+  const fenetreSuppression = $<HTMLDialogElement>('#delete-dialog');
+
+  const signalerCase = (visible: boolean) => {
+    if (!erreurCase || !casePublication) return;
+    erreurCase.hidden = !visible;
+    if (visible) {
+      casePublication.setAttribute('aria-invalid', 'true');
+      casePublication.setAttribute('aria-describedby', 'publish-consent-err');
+    } else {
+      casePublication.removeAttribute('aria-invalid');
+      casePublication.removeAttribute('aria-describedby');
+    }
+  };
+  casePublication?.addEventListener('change', () => signalerCase(false));
+
+  async function depublier(bouton: HTMLElement): Promise<void> {
+    if (bouton.getAttribute('aria-busy') === 'true') return;
+    bouton.setAttribute('aria-busy', 'true');
+    const reponse = await api<CreationFicheApi>(
+      'DELETE',
+      `/api/v1/creations/${creationId}/publication`,
+    );
+    bouton.removeAttribute('aria-busy');
+    if (!reponse.ok) return signalerEchec(reponse.probleme);
+    messageApresChargement('Création dépubliée : elle est de nouveau un brouillon.');
+    location.reload();
+  }
+
+  fiche.addEventListener('click', (evenement) => {
+    const cible = evenement.target as Element;
+    const action = cible.closest<HTMLElement>('[data-status-action]');
+    if (action?.dataset.statusAction === 'publier') {
+      if (!exiger('contribuer', 'publier cette création')) return;
+      if (casePublication) casePublication.checked = false;
+      signalerCase(false);
+      if (erreursPublication) erreursPublication.hidden = true;
+      fenetrePublication?.showModal();
+    } else if (action?.dataset.statusAction === 'depublier') {
+      if (exiger('contribuer', 'dépublier cette création')) void depublier(action);
+    } else if (cible.closest('[data-delete]')) fenetreSuppression?.showModal();
+  });
+
+  formulairePublication?.addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    if (!casePublication?.checked) {
+      signalerCase(true);
+      casePublication?.focus();
+      return;
+    }
+    const bouton = $<HTMLButtonElement>('[type="submit"]', formulairePublication);
+    if (bouton?.getAttribute('aria-busy') === 'true') return;
+    bouton?.setAttribute('aria-busy', 'true');
+    const reponse = await api<CreationFicheApi>(
+      'POST',
+      `/api/v1/creations/${creationId}/publication`,
+      { confirmationDonnees: true },
+    );
+    bouton?.removeAttribute('aria-busy');
+    if (reponse.ok) {
+      messageApresChargement('Création publiée.');
+      location.reload();
+      return;
+    }
+    // Points à compléter (RG-10 à RG-16) ou limite de publication (RG-85) : affichés dans la fenêtre.
+    const { probleme } = reponse;
+    const points = Object.entries(probleme.erreurs ?? {}).filter(
+      ([champ]) => champ !== 'confirmationDonnees',
+    );
+    if (!points.length && probleme.erreurs?.confirmationDonnees) return signalerCase(true);
+    if (erreursPublication && (points.length || probleme.code === 'LIMITE_ATTEINTE')) {
+      erreursPublication.innerHTML = points.length
+        ? `<p><b>${t(probleme.detail ?? probleme.title)}</b></p><ul>${points
+            .map(([, message]) => `<li>${t(message)}</li>`)
+            .join('')}</ul>`
+        : `<p>${t(probleme.detail ?? probleme.title)}</p>`;
+      erreursPublication.hidden = false;
+      erreursPublication.focus();
+      return;
+    }
+    fenetrePublication?.close();
+    signalerEchec(probleme);
+  });
+
+  $('[data-delete-confirm]')?.addEventListener('click', async (evenement) => {
+    const bouton = evenement.currentTarget as HTMLButtonElement;
+    if (bouton.getAttribute('aria-busy') === 'true') return;
+    bouton.setAttribute('aria-busy', 'true');
+    const reponse = await api('DELETE', `/api/v1/creations/${creationId}`);
+    bouton.removeAttribute('aria-busy');
+    fenetreSuppression?.close();
+    if (!reponse.ok) return signalerEchec(reponse.probleme);
+    fiche.dataset.affichage = 'supprimee';
+    scrollTo({ top: 0 });
+    $<HTMLElement>('[data-off="supprimee"] h1')?.focus();
+    toast('Création supprimée.', 'trash');
+  });
 
   /* Section courante dans la navigation de la fiche. */
   const liens = $$<HTMLAnchorElement>('.section-nav a');

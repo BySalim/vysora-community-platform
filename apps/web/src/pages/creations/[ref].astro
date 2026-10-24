@@ -74,6 +74,9 @@ const { etat } = Astro.locals;
 const projet = fiche?.type === 'PROJET';
 const auteur = fiche?.moi?.auteur ?? false;
 const moderation = etat.session === 'membre' && etat.role !== 'membre';
+// Une création dépubliée garde sa date de publication (RG-17) : le statut décide de ce qui s'affiche.
+const publiee = fiche?.statut === 'PUBLIEE';
+const dejaPubliee = Boolean(fiche?.datePublication);
 const statut = !fiche
   ? 'publiee'
   : fiche.masquee
@@ -191,6 +194,7 @@ const icones = [
   'alert',
   'shield',
   'user',
+  'trash',
 ];
 ---
 
@@ -217,6 +221,20 @@ const icones = [
       Retour à Explorer
     </a>
   </section>
+  {fiche && auteur && ACTIONS_OUVERTES.gerer && (
+    <section class="detail-section creation-off" data-off="supprimee">
+      <h1 tabindex="-1">Création supprimée</h1>
+      <p>{typo(`« ${titre} » ne figure plus sur Vysora.`)}</p>
+      <div class="creation-off-actions">
+        <a class="btn btn-primary" href={ROUTES.mesContenus}>
+          Voir mes contenus
+        </a>
+        <a class="btn btn-secondary" href={ROUTES.publier}>
+          Publier une création
+        </a>
+      </div>
+    </section>
+  )}
   {fiche && (
     <>
       <nav class="breadcrumbs" aria-label="Fil d’Ariane">
@@ -254,6 +272,28 @@ const icones = [
               </>
             )}
           </p>
+          {ACTIONS_OUVERTES.gerer && (
+            <div class="creation-status-actions">
+              {ACTIONS_OUVERTES.modifier && (
+                <a class="btn btn-secondary btn-sm" href={ROUTES.modifierCreation(fiche.id)}>
+                  Modifier
+                </a>
+              )}
+              {statut === 'publiee' && (
+                <button class="btn btn-quiet btn-sm" type="button" data-status-action="depublier">
+                  Dépublier
+                </button>
+              )}
+              {statut === 'brouillon' && (
+                <button class="btn btn-primary btn-sm" type="button" data-status-action="publier">
+                  Publier
+                </button>
+              )}
+              <button class="btn btn-quiet btn-sm is-danger" type="button" data-delete>
+                Supprimer
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         statut === 'masquee' &&
@@ -274,7 +314,7 @@ const icones = [
               <strong>{fiche.auteur.nom}</strong>
               <span>
                 {fiche.auteur.niveau.libelle} ·{' '}
-                {fiche.datePublication
+                {publiee && fiche.datePublication
                   ? `Publié le ${dateLongue(fiche.datePublication)}`
                   : `Brouillon modifié le ${dateLongue(fiche.dateModification ?? fiche.dateCreation)}`}
               </span>
@@ -645,14 +685,19 @@ const icones = [
             </div>
             <div>
               <dt>Publication</dt>
-              <dd>{fiche.datePublication ? dateLongue(fiche.datePublication) : 'Brouillon'}</dd>
+              <dd>
+                {publiee && fiche.datePublication ? dateLongue(fiche.datePublication) : 'Brouillon'}
+              </dd>
             </div>
-            {fiche.dateModification && fiche.datePublication && (
-              <div>
-                <dt>Dernière modification</dt>
-                <dd>{dateLongue(fiche.dateModification)}</dd>
-              </div>
-            )}
+            {publiee &&
+              fiche.dateModification &&
+              fiche.datePublication &&
+              fiche.dateModification > fiche.datePublication && (
+                <div>
+                  <dt>Dernière modification</dt>
+                  <dd>{dateLongue(fiche.dateModification)}</dd>
+                </div>
+              )}
           </dl>
           {fiche.aAdapter.length > 0 && (
             <>
@@ -945,6 +990,68 @@ const icones = [
               placeholder="Qu’avez-vous obtenu ? Qu’avez-vous adapté ?"
             ></textarea>
             <button class="btn btn-primary wide">Publier mon essai</button>
+          </form>
+        </dialog>
+      )}
+      {auteur && ACTIONS_OUVERTES.gerer && (
+        <dialog id="delete-dialog" class="creation-dialog" aria-labelledby="delete-title">
+          <div class="dialog-heading">
+            <h2 id="delete-title">
+              {dejaPubliee ? 'Supprimer cette création ?' : 'Supprimer ce brouillon ?'}
+            </h2>
+            <button class="icon-btn" type="button" data-close aria-label="Fermer">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close" />
+              </svg>
+            </button>
+          </div>
+          <p>
+            {dejaPubliee
+              ? 'Ses essais déclarés et ses commentaires seront supprimés définitivement.'
+              : 'Tout ce que vous avez saisi sera effacé.'}
+          </p>
+          <div class="creation-off-actions">
+            <button class="btn btn-secondary" type="button" data-close>
+              Annuler
+            </button>
+            <button class="btn btn-primary is-danger" type="button" data-delete-confirm>
+              {dejaPubliee ? 'Supprimer la création' : 'Supprimer le brouillon'}
+            </button>
+          </div>
+        </dialog>
+      )}
+      {auteur && ACTIONS_OUVERTES.gerer && statut === 'brouillon' && (
+        <dialog id="publish-dialog" class="creation-dialog" aria-labelledby="publish-title">
+          <div class="dialog-heading">
+            <h2 id="publish-title">Publier cette création ?</h2>
+            <button class="icon-btn" type="button" data-close aria-label="Fermer">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close" />
+              </svg>
+            </button>
+          </div>
+          <p>
+            Elle sera visible de tous sur Vysora, avec ses votes, ses essais et ses commentaires.
+          </p>
+          <div class="fc-publication-erreurs" id="publish-errors" tabindex="-1" hidden></div>
+          <form id="publish-form" novalidate>
+            <div class="fc-case">
+              <input type="checkbox" id="publish-consent" />
+              <label for="publish-consent">
+                Je ne publie aucune donnée personnelle d’un tiers ni aucun secret.
+              </label>
+            </div>
+            <p class="fc-erreur" id="publish-consent-err" hidden>
+              Cochez cette case pour publier.
+            </p>
+            <div class="creation-off-actions">
+              <button class="btn btn-secondary" type="button" data-close>
+                Annuler
+              </button>
+              <button class="btn btn-primary" type="submit">
+                Publier
+              </button>
+            </div>
           </form>
         </dialog>
       )}

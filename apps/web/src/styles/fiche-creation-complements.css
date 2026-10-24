@@ -29,3 +29,15 @@
 
 /* Commentaire retiré qui garde ses réponses (RG-51). */
 .creation-page .fc-commentaire-retire p { margin-left: 0; color: var(--text-muted); font-style: italic; }
+
+/* Fenêtre « Publier cette création ? » (CREA-05) : case de confirmation (RG-17), dans le style de
+   l'éditeur du prototype (nouvelle-creation.css : pub-case, pub-erreur), et points à compléter. */
+.creation-dialog .fc-case { display: flex; align-items: flex-start; gap: 10px; margin: 22px 0 6px; }
+.creation-dialog .fc-case input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+.creation-dialog .fc-case label { margin: 0; font: 500 0.875rem/1.45 var(--font-body); cursor: pointer; }
+.creation-dialog .fc-erreur { margin: 0 0 0 28px; color: var(--red-700); font: 500 0.8125rem/1.45 var(--font-body); }
+.creation-dialog .fc-publication-erreurs { margin: 18px 0 0; padding: 14px 16px; border-radius: 8px; background: var(--panel); color: var(--text); font-size: 13px; line-height: 1.6; }
+.creation-dialog .fc-publication-erreurs:focus { outline: none; }
+.creation-dialog .fc-publication-erreurs p { margin: 0; color: var(--red-700); }
+.creation-dialog .fc-publication-erreurs ul { margin: 8px 0 0; padding-left: 18px; }
+.creation-dialog .creation-off-actions { margin-top: 22px; }
