@@ -3,14 +3,14 @@
   "configurations": [
     {
       "name": "api",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@vysora/api", "run", "dev"],
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": ["pnpm", "--filter", "@vysora/api", "run", "dev"],
       "port": 3000
     },
     {
       "name": "web",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@vysora/web", "run", "dev"],
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": ["pnpm", "--filter", "@vysora/web", "run", "dev"],
       "port": 4321
     },
     {
