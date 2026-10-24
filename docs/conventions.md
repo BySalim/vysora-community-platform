@@ -57,6 +57,7 @@
 
 - `packages/shared` ne dépend que de Zod. Après une modification : `pnpm --filter @vysora/shared build` (le mode `pnpm dev` le reconstruit tout seul).
 - Une règle chiffrée (longueur, seuil, délai, barème) est déclarée une fois dans `regles.ts` et citée partout.
+- Un contrôle que l’interface doit annoncer avant l’envoi vit dans le paquet partagé, avec ses messages : l’API l’applique, le site le reprend (par exemple `controlerPublication` pour une création, `liensMaximum` et `limiteQuotidienne` pour RG-85).
 
 ## Tests
 

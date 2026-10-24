@@ -100,7 +100,7 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `email` | Envoi SMTP, gabarit | Fait (envoi direct, file d'attente à venir) |
 | `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes ; garde des droits (`@Exige`) | Fait : comptes, sessions, connexion, droits, vérification de l’adresse, mot de passe oublié, documents en vigueur (AUTH-01 à AUTH-06). À faire : double authentification (SEC-02), Google et GitHub (S-10) |
 | `membres` | Profil public, paramètres, export, suppression | Commencé : `resumes.ts` (membre présenté à côté d’un contenu : pseudo, photo, niveau) |
-| `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | Lecture d’une fiche (CREA-01, RG-30). À faire : écriture (CREA-05), variantes |
+| `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | Lecture d’une fiche (CREA-01, RG-30) ; écriture (CREA-05) : brouillon, enregistrement du contenu complet (`contenu-creation.ts` : étapes et échanges gardés par identifiant, le reste réécrit, images rattachées), publication avec `controlerPublication` du paquet partagé et RG-85, modification, dépublication, suppression (`ecriture.service.ts`), document de recherche (RG-31). À faire : variantes |
 | `decouverte` | Recherche, filtres, accueil, catégories, étiquettes | À faire |
 | `interactions` | Votes, reproductions, enregistrements, obsolescence, commentaires, vues | Votes (INT-01), reproductions (INT-02), commentaires (INT-03), enregistrements (S-01) ; `lireCible` dit si un contenu est visible de tous. À faire : vues (INT-04), obsolescence (S-02), ancrage (S-03) |
 | `forum` | Sujets, réponses, acceptation, fermeture | À faire |
@@ -109,7 +109,7 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `notifications` | Notifications, préférences, regroupement | À faire |
 | `moderation` | Signalements, décisions, masquage automatique | À faire |
 | `administration` | Référentiels, rôles, documents légaux, journal, indicateurs | À faire |
-| `medias` | Téléversement, contrôle, déclinaisons, stockage | Fait (MEDIA-01) : envoi et description des images, retrait avant enregistrement, photo de profil, lecture des fichiers, nettoyage (`pnpm medias:nettoyer`). Le rattachement aux contenus vient avec CREA-01 |
+| `medias` | Téléversement, contrôle, déclinaisons, stockage | Fait (MEDIA-01) : envoi et description des images, retrait avant enregistrement, photo de profil, lecture des fichiers, nettoyage (`pnpm medias:nettoyer`). Le rattachement aux créations et à leurs échanges se fait à l’enregistrement d’une création (CREA-05) |
 
 ## 6. Principes transverses
 
