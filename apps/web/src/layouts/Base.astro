@@ -26,6 +26,10 @@ interface Props {
   donneesCorps?: Record<string, string>;
   /** Classe de <main> reprise de la page du prototype (ex. « auth-scene »). */
   classeMain?: string;
+  /** Attributs data-* de <main> (états de la page lus par sa feuille de style ; '' : attribut présent sans valeur). */
+  donneesMain?: Record<string, string>;
+  /** Image de l'aperçu partagé sur les réseaux (F-26), adresse absolue ou relative au site. */
+  image?: string;
   /** Réglages propres à la page, en plus des réglages communs (ex. { lecture: 'standard' }). */
   reglages?: Record<string, string>;
   /** Icônes utilisées par la page (voir src/lib/icones.ts). */
@@ -49,6 +53,8 @@ const {
   classeCorps,
   donneesCorps = {},
   classeMain,
+  donneesMain = {},
+  image,
   reglages = {},
   icones = [],
   remplacementsIcones,
@@ -76,7 +82,11 @@ const attributsHtml = Object.fromEntries([
 const attributsCorps = Object.fromEntries(
   Object.entries(donneesCorps).map(([nom, valeur]) => [`data-${nom}`, valeur]),
 );
+const attributsMain = Object.fromEntries(
+  Object.entries(donneesMain).map(([nom, valeur]) => [`data-${nom}`, valeur]),
+);
 const canonique = new URL(Astro.url.pathname, Astro.site).href;
+const imagePartage = image ? new URL(image, Astro.site).href : undefined;
 // « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte l'état.
 const etatClient = JSON.stringify({
   etat: Astro.locals.etat,
@@ -103,6 +113,7 @@ const etatClient = JSON.stringify({
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonique} />
     <meta property="og:locale" content="fr_FR" />
+    {imagePartage && <meta property="og:image" content={imagePartage} />}
     <link rel="stylesheet" href="/assets/fonts/fonts.css" />
     <script is:inline>
       (function () {
@@ -137,10 +148,11 @@ const etatClient = JSON.stringify({
       <>
         <SiteHeader />
         <EtatBandeau />
-        <main id="contenu" class={classeMain} tabindex="-1">
+        <main id="contenu" class={classeMain} tabindex="-1" {...attributsMain}>
           <slot />
         </main>
         <SiteFooter />
+        <slot name="fin" />
       </>
     )}
     <div class="toast" role="status" aria-live="polite" data-toast></div>

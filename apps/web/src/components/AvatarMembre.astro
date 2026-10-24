@@ -1,0 +1,34 @@
+---
+/* Photo d'un membre (prototype/commun.js : avatar, avatarMoi) ; sans photo, la silhouette par défaut. */
+import type { MembreResumeApi } from '@vysora/shared';
+
+interface Props {
+  membre: Pick<MembreResumeApi, 'avatar'>;
+  taille: number;
+  classe?: string;
+}
+
+const { membre, taille, classe } = Astro.props;
+---
+
+{membre.avatar ? (
+  <img
+    class:list={[classe]}
+    src={membre.avatar}
+    alt=""
+    width={taille}
+    height={taille}
+    loading="lazy"
+    decoding="async"
+  />
+) : (
+  <span
+    class:list={['avatar compte-avatar', classe]}
+    style={`width:${taille}px;height:${taille}px`}
+    aria-hidden="true"
+  >
+    <svg class="icon" aria-hidden="true">
+      <use href="#i-user" />
+    </svg>
+  </span>
+)}

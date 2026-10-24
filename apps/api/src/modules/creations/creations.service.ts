@@ -10,7 +10,7 @@ import {
   type OutilResumeApi,
   type Role,
 } from '@vysora/shared';
-import { and, asc, count, desc, eq, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, min, or } from 'drizzle-orm';
 import { introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
@@ -58,7 +58,7 @@ interface CommentaireLu {
 
 /** Commentaires renvoyés avec la fiche ; la pagination viendra avec INT-03. */
 const COMMENTAIRES_MAXIMUM = 200;
-const RETOURS_MAXIMUM = 20;
+const RETOURS_MAXIMUM = 6;
 
 const colonnesOutil = {
   id: outil.id,
@@ -183,7 +183,11 @@ export class CreationsService {
         .where(and(eq(vote.contenuId, id), eq(vote.typeVoteCode, 'UTILE'))),
       publiee ? this.reproductions(id) : Promise.resolve([]),
       this.db
-        .select({ modele: colonnesModele, membres: count() })
+        .select({
+          modele: colonnesModele,
+          membres: count(),
+          depuis: min(signalementObsolescence.date),
+        })
         .from(signalementObsolescence)
         .innerJoin(modele, eq(modele.id, signalementObsolescence.modeleId))
         .where(eq(signalementObsolescence.contenuId, id))
@@ -291,7 +295,10 @@ export class CreationsService {
           ],
           parConfiguration: essaisParConfiguration(reproductions),
         },
-        obsolescence,
+        obsolescence: obsolescence.map((o) => ({
+          ...o,
+          depuis: (o.depuis ?? ligne.dateCreation).toISOString(),
+        })),
       },
       retours: reproductions
         .filter((r) => r.retour)

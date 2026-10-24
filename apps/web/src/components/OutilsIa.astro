@@ -1,0 +1,29 @@
+---
+/* Outils et modèles utilisés (prototype/creation-page-data.js : toolHTML) : « ChatGPT · GPT Image 1 »,
+   chaque outil précédé de son logo, plusieurs outils reliés par « et ». */
+import type { OutilResumeApi } from '@vysora/shared';
+
+interface Props {
+  outils: { outil: OutilResumeApi; modele: string | null }[];
+  /** Texte quand aucun outil n'est connu. */
+  vide?: string;
+}
+
+const { outils, vide = 'Outil à préciser' } = Astro.props;
+---
+
+<span class="ai-tool">
+  {outils.length === 0 && vide}
+  {outils.map(({ outil, modele }, i) => (
+    <>
+      {i > 0 && ' et '}
+      <span class="detail-tool-name">
+        {outil.logo && (
+          <img src={`/assets/logos-ia/${outil.logo}.svg`} alt="" width="24" height="24" />
+        )}
+        {outil.nom}
+      </span>
+      {modele && ` · ${modele}`}
+    </>
+  ))}
+</span>

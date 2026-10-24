@@ -47,6 +47,16 @@ const formatDateLongue = new Intl.DateTimeFormat('fr-FR', {
 export const dateLongue = (valeur: string | Date): string =>
   formatDateLongue.format(new Date(valeur)).replace(/^1 /, '1er ');
 
+const formatDateCourte = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+/** « 12 oct. 2026 » (dates des commentaires et des essais du prototype). */
+export const dateCourte = (valeur: string | Date): string =>
+  formatDateCourte.format(new Date(valeur)).replace(/^1 /, '1er ');
+
 /** « c•••••@gmail.com » : une adresse rappelée à l'écran sans être révélée entière. */
 export function masquerEmail(email: string): string {
   const [local = '', domaine = ''] = email.split('@');

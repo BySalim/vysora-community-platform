@@ -12,6 +12,8 @@ export const ROUTES = {
   classements: '/classements',
   defis: '/defis',
   publier: '/creations/nouvelle',
+  /** Fiche d'une création : l'identifiant fait foi, le texte se lit (/creations/12-cite-imaginaire). */
+  creation: (id: number, slug?: string | null) => `/creations/${id}${slug ? `-${slug}` : ''}`,
   connexion: '/connexion',
   inscription: '/inscription',
   notifications: '/notifications',

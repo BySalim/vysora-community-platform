@@ -1,0 +1,31 @@
+/* Compléments de la fiche création (CREA-03), dans le style de fiche-creation.css (gardée identique
+   au prototype) : contenus réels que les données simulées du prototype ne montraient pas. */
+
+/* Prompts sur plusieurs lignes : retours à la ligne gardés, comme à la saisie. */
+.creation-page blockquote.fc-prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Réponses et récits en Markdown (rendu assaini, SEC-01). */
+.creation-page .fc-texte { font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.creation-page .fc-texte p { margin: 0 0 12px; padding: 0; }
+.creation-page .fc-texte :is(ul, ol) { margin: 0 0 12px; padding-left: 22px; }
+.creation-page .fc-texte li + li { margin-top: 4px; }
+.creation-page .fc-texte :is(h4, h5, h6) { font-size: 14px; margin: 16px 0 8px; }
+.creation-page .fc-texte pre { margin: 0 0 12px; padding: 16px; background: var(--panel); border-radius: 8px; overflow-x: auto; font-size: 12px; line-height: 1.7; }
+.creation-page .fc-texte code { font-size: 0.92em; }
+.creation-page .fc-texte :not(pre) > code { padding: 1px 5px; background: var(--panel); border-radius: 4px; }
+.creation-page .fc-texte blockquote { margin: 0 0 12px; padding: 14px 18px; font-size: 14px; }
+.creation-page .fc-texte a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.creation-page .fc-texte table { margin: 0 0 12px; }
+
+/* Images jointes aux échanges. */
+.creation-page .fc-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 0 0 16px; }
+.creation-page .fc-images figure { margin: 0; }
+.creation-page .fc-images img { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--panel); }
+.creation-page .fc-images figcaption { font-size: 11px; color: var(--text-muted); padding-top: 6px; }
+
+/* Liens de résultat (démo, dépôt, vidéo…). */
+.creation-page .fc-liens a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.creation-page .license a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Commentaire retiré qui garde ses réponses (RG-51). */
+.creation-page .fc-commentaire-retire p { margin-left: 0; color: var(--text-muted); font-style: italic; }

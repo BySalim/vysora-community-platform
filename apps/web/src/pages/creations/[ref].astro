@@ -1,0 +1,922 @@
+---
+/* Fiche création (CREA-03), portée de prototype/fiche-creation.html et de ses scripts de données
+   (creation-page-data.js, fiche-brouillon.js) : tout est rendu par le serveur à partir de
+   GET /api/v1/creations/:id (F-23). L'adresse /creations/[id]-[slug] redirige vers la bonne si le
+   texte a changé ; une création que la personne ne peut pas voir (RG-30) répond 404. */
+import {
+  raisonRefus,
+  srcsetImage,
+  type CreationFicheApi,
+  type EchangeApi,
+  type MediaApi,
+} from '@vysora/shared';
+import AvatarMembre from '../../components/AvatarMembre.astro';
+import OutilsIa from '../../components/OutilsIa.astro';
+import Base from '../../layouts/Base.astro';
+import { contexteServeur, invitationHtml } from '../../lib/acces';
+import { ErreurApi, appelerApi } from '../../lib/api';
+import {
+  ACTIONS_OUVERTES,
+  ICONES_TYPE,
+  ISSUES,
+  LIBELLES_LIEN,
+  LIBELLES_TYPE,
+  MOMENTS,
+  adresseCreation,
+  contexteDeTravail,
+  couverture,
+  echangesPresentes,
+  estPortrait,
+  extrait,
+  formatResultat,
+  identifiantDeLAdresse,
+  longueurParcours,
+  outilsUtilises,
+  phrases,
+  placeDuMoment,
+} from '../../lib/creations';
+import { rendreMarkdown } from '../../lib/markdown';
+import { ROUTES } from '../../lib/navigation';
+import { dateCourte, dateLongue, typo } from '../../lib/texte';
+import '../../styles/fiche-creation.css';
+import '../../styles/fiche-creation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const id = identifiantDeLAdresse(Astro.params.ref);
+let fiche: CreationFicheApi | null = null;
+if (id !== null) {
+  try {
+    fiche = await appelerApi<CreationFicheApi>(`/api/v1/creations/${id}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+  }
+}
+if (fiche && Astro.url.pathname !== adresseCreation(fiche))
+  return Astro.redirect(`${adresseCreation(fiche)}${Astro.url.search}`, 301);
+if (!fiche) Astro.response.status = 404;
+
+const { etat } = Astro.locals;
+const projet = fiche?.type === 'PROJET';
+const auteur = fiche?.moi?.auteur ?? false;
+const moderation = etat.session === 'membre' && etat.role !== 'membre';
+const statut = !fiche
+  ? 'publiee'
+  : fiche.masquee
+    ? 'masquee'
+    : fiche.statut === 'BROUILLON'
+      ? 'brouillon'
+      : 'publiee';
+
+/* Résultat ----------------------------------------------------------------- */
+const titre = fiche?.titre ? typo(fiche.titre) : 'Création sans titre';
+const image = fiche ? couverture(fiche) : null;
+const echanges: EchangeApi[] = fiche ? echangesPresentes(fiche) : [];
+const premier = echanges[0];
+const promptPrincipal = premier?.prompt ?? null;
+const derniereReponse = echanges.findLast((x) => x.reponse?.trim())?.reponse ?? null;
+const demo = fiche?.liens.find((l) => ['DEMO', 'DEPOT_CODE', 'VIDEO'].includes(l.type));
+const apercu = image ? null : derniereReponse ? 'texte-auteur' : demo ? 'lien' : 'vide';
+const natureResultat = image
+  ? fiche?.categorie?.libelle === 'Vidéo'
+    ? 'Extrait du projet'
+    : 'Image générée avec l’IA'
+  : 'Résultat du parcours';
+const outils = fiche ? outilsUtilises(fiche) : [];
+const parametres = fiche?.etapes
+  .flatMap((e) => e.configurations)
+  .find((c) => c.parametres?.trim())?.parametres;
+
+/* Parcours ----------------------------------------------------------------- */
+const moments = (fiche?.etapes ?? []).flatMap((e) =>
+  e.moments.map((m) => ({ ...m, ou: fiche ? placeDuMoment(fiche, e.ordre, m.echangeId) : '' })),
+);
+interface Demande {
+  prompt: string | null;
+  reponse: string | null;
+  images: MediaApi[];
+}
+interface EtapeFiche {
+  titre: string;
+  demandes: Demande[];
+  /** Récit de l'étape (projet) ou réponse retenue. */
+  resultat: string | null;
+}
+const etapesFiche: EtapeFiche[] = !fiche
+  ? []
+  : projet
+    ? fiche.etapes.map((e) => ({
+        titre: e.titre ? typo(e.titre) : 'Étape sans titre',
+        demandes: e.echanges.map((x) => ({
+          prompt: x.prompt,
+          reponse: x.reponse,
+          images: x.images,
+        })),
+        resultat: e.recit,
+      }))
+    : fiche.type === 'ITERATION'
+      ? echanges.map((x) => ({
+          titre: `Échange ${x.ordre}`,
+          demandes: [{ prompt: x.prompt, reponse: null, images: x.images }],
+          resultat: x.reponse,
+        }))
+      : [
+          {
+            titre: 'Le prompt et le résultat',
+            demandes: [{ prompt: promptPrincipal, reponse: null, images: premier?.images ?? [] }],
+            resultat: premier?.reponse ?? null,
+          },
+        ];
+let numeroPrompt = 0;
+
+/* Preuve ------------------------------------------------------------------- */
+const reproductions = fiche?.preuve.reproductions;
+const taux = reproductions?.tauxSucces ?? null;
+const noteDePreuve = projet
+  ? `Un projet documenté en ${longueurParcours(fiche as CreationFicheApi)}`
+  : (reproductions?.total ?? 0) < 3
+    ? 'Taux de succès disponible à partir de 3 essais'
+    : 'Selon les retours de la communauté';
+const obsoletes = (fiche?.preuve.obsolescence ?? []).filter((o) => o.membres >= 3);
+const commentaires = fiche?.commentaires.elements ?? [];
+const auteurDe = new Map(commentaires.map((c) => [c.id, c.auteur?.nom ?? null]));
+const invitation = (() => {
+  const raison = raisonRefus('contribuer', etat);
+  return raison
+    ? invitationHtml(raison, 'commenter', contexteServeur(Astro.locals, Astro.url, Astro.site))
+    : '';
+})();
+const licenceLibre = fiche?.licence.code !== 'TOUS-DROITS-RESERVES';
+
+const titrePage = fiche ? (fiche.titre ?? 'Création sans titre') : 'Création indisponible';
+const description = fiche?.objectif
+  ? extrait(fiche.objectif, 160)
+  : 'Le résultat, les prompts et les choix d’une création publiée sur Vysora.';
+const icones = [
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+  fiche?.categorie?.icone ?? 'image',
+  'folder',
+  'external',
+  'scan',
+  'copy',
+  'arrow-down',
+  'utile',
+  'repeat',
+  'route',
+  'moment',
+  'layers',
+  'sliders',
+  'scale',
+  'message',
+  'chevron-left',
+  'flag',
+  'close',
+  'alert',
+  'shield',
+  'user',
+];
+---
+
+<Base
+  titre={titrePage}
+  description={description}
+  classeCorps="creation-page"
+  classeMain="creation-shell"
+  donneesMain={{
+    affichage: fiche ? 'creation' : 'indisponible',
+    statut,
+    ...(auteur ? { auteur: '' } : {}),
+    ...(fiche && fiche.avertissementAgent !== 'AUCUN' ? { 'alerte-agent': '' } : {}),
+  }}
+  icones={icones}
+  nonIndexee={!fiche || statut !== 'publiee'}
+  image={image?.url}
+>
+  <section class="detail-section creation-off" data-off="indisponible">
+    <h1>Cette création n’est pas disponible</h1>
+    <p>Elle a peut-être été retirée par son auteur ou masquée par la modération.</p>
+    <a class="btn btn-primary" href={ROUTES.explorer}>
+      Retour à Explorer
+    </a>
+  </section>
+  {fiche && (
+    <>
+      <nav class="breadcrumbs" aria-label="Fil d’Ariane">
+        <a href={ROUTES.explorer}>Explorer</a>
+        <span aria-hidden="true">/</span>
+        {fiche.categorie && (
+          <>
+            <a href={`${ROUTES.explorer}?categorie=${encodeURIComponent(fiche.categorie.slug)}`}>
+              {fiche.categorie.libelle}
+            </a>
+            <span aria-hidden="true">/</span>
+          </>
+        )}
+        <span>Création</span>
+      </nav>
+      {auteur ? (
+        <div class="creation-status" data-status>
+          <p>
+            {statut === 'publiee' && (
+              <>
+                <b>Votre création</b> · publiée le{' '}
+                {dateLongue(fiche.datePublication ?? fiche.dateCreation)}
+              </>
+            )}
+            {statut === 'brouillon' && (
+              <>
+                <b>Brouillon</b> · visible de vous seul. Les votes, les essais et les commentaires
+                réapparaissent à la publication.
+              </>
+            )}
+            {statut === 'masquee' && (
+              <>
+                <b>Masquée par la modération.</b> Modifiez la création pour demander un nouvel
+                examen.
+              </>
+            )}
+          </p>
+        </div>
+      ) : (
+        statut === 'masquee' &&
+        moderation && (
+          <div class="creation-status" data-status>
+            <p>
+              <b>Masquée par la modération</b> · visible de son auteur et de l’équipe de modération.
+            </p>
+          </div>
+        )
+      )}
+      <header class="creation-heading">
+        <h1>{titre}</h1>
+        <div class="creation-meta">
+          <div class="author">
+            <AvatarMembre membre={fiche.auteur} taille={44} />
+            <div>
+              <strong>{fiche.auteur.nom}</strong>
+              <span>
+                {fiche.auteur.niveau.libelle} ·{' '}
+                {fiche.datePublication
+                  ? `Publié le ${dateLongue(fiche.datePublication)}`
+                  : `Brouillon modifié le ${dateLongue(fiche.dateModification ?? fiche.dateCreation)}`}
+              </span>
+            </div>
+          </div>
+          <span class="meta-type">
+            <svg class="icon" aria-hidden="true">
+              <use href={`#i-${ICONES_TYPE[fiche.type]}`} />
+            </svg>{' '}
+            {LIBELLES_TYPE[fiche.type]}
+          </span>
+          {fiche.categorie && (
+            <span class="meta-type">
+              <svg class="icon" aria-hidden="true">
+                <use href={`#i-${fiche.categorie.icone ?? 'image'}`} />
+              </svg>{' '}
+              {fiche.categorie.libelle}
+            </span>
+          )}
+          <div class="heading-actions">
+            <button
+              class="icon-btn"
+              id="save"
+              type="button"
+              aria-label={
+                fiche.moi?.enregistree
+                  ? 'Retirer des créations enregistrées'
+                  : 'Enregistrer la création'
+              }
+              aria-pressed={fiche.moi?.enregistree ? 'true' : 'false'}
+              title="Enregistrer"
+              hidden={!ACTIONS_OUVERTES.enregistrer}
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-folder" />
+              </svg>
+            </button>
+            <button
+              class="icon-btn"
+              id="share"
+              type="button"
+              aria-label="Partager la création"
+              title="Partager"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-external" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+      {fiche.avertissementAgent !== 'AUCUN' && (
+        <p class="creation-alert" data-alert>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-shield" />
+          </svg>
+          <span>
+            <b>Ce prompt contient des instructions pour un agent</b> qui peut agir sur vos fichiers,
+            vos commandes ou vos services. Relisez-le avant de le confier à un outil.
+          </span>
+        </p>
+      )}
+      {obsoletes.map((o) => (
+        <p class="creation-alert" data-alert>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-alert" />
+          </svg>
+          <span>
+            <b>Signalée comme ne fonctionnant plus avec {o.modele.nomCourt}</b> par {o.membres}{' '}
+            membres depuis le {dateLongue(o.depuis)}. Vérifiez le résultat avant de vous appuyer sur
+            cette méthode.
+          </span>
+        </p>
+      ))}
+
+      <section class="result-layout" id="resultat" aria-label="Résultat et configuration">
+        <figure class="hero-figure">
+          <button class="image-open" type="button" aria-label={`Agrandir le résultat : ${titre}`}>
+            {image ? (
+              <img
+                src={image.url}
+                srcset={srcsetImage(image)}
+                sizes="(max-width: 850px) 100vw, 68vw"
+                alt={image.texteAlternatif}
+                width={image.largeur}
+                height={image.hauteur}
+                fetchpriority="high"
+                style={
+                  estPortrait(image) ? 'object-fit:contain;background:var(--panel)' : undefined
+                }
+              />
+            ) : (
+              <div class={`creation-preview preview-${apercu}`} role="img" aria-label={titre}>
+                {apercu === 'texte-auteur' && (
+                  <div class="mock-paper">
+                    {(derniereReponse ?? '')
+                      .slice(0, 1600)
+                      .split(/\n{2,}/)
+                      .map((paragraphe) => (
+                        <p>{typo(paragraphe)}</p>
+                      ))}
+                  </div>
+                )}
+                {apercu !== 'texte-auteur' && (
+                  <div class="mock-window">
+                    <div class="mock-bar">
+                      <i />
+                      {demo ? demo.url.replace(/^https:\/\//, '') : 'Résultat'}
+                    </div>
+                    <div class="mock-pad">
+                      <p class="mock-label">{titre}</p>
+                      {demo && <div class="mock-btn">Ouvrir la démo</div>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <span class="expand-icon">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-scan" />
+              </svg>
+            </span>
+          </button>
+          <figcaption>
+            {formatResultat(fiche)} <span>{natureResultat}</span>
+          </figcaption>
+        </figure>
+        <aside class="reproduce">
+          <h2>{projet ? 'Comprendre le projet' : 'Pour reproduire'}</h2>
+          <OutilsIa outils={outils} />
+          <dl class="config-list">
+            <div>
+              <dt>
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-sliders" />
+                </svg>{' '}
+                Réglages
+              </dt>
+              <dd>{parametres ? extrait(parametres, 80) : 'Aucun'}</dd>
+            </div>
+            <div>
+              <dt>
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-moment" />
+                </svg>{' '}
+                Moments clés
+              </dt>
+              <dd>{moments.length}</dd>
+            </div>
+            <div>
+              <dt>
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-layers" />
+                </svg>{' '}
+                Parcours
+              </dt>
+              <dd>{longueurParcours(fiche)}</dd>
+            </div>
+          </dl>
+          {promptPrincipal && (
+            <button class="btn btn-primary wide" type="button" data-copy>
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-copy" />
+              </svg>{' '}
+              Copier le prompt
+            </button>
+          )}
+          <a class="path-link" href="#parcours">
+            Voir le chemin parcouru{' '}
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-arrow-down" />
+            </svg>
+          </a>
+          <div class:list={['proof-stats', { 'project-stats': projet }]}>
+            <button
+              id="useful"
+              type="button"
+              aria-pressed={fiche.moi?.utile ? 'true' : 'false'}
+              disabled={auteur || !ACTIONS_OUVERTES.voter}
+              title={auteur ? 'Les votes « Utile » viennent des autres membres' : undefined}
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-utile" />
+              </svg>
+              <strong id="useful-count">{fiche.preuve.utiles}</strong>
+              <span>Utile</span>
+            </button>
+            {!projet && (
+              <a href="#reproductions">
+                <strong data-repro-count>{reproductions?.total ?? 0}</strong>
+                <span>{(reproductions?.total ?? 0) > 1 ? 'reproductions' : 'reproduction'}</span>
+              </a>
+            )}
+            {!projet && (
+              <div hidden={taux === null}>
+                <strong data-success>{taux ?? 0} %</strong>
+                <span>de succès</span>
+              </div>
+            )}
+          </div>
+          <p class="proof-note">{noteDePreuve}</p>
+          {!projet && (
+            <button
+              class="btn btn-secondary wide"
+              type="button"
+              data-try
+              hidden={!ACTIONS_OUVERTES.essayer}
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-repeat" />
+              </svg>{' '}
+              J’ai essayé
+            </button>
+          )}
+        </aside>
+      </section>
+
+      <nav class="section-nav" aria-label="Dans cette création">
+        <a href="#resultat" class="active">
+          Résultat
+        </a>
+        <a href="#parcours">Le chemin parcouru</a>
+        {!projet && (
+          <a href="#reproductions">
+            Reproductions <span data-repro-count>{reproductions?.total ?? 0}</span>
+          </a>
+        )}
+        <a href="#commentaires">
+          Commentaires <span id="comment-count">{fiche.commentaires.total}</span>
+        </a>
+      </nav>
+
+      <section id="parcours" class="detail-section journey-layout">
+        <div>
+          <p class="section-label">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-route" />
+            </svg>{' '}
+            Du prompt au résultat
+          </p>
+          <h2>Le chemin parcouru</h2>
+          {fiche.objectif && <p class="intro">{typo(`« ${fiche.objectif} »`)}</p>}
+          <div class="small-author">
+            <AvatarMembre membre={fiche.auteur} taille={28} />
+            {fiche.auteur.nom}
+          </div>
+          {promptPrincipal && (
+            <>
+              <div class="subheading">
+                <h3>Le prompt</h3>
+                <button class="text-button" type="button" data-copy>
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-copy" />
+                  </svg>{' '}
+                  Copier
+                </button>
+              </div>
+              <blockquote id="prompt-text" class="fc-prompt">
+                {promptPrincipal}
+              </blockquote>
+            </>
+          )}
+          <h3>{moments.length > 1 ? 'Les moments clés' : 'Le moment clé'}</h3>
+          {moments.length ? (
+            moments.map((m) => (
+              <div class="key-moment">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-moment" />
+                </svg>
+                <div>
+                  <span>
+                    {MOMENTS[m.type].nature}
+                    {moments.length > 1 && ` · ${m.ou}`}
+                  </span>
+                  <h4>{MOMENTS[m.type].titre}</h4>
+                  {m.explication && <p>{typo(m.explication)}</p>}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div class="key-moment">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-moment" />
+              </svg>
+              <div>
+                <span>Moment clé</span>
+                <h4>Aucun moment clé noté</h4>
+                <p>L’auteur n’a pas encore noté de moment clé.</p>
+              </div>
+            </div>
+          )}
+          {etapesFiche.length > 0 && (
+            <div class="creation-steps">
+              <h3>
+                {projet
+                  ? 'Les étapes du projet'
+                  : fiche.type === 'ITERATION'
+                    ? 'Les échanges'
+                    : 'Le résultat obtenu'}
+              </h3>
+              {etapesFiche.map((etape, i) => (
+                <details class="process-details">
+                  <summary>
+                    {etape.titre}
+                    <span>
+                      {i + 1} / {etapesFiche.length}
+                    </span>
+                  </summary>
+                  {etape.demandes.map((demande) => {
+                    const numero = numeroPrompt++;
+                    return (
+                      <>
+                        {demande.prompt && (
+                          <>
+                            <div class="subheading">
+                              <h4>Demande</h4>
+                              <button class="text-button" type="button" data-step-copy={numero}>
+                                <svg class="icon" aria-hidden="true">
+                                  <use href="#i-copy" />
+                                </svg>{' '}
+                                Copier
+                              </button>
+                            </div>
+                            <blockquote id={`step-prompt-${numero}`} class="fc-prompt">
+                              {demande.prompt}
+                            </blockquote>
+                          </>
+                        )}
+                        {demande.reponse && (
+                          <>
+                            <h4>Réponse obtenue</h4>
+                            <div class="fc-texte" set:html={rendreMarkdown(demande.reponse)} />
+                          </>
+                        )}
+                        {demande.images.length > 0 && (
+                          <div class="fc-images">
+                            {demande.images.map((img) => (
+                              <figure>
+                                <img
+                                  src={img.declinaisons[0]?.url ?? img.url}
+                                  srcset={srcsetImage(img)}
+                                  sizes="(max-width: 850px) 100vw, 360px"
+                                  alt={img.texteAlternatif}
+                                  width={img.largeur}
+                                  height={img.hauteur}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                                {img.legende && <figcaption>{typo(img.legende)}</figcaption>}
+                              </figure>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })}
+                  <h4>Résultat et choix retenu</h4>
+                  {etape.resultat ? (
+                    <div class="fc-texte" set:html={rendreMarkdown(etape.resultat)} />
+                  ) : (
+                    <p>
+                      {etape.demandes.some((d) => d.images.length)
+                        ? 'Résultat présenté en image.'
+                        : 'Résultat présenté plus haut.'}
+                    </p>
+                  )}
+                </details>
+              ))}
+            </div>
+          )}
+        </div>
+        <aside class="journey-aside">
+          <h3>Configuration utilisée</h3>
+          <OutilsIa outils={outils} />
+          <dl class="config-list">
+            <div>
+              <dt>Contexte de travail</dt>
+              <dd>{typo(contexteDeTravail(fiche))}</dd>
+            </div>
+            <div>
+              <dt>Type de création</dt>
+              <dd>{LIBELLES_TYPE[fiche.type]}</dd>
+            </div>
+            <div>
+              <dt>Publication</dt>
+              <dd>{fiche.datePublication ? dateLongue(fiche.datePublication) : 'Brouillon'}</dd>
+            </div>
+            {fiche.dateModification && fiche.datePublication && (
+              <div>
+                <dt>Dernière modification</dt>
+                <dd>{dateLongue(fiche.dateModification)}</dd>
+              </div>
+            )}
+          </dl>
+          {fiche.limites?.trim() && (
+            <>
+              <h3>Limites constatées</h3>
+              <ul>
+                {phrases(fiche.limites).map((phrase) => (
+                  <li>{typo(phrase)}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {fiche.liens.length > 0 && (
+            <>
+              <h3>Liens</h3>
+              <ul class="fc-liens">
+                {fiche.liens.map((lien) => (
+                  <li>
+                    <a href={lien.url} rel="ugc nofollow noopener noreferrer" target="_blank">
+                      {lien.libelle ? typo(lien.libelle) : LIBELLES_LIEN[lien.type]}
+                      <span class="sr-only"> (nouvel onglet)</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p class="license">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-scale" />
+            </svg>{' '}
+            {licenceLibre ? (
+              <>
+                Licence <a href={fiche.licence.url}>{fiche.licence.libelle}</a>
+                <br />
+                <span>Créditez {fiche.auteur.nom} en cas de réutilisation.</span>
+              </>
+            ) : (
+              <>
+                Conditions de réutilisation
+                <span>
+                  Demandez l’accord de {fiche.auteur.nom} avant de réutiliser cette création.
+                </span>
+              </>
+            )}
+          </p>
+        </aside>
+      </section>
+
+      <section id="reproductions" class="detail-section" hidden={projet}>
+        <div class="section-heading">
+          <div>
+            <p class="section-label">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-repeat" />
+              </svg>{' '}
+              Mis à l’épreuve
+            </p>
+            <h2>Reproductions de la communauté</h2>
+            <p>
+              <span data-repro-count>{reproductions?.total ?? 0}</span>{' '}
+              {(reproductions?.total ?? 0) > 1 ? 'reproductions' : 'reproduction'}
+              <span class="success-summary" hidden={taux === null}>
+                {' '}
+                · <span data-success>{taux ?? 0} %</span> de succès
+              </span>
+              {reproductions?.derniere &&
+                ` · Dernier essai le ${dateCourte(reproductions.derniere)}`}
+            </p>
+          </div>
+          <button class="btn btn-primary" type="button" data-try hidden={!ACTIONS_OUVERTES.essayer}>
+            Partager mon essai
+          </button>
+        </div>
+        <div class="repro-list" id="repro-list">
+          {fiche.retours.length ? (
+            fiche.retours.map((r) => (
+              <article class="repro-item">
+                <div class="person">
+                  <AvatarMembre membre={r.auteur} taille={40} />
+                  <div>
+                    <strong>{r.auteur.nom}</strong>
+                    <span>{ISSUES[r.resultat]}</span>
+                  </div>
+                </div>
+                <OutilsIa outils={[{ outil: r.outil, modele: r.modele }]} />
+                {r.retour && <p>{typo(r.retour)}</p>}
+              </article>
+            ))
+          ) : (
+            <p class="empty-detail">
+              {(reproductions?.total ?? 0) > 0
+                ? 'Les essais déclarés ne comportent pas encore de retour détaillé.'
+                : 'Aucun essai partagé pour le moment. Partagez le premier retour.'}
+            </p>
+          )}
+        </div>
+        {fiche.retours.length > 0 && (
+          <p class="sample-note">
+            {fiche.retours.length}{' '}
+            {fiche.retours.length > 1 ? 'retours détaillés' : 'retour détaillé'} sur les{' '}
+            {reproductions?.total} essais déclarés.
+          </p>
+        )}
+        {(reproductions?.parConfiguration.length ?? 0) > 0 && (
+          <details class="compatibility">
+            <summary>Comparer les modèles testés</summary>
+            <div class="table-scroll">
+              <table>
+                <caption>Réussites déclarées par configuration</caption>
+                <thead>
+                  <tr>
+                    <th>Outil et modèle</th>
+                    <th>Essais</th>
+                    <th>Réussis</th>
+                    <th>Succès</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reproductions?.parConfiguration.map((c) => (
+                    <tr>
+                      <th>
+                        <OutilsIa outils={[{ outil: c.outil, modele: c.modele }]} />
+                      </th>
+                      <td>{c.essais}</td>
+                      <td>{c.reussis}</td>
+                      <td>{Math.round((c.reussis / c.essais) * 100)} %</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        )}
+      </section>
+
+      <section id="commentaires" class="detail-section comments-section">
+        <p class="section-label">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-message" />
+          </svg>{' '}
+          La discussion
+        </p>
+        <h2>Commentaires</h2>
+        <div id="comments-list">
+          {commentaires.length ? (
+            commentaires.map((c) =>
+              c.supprime || !c.auteur ? (
+                <article class="comment-row fc-commentaire-retire">
+                  <p>Commentaire supprimé.</p>
+                </article>
+              ) : (
+                <article class="comment-row" id={`commentaire-${c.id}`}>
+                  <div class="person">
+                    <AvatarMembre membre={c.auteur} taille={40} />
+                    <div>
+                      <strong>{c.auteur.nom}</strong>
+                    </div>
+                    <time datetime={c.date}>{dateCourte(c.date)}</time>
+                  </div>
+                  <p>
+                    {c.parentId !== null &&
+                      `En réponse à ${auteurDe.get(c.parentId) ?? 'un commentaire supprimé'} :\n`}
+                    {typo(c.corps ?? '')}
+                  </p>
+                </article>
+              ),
+            )
+          ) : (
+            <p class="empty-detail">
+              Aucun commentaire pour le moment. Posez une question ou partagez votre retour.
+            </p>
+          )}
+        </div>
+        {ACTIONS_OUVERTES.commenter && !invitation && (
+          <form id="comment-form">
+            <label for="comment">Ajouter un commentaire</label>
+            <textarea
+              id="comment"
+              rows="3"
+              maxlength="2000"
+              required
+              placeholder="Une question sur le prompt ou un retour sur le résultat ?"
+            />
+            <p id="comment-context" hidden />
+            <div class="form-bottom">
+              <span>Restez précis et bienveillant.</span>
+              <button class="btn btn-primary">Publier le commentaire</button>
+            </div>
+          </form>
+        )}
+        {ACTIONS_OUVERTES.commenter && invitation && (
+          <p class="comment-gate" data-comment-gate set:html={invitation} />
+        )}
+      </section>
+
+      <div class="creation-bottom">
+        <a href={ROUTES.explorer}>
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-chevron-left" />
+          </svg>{' '}
+          Retour aux créations
+        </a>
+        <button
+          class="text-button"
+          id="report-open"
+          type="button"
+          hidden={!ACTIONS_OUVERTES.signaler}
+        >
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-flag" />
+          </svg>{' '}
+          Signaler un contenu
+        </button>
+      </div>
+    </>
+  )}
+
+  {fiche && (
+    <Fragment slot="fin">
+      <dialog id="lightbox" aria-label={`${titre} en grand format`}>
+        <button class="icon-btn" type="button" data-close aria-label="Fermer l’image">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-close" />
+          </svg>
+        </button>
+        {image ? (
+          <img src={image.url} alt={image.texteAlternatif} loading="lazy" />
+        ) : (
+          <div class={`creation-preview preview-${apercu}`} role="img" aria-label={titre}>
+            {apercu === 'texte-auteur' ? (
+              <div class="mock-paper">
+                {(derniereReponse ?? '')
+                  .slice(0, 1600)
+                  .split(/\n{2,}/)
+                  .map((paragraphe) => (
+                    <p>{typo(paragraphe)}</p>
+                  ))}
+              </div>
+            ) : (
+              <div class="mock-window">
+                <div class="mock-bar">
+                  <i />
+                  {demo ? demo.url.replace(/^https:\/\//, '') : 'Résultat'}
+                </div>
+                <div class="mock-pad">
+                  <p class="mock-label">{titre}</p>
+                  {demo && <div class="mock-btn">Ouvrir la démo</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </dialog>
+    </Fragment>
+  )}
+</Base>
+
+<script>
+  import '../../scripts/fiche-creation';
+</script>

@@ -112,7 +112,7 @@ export interface PreuveCreationApi {
     parConfiguration: EssaisParConfigurationApi[];
   };
   /** F-35 : membres distincts qui la signalent obsolète, par modèle (bannière à partir de RG-44). */
-  obsolescence: { modele: ModeleResumeApi; membres: number }[];
+  obsolescence: { modele: ModeleResumeApi; membres: number; depuis: string }[];
 }
 
 /** Reproduction déclarée avec un retour écrit (RG-42). */
@@ -164,7 +164,7 @@ export interface CreationFicheApi {
   liens: LienExterneApi[];
   etapes: EtapeApi[];
   preuve: PreuveCreationApi;
-  /** Reproductions avec un retour écrit, des plus récentes aux plus anciennes. */
+  /** Les 6 dernières reproductions avec un retour écrit, des plus récentes aux plus anciennes. */
   retours: RetourReproductionApi[];
   /** Du plus ancien au plus récent, réponses comprises. */
   commentaires: { total: number; elements: CommentaireApi[] };
