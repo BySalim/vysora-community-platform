@@ -29,6 +29,9 @@
 | État du visiteur inséré dans la page en JSON avec `<` échappé (aucune valeur ne peut fermer la balise `<script>`) | `layouts/Base.astro` |
 | Messages d'accès (dialogue, bloc, invitation) construits avec échappement de chaque texte et de chaque adresse ; retour après la connexion limité aux chemins internes | `lib/acces.ts`, `lib/retour.ts` (AUTH-07) |
 | Pages légales : seul le balisage écrit dans le dépôt est transformé (typographie, liens de section) ; les textes venus de l'API (résumés des changements) sont échappés | `lib/pages-legales.ts`, `PageLegale.astro` (LEG-01) |
+| Images : type reconnu par la signature du fichier (PNG, JPEG, WebP, GIF ; jamais l'extension ni le type annoncé), 5 Mo au plus (lecture interrompue au-delà), 50 millions de pixels au plus (bombes de décompression), décodage complet puis ré-encodage en WebP (un fichier piégé ne survit pas), métadonnées EXIF et profils non recopiés, orientation appliquée ; clés aléatoires de 128 bits sans rien du nom envoyé ; chemin sur le disque construit seulement à partir d'une clé de forme stricte ; servies en `image/webp`, `nosniff`, `inline` | `modules/medias/traitement-images.ts`, `stockage-disque.ts` (MEDIA-01) |
+| Envois d'images : corps lu après les gardes (origine, débit, droits), un seul fichier et quelques champs ; 60 envois par 10 minutes et par IP, 20 changements de photo ; 40 images non enregistrées au plus par membre ; images jamais rattachées supprimées après 24 h, fichiers sans ligne aussi (`pnpm medias:nettoyer`) ; seul le membre qui a téléversé une image la décrit ou la retire (une image d'autrui répond 404) | `MediasController`, `ReceptionImage`, `MediasService` (MEDIA-01) |
+| Fichiers servis sans lire la session (aucun cookie renouvelé sur une réponse mise en cache) | `AuthModule` (exclusion de `/api/v1/fichiers`) |
 | Données de démonstration refusées en production (la fonction et la commande vérifient `NODE_ENV`) ; comptes en `@example.test` (domaine réservé), mot de passe de développement commun consigné dans le dépôt et haché en Argon2id comme les vrais ; deux comptes d'équipe (modération, administration) qui ne doivent exister que hors production | `db/demo/` (DEMO-01) |
 
 ## 2. À mettre en place (par ordre d'arrivée)
@@ -43,7 +46,7 @@
 
 **Contenus des membres**
 - [ ] Markdown rendu côté serveur sans HTML brut, assaini (liste blanche), liens `rel="ugc nofollow noopener"` (ENF-06) ; code affiché comme texte, jamais exécuté.
-- [ ] Images : type vérifié par signature (pas par l'extension), 5 Mo, ré-encodage (suppression des métadonnées EXIF), noms de fichiers aléatoires, servies avec `Content-Type` exact et `nosniff`.
+- [x] Images : type vérifié par signature (pas par l'extension), 5 Mo, ré-encodage (suppression des métadonnées EXIF), noms de fichiers aléatoires, servies avec `Content-Type` exact et `nosniff` (MEDIA-01). Limite connue : une image est publique pour qui connaît son adresse (clé non devinable), y compris celle d'un brouillon ou d'un contenu masqué ; voir « Points à trancher » du registre. Le nettoyage doit être planifié chaque jour (EMAIL-01) et le dossier des images sauvegardé (OPS-02).
 - [ ] Détection de données sensibles avant publication (RG-22) : clés d'API, jetons, e-mails, téléphones.
 - [ ] Limites par niveau (RG-85) et masquage automatique (RG-101).
 

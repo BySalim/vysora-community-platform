@@ -30,7 +30,8 @@
 - JSON en camelCase ; dates en ISO 8601 UTC ; identifiants numériques.
 - Listes : `{ "elements": [...], "suivant": "<curseur>" | null }` (pagination par curseur), `total` seulement s'il est utile à l'écran.
 - Erreurs : RFC 9457 (`application/problem+json`) avec `code` stable et `erreurs` par champ ; lever une `ErreurApplication` (ou ses raccourcis `introuvable()`, `interdit()`, `conflit()`, `erreurValidation()`), jamais une réponse construite à la main.
-- Validation : `@Body(new ValidationZod(schema))` avec un schéma de `@vysora/shared` ; les messages du schéma sont ceux de l'interface.
+- Validation : `@Body(new ValidationZod(schema))` avec un schéma de `@vysora/shared` ; les messages du schéma sont ceux de l'interface. Identifiant dans l'adresse : `@Param('id', IdentifiantPipe)` (404 si ce n'est pas un entier positif).
+- Images : l'envoi passe par `@UseInterceptors(ReceptionImage)` (champ `fichier`, `multipart/form-data`) et `fichierRecu(requete)` ; une image se présente avec `presenterMedia` (contrat `MediaApi`) et s'enregistre avec `enregistrerImage` ; jamais de chemin de fichier construit à la main, toujours le `Stockage` injecté.
 - Les types de réponse vivent dans `packages/shared/src/contrats/` pour que le site les réutilise.
 - Toute route qui modifie des données passe par la garde d'origine (globale) ; toute route réservée déclare l'action demandée avec `@Exige('contribuer' | 'parametres' | 'proposer-cas' | 'moderer' | 'administrer')` et lit la personne connectée avec `@SessionCourante()` (`modules/auth/droits.ts`). La garde applique `raisonRefus` et répond 401 ou 403 avec la `raison`, que le site présente avec le bon dialogue.
 

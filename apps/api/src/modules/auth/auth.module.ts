@@ -1,4 +1,4 @@
-import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
+import { Module, RequestMethod, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { ChargementSession } from './chargement-session.middleware.js';
 import { ComptesController } from './comptes.controller.js';
 import { ComptesService } from './comptes.service.js';
@@ -42,6 +42,10 @@ import { VerificationEmailService } from './verification-email.service.js';
 })
 export class AuthModule implements NestModule {
   configure(consommateur: MiddlewareConsumer): void {
-    consommateur.apply(ChargementSession).forRoutes('{*chemin}');
+    consommateur
+      .apply(ChargementSession)
+      // Les images (MEDIA-01) sont publiques et mises en cache : ni session lue, ni cookie renouvelé.
+      .exclude({ path: 'fichiers/{*cle}', method: RequestMethod.GET, version: '1' })
+      .forRoutes('{*chemin}');
   }
 }

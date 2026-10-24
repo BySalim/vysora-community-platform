@@ -1,4 +1,5 @@
 import { lireConfiguration } from '../../config/env.js';
+import { StockageDisque } from '../../modules/medias/stockage-disque.js';
 import { creerBaseDeDonnees } from '../client.js';
 import { chargerDemo, decrireBilan } from './charger.js';
 
@@ -13,7 +14,8 @@ if (config.NODE_ENV === 'production') {
 
 const { db, pool } = creerBaseDeDonnees(config.DATABASE_URL);
 try {
-  console.log(decrireBilan(await chargerDemo(db, { environnement: config.NODE_ENV })));
+  const stockage = new StockageDisque(config.STOCKAGE_DOSSIER);
+  console.log(decrireBilan(await chargerDemo(db, { environnement: config.NODE_ENV, stockage })));
 } finally {
   await pool.end();
 }

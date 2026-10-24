@@ -51,6 +51,7 @@ On privilégie la **vitesse** pour rendre le produit utilisable au plus tôt, en
 | `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:reset` | Migrations · référentiels · base remise à zéro (développement) |
 | `pnpm db:demo` | Données de démonstration du prototype (membres, créations, forum, cas, défis, votes), après `db:seed` ; idempotent, refusé en production. Comptes `<pseudo>@example.test` (par exemple `clarisse-mendy`, le membre simulé du prototype), mot de passe dans `apps/api/src/db/demo/identifiants.ts` |
 | `pnpm db:generate` | Migration SQL depuis le schéma Drizzle (à relire) |
+| `pnpm medias:nettoyer` | Supprime les images jamais enregistrées depuis 24 h et les fichiers qu'aucune ligne ne désigne (à planifier chaque jour) |
 | `pnpm dev` | Paquet partagé, API (:3000) et site (:4321) en mode développement |
 | `pnpm prototype` | Prototype de référence sur :5173 |
 | `pnpm verifier` | Lint, types, tests, tests de bout en bout |
@@ -79,3 +80,4 @@ Adresses en développement : site http://localhost:4321 · API http://localhost:
 - En développement, le navigateur passe par le relais `apps/web/src/pages/api/[...chemin].ts` (ADR-0007) ; le relais de Vite ne transmet pas les corps JSON.
 - Les fichiers CSS du prototype (`apps/web/src/styles/`) ne passent pas par Prettier : on les garde identiques à l'original pour pouvoir les comparer.
 - La limite de débit de l'API est en mémoire : redémarrer l'API la remet à zéro pendant les essais.
+- Les images sont écrites dans `STOCKAGE_DOSSIER`, relatif au dossier de lancement de l'API (`apps/api/stockage/` en développement, ignoré par Git). `pnpm db:demo` y écrit les avatars et images du prototype ; `pnpm db:reset` ne vide pas ce dossier (`pnpm medias:nettoyer` le fera après 24 h).

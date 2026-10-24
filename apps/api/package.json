@@ -11,6 +11,7 @@
     "start:migrate": "node dist/db/migrer.js",
     "start:seed": "node dist/db/seed/index.js",
     "start:demo": "node dist/db/demo/index.js",
+    "start:nettoyer-medias": "node dist/taches/nettoyer-medias.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -20,6 +21,7 @@
     "db:seed": "tsx src/db/seed/index.ts",
     "db:demo": "tsx src/db/demo/index.ts",
     "db:reset": "tsx src/db/reinitialiser.ts",
+    "medias:nettoyer": "tsx src/taches/nettoyer-medias.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
@@ -32,6 +34,7 @@
     "cookie-parser": "^1.4.7",
     "drizzle-orm": "^0.45.4",
     "helmet": "^8.3.0",
+    "multer": "^2.4.0",
     "nestjs-pino": "^5.3.1",
     "nodemailer": "^10.2.1",
     "pg": "^8.23.1",
@@ -39,6 +42,7 @@
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "sharp": "^0.35.5",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -47,6 +51,7 @@
     "@nestjs/testing": "^12.2.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",

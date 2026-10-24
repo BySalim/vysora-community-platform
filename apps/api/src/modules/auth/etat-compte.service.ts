@@ -16,6 +16,7 @@ import {
   niveau,
   notification,
 } from '../../db/schema/index.js';
+import { Stockage } from '../medias/stockage.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
 import type { RequeteVysora, SessionOuverte } from './requete.js';
 
@@ -35,6 +36,7 @@ export class EtatCompteService {
   constructor(
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly documents: DocumentsLegauxService,
+    private readonly stockage: Stockage,
   ) {}
 
   /** Calculé au plus une fois par requête (garde des droits, puis contrôleur). */
@@ -100,8 +102,7 @@ export class EtatCompteService {
         pseudo: membre.pseudo,
         nom: membre.pseudo,
         points,
-        // Clé de stockage de l'image : l'adresse publique viendra avec les médias (MEDIA-01).
-        avatar: null,
+        avatar: membre.avatar ? this.stockage.adresse(membre.avatar) : null,
       },
       nonLues,
       suspensionJusqua: finSuspension?.toISOString() ?? null,

@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import {
   slugifier,
   type MotifMouvementReputation,
@@ -5,9 +8,16 @@ import {
   type Role,
   type TypeContenu,
 } from '@vysora/shared';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DocumentsLegauxService } from '../../modules/auth/documents-legaux.service.js';
 import { hacherMotDePasse } from '../../modules/auth/mots-de-passe.service.js';
+import { enregistrerImage } from '../../modules/medias/medias.service.js';
+import { ecrireDeclinaisons, type Stockage } from '../../modules/medias/stockage.js';
+import {
+  preparerAvatar,
+  preparerImage,
+  type ImagePreparee,
+} from '../../modules/medias/traitement-images.js';
 import type { BaseDeDonnees, Transaction } from '../client.js';
 import {
   badge,
@@ -26,6 +36,7 @@ import {
   etiquette,
   licence,
   lienExterne,
+  media,
   message,
   modele,
   momentCle,
@@ -46,7 +57,7 @@ import { DEFIS } from './donnees/defis.js';
 import { SUJETS } from './donnees/forum.js';
 import { ENREGISTREMENTS, MEMBRES } from './donnees/membres.js';
 import { MOT_DE_PASSE_DEMO } from './identifiants.js';
-import type { CasDemo, ConfigurationDemo, CreationDemo, SujetDemo } from './types.js';
+import type { CasDemo, ConfigurationDemo, CreationDemo, ImageDemo, SujetDemo } from './types.js';
 
 /* DEMO-01 : données de démonstration tirées du prototype, pour le développement et la préproduction.
    - Jamais en production : refus si NODE_ENV vaut production.
@@ -59,7 +70,9 @@ import type { CasDemo, ConfigurationDemo, CreationDemo, SujetDemo } from './type
    - La réputation est celle du prototype (total, points de chaque semaine, détail quand il existe), pour que
      les niveaux et les classements soient les siens. Ses compteurs ne suivent pas son propre barème (RG-80) :
      les mouvements de démonstration ne sont donc pas rattachés aux votes, essais et réponses chargés.
-   - Les images ne sont pas chargées : elles attendent le stockage des médias (MEDIA-01, puis DEMO-02). */
+   - DEMO-02 : les photos de profil et les images du prototype (prototype/assets) passent par le même traitement
+     que les envois des membres (MEDIA-01). Elles sont ajoutées aux membres et aux créations qui n'en ont aucune,
+     y compris dans une base chargée avant leur arrivée. */
 
 /** « Maintenant » du prototype (forum-data.js, classements-data.js). */
 export const MAINTENANT_PROTOTYPE = new Date('2026-10-13T16:20:00Z');
@@ -81,6 +94,8 @@ export interface OptionsDemo {
   environnement: 'development' | 'test' | 'production';
   /** Heure de référence du chargement ; par défaut, l'heure courante. */
   maintenant?: Date;
+  /** Stockage où écrire les photos de profil et les images (celui de l'API). */
+  stockage: Stockage;
 }
 
 /** Éléments ajoutés par un chargement (tout à zéro quand les données sont déjà en base). */
@@ -97,6 +112,8 @@ export interface BilanDemo {
   votes: number;
   enregistrements: number;
   mouvements: number;
+  images: number;
+  avatars: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -114,6 +131,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     for (const s of SUJETS) await chargerSujet(ctx, s);
     for (const c of CAS) await chargerCas(ctx, c);
     await chargerEnregistrements(ctx);
+    await chargerImages(ctx, options.stockage);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
@@ -124,9 +142,22 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
 }
 
 export function decrireBilan(bilan: BilanDemo): string {
-  if (Object.values(bilan).every((n) => n === 0))
-    return 'Données de démonstration déjà chargées : rien à ajouter.';
-  return `Données de démonstration chargées : ${bilan.membres} membres, ${bilan.creations} créations, ${bilan.reproductions} reproductions, ${bilan.sujets} sujets et ${bilan.messages} réponses, ${bilan.cas} cas Bon réflexe, ${bilan.defis} défis, ${bilan.votes} votes, ${bilan.mouvements} mouvements de réputation.`;
+  const parties = [
+    [bilan.membres, 'membres'],
+    [bilan.creations, 'créations'],
+    [bilan.reproductions, 'reproductions'],
+    [bilan.sujets, 'sujets'],
+    [bilan.messages, 'réponses du forum'],
+    [bilan.cas, 'cas Bon réflexe'],
+    [bilan.defis, 'défis'],
+    [bilan.votes, 'votes'],
+    [bilan.mouvements, 'mouvements de réputation'],
+    [bilan.images, 'images'],
+    [bilan.avatars, 'photos de profil'],
+  ] as const;
+  const ajoutes = parties.filter(([nombre]) => nombre > 0);
+  if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
+  return `Données de démonstration chargées : ${ajoutes.map(([nombre, quoi]) => `${nombre} ${quoi}`).join(', ')}.`;
 }
 
 /* Contexte ------------------------------------------------------------------ */
@@ -225,6 +256,8 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
       votes: 0,
       enregistrements: 0,
       mouvements: 0,
+      images: 0,
+      avatars: 0,
     },
   };
 }
@@ -914,6 +947,122 @@ async function chargerCas(ctx: Contexte, c: CasDemo): Promise<void> {
 }
 
 /* Enregistrements ----------------------------------------------------------- */
+
+/* Images (DEMO-02) ------------------------------------------------------------ */
+
+/** Dossier des images du prototype (prototype/assets), cherché à partir de ce fichier. */
+function dossierAssets(): string {
+  let dossier = import.meta.dirname;
+  for (let i = 0; i < 8; i += 1) {
+    const candidat = join(dossier, 'prototype', 'assets');
+    if (existsSync(candidat)) return candidat;
+    dossier = dirname(dossier);
+  }
+  throw new Error(
+    'Images du prototype introuvables (prototype/assets) : les données de démonstration en ont besoin.',
+  );
+}
+
+/** Image du prototype en grande taille (-1280), à défaut en 720 pixels. */
+async function lireImagePrototype(assets: string, fichier: string): Promise<Buffer> {
+  const grande = join(assets, 'images', `${fichier}-1280.webp`);
+  return readFile(existsSync(grande) ? grande : join(assets, 'images', `${fichier}-720.webp`));
+}
+
+async function chargerImages(ctx: Contexte, stockage: Stockage): Promise<void> {
+  const assets = dossierAssets();
+  // Une même image du prototype sert parfois deux fois : préparée une fois, écrite à chaque usage.
+  const preparees = new Map<string, Promise<ImagePreparee>>();
+  const preparee = (fichier: string): Promise<ImagePreparee> => {
+    let image = preparees.get(fichier);
+    if (!image) {
+      image = lireImagePrototype(assets, fichier).then(preparerImage);
+      preparees.set(fichier, image);
+    }
+    return image;
+  };
+  const joindre = async (
+    image: ImageDemo,
+    rattachement: { televerseurId: number; ordre: number } & (
+      { contenuId: number } | { echangeId: number }
+    ),
+  ) => {
+    await enregistrerImage(ctx.tx, stockage, await preparee(image.fichier), {
+      ...rattachement,
+      texteAlternatif: image.texteAlternatif,
+      legende: image.legende ?? null,
+    });
+    ctx.bilan.images += 1;
+  };
+
+  // Photos de profil des membres qui n'en ont pas.
+  const sansAvatar = new Set(
+    (
+      await ctx.tx
+        .select({ id: utilisateur.id })
+        .from(utilisateur)
+        .where(
+          and(
+            inArray(
+              utilisateur.id,
+              [...ctx.membres.values()].map((m) => m.id),
+            ),
+            isNull(utilisateur.avatar),
+          ),
+        )
+    ).map((ligne) => ligne.id),
+  );
+  for (const m of MEMBRES) {
+    const id = ctx.membres.get(m.pseudo)?.id;
+    if (!m.avatar || !id || !sansAvatar.has(id)) continue;
+    const avatar = await preparerAvatar(
+      await readFile(join(assets, 'avatars', `${m.avatar}.webp`)),
+    );
+    const cles = await ecrireDeclinaisons(stockage, [avatar]);
+    await ctx.tx
+      .update(utilisateur)
+      .set({ avatar: cles[avatar.largeur] })
+      .where(eq(utilisateur.id, id));
+    ctx.bilan.avatars += 1;
+  }
+
+  // Images des créations (résultat) et de leurs échanges, pour les créations qui n'en ont aucune.
+  for (const c of CREATIONS) {
+    const id = ctx.creations.get(c.cle);
+    const avecImages = c.images?.length || c.etapes.some((e) => e.echanges.some((x) => x.images));
+    if (!id || !avecImages) continue;
+    const echanges = await ctx.tx
+      .select({ id: echange.id, etape: etape.ordre, ordre: echange.ordre })
+      .from(echange)
+      .innerJoin(etape, eq(etape.id, echange.etapeId))
+      .where(eq(etape.creationId, id));
+    const deja = await ctx.tx.$count(
+      media,
+      or(
+        eq(media.contenuId, id),
+        inArray(
+          media.echangeId,
+          echanges.map((e) => e.id),
+        ),
+      ),
+    );
+    if (deja) continue;
+
+    const televerseurId = membre(ctx, c.auteur).id;
+    for (const [ordre, image] of (c.images ?? []).entries())
+      await joindre(image, { contenuId: id, televerseurId, ordre });
+    for (const [rangEtape, e] of c.etapes.entries())
+      for (const [rangEchange, x] of e.echanges.entries()) {
+        if (!x.images?.length) continue;
+        const echangeId = echanges.find(
+          (l) => l.etape === rangEtape + 1 && l.ordre === rangEchange + 1,
+        )?.id;
+        if (!echangeId) throw new Error(`Échange introuvable : ${c.cle}, étape ${rangEtape + 1}`);
+        for (const [ordre, image] of x.images.entries())
+          await joindre(image, { echangeId, televerseurId, ordre });
+      }
+  }
+}
 
 async function chargerEnregistrements(ctx: Contexte): Promise<void> {
   const lignes = ENREGISTREMENTS.flatMap((e) => {

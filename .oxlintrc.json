@@ -16,7 +16,7 @@
   },
   "overrides": [
     {
-      "files": ["apps/api/src/db/**", "apps/api/test/**", "scripts/**"],
+      "files": ["apps/api/src/db/**", "apps/api/src/taches/**", "apps/api/test/**", "scripts/**"],
       "rules": { "no-console": "off" }
     }
   ],

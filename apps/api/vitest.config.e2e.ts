@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 // Tests de bout en bout : l'application complète sur la base vysora_test (docker compose).
@@ -19,6 +20,8 @@ export default defineConfig({
       LOG_LEVEL: 'silent',
       // Aucun appel au service des fuites de mots de passe pendant les tests.
       VERIFIER_FUITES: 'false',
+      // Images téléversées hors du dépôt, dans un dossier propre aux tests (vidé par medias.e2e-spec.ts).
+      STOCKAGE_DOSSIER: join(tmpdir(), 'vysora-test-stockage'),
       DATABASE_URL:
         process.env.DATABASE_URL_TEST ?? 'postgres://vysora:vysora@localhost:5432/vysora_test',
     },

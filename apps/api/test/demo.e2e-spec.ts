@@ -2,7 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
 import type { SessionApi } from '@vysora/shared';
-import { sql } from 'drizzle-orm';
+import { isNotNull, sql } from 'drizzle-orm';
+import sharp from 'sharp';
 import request from 'supertest';
 import {
   chargerDemo,
@@ -11,9 +12,12 @@ import {
   emailDemo,
   type BilanDemo,
 } from '../src/db/demo/charger.js';
+import { CREATIONS } from '../src/db/demo/donnees/creations.js';
+import { MEMBRES } from '../src/db/demo/donnees/membres.js';
 import { MOT_DE_PASSE_DEMO } from '../src/db/demo/identifiants.js';
-import { utilisateur } from '../src/db/schema/index.js';
+import { media, utilisateur } from '../src/db/schema/index.js';
 import { DocumentsLegauxService } from '../src/modules/auth/documents-legaux.service.js';
+import { Stockage } from '../src/modules/medias/stockage.js';
 import {
   ORIGINE_SITE,
   demarrerApplication,
@@ -22,7 +26,7 @@ import {
   type ApplicationDeTest,
 } from './outils.js';
 
-/* DEMO-01 : données de démonstration tirées du prototype. Un seul chargement sert à toute la suite. */
+/* DEMO-01 et DEMO-02 : données de démonstration tirées du prototype. Un seul chargement sert à toute la suite. */
 
 const TABLES = [
   'utilisateur',
@@ -49,11 +53,28 @@ const TABLES = [
   'enregistrement',
   'signalement_obsolescence',
   'mouvement_reputation',
+  'media',
 ] as const;
 
-describe('Données de démonstration (DEMO-01, pnpm db:demo)', () => {
+/** Images du prototype attendues : résultats des créations et images jointes aux échanges. */
+const IMAGES_ATTENDUES = CREATIONS.reduce(
+  (total, c) =>
+    total +
+    (c.images?.length ?? 0) +
+    c.etapes.reduce((n, e) => n + e.echanges.reduce((m, x) => m + (x.images?.length ?? 0), 0), 0),
+  0,
+);
+const AVATARS_ATTENDUS = MEMBRES.filter((m) => m.avatar).length;
+
+describe('Données de démonstration (DEMO-01, DEMO-02, pnpm db:demo)', () => {
   let contexte: ApplicationDeTest;
   let bilan: BilanDemo;
+  const charger = (environnement: 'test' | 'production', quand = maintenant) =>
+    chargerDemo(contexte.db, {
+      environnement,
+      maintenant: quand,
+      stockage: contexte.app.get(Stockage),
+    });
   // Un vendredi : la semaine en cours a commencé le lundi 19 octobre (RG-87).
   const maintenant = new Date('2026-10-23T14:00:00Z');
 
@@ -71,7 +92,7 @@ describe('Données de démonstration (DEMO-01, pnpm db:demo)', () => {
   beforeAll(async () => {
     contexte = await demarrerApplication();
     await vider(contexte.db, 'utilisateur');
-    bilan = await chargerDemo(contexte.db, { environnement: 'test', maintenant });
+    bilan = await charger('test');
   }, 180_000);
 
   afterAll(async () => {
@@ -82,9 +103,7 @@ describe('Données de démonstration (DEMO-01, pnpm db:demo)', () => {
   describe('refus en production', () => {
     it('refuse le chargement quand NODE_ENV vaut production, sans rien écrire', async () => {
       const avant = await compter();
-      await expect(
-        chargerDemo(contexte.db, { environnement: 'production', maintenant }),
-      ).rejects.toBeInstanceOf(DemoRefusee);
+      await expect(charger('production')).rejects.toBeInstanceOf(DemoRefusee);
       expect(await compter()).toEqual(avant);
     });
 
@@ -230,13 +249,71 @@ describe('Données de démonstration (DEMO-01, pnpm db:demo)', () => {
     });
   });
 
+  describe('images (DEMO-02)', () => {
+    it('donne leur photo aux membres et leurs images aux créations, décrites et ré-encodées', async () => {
+      expect(bilan).toMatchObject({ images: IMAGES_ATTENDUES, avatars: AVATARS_ATTENDUS });
+      expect(IMAGES_ATTENDUES).toBeGreaterThan(15);
+      expect(await contexte.db.$count(utilisateur, isNotNull(utilisateur.avatar))).toBe(
+        AVATARS_ATTENDUS,
+      );
+      // Chaque image est celle de l'auteur de la création, décrite, et rattachée (RG-16, CI-02).
+      expect(
+        await valeur(
+          sql`select count(*)::int from media m left join etape e on e.id = (select etape_id from echange where id = m.echange_id) join contenu c on c.id = coalesce(m.contenu_id, e.creation_id) where m.televerseur_id <> c.auteur_id or m.texte_alternatif = ''`,
+        ),
+      ).toBe(0);
+      expect(
+        await valeur(sql`select count(*)::int from media where echange_id is not null`),
+      ).toBeGreaterThan(0);
+      // RG-11 : la création d'images « 1 prompt » du prototype a maintenant son image.
+      expect(
+        await valeur(
+          sql`select count(*)::int from media m join creation c on c.id = m.contenu_id where c.titre = 'Cité imaginaire entre ciel et mer'`,
+        ),
+      ).toBe(1);
+    });
+
+    it('sert la photo d’un membre de démonstration depuis sa session', async () => {
+      const agent = request.agent(contexte.app.getHttpServer());
+      await agent
+        .post('/api/v1/session')
+        .set('Origin', ORIGINE_SITE)
+        .set('X-Forwarded-For', ipDeTest())
+        .send({ email: emailDemo('awa-sarr'), motDePasse: MOT_DE_PASSE_DEMO })
+        .expect(200);
+      const session = (await agent.get('/api/v1/session').expect(200)).body as SessionApi;
+      expect(session.membre?.avatar).toMatch(/^\/api\/v1\/fichiers\/[A-Za-z0-9_-]{22}-\d+\.webp$/);
+      const image = await agent
+        .get(session.membre?.avatar ?? '')
+        .buffer(true)
+        .expect(200);
+      const lue = await sharp(image.body as Buffer).metadata();
+      expect([lue.format, lue.width, lue.height]).toEqual(['webp', 128, 128]);
+    });
+
+    it('complète une base chargée avant l’arrivée des images, sans rien d’autre', async () => {
+      await contexte.db.delete(media);
+      await contexte.db.update(utilisateur).set({ avatar: null });
+      const avant = await compter();
+      const complement = await charger('test');
+      expect(complement).toMatchObject({
+        membres: 0,
+        creations: 0,
+        votes: 0,
+        images: IMAGES_ATTENDUES,
+        avatars: AVATARS_ATTENDUS,
+      });
+      expect(decrireBilan(complement)).toBe(
+        `Données de démonstration chargées : ${IMAGES_ATTENDUES} images, ${AVATARS_ATTENDUS} photos de profil.`,
+      );
+      expect(await compter()).toEqual({ ...avant, media: IMAGES_ATTENDUES });
+    }, 120_000);
+  });
+
   describe('idempotence', () => {
     it('relancé, n’ajoute rien et ne modifie rien', async () => {
       const avant = await compter();
-      const second = await chargerDemo(contexte.db, {
-        environnement: 'test',
-        maintenant: new Date(maintenant.getTime() + 24 * 60 * 60_000),
-      });
+      const second = await charger('test', new Date(maintenant.getTime() + 24 * 60 * 60_000));
       expect(Object.values(second).every((n) => n === 0)).toBe(true);
       expect(decrireBilan(second)).toBe('Données de démonstration déjà chargées : rien à ajouter.');
       expect(await compter()).toEqual(avant);

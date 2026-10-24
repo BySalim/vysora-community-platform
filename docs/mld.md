@@ -41,7 +41,7 @@
 
 | Table | Origine | Clés et contraintes notables |
 |---|---|---|
-| `utilisateur` | UTILISATEUR (+ `fuseau_horaire`, `refus_mesure_audience`) | pseudo unique sans casse ; e-mail unique sans casse (index partiel) et obligatoire sauf compte SUPPRIME ; `role`, `statut_compte`, `langue_interface` contrôlés |
+| `utilisateur` | UTILISATEUR (+ `fuseau_horaire`, `refus_mesure_audience`) | pseudo unique sans casse ; e-mail unique sans casse (index partiel) et obligatoire sauf compte SUPPRIME ; `role`, `statut_compte`, `langue_interface` contrôlés ; `avatar` : clé de la photo de profil (WebP carré de 256 px au plus) |
 | `compte_externe` | COMPTE_EXTERNE (LIER) | unique `(fournisseur, identifiant_fournisseur)` et `(utilisateur_id, fournisseur)` |
 | `acceptation_document` | ACCEPTER | clé `(utilisateur_id, document_legal_id)`, date |
 | `demande_droit` | DEMANDE_DROIT (DEMANDER) | une demande EN_COURS par membre et par type (index partiel, CI-31) ; fichier d'export et expiration |
@@ -60,7 +60,7 @@
 | `enregistrement` | ENREGISTRER | clé `(utilisateur_id, contenu_id)` |
 | `signalement_obsolescence` | SIGNALER_OBSOLESCENCE (ternaire) | clé `(utilisateur_id, contenu_id, modele_id)` |
 | `contenu_etiquette` | ETIQUETER | clé `(contenu_id, etiquette_id)` |
-| `media` | MEDIA (ILLUSTRER, JOINDRE, TELEVERSER) | rattachée à un contenu **ou** à un échange, jamais les deux (CI-02) ; 5 Mo au plus ; dimensions et `variantes` (720, 1280…) |
+| `media` | MEDIA (ILLUSTRER, JOINDRE, TELEVERSER) | rattachée à un contenu **ou** à un échange, jamais les deux (CI-02), ou à rien juste après l'envoi (supprimée après 24 h si elle le reste) ; `type_mime` et `taille_octets` (5 Mo au plus) décrivent le fichier reçu ; `variantes` : largeur réelle → clé des déclinaisons WebP (720 et 1280, ou la largeur de l'image si elle est plus étroite) ; `fichier` : la plus grande, dont `largeur` et `hauteur` sont les dimensions ; `texte_alternatif` vide permis dans un brouillon, exigé à la publication |
 
 ### Créations et parcours
 

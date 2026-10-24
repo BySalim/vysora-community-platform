@@ -44,7 +44,7 @@ Versions installées au démarrage du projet (octobre 2026) ; les mises à jour 
 | Qualité | oxlint, Prettier, `astro check`, `tsc` | Rapide ; `pnpm verifier` enchaîne tout. |
 | Infra de développement | Docker Compose : PostgreSQL, Mailpit | Démarrage en une commande. |
 
-Installé depuis : `@node-rs/argon2` (mots de passe, AUTH-01). Prévus mais non installés (ajoutés quand une tâche en a besoin) : `sharp` (images), `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), un moteur de rendu Markdown assaini, Playwright (tests de navigateur).
+Installés depuis : `@node-rs/argon2` (mots de passe, AUTH-01), `sharp` (contrôle et ré-encodage des images, MEDIA-01), `multer` (envois `multipart/form-data`, MEDIA-01). Prévus mais non installés (ajoutés quand une tâche en a besoin) : `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), un moteur de rendu Markdown assaini, Playwright (tests de navigateur).
 
 ## 3. Arborescence
 
@@ -59,6 +59,7 @@ apps/
       db/demo/               données de démonstration tirées du prototype (pnpm db:demo, jamais en production)
       commun/                erreurs, filtre RFC 9457, validation Zod, garde d'origine, sécurité
       modules/<domaine>/     contrôleur (HTTP) → service (règles) → base
+      taches/                commandes à lancer chaque jour (nettoyage des images), planifiées plus tard par la file de tâches
     test/                    tests de bout en bout (*.e2e-spec.ts)
   web/
     public/assets/           polices, logos, logos d'outils (repris du prototype)
@@ -80,6 +81,8 @@ infra/                       configuration des services (PostgreSQL)
 **Affichage d'une page.** Le navigateur demande `/contact`. Le middleware du site charge la personne qui consulte (`GET /api/v1/session` si un cookie de session est présent, sinon aucun appel : `Astro.locals.etat`, `membre`, `nonLues`, dates du bandeau) et renvoie au navigateur les cookies que l'API a renouvelés ; la page appelle l'API côté serveur si elle a besoin de données (`appelerApi`, cookie transmis) ; le gabarit `Base.astro` pose sur `<html>` les attributs d'état (`data-session`, `data-role`…) que lisent les feuilles de style du prototype. Le HTML part complet : indexable, sans attente de JavaScript.
 
 **Action du visiteur.** Le script de page envoie `fetch('/api/v1/…')` sur la même origine. Le relais du site transmet la requête à l'API (corps, cookie, adresse du visiteur). L'API retrouve la session (middleware `ChargementSession`), vérifie l'origine (CSRF), la limite de débit, les droits de la route (`@Exige`), valide l'entrée avec le schéma partagé, applique les règles, écrit en base dans une transaction, puis répond (JSON, ou erreur RFC 9457 que le script affiche champ par champ).
+
+**Affichage d'une image.** Une page reçoit de l'API des adresses `/api/v1/fichiers/<clé>.webp` (contrat `MediaApi` : déclinaisons pour `srcset`, dimensions, texte alternatif). Le navigateur les demande sur la même origine ; l'API lit le fichier dans le `Stockage` (disque, plus tard S3) et le sert en WebP, en cache sans limite (une clé ne change jamais de contenu), sans lire la session ni limite de débit. Un envoi d'image (`POST /api/v1/medias`, `multipart/form-data`) est contrôlé (signature, 5 Mo, dimensions), ré-encodé en WebP 720 et 1280 px sans métadonnées, puis enregistré sans rattachement ; l'enregistrement du contenu le rattache.
 
 **En production**, un serveur frontal (Caddy) termine HTTPS et peut envoyer `/api/*` directement à l'API ; le relais du site reste une solution de repli.
 
@@ -104,7 +107,7 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `notifications` | Notifications, préférences, regroupement | À faire |
 | `moderation` | Signalements, décisions, masquage automatique | À faire |
 | `administration` | Référentiels, rôles, documents légaux, journal, indicateurs | À faire |
-| `medias` | Téléversement, contrôle, déclinaisons, stockage | À faire |
+| `medias` | Téléversement, contrôle, déclinaisons, stockage | Fait (MEDIA-01) : envoi et description des images, retrait avant enregistrement, photo de profil, lecture des fichiers, nettoyage (`pnpm medias:nettoyer`). Le rattachement aux contenus vient avec CREA-01 |
 
 ## 6. Principes transverses
 

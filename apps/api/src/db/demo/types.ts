@@ -14,7 +14,7 @@ import type {
    Les membres sont désignés par leur pseudo, les contenus par leur clé (identifiant du prototype).
    Les champs marqués « non chargé » n'ont pas encore de colonne : voir « Points à trancher » du registre. */
 
-/** Image du prototype (prototype/assets/images/<fichier>-720.webp et -1280.webp), à charger avec MEDIA-01. */
+/** Image du prototype (prototype/assets/images/<fichier>-1280.webp, à défaut -720.webp). */
 export interface ImageDemo {
   fichier: string;
   texteAlternatif: string;
@@ -25,7 +25,7 @@ export interface MembreDemo {
   pseudo: string;
   /** Non chargé : nom affiché par le prototype (« Claire Dubois »). */
   nom: string;
-  /** Avatar du prototype (prototype/assets/avatars/<avatar>.webp), à charger avec MEDIA-01. */
+  /** Avatar du prototype (prototype/assets/avatars/<avatar>.webp). */
   avatar?: string;
   inscription: string;
   role?: Role;

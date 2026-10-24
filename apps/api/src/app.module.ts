@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { DroitsGuard } from './modules/auth/droits.js';
 import { ContactModule } from './modules/contact/contact.module.js';
 import { EmailModule } from './modules/email/email.module.js';
+import { MediasModule, StockageModule } from './modules/medias/medias.module.js';
 import { ReferentielsModule } from './modules/referentiels/referentiels.module.js';
 import { SanteModule } from './modules/sante/sante.module.js';
 
@@ -46,11 +47,13 @@ import { SanteModule } from './modules/sante/sante.module.js';
     }),
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     BaseDeDonneesModule,
+    StockageModule,
     EmailModule,
     AuthModule,
     SanteModule,
     ReferentielsModule,
     ContactModule,
+    MediasModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: FiltreErreurs },
