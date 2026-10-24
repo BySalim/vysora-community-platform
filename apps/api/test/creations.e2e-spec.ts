@@ -190,6 +190,29 @@ describe('Lecture d’une création (CREA-01, F-23, RG-30)', () => {
     await contexte.app.close();
   });
 
+  it('présente le résultat obtenu en texte ou en code, au niveau de la création', async () => {
+    const auteur = await creerMembre(contexte);
+    const { id } = await creerCreation(auteur.id);
+    const lire = async () =>
+      (
+        (await request(serveur()).get(`/api/v1/creations/${id}`).expect(200))
+          .body as CreationFicheApi
+      ).resultat;
+    expect(await lire()).toBeNull();
+    await db()
+      .update(creation)
+      .set({ resultatTexte: 'print("bonjour")', resultatNature: 'CODE', resultatNom: 'bonjour.py' })
+      .where(eq(creation.id, id));
+    expect(await lire()).toEqual({ nature: 'CODE', texte: 'print("bonjour")', nom: 'bonjour.py' });
+    // Une nature sans texte, ou un nom de fichier sans texte, est refusée par la base.
+    await expect(
+      db()
+        .update(creation)
+        .set({ resultatTexte: null, resultatNature: 'TEXTE', resultatNom: null })
+        .where(eq(creation.id, id)),
+    ).rejects.toThrow();
+  });
+
   it('présente une création publiée à un visiteur : résultat, parcours, preuve', async () => {
     const auteur = await creerMembre(contexte, { pseudo: 'lea-martin', email: 'lea@example.com' });
     const { id } = await creerCreation(auteur.id);

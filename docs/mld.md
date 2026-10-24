@@ -66,7 +66,7 @@
 
 | Table | Origine | Clés et contraintes notables |
 |---|---|---|
-| `creation` | CREATION (CLASSER, PLACER_SOUS, DERIVER, PARTICIPER) | sous-type de `contenu` ; `type_creation`, `statut_publication`, `avertissement_agent` ; `slug` ; `categorie_id`, `licence_id`, `source_id` (≠ id), `defi_id` + `rang_final_participation` ; complète si publiée |
+| `creation` | CREATION (CLASSER, PLACER_SOUS, DERIVER, PARTICIPER) | sous-type de `contenu` ; résultat en texte ou en code au niveau de la création (`resultat_texte`, `resultat_nature` TEXTE ou CODE, `resultat_nom` : nom du fichier ; nature présente si et seulement si texte présent, extension du prototype, migration `0003`) ; `type_creation`, `statut_publication`, `avertissement_agent` ; `slug` ; `categorie_id`, `licence_id`, `source_id` (≠ id), `defi_id` + `rang_final_participation` ; complète si publiée |
 | `etape` | ETAPE (COMPOSER) | `creation_id` (cascade) ; unique différé `(creation_id, ordre)` |
 | `configuration_ia` | CONFIGURATION_IA (EQUIPER, UTILISER_OUTIL, UTILISER_MODELE) | modèle référencé **ou** texte libre, jamais les deux |
 | `echange` | ECHANGE (CONTENIR, REALISER_AVEC) | unique différé `(etape_id, ordre)` ; `nb_essais ≥ 1` ; « premier essai » si un seul essai |

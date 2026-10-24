@@ -241,6 +241,10 @@ export class CreationsService {
       avertissementAgent: c.avertissementAgent,
       defi: ligne.defi,
       images: imagesDeLaCreation,
+      resultat:
+        c.resultatTexte && c.resultatNature
+          ? { nature: c.resultatNature, texte: c.resultatTexte, nom: c.resultatNom }
+          : null,
       liens,
       etapes: etapes.map((e) => ({
         id: e.id,

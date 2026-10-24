@@ -2,6 +2,7 @@ import type { CreationFicheApi, EchangeApi, EtapeApi, MediaApi } from '@vysora/s
 import { describe, expect, it } from 'vitest';
 import {
   adresseCreation,
+  apercuSansImage,
   contexteDeTravail,
   couverture,
   estPortrait,
@@ -160,5 +161,37 @@ describe('parcours', () => {
       'Les couleurs varient !',
       'Et alors ?',
     ]);
+  });
+});
+
+describe('aperçu d’un résultat sans image', () => {
+  const base = {
+    type: 'UN_PROMPT' as const,
+    etapes: [etape(1, { echanges: [echange(1, { reponse: 'Voici le texte obtenu.' })] })],
+    liens: [] as CreationFicheApi['liens'],
+    resultat: null as CreationFicheApi['resultat'],
+  };
+
+  it('suit l’ordre du prototype : texte ou code obtenu, puis démo, puis dernière réponse', () => {
+    expect(
+      apercuSansImage({ ...base, resultat: { nature: 'CODE', texte: 'x = 1', nom: 'a.py' } }),
+    ).toEqual({ sorte: 'code-auteur', texte: 'x = 1', nom: 'a.py' });
+    expect(
+      apercuSansImage({ ...base, resultat: { nature: 'TEXTE', texte: 'Lettre', nom: null } }),
+    ).toEqual({
+      sorte: 'texte-auteur',
+      texte: 'Lettre',
+    });
+    expect(
+      apercuSansImage({
+        ...base,
+        liens: [{ type: 'DEMO', url: 'https://demo.example', libelle: null }],
+      }),
+    ).toEqual({ sorte: 'lien', url: 'https://demo.example' });
+    expect(apercuSansImage(base)).toEqual({
+      sorte: 'texte-auteur',
+      texte: 'Voici le texte obtenu.',
+    });
+    expect(apercuSansImage({ ...base, etapes: [etape(1)] })).toEqual({ sorte: 'vide' });
   });
 });

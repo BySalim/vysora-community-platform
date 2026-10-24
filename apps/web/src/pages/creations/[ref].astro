@@ -10,6 +10,7 @@ import {
   type EchangeApi,
   type MediaApi,
 } from '@vysora/shared';
+import ApercuResultat from '../../components/ApercuResultat.astro';
 import AvatarMembre from '../../components/AvatarMembre.astro';
 import OutilsIa from '../../components/OutilsIa.astro';
 import Base from '../../layouts/Base.astro';
@@ -23,6 +24,7 @@ import {
   LIBELLES_TYPE,
   MOMENTS,
   adresseCreation,
+  apercuSansImage,
   contexteDeTravail,
   couverture,
   echangesPresentes,
@@ -85,9 +87,7 @@ const image = fiche ? couverture(fiche) : null;
 const echanges: EchangeApi[] = fiche ? echangesPresentes(fiche) : [];
 const premier = echanges[0];
 const promptPrincipal = premier?.prompt ?? null;
-const derniereReponse = echanges.findLast((x) => x.reponse?.trim())?.reponse ?? null;
-const demo = fiche?.liens.find((l) => ['DEMO', 'DEPOT_CODE', 'VIDEO'].includes(l.type));
-const apercu = image ? null : derniereReponse ? 'texte-auteur' : demo ? 'lien' : 'vide';
+const apercu = fiche && !image ? apercuSansImage(fiche) : null;
 const natureResultat = image
   ? fiche?.categorie?.libelle === 'Vidéo'
     ? 'Extrait du projet'
@@ -366,30 +366,7 @@ const icones = [
                 }
               />
             ) : (
-              <div class={`creation-preview preview-${apercu}`} role="img" aria-label={titre}>
-                {apercu === 'texte-auteur' && (
-                  <div class="mock-paper">
-                    {(derniereReponse ?? '')
-                      .slice(0, 1600)
-                      .split(/\n{2,}/)
-                      .map((paragraphe) => (
-                        <p>{typo(paragraphe)}</p>
-                      ))}
-                  </div>
-                )}
-                {apercu !== 'texte-auteur' && (
-                  <div class="mock-window">
-                    <div class="mock-bar">
-                      <i />
-                      {demo ? demo.url.replace(/^https:\/\//, '') : 'Résultat'}
-                    </div>
-                    <div class="mock-pad">
-                      <p class="mock-label">{titre}</p>
-                      {demo && <div class="mock-btn">Ouvrir la démo</div>}
-                    </div>
-                  </div>
-                )}
-              </div>
+              apercu && <ApercuResultat apercu={apercu} titre={titre} />
             )}
             <span class="expand-icon">
               <svg class="icon" aria-hidden="true">
@@ -896,29 +873,7 @@ const icones = [
         {image ? (
           <img src={image.url} alt={image.texteAlternatif} loading="lazy" />
         ) : (
-          <div class={`creation-preview preview-${apercu}`} role="img" aria-label={titre}>
-            {apercu === 'texte-auteur' ? (
-              <div class="mock-paper">
-                {(derniereReponse ?? '')
-                  .slice(0, 1600)
-                  .split(/\n{2,}/)
-                  .map((paragraphe) => (
-                    <p>{typo(paragraphe)}</p>
-                  ))}
-              </div>
-            ) : (
-              <div class="mock-window">
-                <div class="mock-bar">
-                  <i />
-                  {demo ? demo.url.replace(/^https:\/\//, '') : 'Résultat'}
-                </div>
-                <div class="mock-pad">
-                  <p class="mock-label">{titre}</p>
-                  {demo && <div class="mock-btn">Ouvrir la démo</div>}
-                </div>
-              </div>
-            )}
-          </div>
+          apercu && <ApercuResultat apercu={apercu} titre={titre} complet />
         )}
       </dialog>
       {essaiPossible && (

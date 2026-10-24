@@ -273,6 +273,14 @@ describe('Données de démonstration (DEMO-01, DEMO-02, pnpm db:demo)', () => {
       ).toBe(1);
     });
 
+    it('reprend les résultats en code du prototype (section « Résultat » de l’éditeur)', async () => {
+      expect(
+        await valeur(
+          sql`select resultat_nom from creation where resultat_nature = 'CODE' and titre = 'Renommer des photos d’après leur date de prise de vue'`,
+        ),
+      ).toBe('renommer_photos.py');
+    });
+
     it('sert la photo d’un membre de démonstration depuis sa session', async () => {
       const agent = request.agent(contexte.app.getHttpServer());
       await agent

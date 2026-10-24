@@ -114,6 +114,8 @@ export interface BilanDemo {
   mouvements: number;
   images: number;
   avatars: number;
+  /** Résultats en texte ou en code ajoutés à des créations déjà en base. */
+  resultats: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -132,6 +134,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     for (const c of CAS) await chargerCas(ctx, c);
     await chargerEnregistrements(ctx);
     await chargerImages(ctx, options.stockage);
+    await completerResultats(ctx);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
@@ -142,22 +145,25 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
 }
 
 export function decrireBilan(bilan: BilanDemo): string {
-  const parties = [
-    [bilan.membres, 'membres'],
-    [bilan.creations, 'créations'],
-    [bilan.reproductions, 'reproductions'],
-    [bilan.sujets, 'sujets'],
-    [bilan.messages, 'réponses du forum'],
-    [bilan.cas, 'cas Bon réflexe'],
-    [bilan.defis, 'défis'],
-    [bilan.votes, 'votes'],
-    [bilan.mouvements, 'mouvements de réputation'],
-    [bilan.images, 'images'],
-    [bilan.avatars, 'photos de profil'],
-  ] as const;
+  const parties: [number, string, string][] = [
+    [bilan.membres, 'membre', 'membres'],
+    [bilan.creations, 'création', 'créations'],
+    [bilan.reproductions, 'reproduction', 'reproductions'],
+    [bilan.sujets, 'sujet', 'sujets'],
+    [bilan.messages, 'réponse du forum', 'réponses du forum'],
+    [bilan.cas, 'cas Bon réflexe', 'cas Bon réflexe'],
+    [bilan.defis, 'défi', 'défis'],
+    [bilan.votes, 'vote', 'votes'],
+    [bilan.mouvements, 'mouvement de réputation', 'mouvements de réputation'],
+    [bilan.images, 'image', 'images'],
+    [bilan.avatars, 'photo de profil', 'photos de profil'],
+    [bilan.resultats, 'résultat en texte ou en code', 'résultats en texte ou en code'],
+  ];
   const ajoutes = parties.filter(([nombre]) => nombre > 0);
   if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
-  return `Données de démonstration chargées : ${ajoutes.map(([nombre, quoi]) => `${nombre} ${quoi}`).join(', ')}.`;
+  return `Données de démonstration chargées : ${ajoutes
+    .map(([nombre, un, plusieurs]) => `${nombre} ${nombre > 1 ? plusieurs : un}`)
+    .join(', ')}.`;
 }
 
 /* Contexte ------------------------------------------------------------------ */
@@ -180,6 +186,8 @@ interface Contexte {
   decalage: number;
   membres: Map<string, MembreCharge>;
   nouveaux: Set<string>;
+  /** Créations ajoutées par ce chargement (les autres étaient déjà en base). */
+  nouvelles: Set<string>;
   outils: Map<string, { id: number; modeles: ModeleReference[] }>;
   modeles: ModeleReference[];
   categories: Map<string, number>;
@@ -219,6 +227,7 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
     decalage: maintenant.getTime() - MAINTENANT_PROTOTYPE.getTime(),
     membres: new Map(),
     nouveaux: new Set(),
+    nouvelles: new Set(),
     outils: new Map(
       outils.map((o) => [
         o.nom,
@@ -258,6 +267,7 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
       mouvements: 0,
       images: 0,
       avatars: 0,
+      resultats: 0,
     },
   };
 }
@@ -593,6 +603,9 @@ async function chargerCreation(ctx: Contexte, c: CreationDemo): Promise<void> {
     slug: titre ? slugifier(titre) : null,
     objectif: c.objectif || null,
     limites: c.limites,
+    resultatTexte: c.resultat?.texte,
+    resultatNature: c.resultat?.nature,
+    resultatNom: c.resultat?.nom,
     statutPublication: publication ? 'PUBLIEE' : 'BROUILLON',
     datePublication: publication,
     dateConfirmationDonnees: publication,
@@ -601,6 +614,7 @@ async function chargerCreation(ctx: Contexte, c: CreationDemo): Promise<void> {
     defiId: defiLie?.id,
   });
   ctx.creations.set(c.cle, id);
+  ctx.nouvelles.add(c.cle);
   ctx.bilan.creations += 1;
 
   for (const [rang, e] of c.etapes.entries()) {
@@ -947,6 +961,24 @@ async function chargerCas(ctx: Contexte, c: CasDemo): Promise<void> {
 }
 
 /* Enregistrements ----------------------------------------------------------- */
+
+/** Résultat en texte ou en code d'une création chargée avant son arrivée dans les données. */
+async function completerResultats(ctx: Contexte): Promise<void> {
+  for (const c of CREATIONS) {
+    const id = ctx.creations.get(c.cle);
+    if (!id || !c.resultat || ctx.nouvelles.has(c.cle)) continue;
+    const [complete] = await ctx.tx
+      .update(creation)
+      .set({
+        resultatTexte: c.resultat.texte,
+        resultatNature: c.resultat.nature,
+        resultatNom: c.resultat.nom,
+      })
+      .where(and(eq(creation.id, id), isNull(creation.resultatTexte)))
+      .returning({ id: creation.id });
+    if (complete) ctx.bilan.resultats += 1;
+  }
+}
 
 /* Images (DEMO-02) ------------------------------------------------------------ */
 

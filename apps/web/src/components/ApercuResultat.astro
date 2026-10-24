@@ -1,0 +1,50 @@
+---
+/* Aperçu d'un résultat sans image (prototype/creation-page-data.js) : texte obtenu (« texte-auteur »),
+   code obtenu (« code-auteur »), démo en ligne (« lien ») ou cadre neutre (« vide »).
+   Sur la page, le texte est coupé comme dans le prototype ; en grand, il est entier. */
+import type { ApercuFiche } from '../lib/creations';
+import { typo } from '../lib/texte';
+
+interface Props {
+  apercu: ApercuFiche;
+  titre: string;
+  /** Texte entier (image agrandie) plutôt que ses 1 600 premiers caractères. */
+  complet?: boolean;
+}
+
+const { apercu, titre, complet = false } = Astro.props;
+const texte = 'texte' in apercu ? (complet ? apercu.texte : apercu.texte.slice(0, 1600)) : '';
+---
+
+<div class={`creation-preview preview-${apercu.sorte}`} role="img" aria-label={titre}>
+  {apercu.sorte === 'texte-auteur' && (
+    <div class="mock-paper">
+      {texte.split(/\n{2,}/).map((paragraphe) => (
+        <p>{typo(paragraphe)}</p>
+      ))}
+    </div>
+  )}
+  {apercu.sorte === 'code-auteur' && (
+    <div class="mock-code">
+      <div class="mock-bar">
+        <i />
+        <i />
+        <i />
+        <span>{apercu.nom ?? 'Code'}</span>
+      </div>
+      <pre>{texte}</pre>
+    </div>
+  )}
+  {(apercu.sorte === 'lien' || apercu.sorte === 'vide') && (
+    <div class="mock-window">
+      <div class="mock-bar">
+        <i />
+        {apercu.sorte === 'lien' ? apercu.url.replace(/^https:\/\//, '') : 'Résultat'}
+      </div>
+      <div class="mock-pad">
+        <p class="mock-label">{titre}</p>
+        {apercu.sorte === 'lien' && <div class="mock-btn">Ouvrir la démo</div>}
+      </div>
+    </div>
+  )}
+</div>

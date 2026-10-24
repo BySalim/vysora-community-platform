@@ -1,5 +1,6 @@
 import type {
   DifficulteCas,
+  NatureResultat,
   MotifMouvementReputation,
   ResultatReproduction,
   Role,
@@ -111,6 +112,8 @@ export interface CreationDemo {
   etapes: EtapeDemo[];
   liens?: { type: TypeLienExterne; url: string; libelle?: string }[];
   images?: ImageDemo[];
+  /** Résultat obtenu sous forme de texte ou de code (section « Résultat » de l'éditeur du prototype). */
+  resultat?: { nature: NatureResultat; texte: string; nom?: string };
   /** Votes « Utile » affichés par le prototype : au total et sur les 7 derniers jours. */
   utiles: number;
   utilesSemaine?: number;

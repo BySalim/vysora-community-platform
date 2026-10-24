@@ -18,6 +18,8 @@ export const LONGUEURS = {
   configurationContexteCache: { max: 10_000 },
   prompt: { max: 100_000 },
   reponseIa: { max: 200_000 },
+  resultatTexte: { max: 200_000 }, // résultat textuel de la création (texte ou code)
+  resultatNom: { max: 120 }, // nom du fichier de code
   momentCleExplication: { min: 20, max: 1000 }, // RG-15
   lienLibelle: { max: 100 },
   texteAlternatif: { max: 250 }, // ENF-01

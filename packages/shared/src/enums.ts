@@ -135,6 +135,10 @@ export type StatutModele = (typeof STATUTS_MODELE)[number];
 export const TYPES_CREATION = valeurs('UN_PROMPT', 'ITERATION', 'PROJET');
 export type TypeCreation = (typeof TYPES_CREATION)[number];
 
+/** Extension (prototype, Publier) : nature du résultat textuel d'une création (texte rédigé ou code). */
+export const NATURES_RESULTAT = valeurs('TEXTE', 'CODE');
+export type NatureResultat = (typeof NATURES_RESULTAT)[number];
+
 /** CV-01 */
 export const STATUTS_PUBLICATION = valeurs('BROUILLON', 'PUBLIEE');
 export type StatutPublication = (typeof STATUTS_PUBLICATION)[number];

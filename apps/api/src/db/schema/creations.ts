@@ -1,6 +1,7 @@
 import {
   AVERTISSEMENTS_AGENT,
   MODES_SELECTION,
+  NATURES_RESULTAT,
   RESULTATS_REPRODUCTION,
   STATUTS_DEFI,
   STATUTS_PUBLICATION,
@@ -67,6 +68,11 @@ export const creation = pgTable(
     slug: varchar({ length: 140 }),
     objectif: text(),
     limites: text(),
+    /** Extension (prototype, Publier) : résultat obtenu sous forme de texte ou de code, au niveau de la
+        création, à côté de ses images et de ses liens ; nom du fichier pour du code. */
+    resultatTexte: text(),
+    resultatNature: text({ enum: NATURES_RESULTAT }),
+    resultatNom: varchar({ length: 120 }),
     statutPublication: text({ enum: STATUTS_PUBLICATION }).notNull().default('BROUILLON'),
     datePublication: horodatage(),
     /** Technique (F-16) : confirmation « aucune donnée personnelle de tiers ni aucun secret ». */
@@ -92,6 +98,11 @@ export const creation = pgTable(
     index('creation_defi_idx').on(t.defiId),
     valeursPermises('creation_type_check', t.typeCreation, TYPES_CREATION),
     valeursPermises('creation_statut_publication_check', t.statutPublication, STATUTS_PUBLICATION),
+    valeursPermises('creation_resultat_nature_check', t.resultatNature, NATURES_RESULTAT),
+    check(
+      'creation_resultat_check',
+      sql`(${t.resultatTexte} is null) = (${t.resultatNature} is null) and (${t.resultatNom} is null or ${t.resultatTexte} is not null)`,
+    ),
     valeursPermises(
       'creation_avertissement_agent_check',
       t.avertissementAgent,

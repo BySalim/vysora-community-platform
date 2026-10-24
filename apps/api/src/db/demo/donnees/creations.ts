@@ -2478,6 +2478,12 @@ export const CREATIONS: CreationDemo[] = [
       'Un script qui renomme plusieurs centaines de photos d’après leur date de prise de vue, sans jamais écraser un fichier.',
     limites:
       'Les photos sans date de prise de vue, comme les captures d’écran ou les images reçues par messagerie, gardent leur nom. Le script ne parcourt pas les sous-dossiers.',
+    resultat: {
+      nature: 'CODE',
+      nom: 'renommer_photos.py',
+      texte:
+        'from pathlib import Path\nfrom PIL import Image\nimport sys\n\nDATE_EXIF = 36867  # DateTimeOriginal\n\n\ndef lire_date(photo):\n    with Image.open(photo) as image:\n        valeur = image.getexif().get_ifd(0x8769).get(DATE_EXIF)\n    if not valeur:\n        return None\n    return valeur.replace(":", "-", 2).replace(" ", "_").replace(":", "")\n\n\ndef renommer(dossier, simulation=True):\n    pris = set()\n    for photo in sorted(Path(dossier).glob("*.jpg")):\n        date = lire_date(photo)\n        if not date:\n            print("Sans date :", photo.name)\n            continue\n        nom, n = f"{date}.jpg", 2\n        while nom in pris or (photo.with_name(nom).exists() and photo.name != nom):\n            nom, n = f"{date}-{n}.jpg", n + 1\n        pris.add(nom)\n        print(photo.name, "→", nom)\n        if not simulation:\n            photo.rename(photo.with_name(nom))\n\n\nif __name__ == "__main__":\n    renommer(sys.argv[1], simulation="--renommer" not in sys.argv)\n',
+    },
     categorie: 'Code et scripts',
     licence: 'CC-BY-4.0',
     etiquettes: ['Python', 'Photos', 'EXIF'],

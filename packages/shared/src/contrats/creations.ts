@@ -1,6 +1,7 @@
 import type {
   AvertissementAgent,
   ModeSelection,
+  NatureResultat,
   ResultatReproduction,
   StatutPublication,
   TypeCreation,
@@ -161,8 +162,9 @@ export interface CreationFicheApi {
   /** RG-23 */
   avertissementAgent: AvertissementAgent;
   defi: { id: number; slug: string; titre: string } | null;
-  /** Résultat : images de la création (ILLUSTRER), puis liens externes. */
+  /** Résultat : images de la création (ILLUSTRER), texte ou code obtenu, liens externes. */
   images: MediaApi[];
+  resultat: { nature: NatureResultat; texte: string; nom: string | null } | null;
   liens: LienExterneApi[];
   etapes: EtapeApi[];
   preuve: PreuveCreationApi;

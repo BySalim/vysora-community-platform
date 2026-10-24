@@ -224,3 +224,25 @@ export const noteEchantillon = (retours: number, total: number): string =>
 
 export const motReproductions = (total: number): string =>
   total > 1 ? 'reproductions' : 'reproduction';
+
+/** Aperçu d'un résultat sans image (creation-page-data.js : texte-auteur, code-auteur, lien, vide). */
+export type ApercuFiche =
+  | { sorte: 'texte-auteur'; texte: string }
+  | { sorte: 'code-auteur'; texte: string; nom: string | null }
+  | { sorte: 'lien'; url: string }
+  | { sorte: 'vide' };
+
+/** Ce qui tient lieu de résultat quand la création n'a pas d'image (fiche-brouillon.js) : le texte ou
+    le code obtenu, sinon la démo, sinon la dernière réponse de l'IA. */
+export function apercuSansImage(
+  fiche: Pick<CreationFicheApi, 'type' | 'etapes' | 'resultat' | 'liens'>,
+): ApercuFiche {
+  if (fiche.resultat)
+    return fiche.resultat.nature === 'CODE'
+      ? { sorte: 'code-auteur', texte: fiche.resultat.texte, nom: fiche.resultat.nom }
+      : { sorte: 'texte-auteur', texte: fiche.resultat.texte };
+  const demo = fiche.liens.find((l) => ['DEMO', 'DEPOT_CODE', 'VIDEO'].includes(l.type));
+  if (demo) return { sorte: 'lien', url: demo.url };
+  const reponse = echangesPresentes(fiche).findLast((x) => x.reponse?.trim())?.reponse;
+  return reponse ? { sorte: 'texte-auteur', texte: reponse } : { sorte: 'vide' };
+}
