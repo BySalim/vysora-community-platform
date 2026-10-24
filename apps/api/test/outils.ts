@@ -6,7 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { configurerApplication } from '../src/application.js';
 import { BASE } from '../src/db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../src/db/client.js';
-import { utilisateur } from '../src/db/schema/index.js';
+import { contenu, creation, licence, utilisateur } from '../src/db/schema/index.js';
 import { DocumentsLegauxService } from '../src/modules/auth/documents-legaux.service.js';
 import { MotsDePasseService } from '../src/modules/auth/mots-de-passe.service.js';
 import { EmailService, type EmailAEnvoyer } from '../src/modules/email/email.service.js';
@@ -85,4 +85,31 @@ export function cookieRecu(
     (entetes['set-cookie'] as string[] | string | undefined) ?? [],
   );
   return cookies.find((cookie) => cookie.startsWith(`${nom}=`));
+}
+
+/** Contenu de type création, publiée par défaut, sans parcours : assez pour les interactions. */
+export async function creerCreation(
+  contexte: ApplicationDeTest,
+  auteurId: number,
+  valeurs: { publiee?: boolean; statut?: 'VISIBLE' | 'MASQUE' | 'SUPPRIME' } = {},
+): Promise<number> {
+  const publiee = valeurs.publiee ?? true;
+  const [ligne] = await contexte.db
+    .insert(contenu)
+    .values({ typeContenu: 'CREATION', auteurId, statut: valeurs.statut ?? 'VISIBLE' })
+    .returning({ id: contenu.id });
+  const [cc] = await contexte.db.select({ id: licence.id }).from(licence).limit(1);
+  if (!ligne || !cc) throw new Error('Création non créée');
+  await contexte.db.insert(creation).values({
+    id: ligne.id,
+    typeCreation: 'UN_PROMPT',
+    titre: 'Cité imaginaire entre ciel et mer',
+    slug: 'cite-imaginaire-entre-ciel-et-mer',
+    objectif: 'Une cité méditerranéenne en équilibre entre le ciel et la mer.',
+    statutPublication: publiee ? 'PUBLIEE' : 'BROUILLON',
+    datePublication: publiee ? new Date() : null,
+    categorieId: publiee ? 1 : null,
+    licenceId: cc.id,
+  });
+  return ligne.id;
 }

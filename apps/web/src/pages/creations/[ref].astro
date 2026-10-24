@@ -194,6 +194,7 @@ const icones = [
   classeMain="creation-shell"
   donneesMain={{
     affichage: fiche ? 'creation' : 'indisponible',
+    ...(fiche ? { creation: String(fiche.id) } : {}),
     statut,
     ...(auteur ? { auteur: '' } : {}),
     ...(fiche && fiche.avertissementAgent !== 'AUCUN' ? { 'alerte-agent': '' } : {}),

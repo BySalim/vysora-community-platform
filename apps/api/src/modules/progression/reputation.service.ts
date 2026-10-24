@@ -1,0 +1,91 @@
+import { Injectable } from '@nestjs/common';
+import { SEUILS, type MotifMouvementReputation } from '@vysora/shared';
+import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import type { Transaction } from '../../db/client.js';
+import { mouvementReputation, utilisateur } from '../../db/schema/index.js';
+
+/** Motifs plafonnés par jour (RG-81). */
+const MOTIFS_DE_VOTE: MotifMouvementReputation[] = ['VOTE_UTILE_RECU', 'VOTE_TESTE_RECU'];
+
+/** Début du jour (temps universel) d'une date : le plafond de RG-81 se compte par jour UTC. */
+const debutDuJour = (date: Date): Date =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+
+interface Mouvement {
+  beneficiaireId: number;
+  /** Membre dont l'action déclenche le mouvement (votant…). */
+  acteurId: number;
+  contenuId: number;
+  motif: MotifMouvementReputation;
+  points: number;
+}
+
+/* REP-01 (première partie) : mouvements de réputation (RG-80), plafond quotidien des votes reçus
+   (RG-81), annulations (RG-82). La réputation reste calculée (somme des mouvements, RG-83).
+   Chaque méthode s'exécute dans la transaction de l'action qui la déclenche. */
+@Injectable()
+export class ReputationService {
+  /** RG-80, RG-81 : crédite un vote reçu, dans la limite de 200 points de votes par jour. */
+  async crediterVote(tx: Transaction, mouvement: Mouvement, maintenant = new Date()) {
+    // Les votes reçus par un même membre sont comptés l'un après l'autre (plafond exact).
+    await tx
+      .select({ id: utilisateur.id })
+      .from(utilisateur)
+      .where(eq(utilisateur.id, mouvement.beneficiaireId))
+      .for('update');
+    // Les points accordés comptent même s'ils ont été annulés : retirer puis remettre un vote
+    // ne permet pas de dépasser le plafond.
+    const [dejaRecus] = await tx
+      .select({ points: sql<number>`coalesce(sum(${mouvementReputation.points}), 0)::int` })
+      .from(mouvementReputation)
+      .where(
+        and(
+          eq(mouvementReputation.beneficiaireId, mouvement.beneficiaireId),
+          inArray(mouvementReputation.motif, MOTIFS_DE_VOTE),
+          gte(mouvementReputation.date, debutDuJour(maintenant)),
+        ),
+      );
+    const restant = Math.max(0, SEUILS.plafondQuotidienPointsDeVotes - (dejaRecus?.points ?? 0));
+    const points = Math.min(mouvement.points, restant);
+    if (points > 0)
+      await tx.insert(mouvementReputation).values({ ...mouvement, points, date: maintenant });
+  }
+
+  /** RG-82 : mouvement opposé au dernier mouvement non annulé de cette action. */
+  async annuler(
+    tx: Transaction,
+    action: Pick<Mouvement, 'acteurId' | 'contenuId' | 'motif'>,
+    maintenant = new Date(),
+  ) {
+    const annulation = alias(mouvementReputation, 'annulation');
+    const [initial] = await tx
+      .select({
+        id: mouvementReputation.id,
+        beneficiaireId: mouvementReputation.beneficiaireId,
+        points: mouvementReputation.points,
+      })
+      .from(mouvementReputation)
+      .leftJoin(annulation, eq(annulation.mouvementAnnuleId, mouvementReputation.id))
+      .where(
+        and(
+          eq(mouvementReputation.acteurId, action.acteurId),
+          eq(mouvementReputation.contenuId, action.contenuId),
+          eq(mouvementReputation.motif, action.motif),
+          isNull(annulation.id),
+        ),
+      )
+      .orderBy(desc(mouvementReputation.date), desc(mouvementReputation.id))
+      .limit(1);
+    if (!initial) return;
+    await tx.insert(mouvementReputation).values({
+      beneficiaireId: initial.beneficiaireId,
+      points: -initial.points,
+      motif: 'ANNULATION',
+      contenuId: action.contenuId,
+      acteurId: action.acteurId,
+      mouvementAnnuleId: initial.id,
+      date: maintenant,
+    });
+  }
+}
