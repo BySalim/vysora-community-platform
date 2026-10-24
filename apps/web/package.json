@@ -15,7 +15,8 @@
   "dependencies": {
     "@astrojs/node": "^11.1.9",
     "@vysora/shared": "workspace:*",
-    "astro": "^7.4.2"
+    "astro": "^7.4.2",
+    "markdown-it": "^15.0.3"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
