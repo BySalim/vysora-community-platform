@@ -26,7 +26,7 @@ import {
   type ApplicationDeTest,
 } from './outils.js';
 
-/* DEMO-01 et DEMO-02 : données de démonstration tirées du prototype. Un seul chargement sert à toute la suite. */
+/* DEMO-01 à DEMO-03 : données de démonstration tirées du prototype. Un seul chargement sert à toute la suite. */
 
 const TABLES = [
   'utilisateur',
@@ -66,7 +66,7 @@ const IMAGES_ATTENDUES = CREATIONS.reduce(
 );
 const AVATARS_ATTENDUS = MEMBRES.filter((m) => m.avatar).length;
 
-describe('Données de démonstration (DEMO-01, DEMO-02, pnpm db:demo)', () => {
+describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => {
   let contexte: ApplicationDeTest;
   let bilan: BilanDemo;
   const charger = (environnement: 'test' | 'production', quand = maintenant) =>
@@ -271,6 +271,34 @@ describe('Données de démonstration (DEMO-01, DEMO-02, pnpm db:demo)', () => {
           sql`select count(*)::int from media m join creation c on c.id = m.contenu_id where c.titre = 'Cité imaginaire entre ciel et mer'`,
         ),
       ).toBe(1);
+    });
+
+    it('charge les captures des résultats « maquette » du prototype (DEMO-03)', async () => {
+      const captures = CREATIONS.filter((c) => c.images?.some((i) => i.capture));
+      expect(captures).toHaveLength(29);
+      // Une image par création, au niveau de la création, décrite ; captures en double résolution, jamais agrandies.
+      const lignes = (
+        await contexte.db.execute<{
+          titre: string;
+          largeur: number;
+          hauteur: number;
+          texte: string;
+        }>(
+          sql`select c.titre, m.largeur, m.hauteur, m.texte_alternatif as texte from media m join creation c on c.id = m.contenu_id where c.titre in (${sql.join(
+            captures.map((c) => sql`${c.titre}`),
+            sql`, `,
+          )})`,
+        )
+      ).rows;
+      expect(lignes).toHaveLength(29);
+      expect(lignes.find((l) => l.titre === 'Cape Coast au lever du jour')).toEqual({
+        titre: 'Cape Coast au lever du jour',
+        largeur: 1050,
+        hauteur: 1404,
+        texte: 'Cape Coast au lever du jour',
+      });
+      // Les maquettes, complétées par le fond de l'aperçu jusqu'au 4:3 : la fiche les montre sans les couper.
+      expect(lignes.filter((l) => l.largeur === 1280 && l.hauteur === 960)).toHaveLength(27);
     });
 
     it('reprend les résultats en code du prototype (section « Résultat » de l’éditeur)', async () => {

@@ -72,7 +72,9 @@ import type { CasDemo, ConfigurationDemo, CreationDemo, ImageDemo, SujetDemo } f
      les mouvements de démonstration ne sont donc pas rattachés aux votes, essais et réponses chargés.
    - DEMO-02 : les photos de profil et les images du prototype (prototype/assets) passent par le même traitement
      que les envois des membres (MEDIA-01). Elles sont ajoutées aux membres et aux créations qui n'en ont aucune,
-     y compris dans une base chargée avant leur arrivée. */
+     y compris dans une base chargée avant leur arrivée.
+   - DEMO-03 : les résultats que le prototype dessinait en HTML (réservation, tableau de bord, schéma, logo,
+     affiches typographiques…) sont des captures de ses fiches (db/demo/captures), chargées de la même façon. */
 
 /** « Maintenant » du prototype (forum-data.js, classements-data.js). */
 export const MAINTENANT_PROTOTYPE = new Date('2026-10-13T16:20:00Z');
@@ -1121,23 +1123,32 @@ function dossierAssets(): string {
   );
 }
 
-/** Image du prototype en grande taille (-1280), à défaut en 720 pixels. */
-async function lireImagePrototype(assets: string, fichier: string): Promise<Buffer> {
-  const grande = join(assets, 'images', `${fichier}-1280.webp`);
-  return readFile(existsSync(grande) ? grande : join(assets, 'images', `${fichier}-720.webp`));
+/** Captures des résultats « maquette » du prototype (DEMO-03), à côté de ce fichier ; copiées dans dist
+    par nest-cli pour `start:demo`. */
+const DOSSIER_CAPTURES = join(import.meta.dirname, 'captures');
+
+/** Capture d'un résultat « maquette » (en double résolution), ou image du prototype en grande taille
+    (-1280), à défaut en 720 pixels. */
+async function lireImagePrototype(assets: string, image: ImageDemo): Promise<Buffer> {
+  if (image.capture) return readFile(join(DOSSIER_CAPTURES, `${image.fichier}.webp`));
+  const grande = join(assets, 'images', `${image.fichier}-1280.webp`);
+  return readFile(
+    existsSync(grande) ? grande : join(assets, 'images', `${image.fichier}-720.webp`),
+  );
 }
 
 async function chargerImages(ctx: Contexte, stockage: Stockage): Promise<void> {
   const assets = dossierAssets();
   // Une même image du prototype sert parfois deux fois : préparée une fois, écrite à chaque usage.
   const preparees = new Map<string, Promise<ImagePreparee>>();
-  const preparee = (fichier: string): Promise<ImagePreparee> => {
-    let image = preparees.get(fichier);
-    if (!image) {
-      image = lireImagePrototype(assets, fichier).then(preparerImage);
-      preparees.set(fichier, image);
+  const preparee = (image: ImageDemo): Promise<ImagePreparee> => {
+    const cle = `${image.capture ? 'capture' : 'prototype'}:${image.fichier}`;
+    let preparation = preparees.get(cle);
+    if (!preparation) {
+      preparation = lireImagePrototype(assets, image).then(preparerImage);
+      preparees.set(cle, preparation);
     }
-    return image;
+    return preparation;
   };
   const joindre = async (
     image: ImageDemo,
@@ -1145,7 +1156,7 @@ async function chargerImages(ctx: Contexte, stockage: Stockage): Promise<void> {
       { contenuId: number } | { echangeId: number }
     ),
   ) => {
-    await enregistrerImage(ctx.tx, stockage, await preparee(image.fichier), {
+    await enregistrerImage(ctx.tx, stockage, await preparee(image), {
       ...rattachement,
       texteAlternatif: image.texteAlternatif,
       legende: image.legende ?? null,

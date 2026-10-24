@@ -69,6 +69,14 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'keur-awa',
+        capture: true,
+        texteAlternatif:
+          'Page de réservation d’un salon avec les créneaux libres et pris de la journée',
+      },
+    ],
     utiles: 412,
     utilesSemaine: 148,
     reproductions: {
@@ -335,6 +343,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'ventes-boutique',
+        capture: true,
+        texteAlternatif: 'Tableau de bord avec trois indicateurs et les ventes de chaque mois',
+      },
+    ],
     utiles: 288,
     utilesSemaine: 97,
   },
@@ -415,6 +430,13 @@ export const CREATIONS: CreationDemo[] = [
         moments: [],
       },
     ],
+    images: [
+      {
+        fichier: 'factures-auto',
+        capture: true,
+        texteAlternatif: 'Schéma reliant la messagerie, l’extraction des montants et le classement',
+      },
+    ],
     utiles: 197,
     utilesSemaine: 74,
   },
@@ -469,6 +491,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'lettre-motivation',
+        capture: true,
+        texteAlternatif: 'Lettre où une formule générique est remplacée par un fait précis',
+      },
+    ],
     utiles: 240,
     utilesSemaine: 69,
     reproductions: {
@@ -511,6 +540,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 0,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'avis-restaurant',
+        capture: true,
+        texteAlternatif: 'Avis d’un client et réponse du restaurant',
       },
     ],
     utiles: 205,
@@ -580,6 +616,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 3,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'doublons-contacts',
+        capture: true,
+        texteAlternatif: 'Tableau de contacts avec doublons fusionnés et cas à vérifier',
       },
     ],
     utiles: 187,
@@ -676,6 +719,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'site-traiteur',
+        capture: true,
+        texteAlternatif: 'Page d’accueil du site d’un traiteur avec un bouton de demande de devis',
+      },
+    ],
     utiles: 176,
     utilesSemaine: 41,
   },
@@ -739,6 +789,13 @@ export const CREATIONS: CreationDemo[] = [
         moments: [],
       },
     ],
+    images: [
+      {
+        fichier: 'relance-devis',
+        capture: true,
+        texteAlternatif: 'Scénario reliant le tableur, la rédaction, la validation et l’envoi',
+      },
+    ],
     utiles: 168,
     utilesSemaine: 22,
   },
@@ -788,6 +845,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 1,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'marque-cosmetique',
+        capture: true,
+        texteAlternatif: 'Cinq nuances de sable, d’ocre et d’indigo avec le nom de la marque',
       },
     ],
     utiles: 158,
@@ -885,6 +949,13 @@ export const CREATIONS: CreationDemo[] = [
         moments: [],
       },
     ],
+    images: [
+      {
+        fichier: 'extension-navigateur',
+        capture: true,
+        texteAlternatif: 'Manifeste de l’extension où la permission globale est remplacée',
+      },
+    ],
     utiles: 152,
     utilesSemaine: 44,
   },
@@ -952,6 +1023,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'formulaire-asso',
+        capture: true,
+        texteAlternatif: 'Formulaire d’inscription avec un message d’erreur sous le champ e-mail',
+      },
+    ],
     utiles: 143,
     utilesSemaine: 38,
     reproductions: {
@@ -1008,6 +1086,14 @@ export const CREATIONS: CreationDemo[] = [
             echange: 1,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'traduction-glossaire',
+        capture: true,
+        texteAlternatif:
+          'Fiche produit en français et sa traduction anglaise, avec le terme du glossaire',
       },
     ],
     utiles: 131,
@@ -1067,6 +1153,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 2,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'resume-canal',
+        capture: true,
+        texteAlternatif: 'Résumé du matin avec les décisions et les questions ouvertes',
       },
     ],
     utiles: 121,
@@ -1173,6 +1266,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'jingle-podcast',
+        capture: true,
+        texteAlternatif: 'Lecteur audio du générique de 10 secondes',
+      },
+    ],
     utiles: 109,
     utilesSemaine: 18,
     reproductions: {
@@ -1216,6 +1316,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'requete-sql',
+        capture: true,
+        texteAlternatif: 'Requête SQL avec une jointure externe sur les commandes',
+      },
+    ],
     utiles: 97,
     utilesSemaine: 61,
     reproductions: {
@@ -1257,6 +1364,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 0,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'quiz-histoire',
+        capture: true,
+        texteAlternatif: 'Question de quiz sur Tombouctou avec sa source',
       },
     ],
     utiles: 92,
@@ -1303,6 +1417,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'pluie-bamako',
+        capture: true,
+        texteAlternatif: 'Courbe des précipitations avec la saison des pluies mise en évidence',
+      },
+    ],
     utiles: 84,
     utilesSemaine: 19,
     reproductions: {
@@ -1336,6 +1457,13 @@ export const CREATIONS: CreationDemo[] = [
           },
         ],
         moments: [],
+      },
+    ],
+    images: [
+      {
+        fichier: 'voix-off',
+        capture: true,
+        texteAlternatif: 'Lecteur audio de la voix off avec un extrait du script',
       },
     ],
     utiles: 76,
@@ -1460,6 +1588,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'animation-logo',
+        capture: true,
+        texteAlternatif: 'Trois images clés de l’animation du logo et sa ligne de temps',
+      },
+    ],
     utiles: 64,
     utilesSemaine: 37,
     reproductions: {
@@ -1549,6 +1684,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 0,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'renommer-photos',
+        capture: true,
+        texteAlternatif: 'Extrait d’un script Python qui parcourt un dossier de photos',
       },
     ],
     utiles: 9,
@@ -1649,6 +1791,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 1,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'fiches-revision',
+        capture: true,
+        texteAlternatif: 'Fiches de révision empilées sur la photosynthèse',
       },
     ],
     utiles: 5,
@@ -1762,6 +1911,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 1,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'logo-karite',
+        capture: true,
+        texteAlternatif: 'Logo avec une noix de karité stylisée et le nom de la coopérative',
       },
     ],
     utiles: 3,
@@ -1952,6 +2108,14 @@ export const CREATIONS: CreationDemo[] = [
         moments: [],
       },
     ],
+    images: [
+      {
+        fichier: 'resa-terrain',
+        capture: true,
+        texteAlternatif:
+          'Calendrier de réservation de deux terrains, avec les créneaux pris et libres',
+      },
+    ],
     utiles: 233,
     utilesSemaine: 61,
   },
@@ -2011,6 +2175,13 @@ export const CREATIONS: CreationDemo[] = [
             echange: 2,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'agenda-kine',
+        capture: true,
+        texteAlternatif: 'Agenda de la journée avec des séances de 30 et 45 minutes',
       },
     ],
     utiles: 154,
@@ -2104,6 +2275,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'cours-yoga',
+        capture: true,
+        texteAlternatif: 'Cours de yoga complet avec trois personnes en liste d’attente',
+      },
+    ],
     utiles: 128,
     utilesSemaine: 20,
   },
@@ -2158,6 +2336,13 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      {
+        fichier: 'logo-tontine',
+        capture: true,
+        texteAlternatif: 'Logo de trois cercles entrelacés avec le nom Natt',
+      },
+    ],
     utiles: 118,
     utilesSemaine: 33,
     reproductions: {
@@ -2201,6 +2386,14 @@ export const CREATIONS: CreationDemo[] = [
             echange: 0,
           },
         ],
+      },
+    ],
+    images: [
+      {
+        fichier: 'trier-telechargements',
+        capture: true,
+        texteAlternatif:
+          'Simulation listant les déplacements prévus vers les dossiers Images, Documents et Archives',
       },
     ],
     utiles: 136,
@@ -2395,6 +2588,9 @@ export const CREATIONS: CreationDemo[] = [
         ],
       },
     ],
+    images: [
+      { fichier: 'affiche-4', capture: true, texteAlternatif: 'Cape Coast au lever du jour' },
+    ],
     utiles: 3,
     utilesSemaine: 3,
   },
@@ -2438,6 +2634,9 @@ export const CREATIONS: CreationDemo[] = [
           },
         ],
       },
+    ],
+    images: [
+      { fichier: 'affiche-5', capture: true, texteAlternatif: 'Grand-Bassam, la plage du phare' },
     ],
     utiles: 3,
     utilesSemaine: 3,

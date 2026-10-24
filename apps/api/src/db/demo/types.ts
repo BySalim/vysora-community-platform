@@ -15,9 +15,12 @@ import type {
    Les membres sont désignés par leur pseudo, les contenus par leur clé (identifiant du prototype).
    Les champs marqués « non chargé » n'ont pas encore de colonne : voir « Points à trancher » du registre. */
 
-/** Image du prototype (prototype/assets/images/<fichier>-1280.webp, à défaut -720.webp). */
+/** Image du prototype (prototype/assets/images/<fichier>-1280.webp, à défaut -720.webp), ou capture
+    d'un résultat « maquette » du prototype (db/demo/captures/<fichier>.webp, DEMO-03). */
 export interface ImageDemo {
   fichier: string;
+  /** Capture faite depuis le prototype : le résultat y était dessiné en HTML et en CSS. */
+  capture?: boolean;
   texteAlternatif: string;
   legende?: string;
 }
