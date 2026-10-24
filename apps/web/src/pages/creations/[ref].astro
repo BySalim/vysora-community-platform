@@ -822,9 +822,19 @@ const icones = [
                   </div>
                   <p>
                     {c.parentId !== null &&
-                      `En réponse à ${auteurDe.get(c.parentId) ?? 'un commentaire supprimé'} :\n`}
+                      `${typo(`En réponse à ${auteurDe.get(c.parentId) ?? 'un commentaire supprimé'} :`)}\n`}
                     {typo(c.corps ?? '')}
                   </p>
+                  {ACTIONS_OUVERTES.commenter && (
+                    <button
+                      class="text-button"
+                      type="button"
+                      data-reply={c.id}
+                      data-nom={c.auteur.nom}
+                    >
+                      Répondre<span class="sr-only"> à {c.auteur.nom}</span>
+                    </button>
+                  )}
                 </article>
               ),
             )
@@ -840,7 +850,7 @@ const icones = [
             <textarea
               id="comment"
               rows="3"
-              maxlength="2000"
+              maxlength="5000"
               required
               placeholder="Une question sur le prompt ou un retour sur le résultat ?"
             />

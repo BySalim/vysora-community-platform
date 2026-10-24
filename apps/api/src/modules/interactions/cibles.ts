@@ -39,7 +39,7 @@ export async function lireCible(
     .leftJoin(parent, eq(parent.id, message.sujetId))
     .where(eq(contenu.id, id));
   if (!ligne) return null;
-  const public_ =
+  const visible =
     ligne.statut === 'VISIBLE' &&
     (ligne.type !== 'CREATION' || ligne.publication === 'PUBLIEE') &&
     (ligne.type !== 'CAS_BON_REFLEXE' || ligne.validation === 'VALIDE') &&
@@ -48,7 +48,7 @@ export async function lireCible(
     id: ligne.id,
     type: ligne.type,
     auteurId: ligne.auteurId,
-    public: public_,
+    public: visible,
     typeSujet: ligne.typeSujet,
   };
 }

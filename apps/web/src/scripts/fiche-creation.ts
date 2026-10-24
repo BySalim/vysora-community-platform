@@ -1,12 +1,13 @@
 /* Fiche création (CREA-03), portée de prototype/fiche-creation.js : copie des prompts (F-24),
-   partage du lien (F-26), image en grand, fenêtres, section courante de la navigation.
-   vote « Utile » (F-30) et enregistrement (F-34). Le contenu est rendu par le serveur ; l'essai,
-   le commentaire et le signalement arrivent avec leurs tâches. */
+   partage du lien (F-26), image en grand, fenêtres, section courante de la navigation,
+   vote « Utile » (F-30), enregistrement (F-34), commentaires et réponses (F-40, F-42).
+   Le contenu est rendu par le serveur ; l'essai et le signalement arrivent avec leurs tâches. */
 
-import type { EnregistrementApi, ProblemeApi, VoteApi } from '@vysora/shared';
+import type { CommentaireApi, EnregistrementApi, ProblemeApi, VoteApi } from '@vysora/shared';
+import { dateCourte } from '../lib/texte';
 import { exiger } from './commun/acces';
 import { api } from './commun/api';
-import { $, $$, toast } from './commun/outils';
+import { $, $$, esc, icon, t, toast } from './commun/outils';
 
 /** Message d'une action refusée ou interrompue. */
 function signalerEchec(probleme: ProblemeApi): void {
@@ -14,6 +15,16 @@ function signalerEchec(probleme: ProblemeApi): void {
   else if (probleme.status === 401 || probleme.status === 403)
     toast(probleme.detail ?? probleme.title, 'alert');
   else toast('L’action n’a pas abouti. Réessayez dans un instant.', 'alert');
+}
+
+/** Commentaire ajouté sans recharger la page : même balisage que celui rendu par le serveur. */
+function ligneCommentaire(commentaire: CommentaireApi, enReponseA: string | null): string {
+  const nom = commentaire.auteur?.nom ?? '';
+  const avatar = commentaire.auteur?.avatar
+    ? `<img src="${esc(commentaire.auteur.avatar)}" alt="" width="40" height="40" decoding="async">`
+    : `<span class="avatar compte-avatar" style="width:40px;height:40px" aria-hidden="true">${icon('user', '')}</span>`;
+  const contexte = enReponseA ? `${t(`En réponse à ${enReponseA} :`)}\n` : '';
+  return `<article class="comment-row" id="commentaire-${commentaire.id}"><div class="person">${avatar}<div><strong>${esc(nom)}</strong></div><time datetime="${esc(commentaire.date)}">${esc(dateCourte(commentaire.date))}</time></div><p>${contexte}${t(commentaire.corps ?? '')}</p><button class="text-button" type="button" data-reply="${commentaire.id}" data-nom="${esc(nom)}">Répondre<span class="sr-only"> à ${esc(nom)}</span></button></article>`;
 }
 
 const fiche = $('.creation-shell');
@@ -85,6 +96,70 @@ if (fiche && fiche.dataset.affichage === 'creation') {
       enregistre ? 'Retirer des créations enregistrées' : 'Enregistrer la création',
     );
     toast(enregistre ? 'Création enregistrée.' : 'Création retirée des enregistrements.', 'folder');
+  });
+
+  /* F-40, F-42 : commenter, répondre à un commentaire. */
+  const formulaire = $<HTMLFormElement>('#comment-form');
+  const champ = $<HTMLTextAreaElement>('#comment');
+  const contexteReponse = $('#comment-context');
+  let reponseA: { id: number; nom: string } | null = null;
+  const annulerReponse = () => {
+    reponseA = null;
+    if (contexteReponse) contexteReponse.hidden = true;
+  };
+
+  $('#comments-list')?.addEventListener('click', (evenement) => {
+    const bouton = (evenement.target as Element).closest<HTMLElement>('[data-reply]');
+    if (!bouton || !contexteReponse || !champ || !exiger('contribuer', 'répondre')) return;
+    reponseA = { id: Number(bouton.dataset.reply), nom: bouton.dataset.nom ?? '' };
+    contexteReponse.hidden = false;
+    contexteReponse.textContent = `En réponse à ${reponseA.nom} `;
+    const annuler = document.createElement('button');
+    annuler.type = 'button';
+    annuler.className = 'text-button';
+    annuler.textContent = 'Annuler';
+    annuler.addEventListener('click', annulerReponse);
+    contexteReponse.append(annuler);
+    champ.focus();
+  });
+
+  champ?.addEventListener('input', () => champ.setCustomValidity(''));
+  formulaire?.addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    if (!champ || !exiger('contribuer', 'commenter')) return;
+    const signaler = (message: string) => {
+      champ.setCustomValidity(message);
+      champ.reportValidity();
+    };
+    if (!champ.value.trim()) return signaler('Écrivez votre commentaire.');
+    const bouton = $<HTMLButtonElement>('button', formulaire);
+    if (bouton) bouton.disabled = true;
+    const cible = reponseA;
+    const reponse = await api<CommentaireApi>(
+      'POST',
+      `/api/v1/creations/${creationId}/commentaires`,
+      { corps: champ.value, parentId: cible?.id ?? null },
+    );
+    if (bouton) bouton.disabled = false;
+    if (!reponse.ok) {
+      const { erreurs } = reponse.probleme;
+      if (erreurs?.corps) return signaler(erreurs.corps);
+      if (erreurs?.parentId) {
+        annulerReponse();
+        return toast(erreurs.parentId, 'alert');
+      }
+      if (reponse.probleme.code === 'LIMITE_ATTEINTE')
+        return toast(reponse.probleme.detail ?? reponse.probleme.title, 'alert');
+      return signalerEchec(reponse.probleme);
+    }
+    const liste = $('#comments-list');
+    $('.empty-detail', liste ?? undefined)?.remove();
+    liste?.insertAdjacentHTML('beforeend', ligneCommentaire(reponse.donnees, cible?.nom ?? null));
+    const compteur = $('#comment-count');
+    if (compteur) compteur.textContent = String(Number(compteur.textContent) + 1);
+    formulaire.reset();
+    annulerReponse();
+    toast('Commentaire publié.', 'message');
   });
 
   $('#share')?.addEventListener('click', () => {

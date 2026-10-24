@@ -167,7 +167,7 @@ export function identifiantDeLAdresse(partie: string | undefined): number | null
 }
 
 /** Actions de la fiche déjà portées par l'API ; les autres restent masquées jusqu'à leur tâche
-    (registre : INT-02, INT-03, MOD-01, CREA-05). */
+    (registre : INT-02, MOD-01, CREA-05). */
 export const ACTIONS_OUVERTES: Record<
   'voter' | 'enregistrer' | 'essayer' | 'commenter' | 'signaler' | 'gerer',
   boolean
@@ -175,7 +175,7 @@ export const ACTIONS_OUVERTES: Record<
   voter: true,
   enregistrer: true,
   essayer: false,
-  commenter: false,
+  commenter: true,
   signaler: false,
   gerer: false,
 };
