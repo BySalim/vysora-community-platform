@@ -167,15 +167,60 @@ export function identifiantDeLAdresse(partie: string | undefined): number | null
 }
 
 /** Actions de la fiche déjà portées par l'API ; les autres restent masquées jusqu'à leur tâche
-    (registre : INT-02, MOD-01, CREA-05). */
+    (registre : MOD-01, CREA-05). */
 export const ACTIONS_OUVERTES: Record<
   'voter' | 'enregistrer' | 'essayer' | 'commenter' | 'signaler' | 'gerer',
   boolean
 > = {
   voter: true,
   enregistrer: true,
-  essayer: false,
+  essayer: true,
   commenter: true,
   signaler: false,
   gerer: false,
 };
+
+/** Configuration proposée dans « Partager mon essai » (outil et modèle). */
+export interface ConfigurationEssai {
+  outilId: number;
+  modeleId: number | null;
+  modeleNonReference: string | null;
+  libelle: string;
+}
+
+/** Celles de la création, puis celles déjà essayées par d'autres membres, chacune une fois. */
+export function configurationsEssayables(
+  fiche: Pick<CreationFicheApi, 'etapes' | 'preuve'>,
+): ConfigurationEssai[] {
+  const resultat: ConfigurationEssai[] = [];
+  const ajouter = (c: ConfigurationEssai) => {
+    const cle = (x: ConfigurationEssai) =>
+      `${x.outilId}|${x.modeleId ?? ''}|${x.modeleNonReference ?? ''}`;
+    if (!resultat.some((x) => cle(x) === cle(c))) resultat.push(c);
+  };
+  for (const configuration of fiche.etapes.flatMap((e) => e.configurations))
+    if (configuration.outil) {
+      const modele = nomModele(configuration);
+      ajouter({
+        outilId: configuration.outil.id,
+        modeleId: configuration.modele?.id ?? null,
+        modeleNonReference: configuration.modele ? null : configuration.modeleNonReference,
+        libelle: modele ? `${configuration.outil.nom} · ${modele}` : configuration.outil.nom,
+      });
+    }
+  for (const essai of fiche.preuve.reproductions.parConfiguration)
+    ajouter({
+      outilId: essai.outil.id,
+      modeleId: essai.modeleId,
+      modeleNonReference: essai.modeleId ? null : essai.modele,
+      libelle: essai.modele ? `${essai.outil.nom} · ${essai.modele}` : essai.outil.nom,
+    });
+  return resultat;
+}
+
+/** « 3 retours détaillés sur les 44 essais déclarés. » */
+export const noteEchantillon = (retours: number, total: number): string =>
+  `${retours} ${retours > 1 ? 'retours détaillés' : 'retour détaillé'} sur ${total > 1 ? `les ${total} essais déclarés` : '1 essai déclaré'}.`;
+
+export const motReproductions = (total: number): string =>
+  total > 1 ? 'reproductions' : 'reproduction';

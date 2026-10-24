@@ -89,6 +89,8 @@ export interface LienExterneApi {
 /** Essais d'une même configuration (outil et modèle), pour comparer les modèles testés. */
 export interface EssaisParConfigurationApi {
   outil: OutilResumeApi;
+  /** Modèle du référentiel, null s'il est saisi en texte libre ou non précisé. */
+  modeleId: number | null;
   /** Nom du modèle (référentiel ou texte libre), null s'il n'est pas précisé. */
   modele: string | null;
   essais: number;

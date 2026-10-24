@@ -52,14 +52,39 @@ export class ReputationService {
       await tx.insert(mouvementReputation).values({ ...mouvement, points, date: maintenant });
   }
 
+  /** RG-80 : points accordés une seule fois pour une même action d'un membre sur un contenu
+      (reproduction déclarée, reproduction réussie reçue), tant qu'ils n'ont pas été annulés. */
+  async crediterUneFois(tx: Transaction, mouvement: Mouvement, maintenant = new Date()) {
+    if (await this.mouvementEnCours(tx, mouvement)) return;
+    await tx.insert(mouvementReputation).values({ ...mouvement, date: maintenant });
+  }
+
   /** RG-82 : mouvement opposé au dernier mouvement non annulé de cette action. */
   async annuler(
     tx: Transaction,
     action: Pick<Mouvement, 'acteurId' | 'contenuId' | 'motif'>,
     maintenant = new Date(),
   ) {
+    const initial = await this.mouvementEnCours(tx, action);
+    if (!initial) return;
+    await tx.insert(mouvementReputation).values({
+      beneficiaireId: initial.beneficiaireId,
+      points: -initial.points,
+      motif: 'ANNULATION',
+      contenuId: action.contenuId,
+      acteurId: action.acteurId,
+      mouvementAnnuleId: initial.id,
+      date: maintenant,
+    });
+  }
+
+  /** Dernier mouvement de cette action qui n'a pas été annulé. */
+  private async mouvementEnCours(
+    tx: Transaction,
+    action: Pick<Mouvement, 'acteurId' | 'contenuId' | 'motif'>,
+  ) {
     const annulation = alias(mouvementReputation, 'annulation');
-    const [initial] = await tx
+    const [mouvement] = await tx
       .select({
         id: mouvementReputation.id,
         beneficiaireId: mouvementReputation.beneficiaireId,
@@ -77,15 +102,6 @@ export class ReputationService {
       )
       .orderBy(desc(mouvementReputation.date), desc(mouvementReputation.id))
       .limit(1);
-    if (!initial) return;
-    await tx.insert(mouvementReputation).values({
-      beneficiaireId: initial.beneficiaireId,
-      points: -initial.points,
-      motif: 'ANNULATION',
-      contenuId: action.contenuId,
-      acteurId: action.acteurId,
-      mouvementAnnuleId: initial.id,
-      date: maintenant,
-    });
+    return mouvement ?? null;
   }
 }

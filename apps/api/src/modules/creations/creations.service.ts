@@ -338,6 +338,7 @@ export class CreationsService {
         resultat: reproduction.resultat,
         retour: reproduction.retour,
         outil: colonnesOutil,
+        modeleId: reproduction.modeleId,
         modele: modele.nomCourt,
         modeleNonReference: reproduction.modeleNonReference,
       })
@@ -402,12 +403,23 @@ export class CreationsService {
 
 /** Essais et réussites par outil et modèle, du plus essayé au moins essayé. */
 function essaisParConfiguration(
-  reproductions: { outil: OutilResumeApi; modele: string | null; resultat: string }[],
+  reproductions: {
+    outil: OutilResumeApi;
+    modeleId: number | null;
+    modele: string | null;
+    resultat: string;
+  }[],
 ): EssaisParConfigurationApi[] {
   const groupes = new Map<string, EssaisParConfigurationApi>();
   for (const r of reproductions) {
-    const cle = `${r.outil.id}\u0000${r.modele ?? ''}`;
-    const groupe = groupes.get(cle) ?? { outil: r.outil, modele: r.modele, essais: 0, reussis: 0 };
+    const cle = `${r.outil.id}\u0000${r.modeleId ?? ''}\u0000${r.modele ?? ''}`;
+    const groupe = groupes.get(cle) ?? {
+      outil: r.outil,
+      modeleId: r.modeleId,
+      modele: r.modele,
+      essais: 0,
+      reussis: 0,
+    };
     groupe.essais += 1;
     if (r.resultat === 'SUCCES') groupe.reussis += 1;
     groupes.set(cle, groupe);

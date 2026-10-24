@@ -10,6 +10,7 @@ export * from './schemas/contact';
 export * from './schemas/auth';
 export * from './schemas/medias';
 export * from './schemas/commentaires';
+export * from './schemas/reproductions';
 export * from './contrats/referentiels';
 export * from './contrats/session';
 export * from './contrats/medias';

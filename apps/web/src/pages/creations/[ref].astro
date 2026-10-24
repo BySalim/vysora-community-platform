@@ -30,7 +30,10 @@ import {
   extrait,
   formatResultat,
   identifiantDeLAdresse,
+  configurationsEssayables,
   longueurParcours,
+  motReproductions,
+  noteEchantillon,
   outilsUtilises,
   phrases,
   placeDuMoment,
@@ -155,6 +158,9 @@ const invitation = (() => {
     : '';
 })();
 const licenceLibre = fiche?.licence.code !== 'TOUS-DROITS-RESERVES';
+// « Partager mon essai » : seulement pour une création reproductible (RG-42) dont l'outil est connu.
+const configurationsEssai = fiche && !projet && !auteur ? configurationsEssayables(fiche) : [];
+const essaiPossible = ACTIONS_OUVERTES.essayer && configurationsEssai.length > 0;
 
 const titrePage = fiche ? (fiche.titre ?? 'Création sans titre') : 'Création indisponible';
 const description = fiche?.objectif
@@ -458,7 +464,7 @@ const icones = [
             {!projet && (
               <a href="#reproductions">
                 <strong data-repro-count>{reproductions?.total ?? 0}</strong>
-                <span>{(reproductions?.total ?? 0) > 1 ? 'reproductions' : 'reproduction'}</span>
+                <span data-repro-mot>{motReproductions(reproductions?.total ?? 0)}</span>
               </a>
             )}
             {!projet && (
@@ -470,12 +476,7 @@ const icones = [
           </div>
           <p class="proof-note">{noteDePreuve}</p>
           {!projet && (
-            <button
-              class="btn btn-secondary wide"
-              type="button"
-              data-try
-              hidden={!ACTIONS_OUVERTES.essayer}
-            >
+            <button class="btn btn-secondary wide" type="button" data-try hidden={!essaiPossible}>
               <svg class="icon" aria-hidden="true">
                 <use href="#i-repeat" />
               </svg>{' '}
@@ -721,7 +722,7 @@ const icones = [
             <h2>Reproductions de la communauté</h2>
             <p>
               <span data-repro-count>{reproductions?.total ?? 0}</span>{' '}
-              {(reproductions?.total ?? 0) > 1 ? 'reproductions' : 'reproduction'}
+              <span data-repro-mot>{motReproductions(reproductions?.total ?? 0)}</span>
               <span class="success-summary" hidden={taux === null}>
                 {' '}
                 · <span data-success>{taux ?? 0} %</span> de succès
@@ -730,7 +731,7 @@ const icones = [
                 ` · Dernier essai le ${dateCourte(reproductions.derniere)}`}
             </p>
           </div>
-          <button class="btn btn-primary" type="button" data-try hidden={!ACTIONS_OUVERTES.essayer}>
+          <button class="btn btn-primary" type="button" data-try hidden={!essaiPossible}>
             Partager mon essai
           </button>
         </div>
@@ -757,13 +758,9 @@ const icones = [
             </p>
           )}
         </div>
-        {fiche.retours.length > 0 && (
-          <p class="sample-note">
-            {fiche.retours.length}{' '}
-            {fiche.retours.length > 1 ? 'retours détaillés' : 'retour détaillé'} sur les{' '}
-            {reproductions?.total} essais déclarés.
-          </p>
-        )}
+        <p class="sample-note" data-sample-note hidden={fiche.retours.length === 0}>
+          {noteEchantillon(fiche.retours.length, reproductions?.total ?? 0)}
+        </p>
         {(reproductions?.parConfiguration.length ?? 0) > 0 && (
           <details class="compatibility">
             <summary>Comparer les modèles testés</summary>
@@ -924,6 +921,54 @@ const icones = [
           </div>
         )}
       </dialog>
+      {essaiPossible && (
+        <dialog id="try-dialog" class="creation-dialog" aria-labelledby="try-title">
+          <div class="dialog-heading">
+            <h2 id="try-title">Partager mon essai</h2>
+            <button class="icon-btn" type="button" data-close aria-label="Fermer le formulaire">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close" />
+              </svg>
+            </button>
+          </div>
+          <form id="try-form">
+            <label for="try-model">Configuration utilisée</label>
+            <select id="try-model">
+              {configurationsEssai.map((c) => (
+                <option
+                  value={JSON.stringify({
+                    outilId: c.outilId,
+                    modeleId: c.modeleId,
+                    modeleNonReference: c.modeleNonReference,
+                  })}
+                >
+                  {c.libelle}
+                </option>
+              ))}
+            </select>
+            <fieldset>
+              <legend>Votre résultat</legend>
+              <label>
+                <input type="radio" name="outcome" value="SUCCES" required /> Réussi
+              </label>
+              <label>
+                <input type="radio" name="outcome" value="PARTIEL" /> Résultat partiel
+              </label>
+              <label>
+                <input type="radio" name="outcome" value="ECHEC" /> Non reproduit
+              </label>
+            </fieldset>
+            <label for="try-note">Votre retour</label>
+            <textarea
+              id="try-note"
+              rows="3"
+              maxlength="5000"
+              placeholder="Qu’avez-vous obtenu ? Qu’avez-vous adapté ?"
+            ></textarea>
+            <button class="btn btn-primary wide">Publier mon essai</button>
+          </form>
+        </dialog>
+      )}
     </Fragment>
   )}
 </Base>

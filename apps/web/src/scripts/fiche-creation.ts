@@ -1,9 +1,17 @@
 /* Fiche création (CREA-03), portée de prototype/fiche-creation.js : copie des prompts (F-24),
    partage du lien (F-26), image en grand, fenêtres, section courante de la navigation,
-   vote « Utile » (F-30), enregistrement (F-34), commentaires et réponses (F-40, F-42).
-   Le contenu est rendu par le serveur ; l'essai et le signalement arrivent avec leurs tâches. */
+   vote « Utile » (F-30), enregistrement (F-34), reproductions (F-32), commentaires et réponses
+   (F-40, F-42). Le contenu est rendu par le serveur ; le signalement arrivera avec MOD-01. */
 
-import type { CommentaireApi, EnregistrementApi, ProblemeApi, VoteApi } from '@vysora/shared';
+import type {
+  CommentaireApi,
+  EnregistrementApi,
+  ProblemeApi,
+  ReproductionDeclareeApi,
+  ResultatReproduction,
+  VoteApi,
+} from '@vysora/shared';
+import { ISSUES, motReproductions, noteEchantillon } from '../lib/creations';
 import { dateCourte } from '../lib/texte';
 import { exiger } from './commun/acces';
 import { api } from './commun/api';
@@ -25,6 +33,19 @@ function ligneCommentaire(commentaire: CommentaireApi, enReponseA: string | null
     : `<span class="avatar compte-avatar" style="width:40px;height:40px" aria-hidden="true">${icon('user', '')}</span>`;
   const contexte = enReponseA ? `${t(`En réponse à ${enReponseA} :`)}\n` : '';
   return `<article class="comment-row" id="commentaire-${commentaire.id}"><div class="person">${avatar}<div><strong>${esc(nom)}</strong></div><time datetime="${esc(commentaire.date)}">${esc(dateCourte(commentaire.date))}</time></div><p>${contexte}${t(commentaire.corps ?? '')}</p><button class="text-button" type="button" data-reply="${commentaire.id}" data-nom="${esc(nom)}">Répondre<span class="sr-only"> à ${esc(nom)}</span></button></article>`;
+}
+
+/** Essai déclaré, ajouté en tête des retours détaillés : même balisage que le serveur. */
+function ligneEssai(essai: ReproductionDeclareeApi['reproduction']): string {
+  const nom = essai.auteur.nom;
+  const avatar = essai.auteur.avatar
+    ? `<img src="${esc(essai.auteur.avatar)}" alt="" width="40" height="40" decoding="async">`
+    : `<span class="avatar compte-avatar" style="width:40px;height:40px" aria-hidden="true">${icon('user', '')}</span>`;
+  const logo = essai.outil.logo
+    ? `<img src="/assets/logos-ia/${esc(essai.outil.logo)}.svg" alt="" width="24" height="24">`
+    : '';
+  const modele = essai.modele ? ` · ${esc(essai.modele)}` : '';
+  return `<article class="repro-item"><div class="person">${avatar}<div><strong>${esc(nom)}</strong><span>${esc(ISSUES[essai.resultat])}</span></div></div><span class="ai-tool"><span class="detail-tool-name">${logo}${esc(essai.outil.nom)}</span>${modele}</span>${essai.retour ? `<p>${t(essai.retour)}</p>` : ''}</article>`;
 }
 
 const fiche = $('.creation-shell');
@@ -160,6 +181,76 @@ if (fiche && fiche.dataset.affichage === 'creation') {
     formulaire.reset();
     annulerReponse();
     toast('Commentaire publié.', 'message');
+  });
+
+  /* F-32 : « J'ai essayé » ; indicateurs de preuve mis à jour (F-33, RG-43). */
+  const dialogueEssai = $<HTMLDialogElement>('#try-dialog');
+  const formulaireEssai = $<HTMLFormElement>('#try-form');
+  const noteEssai = $<HTMLTextAreaElement>('#try-note');
+  for (const bouton of $$('[data-try]'))
+    bouton.addEventListener('click', () => {
+      if (exiger('contribuer', 'partager votre essai')) dialogueEssai?.showModal();
+    });
+  // Le message du retour tombe dès que le retour ou le résultat change (un succès n'exige rien).
+  for (const evenement of ['input', 'change'])
+    formulaireEssai?.addEventListener(evenement, () => noteEssai?.setCustomValidity(''));
+  formulaireEssai?.addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    if (!noteEssai || !exiger('contribuer', 'partager votre essai')) return;
+    const resultat = new FormData(formulaireEssai).get('outcome') as ResultatReproduction | null;
+    const configuration = JSON.parse($<HTMLSelectElement>('#try-model')?.value ?? '{}') as object;
+    const signaler = (message: string) => {
+      noteEssai.setCustomValidity(message);
+      noteEssai.reportValidity();
+    };
+    // RG-42 : un résultat partiel ou un échec s'explique en 20 caractères au moins.
+    if (resultat && resultat !== 'SUCCES' && noteEssai.value.trim().length < 20)
+      return signaler('Décrivez ce que vous avez obtenu : 20 caractères au moins.');
+    const bouton = $<HTMLButtonElement>('button:not([data-close])', formulaireEssai);
+    if (bouton) bouton.disabled = true;
+    const reponse = await api<ReproductionDeclareeApi>(
+      'POST',
+      `/api/v1/creations/${creationId}/reproductions`,
+      { ...configuration, resultat, retour: noteEssai.value },
+    );
+    if (bouton) bouton.disabled = false;
+    if (!reponse.ok) {
+      const { erreurs } = reponse.probleme;
+      if (erreurs?.retour) return signaler(erreurs.retour);
+      return signalerEchec(reponse.probleme);
+    }
+    const { reproduction, total, tauxSucces } = reponse.donnees;
+    for (const compteur of $$('[data-repro-count]')) compteur.textContent = String(total);
+    for (const mot of $$('[data-repro-mot]')) mot.textContent = motReproductions(total);
+    for (const taux of $$('[data-success]')) taux.textContent = `${tauxSucces ?? 0} %`;
+    const resume = $('.success-summary');
+    if (resume) resume.hidden = tauxSucces === null;
+    const tauxEncart = $('.proof-stats [data-success]')?.parentElement;
+    if (tauxEncart) tauxEncart.hidden = tauxSucces === null;
+    const note = $('.proof-note');
+    if (note)
+      note.textContent =
+        total < 3
+          ? 'Taux de succès disponible à partir de 3 essais'
+          : 'Selon les retours de la communauté';
+    const liste = $('#repro-list');
+    if (liste && reproduction.retour) {
+      $('.empty-detail', liste)?.remove();
+      liste.insertAdjacentHTML('afterbegin', ligneEssai(reproduction));
+    } else {
+      const vide = $('#repro-list .empty-detail');
+      if (vide)
+        vide.textContent = 'Les essais déclarés ne comportent pas encore de retour détaillé.';
+    }
+    const echantillon = $('[data-sample-note]');
+    const retours = $$('#repro-list .repro-item').length;
+    if (echantillon && retours) {
+      echantillon.textContent = noteEchantillon(retours, total);
+      echantillon.hidden = false;
+    }
+    dialogueEssai?.close();
+    formulaireEssai.reset();
+    toast('Votre essai a été ajouté.', 'repeat');
   });
 
   $('#share')?.addEventListener('click', () => {
