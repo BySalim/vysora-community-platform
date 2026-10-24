@@ -44,7 +44,7 @@ Versions installées au démarrage du projet (octobre 2026) ; les mises à jour 
 | Qualité | oxlint, Prettier, `astro check`, `tsc` | Rapide ; `pnpm verifier` enchaîne tout. |
 | Infra de développement | Docker Compose : PostgreSQL, Mailpit | Démarrage en une commande. |
 
-Installés depuis : `@node-rs/argon2` (mots de passe, AUTH-01), `sharp` (contrôle et ré-encodage des images, MEDIA-01), `multer` (envois `multipart/form-data`, MEDIA-01). Prévus mais non installés (ajoutés quand une tâche en a besoin) : `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), un moteur de rendu Markdown assaini, Playwright (tests de navigateur).
+Installés depuis : `@node-rs/argon2` (mots de passe, AUTH-01), `sharp` (contrôle et ré-encodage des images, MEDIA-01), `multer` (envois `multipart/form-data`, MEDIA-01), `markdown-it` (rendu assaini des textes des membres par le site, SEC-01). Prévus mais non installés (ajoutés quand une tâche en a besoin) : `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), Playwright (tests de navigateur).
 
 ## 3. Arborescence
 
@@ -84,6 +84,8 @@ infra/                       configuration des services (PostgreSQL)
 
 **Affichage d'une image.** Une page reçoit de l'API des adresses `/api/v1/fichiers/<clé>.webp` (contrat `MediaApi` : déclinaisons pour `srcset`, dimensions, texte alternatif). Le navigateur les demande sur la même origine ; l'API lit le fichier dans le `Stockage` (disque, plus tard S3) et le sert en WebP, en cache sans limite (une clé ne change jamais de contenu), sans lire la session ni limite de débit. Un envoi d'image (`POST /api/v1/medias`, `multipart/form-data`) est contrôlé (signature, 5 Mo, dimensions), ré-encodé en WebP 720 et 1280 px sans métadonnées, puis enregistré sans rattachement ; l'enregistrement du contenu le rattache.
 
+**Texte rédigé par un membre.** L'API renvoie le Markdown brut ; le site le rend avec `rendreMarkdown` (`lib/markdown.ts`) : aucun HTML brut, code affiché tel quel, liens limités et marqués `ugc nofollow`. Un prompt n'est jamais rendu : il s'affiche et se copie à l'identique (F-24).
+
 **En production**, un serveur frontal (Caddy) termine HTTPS et peut envoyer `/api/*` directement à l'API ; le relais du site reste une solution de repli.
 
 ## 5. Découpage de l'API en modules
@@ -97,13 +99,13 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `contact` | Messages à l'équipe, signalement sans compte | Fait |
 | `email` | Envoi SMTP, gabarit | Fait (envoi direct, file d'attente à venir) |
 | `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes ; garde des droits (`@Exige`) | Fait : comptes, sessions, connexion, droits, vérification de l’adresse, mot de passe oublié, documents en vigueur (AUTH-01 à AUTH-06). À faire : double authentification (SEC-02), Google et GitHub (S-10) |
-| `membres` | Profil public, paramètres, export, suppression | À faire |
-| `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | À faire |
+| `membres` | Profil public, paramètres, export, suppression | Commencé : `resumes.ts` (membre présenté à côté d’un contenu : pseudo, photo, niveau) |
+| `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | Lecture d’une fiche (CREA-01, RG-30). À faire : écriture (CREA-05), variantes |
 | `decouverte` | Recherche, filtres, accueil, catégories, étiquettes | À faire |
-| `interactions` | Votes, reproductions, enregistrements, obsolescence, commentaires, vues | À faire |
+| `interactions` | Votes, reproductions, enregistrements, obsolescence, commentaires, vues | Votes (INT-01), reproductions (INT-02), commentaires (INT-03), enregistrements (S-01) ; `lireCible` dit si un contenu est visible de tous. À faire : vues (INT-04), obsolescence (S-02), ancrage (S-03) |
 | `forum` | Sujets, réponses, acceptation, fermeture | À faire |
 | `apprentissage` | Bon réflexe, défis | À faire |
-| `progression` | Réputation, niveaux, badges, classements, statistiques | À faire |
+| `progression` | Réputation, niveaux, badges, classements, statistiques | `ReputationService` : mouvements des votes et des reproductions, plafond quotidien (RG-81), annulations (RG-82). À faire : le reste de REP-01, badges, classements |
 | `notifications` | Notifications, préférences, regroupement | À faire |
 | `moderation` | Signalements, décisions, masquage automatique | À faire |
 | `administration` | Référentiels, rôles, documents légaux, journal, indicateurs | À faire |

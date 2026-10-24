@@ -16,11 +16,11 @@
 
 ## Prochaines tâches (ordre conseillé)
 
-1. **SEC-01**, puis **CREA-01** — Markdown assaini, API des créations (lecture d’une fiche d’abord : les données de démonstration sont en base avec leurs images, `pnpm db:demo`). CREA-01 rattache les images téléversées (`media`) aux créations et aux échanges ; trancher avant le point « Résultat d’un 1 prompt ou d’une itération ».
-2. **CREA-02** puis **CREA-03** — Éditeur (avec `AccesBloc` pour le visiteur ; dépôt d’images par `POST /api/v1/medias`) et fiche création (images avec `srcsetImage`).
-3. **INV-01** — Code d'invitation de la bêta (champ déjà présent, masqué, sur l'inscription).
-4. **QA-01** — Tests de navigateur (Playwright) : les comparaisons au prototype faites à la main gagneraient à être automatisées.
-5. **PROF-01** — Profil public porté : la photo de profil se change déjà par l’API (`PUT`/`DELETE /api/v1/moi/avatar`).
+1. **CREA-05**, puis **CREA-02** — Écriture des créations (brouillon, publication avec les contrôles RG-10 à RG-17, dépublication, suppression ; rattachement des images téléversées), puis l’éditeur porté. Trancher d’abord « Résultat d’un 1 prompt ou d’une itération » (Points à trancher). La fiche affichera alors les actions de l’auteur (`ACTIONS_OUVERTES.gerer`).
+2. **MOD-01** — Signalements : le bouton « Signaler un contenu » de la fiche attend son API (`ACTIONS_OUVERTES.signaler`).
+3. **DEC-01** puis **ACC-01** — Explorer et l’accueil : les fiches existent, il faut pouvoir y arriver (les liens « Explorer » mènent aujourd’hui à une page absente).
+4. **INV-01** — Code d'invitation de la bêta (champ déjà présent, masqué, sur l'inscription).
+5. **QA-01** — Tests de navigateur (Playwright) : les comparaisons au prototype (mesures à 1280 et 375 px, textes) gagneraient à être automatisées.
 
 ---
 
@@ -62,12 +62,13 @@
 | ID | Tâche | Prio | Statut | Périmètre de base · références |
 |---|---|---|---|---|
 | MEDIA-01 | Téléversement d'images | P1 | ✅ 2026-10-24 | **Fait** : module `medias` ; `POST /api/v1/medias` (`multipart/form-data` : `fichier`, `texteAlternatif`, `legende`), `PATCH` et `DELETE /api/v1/medias/:id` (image du membre, retrait seulement avant rattachement), `PUT`·`DELETE /api/v1/moi/avatar` (carré de 256 px, l’ancienne supprimée ; adresse renvoyée dans la session), `GET /api/v1/fichiers/:cle` (WebP, cache immuable, sans session ni limite de débit) ; contrôle par signature, 5 Mo, 50 Mpx, ré-encodage WebP 720 et 1280 (`sharp`, jamais d’agrandissement, animations gardées), EXIF supprimé, orientation appliquée ; `Stockage` (interface) et `StockageDisque` ; 40 images non enregistrées au plus par membre ; `pnpm medias:nettoyer` (orphelines de plus de 24 h et fichiers sans ligne). Contrat `MediaApi`, schéma `schemaDescriptionImage`, `srcsetImage` dans `@vysora/shared`. 13 tests unitaires (API), 4 (paquet partagé), 11 de bout en bout. Vérifié dans le navigateur par le relais du site (avatar de l’en-tête, envoi, refus, retrait). Le texte alternatif est exigé à la publication (CREA-01) ; le rattachement aux contenus vient avec CREA-01. **Périmètre initial** : Contrôle par signature, 5 Mo, ré-encodage WebP 720 et 1280 (`sharp`), métadonnées supprimées, texte alternatif obligatoire, stockage local derrière une interface ; nettoyage des orphelines. RG-16 |
-| CREA-01 | API des créations | P1 | ⬜ | Brouillon (3 types), enregistrement, publication avec contrôles RG-10 à RG-17 (erreurs par champ), modification (date affichée), dépublication, suppression ; limites RG-85 ; slug ; lecture d'une fiche selon la visibilité RG-30 ; index de recherche mis à jour. F-10 à F-17 |
+| CREA-01 | API des créations : lecture d’une fiche | P1 | ✅ 2026-10-24 | **Fait** : `GET /api/v1/creations/:id` (contrat `CreationFicheApi`) : résultat, parcours, preuve (RG-43, modèles réussis, comparaison par configuration), obsolescence (RG-44), 6 derniers retours détaillés, commentaires (RG-51, 200 au plus en attendant la pagination), relation du lecteur ; visibilité RG-30 (brouillon : auteur ; masquée : auteur et modération ; supprimée : personne) et RG-17 (ni commentaires ni reproductions sur un brouillon). `resumerMembres` (pseudo, photo, niveau). 7 tests de bout en bout. L’écriture est CREA-05 |
+| CREA-05 | API des créations : écriture | P1 | ⬜ | Brouillon (3 types), enregistrement, publication avec contrôles RG-10 à RG-17 (erreurs par champ), modification (date affichée), dépublication, suppression ; rattachement des images téléversées (`media`) et texte alternatif exigé à la publication ; limites RG-85 ; slug ; index de recherche mis à jour ; actions de l’auteur sur la fiche. F-10 à F-17 |
 | CREA-02 | Éditeur porté (Publier) | P1 | ⬜ | proto `nouvelle-creation.*` : trois types, configurations IA (outils et modèles proposés), échanges, étapes, moments clés, liens, images, licence, étiquettes, confirmation avant publication ; `/creations/nouvelle`, `/creations/[id]/modifier`. Îlot React permis si le script devient ingérable (ADR-0002) |
-| CREA-03 | Fiche création portée | P1 | ⬜ | proto `fiche-creation.*` : en-tête, résultat, moments clés, parcours dépliable, copie du prompt (F-24), licence, dates ; `/creations/[id]-[slug]` avec redirection si le slug change ; balises de partage (F-26). F-23 |
+| CREA-03 | Fiche création portée | P1 | ✅ 2026-10-24 | **Fait** : `/creations/[id]-[slug]` (redirection vers l’adresse lisible, 404 « Cette création n’est pas disponible » sinon), rendue par le serveur avec le balisage et `fiche-creation.css` du prototype ; présentation calculée comme `fiche-brouillon.js` (`lib/creations.ts`) ; réponses et récits en Markdown assaini ; images des échanges ; états brouillon, masquée, auteur ; avertissements agent et obsolescence ; image de partage (`og:image`) ; copie des prompts, partage, image en grand, section courante ; vote, enregistrement, essai et commentaire branchés. Mêmes mesures que le prototype à 1280 et 375 px. Restent masqués : « Signaler » (MOD-01) et les actions de l’auteur (CREA-05). 8 tests unitaires. **Périmètre initial** : proto `fiche-creation.*` : en-tête, résultat, moments clés, parcours dépliable, copie du prompt (F-24), licence, dates ; `/creations/[id]-[slug]` avec redirection si le slug change ; balises de partage (F-26). F-23 |
 | CREA-04 | Mes contenus porté | P1 | ⬜ | proto `mes-contenus.*` : brouillons, publiés (enregistrés avec INT-04). F-16, EC-15 |
 | PROF-01 | Profil public porté | P1 | ⬜ | proto `profil.*` : identité, niveau, réputation, créations publiées, statistiques publiques (calculées) ; modification de la photo (API prête : `PUT`/`DELETE /api/v1/moi/avatar`), de la biographie et du lien. F-05, F-73 |
-| SEC-01 | Rendu Markdown assaini | P1 | ⬜ | Une fonction partagée côté serveur (sans HTML brut, liens `ugc nofollow`, code affiché en texte). ENF-06 |
+| SEC-01 | Rendu Markdown assaini | P1 | ✅ 2026-10-24 | **Fait** : `apps/web/src/lib/markdown.ts` (`rendreMarkdown`, `rendreMarkdownEnLigne`) avec markdown-it : HTML brut affiché comme du texte, code jamais exécuté ni coloré, liens http(s), mailto et internes seulement (externes en `rel="ugc nofollow noopener noreferrer"`, nouvel onglet), pas d’image, titres ramenés en h4 à h6, typographie française hors code. 9 tests, dont 16 vecteurs d’injection. ENF-06 |
 
 ## Lot 3 — Découverte et preuve (P1)
 
@@ -75,10 +76,10 @@
 |---|---|---|---|---|
 | DEC-01 | Recherche et Explorer | P1 | ⬜ | proto `explorer.*` : recherche plein texte (`vysora_fr`), onglets créations / sujets / cas, filtres combinables, tris ; adresse partageable. Voir le point à trancher sur les « guides ». F-22, RG-31 |
 | ACC-01 | Accueil porté | P1 | ⬜ | proto `index.html`, `styles.css`, `app.js`, `accueil-hero.js` (page verrouillée : rendu identique) ; données réelles : créations utiles de la semaine (RG-32), récentes, plus reproduites, chiffres clés, catalogue d'outils, défi, cas, questions sans réponse ; remplace `pages/index.astro`. F-21 |
-| REP-01 | Réputation, niveaux, limites | P1 | ⬜ | Service central : mouvements (RG-80), plafond quotidien (RG-81), annulations (RG-82), réputation et niveau calculés, limites RG-85, notification de niveau atteint |
-| INT-01 | Votes « Utile » et « Testé, ça marche » | P1 | ⬜ | Vote, annulation, compteurs, interdiction sur son contenu, mouvements de réputation. F-30, F-31, RG-40, RG-41 |
-| INT-02 | Reproductions et indicateurs de preuve | P1 | ⬜ | Déclaration (outil, modèle, résultat, retour), points une fois par membre et création, taux de succès dès 3, dernière date, modèles réussis. F-32, F-33, RG-42, RG-43 |
-| INT-03 | Commentaires | P1 | ⬜ | Commenter, modifier, supprimer (« Commentaire supprimé » si réponses). F-40, RG-50, RG-51 |
+| REP-01 | Réputation, niveaux, limites | P1 | 🔄 2026-10-24 | **Fait** : `ReputationService` (module `progression`) : vote crédité dans la limite de 200 points par jour UTC (RG-81, les points annulés comptent), points une fois par action (reproductions), annulation par mouvement opposé (RG-82) ; limite RG-85 des commentaires. **Reste** : annulations à la suppression ou au masquage d’un contenu (RG-19, RG-82, avec CREA-05 et MOD-01), réponses acceptées, cas, défis ; limites RG-85 des créations et sujets ; notification de niveau atteint |
+| INT-01 | Votes « Utile » et « Testé, ça marche » | P1 | ✅ 2026-10-24 | **Fait** : `PUT`·`DELETE /api/v1/contenus/:id/votes/:type` : un vote de chaque type, jamais sur son contenu (RG-40), « Testé » réservé aux astuces (RG-41), contenu visible seulement ; points (RG-80, RG-81, RG-82). Bouton « Utile » de la fiche. 6 tests de bout en bout. Les votes de démonstration n’ont pas de mouvement : les retirer ne retire aucun point |
+| INT-02 | Reproductions et indicateurs de preuve | P1 | ✅ 2026-10-24 | **Fait** : `POST /api/v1/creations/:id/reproductions` (outil, modèle du référentiel ou libre, résultat, retour, réponse obtenue) ; RG-42 (prompts et itérations publiés, pas l’auteur, retour de 20 caractères pour un partiel ou un échec) ; points une fois par membre et par création (+2, +5) ; indicateurs à jour dans la réponse. Dialogue « Partager mon essai » de la fiche. 3 tests de bout en bout. **Suite** : images de l’essai (5 au plus, RG-16), choix d’un outil hors de ceux de la création, notification de l’auteur (NOTIF-01) |
+| INT-03 | Commentaires | P1 | ✅ 2026-10-24 | **Fait** : `POST /api/v1/creations/:id/commentaires`, `PATCH`·`DELETE /api/v1/commentaires/:id` : 1 à 5 000 caractères (RG-50), réponse rattachée au commentaire d’origine (F-42), limite RG-85, modification et suppression par l’auteur seul, « Commentaire supprimé » s’il a des réponses (RG-51). Formulaire et « Répondre » de la fiche. 4 tests de bout en bout. **Suite** : boutons « Modifier » et « Supprimer » sur la fiche (sans maquette, à concevoir), pagination, notification (NOTIF-01) |
 | INT-04 | Vues | P1 | ⬜ | Une vue par visiteur et par jour (empreinte anonyme, `vue_contenu`). F-23 |
 
 ## Lot 4 — Entraide et apprentissage (P1)
@@ -106,7 +107,7 @@
 
 | ID | Tâche | Statut | Références |
 |---|---|---|---|
-| S-01 | Enregistrer un contenu, liste « Enregistrés » | ⬜ | F-34, RG-45 |
+| S-01 | Enregistrer un contenu, liste « Enregistrés » | 🔄 2026-10-24 | **Fait** : `PUT`·`DELETE /api/v1/contenus/:id/enregistrement` (créations, sujets, cas ; une fois, RG-45), bouton de la fiche. **Reste** : la liste « Enregistrés » (avec CREA-04). F-34 |
 | S-02 | Signaler une obsolescence, bannière au-delà de 3 | ⬜ | F-35, RG-44 |
 | S-03 | Ancrage des commentaires et réponses | ⬜ | F-41, F-42 |
 | S-04 | Variantes | ⬜ | F-20, RG-21 |
@@ -164,6 +165,7 @@
 | Résultat d’un « 1 prompt » ou d’une itération | RG-11 et RG-12 demandent une réponse ou une image **jointe à l’échange** ; l’éditeur du prototype place le résultat (texte, code, fichier, lien) dans une section « Résultat » de la création, et ses données de démonstration rattachent les images à la création (8 créations publiées dans ce cas). | Pour RG-11 et RG-12, accepter une image jointe à l’échange **ou** à la création (le résultat) ; à décider avec CREA-01 |
 | Images des brouillons et des contenus masqués | Une image est servie à qui connaît son adresse : clé aléatoire de 128 bits, jamais listée, mais valable aussi pour une image de brouillon ou d’un contenu masqué par la modération. | Accepter pour la bêta (pratique courante) ; MOD-01 supprime les fichiers d’un contenu retiré ; si la confidentialité des brouillons le demande, servir les images non publiées par une route qui vérifie les droits |
 | Fichiers joints autres que des images | L’éditeur du prototype accepte tout fichier (vidéo, son, document) jusqu’à 10 Mo, 20 par création ; RG-16 n’héberge que des images de 5 Mo au plus, le reste par lien. | Suivre RG-16 dans l’éditeur (CREA-02) : refus avec la raison et proposition d’ajouter un lien |
+| Taille d’un commentaire et d’un retour d’essai | Le prototype limite le commentaire à 2 000 caractères et le retour d’essai à 1 500 ; RG-50 et RG-42 (LONGUEURS) permettent 5 000. | Suivre les règles (5 000), appliqué sur la fiche |
 | Hébergeur, domaine, fournisseur d'e-mail | — | ADR-0008 |
 | Anglais | Au lancement ou après (D-06) ? | Après l'ouverture (S-15) |
 | Licence par défaut et suppression de compte | Avis juridique demandé (D-07, D-09) | En attente |
@@ -184,6 +186,16 @@
 - Le prompt proposé dans une réponse du forum est un bloc de code du corps Markdown ; le prototype l’affiche à part, avec un bouton « Copier » (à reprendre par FORUM-02).
 - Clarisse Mendy est au niveau Apprenti affiché par défaut : 3 créations publiées et 5 brouillons ; ses 13 autres exemples (niveaux supérieurs) ne sont pas chargés.
 - Quatre cas Bon réflexe ont un auteur sous le niveau Expert (RG-70), comme dans le prototype.
+
+## Écarts au prototype (fiche création)
+
+- La fiche suit la présentation que le prototype réservait aux créations du membre (`fiche-brouillon.js`) : « Réglages », « Limites constatées », titres génériques des moments clés. Le format (« Paysage · 4:3 »), « Image de référence », « À adapter » et les titres propres de la création écrite à la main du prototype n’ont pas de données (voir « Titres dans la fiche création »).
+- Fil d’Ariane : Explorer, puis la catégorie ; le « guide » d’Explorer viendra avec DEC-01 (et le point à trancher sur les guides).
+- Ajouts sans équivalent dans le prototype : réponses obtenues et images jointes dans chaque échange, liste des liens du résultat dans l’encart « Configuration utilisée », date de dernière modification (RG-18), lien vers le texte de la licence (F-17), bannière d’obsolescence à partir de 3 membres (RG-44). Styles dans `fiche-creation-complements.css`.
+- Six retours détaillés au plus (trois dans le prototype) ; le formulaire de commentaire accepte 5 000 caractères, le retour d’essai aussi.
+- « Partager mon essai » ne propose que les configurations de la création et celles déjà essayées ; il n’est pas proposé à l’auteur ni sur un projet (RG-42).
+- Masqués jusqu’à leur API : « Signaler un contenu » (MOD-01), « Modifier », « Publier », « Dépublier », « Supprimer » de l’auteur (CREA-05). Le bandeau de la création masquée ne donne ni date ni motif (MOD-01).
+- Commentaires affichés comme du texte, comme dans le prototype (pas de Markdown).
 
 ## Écarts au prototype (images)
 
@@ -206,6 +218,14 @@
 - Le lien de vérification et celui de réinitialisation sont lus par le serveur (pas d’écran intermédiaire) ; le jeton est retiré de la barre d’adresse.
 
 ## Journal
+
+### 2026-10-24 — Fiche création et premières interactions (SEC-01, CREA-01, CREA-03, INT-01 à INT-03, S-01)
+- SEC-01 : `lib/markdown.ts` (markdown-it 15, sans HTML brut), testé contre 16 vecteurs d’injection.
+- CREA-01 (lecture) : `GET /api/v1/creations/:id`, contrat `CreationFicheApi`, visibilité RG-30 et RG-17 ; `modules/membres/resumes.ts`. CREA-01 est découpé : l’écriture devient CREA-05.
+- CREA-03 : page `/creations/[ref].astro`, `lib/creations.ts` (présentation tirée de `fiche-brouillon.js`), composants `OutilsIa` et `AvatarMembre`, script `fiche-creation.ts`. Le gabarit accepte des attributs sur `<main>`, une image de partage et un emplacement `fin` (dialogues) ; `ROUTES.creation`. Les actions sans API sont masquées par `ACTIONS_OUVERTES` (`lib/creations.ts`).
+- INT-01, INT-02, INT-03, S-01 : module `interactions` (votes, enregistrements, commentaires, reproductions) et module `progression` (`ReputationService`, première partie de REP-01). `IdentifiantPipe`, `lireCible` (visibilité d’un contenu quel que soit son type).
+- Vérifié dans le navigateur : fiche d’un prompt, d’une itération, d’un projet, d’un brouillon vu par son autrice, d’une création inconnue (404) ; mesures identiques au prototype à 1280 et 375 px ; vote, retrait, enregistrement, commentaire, réponse, essai (avec le refus d’un retour trop court). Les essais faits sur la base de développement ont été retirés (votes, commentaires, reproductions, mouvements).
+- Défaut trouvé et corrigé pendant la vérification : le message de validation du retour d’essai bloquait l’envoi quand on passait d’un échec à une réussite.
 
 ### 2026-10-24 — Images : téléversement, stockage, démonstration (MEDIA-01, DEMO-02)
 - API, module `medias` : `Stockage` (interface) et `StockageDisque` (sous-dossiers par deux caractères, clés `<128 bits>-<largeur>.webp` de forme stricte, jamais d’écrasement) ; `traitement-images.ts` (signature, 5 Mo, 50 Mpx, ré-encodage WebP 720 et 1280 avec `sharp`, EXIF supprimé, orientation appliquée, animations gardées, photo de profil carrée de 256 px) ; `ReceptionImage` (`multer` en mémoire, lu après les gardes) ; `MediasService` (envoi, description, retrait, photo de profil, nettoyage) ; routes `medias`, `moi/avatar`, `fichiers` ; `IdentifiantPipe` (commun) ; la session renvoie l’adresse de la photo ; `AuthModule` ne lit plus la session pour `/api/v1/fichiers`.

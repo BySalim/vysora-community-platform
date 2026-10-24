@@ -50,6 +50,7 @@
 - Scripts de page dans `src/scripts/<page>.ts`, importés par `<script>` dans la page ; outils communs dans `src/scripts/commun/` (`$`, `icon`, `toast`, `etats`…).
 - Styles : les fichiers du prototype restent identiques à l'original dans `src/styles/` ; les ajouts vont dans `socle.css` ou dans un fichier nouveau, jamais en modifiant un fichier repris sans le noter.
 - Icônes : `src/lib/icones.ts` et le composant `Sprite` (la page déclare ses icônes).
+- Textes rédigés par les membres : `rendreMarkdown(texte)` (`lib/markdown.ts`) dans un `set:html`, jamais un autre rendu ; les prompts s'affichent tels quels (Astro les échappe).
 - Actions réservées : dans un script, `if (!exiger('contribuer', 'voter')) return;` avant l'appel à l'API ; dans le HTML, `data-exige` et `data-exige-quoi` sur le bouton ; côté serveur, `<AccesBloc quoi="publier une création">…</AccesBloc>` autour du contenu réservé. Le site anticipe, l'API refuse avec la même `raison`.
 
 ## Données partagées
