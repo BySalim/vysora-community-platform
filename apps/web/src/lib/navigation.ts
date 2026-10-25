@@ -16,6 +16,10 @@ export const ROUTES = {
   creation: (id: number, slug?: string | null) => `/creations/${id}${slug ? `-${slug}` : ''}`,
   /** Éditeur d'une création existante (CREA-02). */
   modifierCreation: (id: number) => `/creations/${id}/modifier`,
+  /** Sujet du forum (plan du site ; page portée avec FORUM-02). */
+  sujet: (id: number, slug: string) => `/forum/${id}-${slug}`,
+  /** Cas Bon réflexe (plan du site, à confirmer ; page portée avec APP-02). */
+  casBonReflexe: (id: number, slug: string) => `/bon-reflexe/${id}-${slug}`,
   connexion: '/connexion',
   inscription: '/inscription',
   notifications: '/notifications',
