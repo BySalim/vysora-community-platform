@@ -26,13 +26,8 @@ import {
 } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees, Transaction } from '../../db/client.js';
-import {
-  commentaire,
-  contenu,
-  creation,
-  reproduction,
-  utilisateur,
-} from '../../db/schema/index.js';
+import { contenu, creation, utilisateur } from '../../db/schema/index.js';
+import { contenusLies } from '../moderation/contenus-moderes.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import {
   ecrireContenu,
@@ -174,21 +169,7 @@ export class EcritureCreationsService {
     await this.db.transaction(async (tx) => {
       await this.sienne(tx, auteurId, id);
       await tx.update(contenu).set({ statut: 'SUPPRIME' }).where(eq(contenu.id, id));
-      const [commentaires, reproductions] = [
-        await tx
-          .select({ id: commentaire.id })
-          .from(commentaire)
-          .where(eq(commentaire.creationId, id)),
-        await tx
-          .select({ id: reproduction.id })
-          .from(reproduction)
-          .where(eq(reproduction.creationId, id)),
-      ];
-      await this.reputation.annulerContenus(
-        tx,
-        [id, ...commentaires.map((c) => c.id), ...reproductions.map((r) => r.id)],
-        maintenant,
-      );
+      await this.reputation.annulerContenus(tx, await contenusLies(tx, id, 'CREATION'), maintenant);
       await retirerDeLaRecherche(tx, id);
     });
   }

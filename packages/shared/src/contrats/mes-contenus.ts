@@ -8,6 +8,7 @@ import type {
 import type { ConditionPublication } from '../publication';
 import type { MembreResumeApi, OutilResumeApi } from './creations';
 import type { MediaApi } from './medias';
+import type { MasquageApi } from './moderation';
 
 /* Contrats de la page « Mes contenus » (CREA-04, EC-15, F-16, F-34) :
    GET /api/v1/moi/creations (brouillons et créations publiées du membre connecté) et
@@ -38,6 +39,8 @@ export interface MaCreationApi {
   statut: StatutPublication;
   /** RG-30 : masquée par la modération, visible de son auteur et de la modération seulement. */
   masquee: boolean;
+  /** Date et motif du masquage (MOD-01) ; null si la création n’est pas masquée. */
+  masquage: MasquageApi | null;
   titre: string | null;
   categorie: { libelle: string; slug: string } | null;
   dateCreation: string;

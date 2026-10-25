@@ -10,6 +10,7 @@ import type {
 } from '../enums';
 import type { CodeNiveau } from '../regles';
 import type { MediaApi } from './medias';
+import type { MasquageApi } from './moderation';
 
 /* Contrat de GET /api/v1/creations/:id (CREA-01, F-23) : tout ce que la fiche création affiche,
    dans l'ordre de F-23. Les textes rédigés (objectif, limites, récits, réponses, commentaires) sont
@@ -152,6 +153,8 @@ export interface CreationFicheApi {
   statut: StatutPublication;
   /** RG-30 : masquée par la modération (visible seulement de son auteur et de la modération). */
   masquee: boolean;
+  /** Date et motif du masquage (MOD-01) ; null si la création n’est pas masquée. */
+  masquage: MasquageApi | null;
   titre: string | null;
   objectif: string | null;
   limites: string | null;
@@ -180,6 +183,12 @@ export interface CreationFicheApi {
   retours: RetourReproductionApi[];
   /** Du plus ancien au plus récent, réponses comprises. */
   commentaires: { total: number; elements: CommentaireApi[] };
-  /** Ce qui concerne la personne connectée ; null pour un visiteur. */
-  moi: { auteur: boolean; utile: boolean; enregistree: boolean } | null;
+  /** Ce qui concerne la personne connectée ; null pour un visiteur. `signalementOuvert` : elle a
+      signalé la création et la modération ne l’a pas encore examinée (RG-100). */
+  moi: {
+    auteur: boolean;
+    utile: boolean;
+    enregistree: boolean;
+    signalementOuvert: boolean;
+  } | null;
 }

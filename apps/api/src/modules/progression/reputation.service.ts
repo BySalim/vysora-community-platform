@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { SEUILS, type MotifMouvementReputation } from '@vysora/shared';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, notInArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Transaction } from '../../db/client.js';
-import { mouvementReputation, utilisateur } from '../../db/schema/index.js';
+import { contenu, mouvementReputation, utilisateur } from '../../db/schema/index.js';
 
 /** Motifs plafonnés par jour (RG-81). */
 const MOTIFS_DE_VOTE: MotifMouvementReputation[] = ['VOTE_UTILE_RECU', 'VOTE_TESTE_RECU'];
@@ -79,8 +79,8 @@ export class ReputationService {
   }
 
   /** RG-19, RG-82 : annule, action par action, les mouvements encore en cours nés de ces contenus
-      (création supprimée, avec ses commentaires et ses reproductions). Les ajustements de la
-      modération restent. */
+      (création supprimée ou masquée, avec ses commentaires et ses reproductions). Les ajustements
+      de la modération restent. */
   async annulerContenus(tx: Transaction, contenuIds: number[], maintenant = new Date()) {
     if (!contenuIds.length) return;
     const annulation = alias(mouvementReputation, 'annulation');
@@ -103,6 +103,36 @@ export class ReputationService {
     for (const { acteurId, contenuId, motif } of actions)
       if (acteurId !== null && contenuId !== null)
         await this.annuler(tx, { acteurId, contenuId, motif }, maintenant);
+  }
+
+  /** RG-82 : un contenu rétabli après masquage génère de nouveau les mouvements que le masquage a
+      annulés : ceux dont l'annulation porte la date de la décision (annulerContenus reçoit la même),
+      sauf pour un contenu supprimé depuis. Les mouvements regénérés gardent leur date d'origine : le
+      plafond du jour (RG-81) et les points de la semaine (RG-87) ne s'en trouvent pas faussés. */
+  async retablirContenus(tx: Transaction, contenuIds: number[], dateDuMasquage: Date) {
+    if (!contenuIds.length) return;
+    const initial = alias(mouvementReputation, 'initial');
+    const annules = await tx
+      .select({
+        beneficiaireId: initial.beneficiaireId,
+        points: initial.points,
+        motif: initial.motif,
+        date: initial.date,
+        contenuId: initial.contenuId,
+        acteurId: initial.acteurId,
+      })
+      .from(mouvementReputation)
+      .innerJoin(initial, eq(initial.id, mouvementReputation.mouvementAnnuleId))
+      .innerJoin(contenu, eq(contenu.id, initial.contenuId))
+      .where(
+        and(
+          eq(mouvementReputation.motif, 'ANNULATION'),
+          inArray(mouvementReputation.contenuId, contenuIds),
+          eq(mouvementReputation.date, dateDuMasquage),
+          ne(contenu.statut, 'SUPPRIME'),
+        ),
+      );
+    if (annules.length) await tx.insert(mouvementReputation).values(annules);
   }
 
   /** Dernier mouvement de cette action qui n'a pas été annulé. */

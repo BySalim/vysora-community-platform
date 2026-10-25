@@ -22,6 +22,7 @@ import {
   vote,
 } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
+import { lireMasquages } from '../moderation/masquages.js';
 import { apercusDesCreations } from './apercus.js';
 import { lireAControlerPlusieurs } from './contenu-creation.js';
 import { limitePublication } from './limite-publication.js';
@@ -72,54 +73,65 @@ export class MesCreationsService {
     if (!ids.length)
       return { elements: [], publication: await limitePublication(this.db, membre, maintenant) };
     const brouillons = lignes.filter((l) => l.statut === 'BROUILLON').map((l) => l.id);
+    const masquees = lignes.filter((l) => l.statutContenu === 'MASQUE').map((l) => l.id);
 
-    const [apercus, aControler, utiles, reproductions, commentaires, obsolescence, points, limite] =
-      await Promise.all([
-        apercusDesCreations(this.db, this.stockage, lignes),
-        lireAControlerPlusieurs(this.db, brouillons),
-        this.compter(
-          this.db
-            .select({ id: vote.contenuId, n: count() })
-            .from(vote)
-            .where(and(inArray(vote.contenuId, ids), eq(vote.typeVoteCode, 'UTILE')))
-            .groupBy(vote.contenuId),
-        ),
+    const [
+      apercus,
+      aControler,
+      utiles,
+      reproductions,
+      commentaires,
+      obsolescence,
+      points,
+      limite,
+      masquages,
+    ] = await Promise.all([
+      apercusDesCreations(this.db, this.stockage, lignes),
+      lireAControlerPlusieurs(this.db, brouillons),
+      this.compter(
         this.db
-          .select({
-            id: reproduction.creationId,
-            n: count(),
-            reussies:
-              sql<number>`count(*) filter (where ${reproduction.resultat} = 'SUCCES')`.mapWith(
-                Number,
-              ),
-          })
-          .from(reproduction)
-          .innerJoin(contenu, eq(contenu.id, reproduction.id))
-          .where(and(inArray(reproduction.creationId, ids), eq(contenu.statut, 'VISIBLE')))
-          .groupBy(reproduction.creationId),
-        this.compter(
-          this.db
-            .select({ id: commentaire.creationId, n: count() })
-            .from(commentaire)
-            .innerJoin(contenu, eq(contenu.id, commentaire.id))
-            .where(and(inArray(commentaire.creationId, ids), eq(contenu.statut, 'VISIBLE')))
-            .groupBy(commentaire.creationId),
-        ),
+          .select({ id: vote.contenuId, n: count() })
+          .from(vote)
+          .where(and(inArray(vote.contenuId, ids), eq(vote.typeVoteCode, 'UTILE')))
+          .groupBy(vote.contenuId),
+      ),
+      this.db
+        .select({
+          id: reproduction.creationId,
+          n: count(),
+          reussies:
+            sql<number>`count(*) filter (where ${reproduction.resultat} = 'SUCCES')`.mapWith(
+              Number,
+            ),
+        })
+        .from(reproduction)
+        .innerJoin(contenu, eq(contenu.id, reproduction.id))
+        .where(and(inArray(reproduction.creationId, ids), eq(contenu.statut, 'VISIBLE')))
+        .groupBy(reproduction.creationId),
+      this.compter(
         this.db
-          .select({
-            id: signalementObsolescence.contenuId,
-            modele: modele.nomCourt,
-            membres: count(),
-            depuis: min(signalementObsolescence.date),
-          })
-          .from(signalementObsolescence)
-          .innerJoin(modele, eq(modele.id, signalementObsolescence.modeleId))
-          .where(inArray(signalementObsolescence.contenuId, ids))
-          .groupBy(signalementObsolescence.contenuId, modele.id)
-          .orderBy(desc(count()), modele.nomCourt),
-        this.pointsLies(membre.id, ids),
-        limitePublication(this.db, membre, maintenant),
-      ]);
+          .select({ id: commentaire.creationId, n: count() })
+          .from(commentaire)
+          .innerJoin(contenu, eq(contenu.id, commentaire.id))
+          .where(and(inArray(commentaire.creationId, ids), eq(contenu.statut, 'VISIBLE')))
+          .groupBy(commentaire.creationId),
+      ),
+      this.db
+        .select({
+          id: signalementObsolescence.contenuId,
+          modele: modele.nomCourt,
+          membres: count(),
+          depuis: min(signalementObsolescence.date),
+        })
+        .from(signalementObsolescence)
+        .innerJoin(modele, eq(modele.id, signalementObsolescence.modeleId))
+        .where(inArray(signalementObsolescence.contenuId, ids))
+        .groupBy(signalementObsolescence.contenuId, modele.id)
+        .orderBy(desc(count()), modele.nomCourt),
+      this.pointsLies(membre.id, ids),
+      limitePublication(this.db, membre, maintenant),
+      lireMasquages(this.db, masquees, false),
+    ]);
 
     const contexte = { liensMaximum: liensMaximum(membre.etat) };
     const elements = lignes.map((l): MaCreationApi => {
@@ -134,6 +146,7 @@ export class MesCreationsService {
         typeDefini: apercu?.typeDefini ?? false,
         statut: l.statut,
         masquee: l.statutContenu === 'MASQUE',
+        masquage: masquages.get(l.id) ?? null,
         titre: l.titre,
         categorie: l.categorie,
         dateCreation: l.dateCreation.toISOString(),
