@@ -66,3 +66,32 @@ export function erreursParChamp(erreur: z.ZodError): Record<string, string> {
   }
   return champs;
 }
+
+/* Paramètres d'adresse des listes (forum, Bon réflexe). */
+
+/** Paramètre booléen d'une adresse (« true » ou « 1 »). */
+export const parametreBooleen = z
+  .enum(['true', 'false', '1', '0'], { error: 'Ce filtre est invalide.' })
+  .optional()
+  .transform((valeur) => valeur === 'true' || valeur === '1');
+
+/** Liste séparée par des virgules (« ?type=QUESTION,CLINIQUE »). */
+export const parametreListe = (message: string) =>
+  z
+    .string({ error: message })
+    .max(1000, { error: message })
+    .optional()
+    .transform((valeur) =>
+      (valeur ?? '')
+        .split(',')
+        .map((element) => element.trim())
+        .filter(Boolean),
+    );
+
+/** Numéro de page d'une liste paginée par numéros (1 par défaut). */
+export const parametrePage = z.coerce
+  .number({ error: 'Cette page n’existe pas.' })
+  .int({ error: 'Cette page n’existe pas.' })
+  .min(1, { error: 'Cette page n’existe pas.' })
+  .max(100_000, { error: 'Cette page n’existe pas.' })
+  .default(1);

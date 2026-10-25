@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TYPES_SUJET, type TypeSujet } from '../enums';
 import { composerMessage } from '../forum';
 import { LONGUEURS } from '../regles';
+import { parametreBooleen, parametreListe, parametrePage } from './commun';
 import { champEtiquettes } from './creations';
 
 /* Forum (F-50 à F-53) : sujet des cinq types, réponse, filtres de la liste. Messages du formulaire
@@ -159,25 +160,6 @@ export type SaisieMessage = z.output<typeof schemaMessage>;
 export const TRIS_SUJETS = ['recents', 'actifs', 'anciens', 'utiles', 'reproduits'] as const;
 export type TriSujets = (typeof TRIS_SUJETS)[number];
 
-/** Paramètre booléen d'une adresse (« true » ou « 1 »). */
-const booleen = z
-  .enum(['true', 'false', '1', '0'], { error: 'Ce filtre est invalide.' })
-  .optional()
-  .transform((valeur) => valeur === 'true' || valeur === '1');
-
-/** Liste séparée par des virgules (« ?type=QUESTION,CLINIQUE »). */
-const liste = (message: string) =>
-  z
-    .string({ error: message })
-    .max(1000, { error: message })
-    .optional()
-    .transform((valeur) =>
-      (valeur ?? '')
-        .split(',')
-        .map((element) => element.trim())
-        .filter(Boolean),
-    );
-
 /** Paramètres de GET /api/v1/sujets. */
 export const schemaFiltresSujets = z.object({
   /** Recherche plein texte (RG-31). */
@@ -187,7 +169,7 @@ export const schemaFiltresSujets = z.object({
     .max(200, { error: 'Votre recherche compte 200 caractères au plus.' })
     .optional()
     .transform((valeur) => valeur || null),
-  type: liste('Ce type de sujet n’existe pas.').pipe(
+  type: parametreListe('Ce type de sujet n’existe pas.').pipe(
     z.array(z.enum(TYPES_SUJET, { error: 'Ce type de sujet n’existe pas.' })),
   ),
   /** Adresse (slug) d'une étiquette. */
@@ -198,7 +180,7 @@ export const schemaFiltresSujets = z.object({
     .optional()
     .transform((valeur) => valeur || null),
   /** Adresses (slug) d'outils : l'un d'eux (« Sur mes outils »). */
-  outil: liste('Cet outil est introuvable.').pipe(
+  outil: parametreListe('Cet outil est introuvable.').pipe(
     z.array(z.string().max(80)).max(20, { error: 'Choisissez 20 outils au plus.' }),
   ),
   /** Pseudo d'un membre : ses sujets et ceux où il a répondu. */
@@ -209,19 +191,14 @@ export const schemaFiltresSujets = z.object({
     .optional()
     .transform((valeur) => valeur || null),
   /** Sans réponse d'un autre membre que l'auteur. */
-  sansReponse: booleen,
+  sansReponse: parametreBooleen,
   /** Question ou clinique sans réponse acceptée (RG-63). */
-  sansReponseAcceptee: booleen,
+  sansReponseAcceptee: parametreBooleen,
   /** Astuce, ou réponse qui propose un prompt (« Avec un prompt corrigé »). */
-  avecPrompt: booleen,
+  avecPrompt: parametreBooleen,
   /** Onglet « Sans réponse » : ouvert, et personne d'autre que l'auteur n'y a répondu. */
-  enAttente: booleen,
+  enAttente: parametreBooleen,
   tri: z.enum(TRIS_SUJETS, { error: 'Ce tri n’existe pas.' }).default('recents'),
-  page: z.coerce
-    .number({ error: 'Cette page n’existe pas.' })
-    .int({ error: 'Cette page n’existe pas.' })
-    .min(1, { error: 'Cette page n’existe pas.' })
-    .max(100_000, { error: 'Cette page n’existe pas.' })
-    .default(1),
+  page: parametrePage,
 });
 export type FiltresSujets = z.output<typeof schemaFiltresSujets>;

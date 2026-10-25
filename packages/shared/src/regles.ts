@@ -35,7 +35,17 @@ export const LONGUEURS = {
   sujetCorps: { min: 30, max: 20_000 }, // RG-60
   astuceExemple: { min: 20, max: 5000 }, // RG-61
   reponseForum: { min: 20, max: 20_000 }, // RG-64
+  // Cas Bon réflexe (MCD) ; seule l'explication générale a un minimum fixé par une règle (RG-70),
+  // les autres minimums évitent un champ obligatoire rempli d'un mot.
+  casTitre: { min: 15, max: 150 },
+  casContexte: { min: 20, max: 5000 },
+  casDemandeIa: { min: 10, max: 20_000 },
+  casReponseIa: { min: 10, max: 50_000 },
+  casQuestion: { min: 10, max: 300 },
   casExplication: { min: 50, max: 5000 }, // RG-70
+  optionLibelle: { min: 2, max: 500 },
+  optionExplication: { min: 20, max: 2000 },
+  motifRefusCas: { max: 1000 }, // RG-71 (MCD)
   etiquette: { max: 40 },
   motifDecision: { max: 2000 },
   precisionSignalement: { max: 1000 },
