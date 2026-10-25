@@ -41,3 +41,7 @@
 .creation-dialog .fc-publication-erreurs p { margin: 0; color: var(--red-700); }
 .creation-dialog .fc-publication-erreurs ul { margin: 8px 0 0; padding-left: 18px; }
 .creation-dialog .creation-off-actions { margin-top: 22px; }
+
+/* Aperçu ouvert depuis l'éditeur (CREA-02 ; prototype : fiche-brouillon.js) : la fiche seule. */
+html[data-apercu] .site-header, html[data-apercu] .site-footer, html[data-apercu] .skip-link, html[data-apercu] .toast, html[data-apercu] .etat-bandeau, html[data-apercu] .creation-status, html[data-apercu] .creation-bottom { display: none !important; }
+html[data-apercu] .creation-shell { padding-top: 28px; }

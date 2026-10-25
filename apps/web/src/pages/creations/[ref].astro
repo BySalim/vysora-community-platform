@@ -74,16 +74,22 @@ const { etat } = Astro.locals;
 const projet = fiche?.type === 'PROJET';
 const auteur = fiche?.moi?.auteur ?? false;
 const moderation = etat.session === 'membre' && etat.role !== 'membre';
+/* Aperçu ouvert depuis l'éditeur (CREA-02 ; prototype : fiche-brouillon.js, apercu) : la fiche telle
+   que les lecteurs la verront une fois publiée, sans en-tête ni actions, dans un cadre de l'éditeur. */
+const modeApercu = auteur && Astro.url.searchParams.has('apercu');
 // Une création dépubliée garde sa date de publication (RG-17) : le statut décide de ce qui s'affiche.
-const publiee = fiche?.statut === 'PUBLIEE';
+const publiee = fiche?.statut === 'PUBLIEE' || modeApercu;
 const dejaPubliee = Boolean(fiche?.datePublication);
+const datePubliee = fiche?.datePublication ?? (modeApercu ? new Date().toISOString() : null);
 const statut = !fiche
   ? 'publiee'
-  : fiche.masquee
-    ? 'masquee'
-    : fiche.statut === 'BROUILLON'
-      ? 'brouillon'
-      : 'publiee';
+  : modeApercu
+    ? 'publiee'
+    : fiche.masquee
+      ? 'masquee'
+      : fiche.statut === 'BROUILLON'
+        ? 'brouillon'
+        : 'publiee';
 
 /* Résultat ----------------------------------------------------------------- */
 const titre = fiche?.titre ? typo(fiche.titre) : 'Création sans titre';
@@ -211,7 +217,8 @@ const icones = [
     ...(fiche && fiche.avertissementAgent !== 'AUCUN' ? { 'alerte-agent': '' } : {}),
   }}
   icones={icones}
-  nonIndexee={!fiche || statut !== 'publiee'}
+  nonIndexee={!fiche || statut !== 'publiee' || modeApercu}
+  reglages={modeApercu ? { apercu: '' } : {}}
   image={image?.url}
 >
   <section class="detail-section creation-off" data-off="indisponible">
@@ -314,8 +321,8 @@ const icones = [
               <strong>{fiche.auteur.nom}</strong>
               <span>
                 {fiche.auteur.niveau.libelle} ·{' '}
-                {publiee && fiche.datePublication
-                  ? `Publié le ${dateLongue(fiche.datePublication)}`
+                {publiee && datePubliee
+                  ? `Publié le ${dateLongue(datePubliee)}`
                   : `Brouillon modifié le ${dateLongue(fiche.dateModification ?? fiche.dateCreation)}`}
               </span>
             </div>
@@ -685,14 +692,12 @@ const icones = [
             </div>
             <div>
               <dt>Publication</dt>
-              <dd>
-                {publiee && fiche.datePublication ? dateLongue(fiche.datePublication) : 'Brouillon'}
-              </dd>
+              <dd>{publiee && datePubliee ? dateLongue(datePubliee) : 'Brouillon'}</dd>
             </div>
             {publiee &&
               fiche.dateModification &&
-              fiche.datePublication &&
-              fiche.dateModification > fiche.datePublication && (
+              datePubliee &&
+              fiche.dateModification > datePubliee && (
                 <div>
                   <dt>Dernière modification</dt>
                   <dd>{dateLongue(fiche.dateModification)}</dd>

@@ -51,6 +51,8 @@ function ligneEssai(essai: ReproductionDeclareeApi['reproduction']): string {
 }
 
 const fiche = $('.creation-shell');
+// Aperçu dans l'éditeur (CREA-02) : la fiche se regarde, rien ne s'y déclenche.
+if (fiche && document.documentElement.hasAttribute('data-apercu')) fiche.inert = true;
 
 if (fiche && fiche.dataset.affichage === 'creation') {
   const agent = fiche.hasAttribute('data-alerte-agent');

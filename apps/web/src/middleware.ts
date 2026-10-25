@@ -21,7 +21,10 @@ export const onRequest = defineMiddleware(async (contexte, suite) => {
   for (const cookie of session.cookies) entetes.append('Set-Cookie', cookie);
   entetes.set('X-Content-Type-Options', 'nosniff');
   entetes.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  entetes.set('X-Frame-Options', 'DENY');
+  // L'aperçu de la fiche s'affiche dans un cadre de l'éditeur (CREA-02), sur le même site seulement.
+  const apercu =
+    contexte.url.pathname.startsWith('/creations/') && contexte.url.searchParams.has('apercu');
+  entetes.set('X-Frame-Options', apercu ? 'SAMEORIGIN' : 'DENY');
   entetes.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
   if (import.meta.env.PROD)
     entetes.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

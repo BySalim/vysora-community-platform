@@ -190,7 +190,8 @@ export const ACTIONS_OUVERTES: Record<
   signaler: false,
   /** Publier, dépublier, supprimer (CREA-05). */
   gerer: true,
-  modifier: false,
+  /** Éditeur (CREA-02). */
+  modifier: true,
 };
 
 /** Configuration proposée dans « Partager mon essai » (outil et modèle). */
