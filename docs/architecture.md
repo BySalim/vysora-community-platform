@@ -106,9 +106,9 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `interactions` | Votes, reproductions, enregistrements, obsolescence, commentaires, vues | Votes (INT-01), reproductions (INT-02), commentaires (INT-03), enregistrements et leur liste (S-01, `enregistrements.service.ts`) ; `lireCible` dit si un contenu est visible de tous. À faire : vues (INT-04), obsolescence (S-02), ancrage (S-03) |
 | `forum` | Sujets, réponses, acceptation, fermeture | À faire |
 | `apprentissage` | Bon réflexe, défis | À faire |
-| `progression` | Réputation, niveaux, badges, classements, statistiques | `ReputationService` : mouvements des votes et des reproductions, plafond quotidien (RG-81), annulations (RG-82). À faire : le reste de REP-01, badges, classements |
+| `progression` | Réputation, niveaux, badges, classements, statistiques | `ReputationService` : mouvements des votes et des reproductions, plafond quotidien (RG-81), annulations (RG-82) d’un contenu supprimé ou masqué, mouvements générés de nouveau au rétablissement. À faire : le reste de REP-01, badges, classements |
 | `notifications` | Notifications, préférences, regroupement | À faire |
-| `moderation` | Signalements, décisions, masquage automatique | À faire |
+| `moderation` | Signalements, décisions, masquage automatique | Fait (MOD-01) : signaler (`signalements.service.ts`), file de la modération et dossier d’un contenu (`dossiers.service.ts`), décisions et leurs effets : statut du contenu, clôture des signalements, points annulés ou générés de nouveau, images effacées, e-mail à l’auteur (`decisions.service.ts`, `courriels.ts`) ; contenu présenté quel que soit son type (`contenus-moderes.ts`) ; masquage lu par la fiche et « Mes contenus » (`masquages.ts`). À faire : masquage automatique (S-13), actions des administrateurs (ADM-01), notifications (NOTIF-01) |
 | `administration` | Référentiels, rôles, documents légaux, journal, indicateurs | À faire |
 | `medias` | Téléversement, contrôle, déclinaisons, stockage | Fait (MEDIA-01) : envoi et description des images, retrait avant enregistrement, photo de profil, lecture des fichiers, nettoyage (`pnpm medias:nettoyer`). Le rattachement aux créations et à leurs échanges se fait à l’enregistrement d’une création (CREA-05) |
 
