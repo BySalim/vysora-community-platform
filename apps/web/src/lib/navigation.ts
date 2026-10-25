@@ -26,6 +26,8 @@ export const ROUTES = {
   mesContenus: '/mes-contenus',
   parametres: '/parametres',
   moderation: '/moderation/signalements',
+  /** Dossier d'un contenu dans la modération (MOD-02) : l'identifiant est celui du contenu. */
+  dossierModeration: (contenuId: number) => `/moderation/signalements/${contenuId}`,
   administration: '/admin/referentiels',
   cgu: '/cgu',
   confidentialite: '/confidentialite',

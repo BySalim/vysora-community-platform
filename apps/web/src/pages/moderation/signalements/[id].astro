@@ -1,0 +1,503 @@
+---
+/* Dossier d'un contenu et décision (MOD-02, EC-19, F-91). Écran sans maquette dans le prototype,
+   conçu dans son style : tête de la fiche création, sections à filets, panneau clair du formulaire
+   (comme « Pour reproduire »). Rendu par le serveur depuis GET /api/v1/moderation/contenus/:id ; le
+   formulaire ne propose que les décisions possibles (`actions`, calculées par l'API) et
+   scripts/moderation.ts l'envoie après confirmation (POST …/decisions). RG-104 : le dossier de son
+   propre contenu n'est pas ouvert. */
+import {
+  DELAIS,
+  LIBELLES_ACTION_DECISION,
+  LIBELLES_MOTIF_SIGNALEMENT,
+  LONGUEURS,
+  raisonRefus,
+  type DecisionApi,
+  type DossierModerationApi,
+} from '@vysora/shared';
+import AccesBloc from '../../../components/AccesBloc.astro';
+import AvatarMembre from '../../../components/AvatarMembre.astro';
+import Base from '../../../layouts/Base.astro';
+import { appelerApi, ErreurApi } from '../../../lib/api';
+import {
+  EFFETS_ACTION,
+  GROUPES_ACTIONS,
+  ICONES_TYPE_CONTENU,
+  LIBELLES_STATUT_SIGNALEMENT,
+  LIBELLES_TYPE_CONTENU,
+  TITRES_DOSSIER,
+  TITRES_TEXTE,
+  adresseDuContenu,
+  lienDuContenu,
+} from '../../../lib/moderation';
+import { ROUTES } from '../../../lib/navigation';
+import { dateCourte, dateLongue, enPhrase, fmt, typo } from '../../../lib/texte';
+import '../../../styles/moderation.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const { etat } = Astro.locals;
+const raison = raisonRefus('moderer', etat);
+const id = /^\d{1,15}$/.test(Astro.params.id ?? '') ? Number(Astro.params.id) : null;
+
+const INTROUVABLE = {
+  titre: 'Ce contenu est introuvable',
+  texte: 'L’adresse ne correspond à aucun contenu : il a pu être supprimé par son auteur.',
+};
+let dossier: DossierModerationApi | null = null;
+/** Dossier qui ne s'ouvre pas : contenu introuvable, ou contenu du modérateur (RG-104). */
+let refus: { titre: string; texte: string } | null = null;
+if (raison === 'role') Astro.response.status = 403;
+else if (!raison && id === null) {
+  Astro.response.status = 404;
+  refus = INTROUVABLE;
+} else if (!raison) {
+  try {
+    dossier = await appelerApi<DossierModerationApi>(`/api/v1/moderation/contenus/${id}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || ![403, 404].includes(erreur.probleme.status))
+      throw erreur;
+    Astro.response.status = erreur.probleme.status;
+    refus =
+      erreur.probleme.status === 404
+        ? INTROUVABLE
+        : {
+            titre: 'Ce dossier ne vous revient pas',
+            texte:
+              erreur.probleme.detail ??
+              'Un autre membre de l’équipe de modération examine ce dossier.',
+          };
+  }
+}
+
+const contenu = dossier?.contenu;
+const page = contenu ? adresseDuContenu(contenu.page) : null;
+const ouverts = dossier?.signalements.filter((s) => s.statut === 'OUVERT').length ?? 0;
+const clos = (dossier?.signalements.length ?? 0) - ouverts;
+const groupes = GROUPES_ACTIONS.map((g) => ({
+  ...g,
+  actions: g.actions.filter((a) => dossier?.actions.includes(a)),
+})).filter((g) => g.actions.length);
+const STATUTS = { VISIBLE: 'Visible', MASQUE: 'Masqué', SUPPRIME: 'Supprimé' } as const;
+const AVERTISSEMENTS = {
+  AUTEUR: 'posé par l’auteur',
+  MODERATION: 'posé par la modération',
+} as const;
+const titre = contenu
+  ? typo((dossier?.texte && TITRES_DOSSIER[contenu.type]) || contenu.intitule)
+  : 'Dossier de modération';
+
+const icones = [
+  'arrow-up-right',
+  'clock',
+  'flag',
+  'history',
+  'pen',
+  'lock',
+  'info',
+  'check-circle',
+  'x-circle',
+  'circle-dot',
+  'layers',
+  'message',
+  'repeat',
+  'help',
+  'reply',
+  'bulb',
+];
+
+/** Une décision, dans le dossier comme dans l'historique de l'auteur. */
+const resumeDecision = (d: DecisionApi) =>
+  [
+    `Par ${d.decideur.nom}, le ${dateCourte(d.date)}`,
+    d.finSuspension ? `jusqu’au ${dateLongue(d.finSuspension)}` : '',
+    d.signalementsClos
+      ? `${fmt(d.signalementsClos)} ${d.signalementsClos > 1 ? 'signalements clos' : 'signalement clos'}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+---
+
+<Base
+  titre={contenu ? `Dossier : ${titre}` : titre}
+  description="Dossier d’un contenu signalé : signalements, décisions et historique de son auteur."
+  classeCorps="md"
+  icones={icones}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <nav class="md-ariane" aria-label="Fil d’Ariane">
+      <ol>
+        <li>
+          <a href={ROUTES.moderation}>File de modération</a>
+        </li>
+        <li>
+          <span aria-current="page">{id !== null ? `Dossier n° ${id}` : 'Dossier'}</span>
+        </li>
+      </ol>
+    </nav>
+    {contenu ? (
+      <>
+        <p class="md-rubrique">
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href={`#i-${ICONES_TYPE_CONTENU[contenu.type]}`} />
+          </svg>
+          {LIBELLES_TYPE_CONTENU[contenu.type]}
+          <span class="md-sep" aria-hidden="true">
+            ·
+          </span>
+          <span class:list={['md-etat', `is-${contenu.statut.toLowerCase()}`]}>
+            {STATUTS[contenu.statut]}
+          </span>
+        </p>
+        <h1 class="md-titre-dossier">{titre}</h1>
+        <div class="md-meta">
+          <div class="md-auteur">
+            <AvatarMembre membre={contenu.auteur} taille={44} />
+            <div>
+              <strong>{contenu.auteur.nom}</strong>
+              <span>
+                {`@${contenu.auteur.pseudo} · ${contenu.auteur.niveau.libelle} · créé le ${dateCourte(contenu.dateCreation)}`}
+              </span>
+            </div>
+          </div>
+          <div class="md-meta-actions">
+            {page && contenu.statut !== 'SUPPRIME' && (
+              <a class="btn btn-secondary btn-sm" href={page}>
+                {lienDuContenu(contenu.type)}
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-arrow-up-right" />
+                </svg>
+              </a>
+            )}
+            {groupes.length > 0 && (
+              <a class="btn btn-primary btn-sm md-aller" href="#md-decision">
+                Prendre une décision
+              </a>
+            )}
+          </div>
+        </div>
+        {dossier?.nouvelExamen && contenu.dateModification && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-pen" />
+            </svg>
+            <span>
+              <b>Nouvel examen demandé.</b>
+              {` L’auteur a modifié ce contenu le ${dateLongue(contenu.dateModification)}, après son masquage.`}
+            </span>
+          </p>
+        )}
+        {dossier?.suspensionJusqua && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-lock" />
+            </svg>
+            <span>
+              <b>{`Compte de l’auteur suspendu jusqu’au ${dateLongue(dossier.suspensionJusqua)}.`}</b>
+              {typo(
+                ' Une nouvelle suspension court à partir d’aujourd’hui ; la fin la plus tardive s’applique.',
+              )}
+            </span>
+          </p>
+        )}
+        {dossier?.avertissementAgent && dossier.avertissementAgent !== 'AUCUN' && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-info" />
+            </svg>
+            <span>
+              <b>{typo('Avertissement « instructions pour agent »')}</b>
+              {` ${AVERTISSEMENTS[dossier.avertissementAgent]}.`}
+            </span>
+          </p>
+        )}
+      </>
+    ) : (
+      <h1>Dossier de modération</h1>
+    )}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="moderer" quoi="accéder à la file de modération" />
+    </div>
+  ) : refus ? (
+    <div class="container md-file">
+      <div class="md-vide">
+        <span class="md-vide-icone" aria-hidden="true">
+          <svg class="icon">
+            <use href="#i-flag" />
+          </svg>
+        </span>
+        <h2>{refus.titre}</h2>
+        <p>{typo(refus.texte)}</p>
+        <a class="btn btn-secondary" href={ROUTES.moderation}>
+          Revenir à la file
+        </a>
+      </div>
+    </div>
+  ) : (
+    dossier &&
+    contenu && (
+      <div class="container md-dossier">
+        <div class="md-principal">
+          {dossier.texte && (
+            <section class="md-section" aria-labelledby="md-texte-titre">
+              <h2 id="md-texte-titre">{TITRES_TEXTE[contenu.type] ?? 'Texte'}</h2>
+              <p class="md-texte">{typo(dossier.texte)}</p>
+            </section>
+          )}
+
+          <section class="md-section" aria-labelledby="md-signalements-titre">
+            <div class="md-section-tete">
+              <h2 id="md-signalements-titre">Signalements</h2>
+              <p>
+                {dossier.signalements.length
+                  ? [
+                      ouverts ? `${fmt(ouverts)} ${ouverts > 1 ? 'ouverts' : 'ouvert'}` : '',
+                      clos ? `${fmt(clos)} clos` : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : ''}
+              </p>
+            </div>
+            {dossier.signalements.length ? (
+              <ol class="md-fil">
+                {dossier.signalements.map((s) => (
+                  <li class:list={['md-ligne', { 'is-ouvert': s.statut === 'OUVERT' }]}>
+                    <AvatarMembre membre={s.signaleur} taille={32} />
+                    <div class="md-ligne-corps">
+                      <p class="md-ligne-haut">
+                        <b>{LIBELLES_MOTIF_SIGNALEMENT[s.motif]}</b>
+                        <span>{`${s.signaleur.nom} · ${dateCourte(s.date)}`}</span>
+                        <span
+                          class:list={['md-statut-signalement', `is-${s.statut.toLowerCase()}`]}
+                        >
+                          <svg class="icon icon-xs" aria-hidden="true">
+                            <use
+                              href={
+                                s.statut === 'OUVERT'
+                                  ? '#i-circle-dot'
+                                  : s.statut === 'FONDE'
+                                    ? '#i-check-circle'
+                                    : '#i-x-circle'
+                              }
+                            />
+                          </svg>
+                          {LIBELLES_STATUT_SIGNALEMENT[s.statut]}
+                        </span>
+                      </p>
+                      {s.precision && <p class="md-ligne-texte">{typo(s.precision)}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p class="md-rien">
+                {typo(
+                  'Aucun signalement : ce contenu est examiné à la demande de la modération ou de son auteur.',
+                )}
+              </p>
+            )}
+          </section>
+
+          <section class="md-section" aria-labelledby="md-decisions-titre">
+            <div class="md-section-tete">
+              <h2 id="md-decisions-titre">Décisions sur ce contenu</h2>
+            </div>
+            {dossier.decisions.length ? (
+              <ol class="md-fil">
+                {dossier.decisions.map((d) => (
+                  <li class="md-ligne">
+                    <AvatarMembre membre={d.decideur} taille={32} />
+                    <div class="md-ligne-corps">
+                      <p class="md-ligne-haut">
+                        <b>{typo(LIBELLES_ACTION_DECISION[d.action])}</b>
+                        <span>{resumeDecision(d)}</span>
+                        <span class="md-ref">{`Décision n° ${d.id}`}</span>
+                      </p>
+                      <p class="md-ligne-texte">{typo(enPhrase(d.motif))}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p class="md-rien">Aucune décision n’a encore été prise sur ce contenu.</p>
+            )}
+          </section>
+
+          <section class="md-section" aria-labelledby="md-historique-titre">
+            <div class="md-section-tete">
+              <h2 id="md-historique-titre">Historique de l’auteur</h2>
+              <p>Décisions qui ont visé l’auteur ou ses autres contenus</p>
+            </div>
+            {dossier.historiqueAuteur.length ? (
+              <ol class="md-fil">
+                {dossier.historiqueAuteur.map((d) => (
+                  <li class="md-ligne">
+                    <span class="md-ligne-icone" aria-hidden="true">
+                      <svg class="icon icon-sm">
+                        <use href="#i-history" />
+                      </svg>
+                    </span>
+                    <div class="md-ligne-corps">
+                      <p class="md-ligne-haut">
+                        <b>{typo(LIBELLES_ACTION_DECISION[d.action])}</b>
+                        <span>{resumeDecision(d)}</span>
+                      </p>
+                      {d.contenuId !== null && d.intituleContenu && (
+                        <p class="md-ligne-sur">
+                          Sur{' '}
+                          <a href={ROUTES.dossierModeration(d.contenuId)}>
+                            {typo(d.intituleContenu)}
+                          </a>
+                        </p>
+                      )}
+                      <p class="md-ligne-texte">{typo(enPhrase(d.motif))}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p class="md-rien">Aucune décision n’a visé cet auteur jusqu’ici.</p>
+            )}
+          </section>
+        </div>
+
+        <aside class="md-decision" id="md-decision" aria-labelledby="md-decision-titre">
+          <h2 id="md-decision-titre">Prendre une décision</h2>
+          {groupes.length ? (
+            <form
+              class="md-form"
+              novalidate
+              autocomplete="off"
+              data-md-form
+              data-contenu={contenu.id}
+              data-ouverts={ouverts}
+            >
+              <fieldset class="md-actions">
+                <legend class="sr-only">Décision</legend>
+                {groupes.map((groupe) => (
+                  <div class="md-groupe" role="group" aria-label={groupe.titre}>
+                    <p class="md-groupe-titre" aria-hidden="true">
+                      {groupe.titre}
+                    </p>
+                    {groupe.actions.map((action) => (
+                      <label class="md-choix">
+                        <input type="radio" name="action" value={action} required />
+                        <span>
+                          <b>{typo(LIBELLES_ACTION_DECISION[action])}</b>
+                          <span>{typo(EFFETS_ACTION[action])}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </fieldset>
+              <p class="md-erreur" id="md-action-erreur" data-md-erreur="action" hidden />
+
+              <div class="md-champ" data-md-duree hidden>
+                <label for="md-duree">Durée de la suspension</label>
+                <div class="md-duree">
+                  <input
+                    id="md-duree"
+                    name="dureeJours"
+                    type="number"
+                    inputmode="numeric"
+                    min={DELAIS.suspensionJours.min}
+                    max={DELAIS.suspensionJours.max}
+                    step="1"
+                    aria-describedby="md-duree-aide md-duree-erreur"
+                  />
+                  <span>jours</span>
+                </div>
+                <p class="md-aide" id="md-duree-aide" data-md-fin>
+                  {`De ${DELAIS.suspensionJours.min} à ${DELAIS.suspensionJours.max} jours.`}
+                </p>
+                <p class="md-erreur" id="md-duree-erreur" data-md-erreur="dureeJours" hidden />
+              </div>
+
+              <div class="md-champ">
+                <label for="md-motif">Motif communiqué à l’auteur</label>
+                <textarea
+                  id="md-motif"
+                  name="motif"
+                  rows="5"
+                  maxlength={LONGUEURS.motifDecision.max}
+                  required
+                  aria-describedby="md-motif-aide md-motif-erreur"
+                />
+                <p class="md-aide" id="md-motif-aide">
+                  <span>
+                    {typo(
+                      'Envoyé à l’auteur par e-mail, sauf pour « Aucune mesure », et conservé avec la décision.',
+                    )}
+                  </span>
+                  <span class="md-compteur" data-md-compteur>
+                    {`0 / ${fmt(LONGUEURS.motifDecision.max)}`}
+                  </span>
+                </p>
+                <p class="md-erreur" id="md-motif-erreur" data-md-erreur="motif" hidden />
+              </div>
+
+              <p class="md-issue" data-md-issue hidden />
+              <p class="md-erreur" data-md-erreur="general" role="alert" hidden />
+              <button class="btn btn-primary md-envoyer" type="submit">
+                Enregistrer la décision
+              </button>
+              <p class="md-note">
+                {typo(
+                  'Une décision ne se modifie plus : une erreur se corrige par une nouvelle décision.',
+                )}
+              </p>
+            </form>
+          ) : (
+            <p class="md-rien">
+              {typo(
+                'Ce contenu a été supprimé : plus aucune décision n’est possible. Son dossier reste consultable.',
+              )}
+            </p>
+          )}
+        </aside>
+      </div>
+    )
+  )}
+
+  <Fragment slot="fin">
+    {dossier && groupes.length > 0 && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="md-dialogue-titre"
+        aria-describedby="md-dialogue-texte"
+        data-md-dialogue
+      >
+        <form method="dialog" class="md-dialogue-form">
+          <h2 id="md-dialogue-titre" data-md-dialogue-titre />
+          <p id="md-dialogue-texte" data-md-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Annuler
+            </button>
+            <button class="btn btn-primary" type="button" data-md-confirmer>
+              Confirmer la décision
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../../../scripts/moderation';
+</script>

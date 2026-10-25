@@ -1,0 +1,234 @@
+---
+/* File de modération (MOD-02, EC-19, F-91). Écran sans maquette dans le prototype, conçu dans son
+   style : tête de page de Notifications et de Mes contenus, liste à filets dont chaque ligne ouvre
+   le dossier du contenu. Rendue par le serveur depuis GET /api/v1/moderation/file (contenus du plus
+   ancien au plus récent, par pages de 20) ; qui n'est pas de la modération lit la raison du refus
+   (AccesBloc). */
+import {
+  LIBELLES_ACTION_DECISION,
+  LIBELLES_MOTIF_SIGNALEMENT,
+  raisonRefus,
+  type FileModerationApi,
+} from '@vysora/shared';
+import AccesBloc from '../../../components/AccesBloc.astro';
+import AvatarMembre from '../../../components/AvatarMembre.astro';
+import Base from '../../../layouts/Base.astro';
+import { appelerApi, ErreurApi } from '../../../lib/api';
+import {
+  DELAI_CIBLE,
+  ICONES_TYPE_CONTENU,
+  LIBELLES_TYPE_CONTENU,
+  anciennete,
+} from '../../../lib/moderation';
+import { ROUTES } from '../../../lib/navigation';
+import { dateCourte, fmt, pluriel, typo } from '../../../lib/texte';
+import '../../../styles/moderation.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const { etat } = Astro.locals;
+const raison = raisonRefus('moderer', etat);
+if (raison === 'role') Astro.response.status = 403;
+
+const apres = Astro.url.searchParams.get('apres');
+let file: FileModerationApi | null = null;
+if (!raison) {
+  try {
+    file = await appelerApi<FileModerationApi>(
+      `/api/v1/moderation/file${apres ? `?apres=${encodeURIComponent(apres)}` : ''}`,
+      { requete: Astro.request, adresseClient },
+    );
+  } catch (erreur) {
+    // Page de la file qui n'existe pas (adresse modifiée à la main) : retour au début.
+    if (apres && erreur instanceof ErreurApi && erreur.probleme.status === 400)
+      return Astro.redirect(ROUTES.moderation, 302);
+    throw erreur;
+  }
+}
+const maintenant = new Date();
+
+const icones = [
+  'arrow',
+  'chevron-right',
+  'clock',
+  'check-circle',
+  'history',
+  'eye-off',
+  'pen',
+  'layers',
+  'message',
+  'repeat',
+  'help',
+  'reply',
+  'bulb',
+];
+---
+
+<Base
+  titre="File de modération"
+  description="Contenus signalés à examiner par l’équipe de modération de Vysora."
+  classeCorps="md"
+  icones={icones}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Modération
+    </p>
+    <h1>File de modération</h1>
+    {file && file.total > 0 && (
+      <p class="md-statut">
+        <span class="is-fort">{`${pluriel(file.total, 'contenu', 'contenus')} à examiner`}</span>
+        {file.enRetard > 0 && (
+          <span class="is-retard">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-clock" />
+            </svg>
+            {`${fmt(file.enRetard)} en attente depuis plus de ${DELAI_CIBLE}`}
+          </span>
+        )}
+      </p>
+    )}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="moderer" quoi="accéder à la file de modération" />
+    </div>
+  ) : file && file.elements.length ? (
+    <div class="container md-file">
+      <p class="md-regle">
+        {typo(`Du plus ancien au plus récent. Délai cible de traitement : ${DELAI_CIBLE}.`)}
+      </p>
+      <ol class="md-liste">
+        {file.elements.map((element) => {
+          const { contenu, signalements, historiqueAuteur } = element;
+          const derniere = historiqueAuteur.derniere;
+          return (
+            <li class:list={['md-item', { 'is-retard': element.enRetard }]}>
+              <a class="md-ouvrir" href={ROUTES.dossierModeration(contenu.id)}>
+                <AvatarMembre membre={contenu.auteur} taille={40} classe="md-visuel" />
+                <span class="md-item-corps">
+                  <span class="md-item-haut">
+                    <span class="md-genre">
+                      <svg class="icon icon-xs" aria-hidden="true">
+                        <use href={`#i-${ICONES_TYPE_CONTENU[contenu.type]}`} />
+                      </svg>
+                      {LIBELLES_TYPE_CONTENU[contenu.type]}
+                    </span>
+                    <span class="md-sep" aria-hidden="true">
+                      ·
+                    </span>
+                    <span class="md-qui">{contenu.auteur.nom}</span>
+                  </span>
+                  <span class="md-item-titre">{contenu.intitule}</span>
+                  <span class="md-item-motifs">
+                    {signalements.nombre > 0
+                      ? signalements.motifs
+                          .map(
+                            (m) =>
+                              `${LIBELLES_MOTIF_SIGNALEMENT[m.motif]}${m.nombre > 1 ? ` (${fmt(m.nombre)})` : ''}`,
+                          )
+                          .join(', ')
+                      : 'Aucun signalement ouvert'}
+                  </span>
+                  {(element.nouvelExamen || contenu.statut === 'MASQUE' || derniere) && (
+                    <span class="md-item-marques">
+                      {element.nouvelExamen ? (
+                        <span class="md-marque is-accent">
+                          <svg class="icon icon-xs" aria-hidden="true">
+                            <use href="#i-pen" />
+                          </svg>
+                          {typo('Modifié après le masquage : nouvel examen')}
+                        </span>
+                      ) : (
+                        contenu.statut === 'MASQUE' && (
+                          <span class="md-marque">
+                            <svg class="icon icon-xs" aria-hidden="true">
+                              <use href="#i-eye-off" />
+                            </svg>
+                            Masqué
+                          </span>
+                        )
+                      )}
+                      {derniere && (
+                        <span class="md-marque">
+                          <svg class="icon icon-xs" aria-hidden="true">
+                            <use href="#i-history" />
+                          </svg>
+                          {typo(
+                            `${pluriel(historiqueAuteur.decisions, 'décision antérieure', 'décisions antérieures')} contre l’auteur · la dernière : ${LIBELLES_ACTION_DECISION[derniere.action]}, ${dateCourte(derniere.date)}`,
+                          )}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </span>
+                <span class="md-item-nb">
+                  <strong>{fmt(signalements.nombre)}</strong>
+                  <span>{signalements.nombre > 1 ? 'signalements' : 'signalement'}</span>
+                </span>
+                <span class="md-item-attente">
+                  <time datetime={element.depuis}>{anciennete(element.depuis, maintenant)}</time>
+                  <span>
+                    {element.enRetard ? (
+                      <>
+                        <svg class="icon icon-xs" aria-hidden="true">
+                          <use href="#i-clock" />
+                        </svg>
+                        Au-delà du délai
+                      </>
+                    ) : (
+                      'd’attente'
+                    )}
+                  </span>
+                </span>
+                <svg class="icon icon-sm md-fleche" aria-hidden="true">
+                  <use href="#i-chevron-right" />
+                </svg>
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+      {file.suivant && (
+        <nav class="md-pages" aria-label="Pages de la file">
+          <a class="btn btn-secondary" href={`?apres=${encodeURIComponent(file.suivant)}`}>
+            Contenus suivants
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </a>
+        </nav>
+      )}
+    </div>
+  ) : (
+    <div class="container md-file">
+      <div class="md-vide">
+        <span class="md-vide-icone" aria-hidden="true">
+          <svg class="icon">
+            <use href="#i-check-circle" />
+          </svg>
+        </span>
+        <h2>{apres ? 'Plus aucun contenu dans la file' : 'La file est vide'}</h2>
+        <p>
+          Les contenus signalés, et ceux que leur auteur a corrigés après un masquage, s’affichent
+          ici du plus ancien au plus récent.
+        </p>
+        {apres && (
+          <a class="btn btn-secondary" href={ROUTES.moderation}>
+            Revenir au début de la file
+          </a>
+        )}
+      </div>
+    </div>
+  )}
+</Base>

@@ -325,6 +325,11 @@ const icones = [
                 ` · ${signalementsClos} ${signalementsClos > 1 ? 'signalements' : 'signalement'}`}
               {motifMasquage ? ` · ${typo(motifMasquage)}` : '.'}
             </p>
+            <div class="creation-status-actions">
+              <a class="btn btn-secondary btn-sm" href={ROUTES.dossierModeration(fiche.id)}>
+                Ouvrir le dossier
+              </a>
+            </div>
           </div>
         )
       )}
