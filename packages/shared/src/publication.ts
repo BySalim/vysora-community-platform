@@ -217,3 +217,114 @@ export function controlerPublication(
   if (creation.categorieId === null) ajouter('categorieId', MESSAGES_PUBLICATION.categorie);
   return erreurs;
 }
+
+/** Condition de publication telle que « Mes contenus » la présente (barre d'avancement, liste à compléter). */
+export interface ConditionPublication {
+  libelle: string;
+  remplie: boolean;
+}
+
+/** Conditions de publication d'un brouillon, dans l'ordre de l'éditeur (prototype : mes-contenus.js,
+    verifier), tirées de controlerPublication : toutes remplies si et seulement si la création peut être
+    publiée (la case de confirmation mise à part). Les libellés sont ceux du prototype ; les images à
+    décrire, les moments clés à expliquer et les liens en trop ajoutent la leur quand ils existent. */
+export function conditionsPublication(
+  creation: CreationAControler,
+  contexte: ContexteControle,
+): ConditionPublication[] {
+  const erreurs = controlerPublication(creation, contexte);
+  const cles = Object.keys(erreurs);
+  const restantes = new Set(cles);
+  const projet = creation.type === 'PROJET';
+  const prompts = creation.etapes.reduce((total, etape) => total + etape.echanges.length, 0);
+  const outil = creation.etapes.some((etape) =>
+    etape.configurations.some((configuration) => configuration.outilId !== null),
+  );
+  // « Ajoutez au moins un prompt, avec l’outil utilisé » : il manque l'outil, le prompt ou les deux.
+  const messageChemin = erreurs.etapes === MESSAGES_PUBLICATION.chemin;
+
+  const condition = (
+    libelle: string,
+    concerne: (cle: string) => boolean,
+    aussi = true,
+  ): ConditionPublication => {
+    let remplie = aussi;
+    for (const cle of cles)
+      if (concerne(cle)) {
+        remplie = false;
+        restantes.delete(cle);
+      }
+    return { libelle, remplie };
+  };
+  const cheminDuType = (cle: string) =>
+    (cle === 'etapes' && (!messageChemin || (!projet && prompts === 0))) ||
+    cle === 'etapes.0.echanges' ||
+    /^etapes\.\d+\.echanges\.\d+\.prompt$/.test(cle) ||
+    /^etapes\.\d+\.(titre|recit)$/.test(cle);
+  const resultat = (cle: string) => cle === 'resultat';
+
+  const conditions = [
+    condition(
+      `Un titre de ${LONGUEURS.creationTitre.min} caractères au moins`,
+      (cle) => cle === 'titre',
+    ),
+    condition('L’objectif de la création', (cle) => cle === 'objectif'),
+    condition('Une catégorie', (cle) => cle === 'categorieId'),
+    condition(
+      'L’outil d’IA utilisé',
+      (cle) =>
+        (cle === 'etapes' && messageChemin && !outil) ||
+        /^etapes\.\d+\.configurations(\.|$)/.test(cle) ||
+        /^etapes\.\d+\.echanges\.\d+\.configuration$/.test(cle),
+      outil,
+    ),
+  ];
+  // Le nombre d'étapes et de prompts se vérifie aussi directement : sous le message du chemin, celui
+  // qui le précise (« une seule étape », « au moins deux étapes ») n'est pas renvoyé.
+  const etapes = creation.etapes.length;
+  if (creation.type === 'ITERATION')
+    conditions.push(
+      condition('Au moins deux échanges', cheminDuType, etapes <= 1 && prompts >= 2),
+      condition('La réponse ou l’image du dernier échange', resultat),
+    );
+  else if (projet)
+    conditions.push(
+      condition('Deux étapes avec un titre et un récit', cheminDuType, etapes >= 2),
+      condition('Un résultat final : un lien ou une image', resultat),
+    );
+  else
+    conditions.push(
+      condition(
+        'Le prompt et la réponse ou l’image obtenue',
+        (cle) => cheminDuType(cle) || resultat(cle),
+        etapes <= 1 && prompts === 1,
+      ),
+    );
+
+  const images =
+    creation.images.length +
+    creation.etapes.reduce(
+      (total, etape) => total + etape.echanges.reduce((n, x) => n + x.images.length, 0),
+      0,
+    );
+  if (images)
+    conditions.push(
+      condition(
+        'Une description pour chaque image',
+        (cle) => cle === 'images' || cle.endsWith('.texteAlternatif'),
+      ),
+    );
+  if (creation.etapes.some((etape) => etape.moments.length))
+    conditions.push(
+      condition('Une explication pour chaque moment clé', (cle) =>
+        /^etapes\.\d+\.moments\.\d+\.explication$/.test(cle),
+      ),
+    );
+  if ('liens' in erreurs)
+    conditions.push(
+      condition(`${contexte.liensMaximum} liens au plus à votre niveau`, (cle) => cle === 'liens'),
+    );
+  // Filet de sécurité : un contrôle qu'aucune condition ne présente empêche quand même de publier.
+  for (const cle of restantes) conditions.push({ libelle: erreurs[cle] ?? cle, remplie: false });
+  return conditions;
+}

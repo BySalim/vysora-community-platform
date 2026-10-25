@@ -6,7 +6,7 @@ import {
 } from '@vysora/shared';
 import { and, asc, eq, inArray, isNotNull, notInArray, or, sql } from 'drizzle-orm';
 import { erreurValidation } from '../../commun/erreurs.js';
-import type { Transaction } from '../../db/client.js';
+import type { Executeur, Transaction } from '../../db/client.js';
 import {
   categorie,
   configurationIa,
@@ -419,9 +419,22 @@ async function resoudreEtiquettes(tx: Transaction, libelles: string[]): Promise<
 }
 
 /** Ce qui est enregistré, sous la forme que contrôle la publication (controlerPublication). */
-export async function lireAControler(tx: Transaction, id: number): Promise<CreationAControler> {
-  const [ligne] = await tx
+export async function lireAControler(db: Executeur, id: number): Promise<CreationAControler> {
+  const lue = (await lireAControlerPlusieurs(db, [id])).get(id);
+  if (!lue) throw new Error(`Création introuvable : ${id}`);
+  return lue;
+}
+
+/** Même lecture pour plusieurs créations à la fois (« Mes contenus », CREA-04). */
+export async function lireAControlerPlusieurs(
+  db: Executeur,
+  ids: number[],
+): Promise<Map<number, CreationAControler>> {
+  const resultat = new Map<number, CreationAControler>();
+  if (!ids.length) return resultat;
+  const lignes = await db
     .select({
+      id: creation.id,
       type: creation.typeCreation,
       titre: creation.titre,
       objectif: creation.objectif,
@@ -429,26 +442,25 @@ export async function lireAControler(tx: Transaction, id: number): Promise<Creat
       resultatTexte: creation.resultatTexte,
     })
     .from(creation)
-    .where(eq(creation.id, id));
-  if (!ligne) throw new Error(`Création introuvable : ${id}`);
-  const etapes = await tx
-    .select({ id: etape.id, titre: etape.titre, recit: etape.recit })
+    .where(inArray(creation.id, ids));
+  const etapes = await db
+    .select({ id: etape.id, creationId: etape.creationId, titre: etape.titre, recit: etape.recit })
     .from(etape)
-    .where(eq(etape.creationId, id))
+    .where(inArray(etape.creationId, ids))
     .orderBy(asc(etape.ordre));
-  const ids = etapes.map((e) => e.id);
-  const [configurations, echanges, moments] = ids.length
+  const idsEtapes = etapes.map((e) => e.id);
+  const [configurations, echanges, moments] = idsEtapes.length
     ? [
-        await tx
+        await db
           .select({
             id: configurationIa.id,
             etapeId: configurationIa.etapeId,
             outilId: configurationIa.outilId,
           })
           .from(configurationIa)
-          .where(inArray(configurationIa.etapeId, ids))
+          .where(inArray(configurationIa.etapeId, idsEtapes))
           .orderBy(asc(configurationIa.ordre), asc(configurationIa.id)),
-        await tx
+        await db
           .select({
             id: echange.id,
             etapeId: echange.etapeId,
@@ -457,20 +469,20 @@ export async function lireAControler(tx: Transaction, id: number): Promise<Creat
             configurationId: echange.configurationId,
           })
           .from(echange)
-          .where(inArray(echange.etapeId, ids))
+          .where(inArray(echange.etapeId, idsEtapes))
           .orderBy(asc(echange.ordre)),
-        await tx
+        await db
           .select({
             etapeId: momentCle.etapeId,
             explication: momentCle.explication,
             echangeId: momentCle.echangeId,
           })
           .from(momentCle)
-          .where(inArray(momentCle.etapeId, ids))
+          .where(inArray(momentCle.etapeId, idsEtapes))
           .orderBy(asc(momentCle.id)),
       ]
     : [[], [], []];
-  const images = await tx
+  const images = await db
     .select({
       contenuId: media.contenuId,
       echangeId: media.echangeId,
@@ -479,7 +491,7 @@ export async function lireAControler(tx: Transaction, id: number): Promise<Creat
     .from(media)
     .where(
       or(
-        eq(media.contenuId, id),
+        inArray(media.contenuId, ids),
         echanges.length
           ? and(
               isNotNull(media.echangeId),
@@ -492,44 +504,52 @@ export async function lireAControler(tx: Transaction, id: number): Promise<Creat
       ),
     )
     .orderBy(asc(media.ordre), asc(media.id));
-  const liens = await tx
-    .select({ type: lienExterne.type })
+  const liens = await db
+    .select({ creationId: lienExterne.creationId, type: lienExterne.type })
     .from(lienExterne)
-    .where(eq(lienExterne.creationId, id));
+    .where(inArray(lienExterne.creationId, ids));
 
-  return {
-    type: ligne.type,
-    titre: ligne.titre,
-    objectif: ligne.objectif,
-    categorieId: ligne.categorieId,
-    resultat: ligne.resultatTexte ? { texte: ligne.resultatTexte } : null,
-    images: images.filter((i) => i.contenuId === id),
-    liens,
-    etapes: etapes.map((e) => {
-      const confs = configurations.filter((c) => c.etapeId === e.id);
-      const sesEchanges = echanges.filter((x) => x.etapeId === e.id);
-      return {
-        titre: e.titre,
-        recit: e.recit,
-        configurations: confs,
-        echanges: sesEchanges.map((x) => {
-          const rang = confs.findIndex((c) => c.id === x.configurationId);
+  for (const ligne of lignes)
+    resultat.set(ligne.id, {
+      type: ligne.type,
+      titre: ligne.titre,
+      objectif: ligne.objectif,
+      categorieId: ligne.categorieId,
+      resultat: ligne.resultatTexte ? { texte: ligne.resultatTexte } : null,
+      images: images
+        .filter((i) => i.contenuId === ligne.id)
+        .map(({ texteAlternatif }) => ({ texteAlternatif })),
+      liens: liens.filter((l) => l.creationId === ligne.id).map(({ type }) => ({ type })),
+      etapes: etapes
+        .filter((e) => e.creationId === ligne.id)
+        .map((e) => {
+          const confs = configurations.filter((c) => c.etapeId === e.id);
+          const sesEchanges = echanges.filter((x) => x.etapeId === e.id);
           return {
-            prompt: x.prompt,
-            reponse: x.reponse,
-            configuration: rang < 0 ? null : rang,
-            images: images.filter((i) => i.echangeId === x.id),
+            titre: e.titre,
+            recit: e.recit,
+            configurations: confs.map(({ outilId }) => ({ outilId })),
+            echanges: sesEchanges.map((x) => {
+              const rang = confs.findIndex((c) => c.id === x.configurationId);
+              return {
+                prompt: x.prompt,
+                reponse: x.reponse,
+                configuration: rang < 0 ? null : rang,
+                images: images
+                  .filter((i) => i.echangeId === x.id)
+                  .map(({ texteAlternatif }) => ({ texteAlternatif })),
+              };
+            }),
+            moments: moments
+              .filter((m) => m.etapeId === e.id)
+              .map((m) => {
+                const rang = sesEchanges.findIndex((x) => x.id === m.echangeId);
+                return { explication: m.explication, echange: rang < 0 ? null : rang };
+              }),
           };
         }),
-        moments: moments
-          .filter((m) => m.etapeId === e.id)
-          .map((m) => {
-            const rang = sesEchanges.findIndex((x) => x.id === m.echangeId);
-            return { explication: m.explication, echange: rang < 0 ? null : rang };
-          }),
-      };
-    }),
-  };
+    });
+  return resultat;
 }
 
 /** RG-31 : document de recherche d'une création publiée (titre, puis objectif, étiquettes et

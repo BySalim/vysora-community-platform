@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { liensMaximum, ETAT_VISITEUR } from './permissions';
-import { controlerPublication, type CreationAControler } from './publication';
+import {
+  conditionsPublication,
+  controlerPublication,
+  type CreationAControler,
+} from './publication';
 import { erreursParChamp } from './schemas/commun';
+import { dansLeDelai } from './texte';
 import { schemaContenuCreation } from './schemas/creations';
 
 const contexte = { liensMaximum: 10 };
@@ -237,5 +242,111 @@ describe('schemaContenuCreation (CREA-05)', () => {
     expect(
       images(lire({ type: 'ITERATION', images: [1], etapes: [{ echanges: [{ images: [1] }] }] })),
     ).toBe('Une même image ne peut servir qu’une fois.');
+  });
+});
+
+describe('conditionsPublication (CREA-04)', () => {
+  const libelles = (creation: CreationAControler) =>
+    conditionsPublication(creation, contexte).map((c) => `${c.remplie ? '✓' : '○'} ${c.libelle}`);
+  const toutesRemplies = (creation: CreationAControler) =>
+    conditionsPublication(creation, contexte).every((c) => c.remplie);
+
+  it('reprend les conditions du prototype, toutes remplies pour une création publiable', () => {
+    expect(libelles(unPrompt())).toEqual([
+      '✓ Un titre de 10 caractères au moins',
+      '✓ L’objectif de la création',
+      '✓ Une catégorie',
+      '✓ L’outil d’IA utilisé',
+      '✓ Le prompt et la réponse ou l’image obtenue',
+    ]);
+  });
+
+  it('un brouillon vide : rien n’est rempli', () => {
+    const vide: CreationAControler = {
+      ...unPrompt(),
+      titre: null,
+      objectif: null,
+      categorieId: null,
+      etapes: [],
+    };
+    expect(libelles(vide)).toEqual([
+      '○ Un titre de 10 caractères au moins',
+      '○ L’objectif de la création',
+      '○ Une catégorie',
+      '○ L’outil d’IA utilisé',
+      '○ Le prompt et la réponse ou l’image obtenue',
+    ]);
+  });
+
+  it('itération et projet ont leurs propres conditions (RG-12, RG-13)', () => {
+    const iteration: CreationAControler = { ...unPrompt(), type: 'ITERATION' };
+    expect(libelles(iteration).slice(4)).toEqual([
+      '○ Au moins deux échanges',
+      '✓ La réponse ou l’image du dernier échange',
+    ]);
+    const projet: CreationAControler = {
+      ...unPrompt(),
+      type: 'PROJET',
+      etapes: [etapeDeProjet('Préparer')],
+    };
+    expect(libelles(projet).slice(4)).toEqual([
+      '○ Deux étapes avec un titre et un récit',
+      '○ Un résultat final : un lien ou une image',
+    ]);
+    // Sans outil, le message du chemin couvre aussi le nombre d'étapes : il se vérifie directement.
+    projet.etapes[0]!.configurations = [];
+    expect(libelles(projet)[3]).toBe('○ L’outil d’IA utilisé');
+    expect(libelles(projet)[4]).toBe('○ Deux étapes avec un titre et un récit');
+  });
+
+  it('images à décrire, moments à expliquer et liens en trop ont leur condition', () => {
+    const creation = { ...unPrompt(), images: [{ texteAlternatif: null }] };
+    creation.etapes[0]!.moments = [{ explication: 'Trop court', echange: 0 }];
+    expect(libelles(creation).slice(5)).toEqual([
+      '○ Une description pour chaque image',
+      '○ Une explication pour chaque moment clé',
+    ]);
+    const liens = {
+      ...unPrompt(),
+      liens: [{ type: 'DEMO' as const }, { type: 'ARTICLE' as const }, { type: 'VIDEO' as const }],
+    };
+    expect(conditionsPublication(liens, { liensMaximum: 2 }).at(-1)).toEqual({
+      libelle: '2 liens au plus à votre niveau',
+      remplie: false,
+    });
+  });
+
+  it('toutes remplies si et seulement si la publication est possible (RG-10 à RG-16)', () => {
+    const cas: CreationAControler[] = [unPrompt()];
+    const deuxPrompts = unPrompt();
+    deuxPrompts.etapes[0]!.echanges.push({ ...deuxPrompts.etapes[0]!.echanges[0]! });
+    cas.push(deuxPrompts, { ...deuxPrompts, type: 'ITERATION' });
+    cas.push({
+      ...unPrompt(),
+      type: 'PROJET',
+      etapes: [etapeDeProjet('Un'), etapeDeProjet('Deux')],
+    });
+    cas.push({
+      ...unPrompt(),
+      type: 'PROJET',
+      images: [decrite],
+      etapes: [etapeDeProjet('Préparer'), etapeDeProjet('Construire')],
+    });
+    const sansOutil = unPrompt();
+    sansOutil.etapes[0]!.configurations = [];
+    cas.push(sansOutil, { ...unPrompt(), images: [{ texteAlternatif: '' }] });
+    for (const creation of cas)
+      expect(toutesRemplies(creation)).toBe(
+        Object.keys(controlerPublication(creation, contexte)).length === 0,
+      );
+  });
+});
+
+describe('dansLeDelai (RG-85)', () => {
+  it('donne une durée, sans heure ni fuseau', () => {
+    expect(dansLeDelai(30)).toBe('dans moins d’une minute');
+    expect(dansLeDelai(40 * 60)).toBe('dans 40 min');
+    expect(dansLeDelai(2 * 3600)).toBe('dans 2 h');
+    expect(dansLeDelai(5 * 3600 + 12 * 60 - 5)).toBe('dans 5 h 12 min');
   });
 });

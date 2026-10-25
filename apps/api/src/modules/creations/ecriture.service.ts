@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   controlerPublication,
+  dansLeDelai,
   LIMITES,
   limiteQuotidienne,
   liensMaximum,
@@ -15,7 +16,7 @@ import {
   type StatutPublication,
   type TypeCreation,
 } from '@vysora/shared';
-import { and, asc, eq, gt, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import {
   conflit,
   ErreurApplication,
@@ -41,8 +42,7 @@ import {
   retirerDeLaRecherche,
 } from './contenu-creation.js';
 import { CreationsService } from './creations.service.js';
-
-const JOUR_MS = 24 * 60 * 60_000;
+import { limitePublication } from './limite-publication.js';
 
 /** Auteur d'une création : identifiant, rôle et état (niveau pour RG-85). */
 export interface Redacteur {
@@ -59,16 +59,6 @@ interface CreationVerrouillee {
   statutContenu: StatutContenu;
   datePublication: Date | null;
   avertissementAgent: AvertissementAgent;
-}
-
-/** « dans 5 h 12 min », « dans 40 min », « dans moins d’une minute ». */
-function delai(secondes: number): string {
-  const minutes = Math.ceil(secondes / 60);
-  if (minutes <= 1) return 'dans moins d’une minute';
-  const heures = Math.floor(minutes / 60);
-  const reste = minutes % 60;
-  if (!heures) return `dans ${reste} min`;
-  return reste ? `dans ${heures} h ${reste} min` : `dans ${heures} h`;
 }
 
 /* CREA-05 : écriture des créations par leur auteur (F-10 à F-17).
@@ -283,38 +273,20 @@ export class EcritureCreationsService {
     id: number,
     maintenant: Date,
   ): Promise<void> {
-    const limite = limiteQuotidienne('creations', auteur.etat);
-    if (!Number.isFinite(limite)) return;
+    if (!Number.isFinite(limiteQuotidienne('creations', auteur.etat))) return;
     // Les publications d'un même membre se comptent l'une après l'autre (limite exacte).
     await tx
       .select({ id: utilisateur.id })
       .from(utilisateur)
       .where(eq(utilisateur.id, auteur.id))
       .for('update');
-    const publiees = await tx
-      .select({ date: creation.datePublication })
-      .from(creation)
-      .innerJoin(contenu, eq(contenu.id, creation.id))
-      .where(
-        and(
-          eq(contenu.auteurId, auteur.id),
-          gt(creation.datePublication, new Date(maintenant.getTime() - JOUR_MS)),
-          ne(creation.id, id),
-        ),
-      )
-      .orderBy(asc(creation.datePublication));
-    if (publiees.length < limite) return;
-    // Une place se libère quand la plus ancienne des publications en trop sort des 24 heures.
-    const liberatrice = publiees[publiees.length - limite]?.date ?? maintenant;
-    const secondes = Math.max(
-      1,
-      Math.ceil((liberatrice.getTime() + JOUR_MS - maintenant.getTime()) / 1000),
-    );
+    const etat = await limitePublication(tx, auteur, maintenant, id);
+    if (!etat?.reessayerDans) return;
     throw new ErreurApplication(
       'LIMITE_ATTEINTE',
-      `Limite de ${limite} publications par 24 heures atteinte. Vous pourrez publier ${delai(secondes)} ; votre brouillon reste enregistré.`,
+      `Limite de ${etat.limite} publications par 24 heures atteinte. Vous pourrez publier ${dansLeDelai(etat.reessayerDans)} ; votre brouillon reste enregistré.`,
       undefined,
-      { reessayerDans: secondes },
+      { reessayerDans: etat.reessayerDans },
     );
   }
 }

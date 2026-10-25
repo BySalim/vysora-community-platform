@@ -18,3 +18,4 @@ export * from './contrats/session';
 export * from './contrats/medias';
 export * from './contrats/creations';
 export * from './contrats/interactions';
+export * from './contrats/mes-contenus';
