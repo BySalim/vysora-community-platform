@@ -33,11 +33,19 @@ export const AUCUNE_REFERENCE: ReferencesExistantes = {
   etiquettes: new Set(),
 };
 
+/** Références d'une saisie : celles d'un sujet, ou d'un cas Bon réflexe (sans création liée). */
+type ReferencesSaisies = Pick<
+  SaisieSujet,
+  'outilId' | 'modeleId' | 'modeleNonReference' | 'etiquettes'
+> & {
+  creationId?: number | null;
+};
+
 /** Outil et modèle du référentiel, création publiée (RG-66), étiquettes encore proposées (CI-04).
     Renvoie l'outil et le modèle tels que la rubrique « Outil et modèle » d'une clinique les cite. */
 export async function verifierReferences(
   tx: Transaction,
-  saisie: SaisieSujet,
+  saisie: ReferencesSaisies,
   avant: ReferencesExistantes,
 ): Promise<string> {
   const erreurs: Record<string, string> = {};
@@ -63,7 +71,7 @@ export async function verifierReferences(
     outilEtModele = `${outilEtModele} · ${saisie.modeleNonReference}`;
 
   // RG-66 : une création publiée et visible ; celle que le sujet évoquait déjà peut rester.
-  if (saisie.creationId !== null && saisie.creationId !== avant.creationId) {
+  if (saisie.creationId != null && saisie.creationId !== avant.creationId) {
     const cible = await lireCible(tx, saisie.creationId);
     if (!cible?.public || cible.type !== 'CREATION')
       erreurs.creationId = 'Choisissez une création publiée.';
@@ -106,7 +114,8 @@ export function corpsDuSujet(saisie: SaisieSujet, outilEtModele: string): string
   return corps;
 }
 
-/** Étiquettes réécrites (une à cinq, RG-60) ; une étiquette absente est ajoutée (CI-04). */
+/** Étiquettes réécrites (une à cinq pour un sujet, RG-60 ; aucune à cinq pour un cas, RG-70) ; une
+    étiquette absente est ajoutée (CI-04). */
 export async function ecrireEtiquettes(
   tx: Transaction,
   id: number,
@@ -114,9 +123,10 @@ export async function ecrireEtiquettes(
 ): Promise<void> {
   const ids = await resoudreEtiquettes(tx, libelles);
   await tx.delete(contenuEtiquette).where(eq(contenuEtiquette.contenuId, id));
-  await tx
-    .insert(contenuEtiquette)
-    .values(ids.map((etiquetteId) => ({ contenuId: id, etiquetteId })));
+  if (ids.length)
+    await tx
+      .insert(contenuEtiquette)
+      .values(ids.map((etiquetteId) => ({ contenuId: id, etiquetteId })));
 }
 
 /** Étiquettes de plusieurs contenus, par ordre alphabétique (comme la fiche création). */

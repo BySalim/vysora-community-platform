@@ -124,8 +124,9 @@ export class ReputationService {
 
   /** RG-82 : un contenu rétabli après masquage génère de nouveau les mouvements que le masquage a
       annulés : ceux dont l'annulation porte la date de la décision (annulerContenus reçoit la même),
-      sauf pour un contenu supprimé depuis, et sauf les points d'une réponse qui n'est plus la réponse
-      acceptée de son sujet (RG-63 : l'auteur du sujet en a choisi une autre entre-temps). Les
+      sauf pour un contenu supprimé depuis, sauf les points d'une réponse qui n'est plus la réponse
+      acceptée de son sujet (RG-63 : l'auteur du sujet en a choisi une autre entre-temps), et sauf
+      ceux de la validation d'un cas qui n'est plus validé (RG-71 : modifié ou refusé depuis). Les
       mouvements regénérés gardent leur date d'origine : le plafond du jour (RG-81) et les points de
       la semaine (RG-87) ne s'en trouvent pas faussés. */
   async retablirContenus(tx: Transaction, contenuIds: number[], dateDuMasquage: Date) {
@@ -152,6 +153,12 @@ export class ReputationService {
           or(
             notInArray(initial.motif, MOTIFS_D_ACCEPTATION),
             sql`exists (select 1 from sujet s where s.message_accepte_id = ${initial.contenuId})`,
+          ),
+          // RG-71 : les points d'un cas validé ne reviennent pas s'il a été refusé entre-temps.
+          or(
+            ne(initial.motif, 'CAS_VALIDE'),
+            sql`exists (select 1 from cas_bon_reflexe cb
+              where cb.id = ${initial.contenuId} and cb.statut_validation = 'VALIDE')`,
           ),
         ),
       );

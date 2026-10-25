@@ -26,6 +26,7 @@ import {
   signalement,
   utilisateur,
 } from '../../db/schema/index.js';
+import { indexerCas } from '../apprentissage/contenu-cas.js';
 import { indexer, retirerDeLaRecherche } from '../creations/contenu-creation.js';
 import { EmailService } from '../email/email.service.js';
 import { indexerSujet, oublierAcceptation } from '../forum/contenu-sujet.js';
@@ -129,6 +130,8 @@ export class DecisionsService {
           if (cible.type === 'CREATION' && cible.publication === 'PUBLIEE')
             await indexer(tx, contenuId);
           if (cible.type === 'SUJET') await indexerSujet(tx, contenuId);
+          // Un cas n'est cherché que s'il est validé (indexerCas le vérifie).
+          if (cible.type === 'CAS_BON_REFLEXE') await indexerCas(tx, contenuId);
           break;
         }
         case 'SUPPRIMER': {

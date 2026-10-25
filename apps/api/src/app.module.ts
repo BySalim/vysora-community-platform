@@ -7,6 +7,7 @@ import { OrigineGuard } from './commun/http/origine.guard.js';
 import { CONFIG, ConfigurationModule } from './config/configuration.module.js';
 import type { Configuration } from './config/env.js';
 import { BaseDeDonneesModule } from './db/base-de-donnees.module.js';
+import { ApprentissageModule } from './modules/apprentissage/apprentissage.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { DroitsGuard } from './modules/auth/droits.js';
 import { ContactModule } from './modules/contact/contact.module.js';
@@ -62,6 +63,7 @@ import { SanteModule } from './modules/sante/sante.module.js';
     InteractionsModule,
     ModerationModule,
     ForumModule,
+    ApprentissageModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: FiltreErreurs },
