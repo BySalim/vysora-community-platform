@@ -142,7 +142,7 @@ importers:
         specifier: ^7.4.2
         version: 7.4.2(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
       markdown-it:
-        specifier: 15.0.3
+        specifier: ^15.0.3
         version: 15.0.3
     devDependencies:
       '@astrojs/check':
