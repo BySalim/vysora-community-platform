@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   DELAIS,
+  actionsPossibles,
   type ActionDecision,
   type DecisionApi,
   type DossierModerationApi,
@@ -29,7 +30,7 @@ import type { BaseDeDonnees } from '../../db/client.js';
 import { contenu, decisionModeration, signalement } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
-import { presenterContenus } from './contenus-moderes.js';
+import { detailsDuContenu, presenterContenus } from './contenus-moderes.js';
 
 const PAR_PAGE = 20;
 const HISTORIQUE_MAXIMUM = 20;
@@ -69,8 +70,9 @@ export class DossiersService {
     maintenant = new Date(),
   ): Promise<FileModerationApi> {
     const curseur = lireCurseur(apres);
-    const lignes = (
-      await this.db.execute<{ id: string; depuis: Date | string; nouvel_examen: boolean }>(sql`
+    // RG-105 : délai cible de 72 heures.
+    const limite = new Date(maintenant.getTime() - DELAIS.traitementSignalementHeures * 3_600_000);
+    const file = sql`
         with ouverts as (
           select contenu_id, min(date) as premier from signalement
           where statut = 'OUVERT' group by contenu_id
@@ -87,17 +89,33 @@ export class DossiersService {
           left join dernieres d on d.contenu_id = c.id
           where c.statut <> 'SUPPRIME' and c.auteur_id <> ${moderateurId}
         )
-        select id, depuis, nouvel_examen from file
-        where depuis is not null
-          and (${curseur?.depuis.toISOString() ?? null}::timestamptz is null
-            or (depuis, id) > (${curseur?.depuis.toISOString() ?? null}::timestamptz, ${curseur?.id ?? 0}::bigint))
+        select id, depuis, nouvel_examen from file where depuis is not null`;
+    const [resultat, comptes] = await Promise.all([
+      this.db.execute<{ id: string; depuis: Date | string; nouvel_examen: boolean }>(sql`
+        select * from (${file}) f
+        where ${curseur?.depuis.toISOString() ?? null}::timestamptz is null
+          or (depuis, id) > (${curseur?.depuis.toISOString() ?? null}::timestamptz, ${curseur?.id ?? 0}::bigint)
         order by depuis, id
         limit ${PAR_PAGE + 1}
-      `)
-    ).rows.map((l) => ({ ...l, id: Number(l.id), depuis: new Date(l.depuis) }));
+      `),
+      this.db.execute<{ total: number; en_retard: number }>(sql`
+        select count(*)::int as total,
+          (count(*) filter (where depuis < ${limite.toISOString()}::timestamptz))::int as en_retard
+        from (${file}) f
+      `),
+    ]);
+    const lignes = resultat.rows.map((l) => ({
+      ...l,
+      id: Number(l.id),
+      depuis: new Date(l.depuis),
+    }));
     const page = lignes.slice(0, PAR_PAGE);
     const ids = page.map((l) => l.id);
-    if (!ids.length) return { elements: [], suivant: null };
+    const totaux = {
+      total: comptes.rows[0]?.total ?? 0,
+      enRetard: comptes.rows[0]?.en_retard ?? 0,
+    };
+    if (!ids.length) return { elements: [], suivant: null, ...totaux };
 
     const [contenus, motifs] = await Promise.all([
       presenterContenus(this.db, this.stockage, ids),
@@ -110,8 +128,6 @@ export class DossiersService {
     const historiques = await this.historiques([
       ...new Set([...contenus.values()].map((c) => c.auteur.id)),
     ]);
-    const limite = maintenant.getTime() - DELAIS.traitementSignalementHeures * 3_600_000;
-
     const elements = page.map((l): ElementFileModerationApi => {
       const presente = contenus.get(l.id);
       if (!presente) throw new Error(`Contenu introuvable : ${l.id}`);
@@ -124,8 +140,7 @@ export class DossiersService {
       return {
         contenu: presente,
         depuis: l.depuis.toISOString(),
-        // RG-105 : délai cible de 72 heures.
-        enRetard: l.depuis.getTime() < limite,
+        enRetard: l.depuis < limite,
         signalements: { nombre: siens.reduce((n, m) => n + m.nombre, 0), motifs: siens },
         nouvelExamen: l.nouvel_examen,
         historiqueAuteur: {
@@ -141,6 +156,7 @@ export class DossiersService {
       elements,
       suivant:
         lignes.length > PAR_PAGE && dernier ? ecrireCurseur(dernier.depuis, dernier.id) : null,
+      ...totaux,
     };
   }
 
@@ -157,7 +173,8 @@ export class DossiersService {
       );
     const auteurId = presente.auteur.id;
 
-    const [signalements, surLeContenu, historique, [suspension]] = await Promise.all([
+    const [details, signalements, surLeContenu, historique, [suspension]] = await Promise.all([
+      detailsDuContenu(this.db, contenuId),
       this.db
         .select()
         .from(signalement)
@@ -203,6 +220,9 @@ export class DossiersService {
     const derniere = surLeContenu[0];
     return {
       contenu: presente,
+      texte: details.texte,
+      avertissementAgent: details.avertissementAgent,
+      actions: actionsPossibles({ ...presente, avertissementAgent: details.avertissementAgent }),
       signalements: signalements.map((s) => {
         const signaleur = signaleurs.get(s.signaleurId);
         if (!signaleur) throw new Error(`Membre introuvable : ${s.signaleurId}`);
@@ -230,7 +250,7 @@ export class DossiersService {
   /** Décisions présentées dans l'ordre reçu. */
   async presenter(lignes: LigneDecision[]): Promise<DecisionApi[]> {
     if (!lignes.length) return [];
-    const [membres, clos] = await Promise.all([
+    const [membres, clos, contenus] = await Promise.all([
       resumerMembres(
         this.db,
         this.stockage,
@@ -246,6 +266,9 @@ export class DossiersService {
           ),
         )
         .groupBy(signalement.decisionId),
+      presenterContenus(this.db, this.stockage, [
+        ...new Set(lignes.flatMap((d) => (d.contenuId === null ? [] : [d.contenuId]))),
+      ]),
     ]);
     const membre = (id: number) => {
       const resume = membres.get(id);
@@ -261,6 +284,7 @@ export class DossiersService {
       finSuspension: d.dateFinSuspension?.toISOString() ?? null,
       decideur: membre(d.decideurId),
       contenuId: d.contenuId,
+      intituleContenu: d.contenuId === null ? null : (contenus.get(d.contenuId)?.intitule ?? null),
       membreVise: d.membreViseId === null ? null : membre(d.membreViseId),
       signalementsClos: closParDecision.get(d.id) ?? 0,
     }));

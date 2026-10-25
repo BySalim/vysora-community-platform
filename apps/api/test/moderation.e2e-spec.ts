@@ -227,6 +227,7 @@ describe('Signalements et décisions (MOD-01)', () => {
         },
       });
       expect(file.elements[1]?.enRetard).toBe(false);
+      expect([file.total, file.enRetard]).toEqual([3, 1]);
       expect(file.elements[2]?.contenu).toMatchObject({
         type: 'COMMENTAIRE',
         intitule: 'Le prompt ne donne pas le format attendu.',
@@ -257,6 +258,8 @@ describe('Signalements et décisions (MOD-01)', () => {
       ).body as FileModerationApi;
       expect(seconde.elements.map((e) => e.contenu.id)).toEqual([ids[20]]);
       expect(seconde.suivant).toBeNull();
+      // Les totaux valent pour toute la file, quelle que soit la page.
+      expect([premiere.total, seconde.total, seconde.enRetard]).toEqual([21, 21, 0]);
       await agent.get('/api/v1/moderation/file').query({ apres: 'nimporte' }).expect(400);
     });
   });
@@ -514,8 +517,12 @@ describe('Signalements et décisions (MOD-01)', () => {
       await (await lea()).get(`/api/v1/creations/${id}`).expect(404);
       const file = (await moderation.get('/api/v1/moderation/file').expect(200))
         .body as FileModerationApi;
-      expect(file.elements).toEqual([]);
+      expect(file).toEqual({ elements: [], suivant: null, total: 0, enRetard: 0 });
       await decider(moderation, id, { action: 'RETABLIR', motif: 'Erreur.' }).expect(404);
+      // Le dossier reste lisible, sans plus aucune décision possible.
+      const dossier = (await moderation.get(`/api/v1/moderation/contenus/${id}`).expect(200))
+        .body as DossierModerationApi;
+      expect([dossier.contenu.statut, dossier.actions]).toEqual(['SUPPRIME', []]);
       expect(contexte.emails[0]?.sujet).toBe('Votre création a été supprimée par la modération');
       expect(contexte.emails[0]?.texte).toContain('/contact?motif=contestation');
     });
@@ -548,12 +555,42 @@ describe('Signalements et décisions (MOD-01)', () => {
     ]);
     expect(dossier.signalements[0]?.precision).toBe('Le prompt recopie un article.');
     expect(dossier.decisions.map((d) => [d.action, d.signalementsClos])).toEqual([['AUCUNE', 1]]);
-    expect(dossier.historiqueAuteur.map((d) => [d.action, d.membreVise?.pseudo])).toEqual([
-      ['AVERTIR', 'lea-martin'],
-    ]);
+    expect(
+      dossier.historiqueAuteur.map((d) => [d.action, d.membreVise?.pseudo, d.intituleContenu]),
+    ).toEqual([['AVERTIR', 'lea-martin', 'Cité imaginaire entre ciel et mer']]);
     expect(dossier.suspensionJusqua).toBeNull();
     expect(dossier.nouvelExamen).toBe(false);
+    // Une création se lit sur sa page ; le dossier dit ce que la modération peut en décider.
+    expect(dossier).toMatchObject({ texte: null, avertissementAgent: 'AUCUN' });
+    expect(dossier.actions).toEqual([
+      'AUCUNE',
+      'MASQUER',
+      'SUPPRIMER',
+      'AVERTIR',
+      'SUSPENDRE',
+      'AJOUTER_AVERTISSEMENT_AGENT',
+    ]);
     await moderation.get('/api/v1/moderation/contenus/999999').expect(404);
+  });
+
+  it('donne le texte entier d’un commentaire, même masqué (F-91)', async () => {
+    const id = await creerCreation(contexte, auteurId);
+    const commentaireId = await commenter(id, awaId);
+    const moderation = await thomas();
+    await decider(moderation, commentaireId, {
+      action: 'MASQUER',
+      motif: 'Propos blessants.',
+    }).expect(201);
+    const dossier = (
+      await moderation.get(`/api/v1/moderation/contenus/${commentaireId}`).expect(200)
+    ).body as DossierModerationApi;
+    expect(dossier).toMatchObject({
+      contenu: { type: 'COMMENTAIRE', statut: 'MASQUE' },
+      texte: 'Le prompt ne donne pas le format attendu.',
+      avertissementAgent: null,
+      actions: ['AUCUNE', 'RETABLIR', 'SUPPRIMER', 'AVERTIR', 'SUSPENDRE'],
+    });
+    expect(dossier.decisions[0]?.intituleContenu).toBe('Le prompt ne donne pas le format attendu.');
   });
 
   /** Commentaire visible d'un membre sur une création. */

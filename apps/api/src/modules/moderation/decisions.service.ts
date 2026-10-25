@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   ACTIONS_DECISION_MEMBRE,
+  actionsPossibles,
   issueDesSignalements,
   type AvertissementAgent,
   type DecisionApi,
@@ -229,27 +230,26 @@ export class DecisionsService {
   }
 }
 
-/** Ce que la décision suppose de l'état du contenu. */
+/** Ce que la décision suppose de l'état du contenu (actionsPossibles, que le dossier présente aussi
+    à la modération) ; un refus dit pourquoi. */
 function verifierEtat(action: DecisionModeration['action'], cible: Cible): void {
+  if (actionsPossibles(cible).includes(action)) return;
   switch (action) {
     case 'MASQUER':
-      if (cible.statut === 'MASQUE') throw conflit('Ce contenu est déjà masqué.');
-      return;
+      throw conflit('Ce contenu est déjà masqué.');
     case 'RETABLIR':
-      if (cible.statut !== 'MASQUE')
-        throw conflit('Ce contenu n’est pas masqué : il n’y a rien à rétablir.');
-      return;
+      throw conflit('Ce contenu n’est pas masqué : il n’y a rien à rétablir.');
     case 'AJOUTER_AVERTISSEMENT_AGENT':
     case 'RETIRER_AVERTISSEMENT_AGENT':
       if (cible.type !== 'CREATION')
         throw conflit('L’avertissement « instructions pour agent » concerne les créations.');
-      if (action === 'AJOUTER_AVERTISSEMENT_AGENT' && cible.avertissementAgent === 'MODERATION')
-        throw conflit('La modération a déjà posé cet avertissement.');
-      if (action === 'RETIRER_AVERTISSEMENT_AGENT' && cible.avertissementAgent === 'AUCUN')
-        throw conflit('Cette création n’a pas d’avertissement « instructions pour agent ».');
-      return;
+      throw conflit(
+        action === 'AJOUTER_AVERTISSEMENT_AGENT'
+          ? 'La modération a déjà posé cet avertissement.'
+          : 'Cette création n’a pas d’avertissement « instructions pour agent ».',
+      );
     default:
-      return;
+      throw conflit('Cette décision n’est pas possible sur ce contenu.');
   }
 }
 

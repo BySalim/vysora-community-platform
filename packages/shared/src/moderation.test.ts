@@ -8,6 +8,7 @@ import {
 import {
   LIBELLES_ACTION_DECISION,
   LIBELLES_MOTIF_SIGNALEMENT,
+  actionsPossibles,
   issueDesSignalements,
 } from './moderation';
 import { erreursParChamp } from './schemas/commun';
@@ -94,6 +95,45 @@ describe('issueDesSignalements (RG-102, CV-06)', () => {
     expect(issueDesSignalements('RETABLIR')).toBe('NON_FONDE');
     for (const action of ACTIONS_DECISION.filter((a) => a !== 'AUCUNE' && a !== 'RETABLIR'))
       expect(issueDesSignalements(action)).toBe('FONDE');
+  });
+});
+
+describe('actionsPossibles (RG-102, RG-23)', () => {
+  const creation = { type: 'CREATION', avertissementAgent: 'AUCUN' } as const;
+
+  it('masque un contenu visible, rétablit un contenu masqué', () => {
+    expect(actionsPossibles({ ...creation, statut: 'VISIBLE' })).toEqual([
+      'AUCUNE',
+      'MASQUER',
+      'SUPPRIMER',
+      'AVERTIR',
+      'SUSPENDRE',
+      'AJOUTER_AVERTISSEMENT_AGENT',
+    ]);
+    expect(actionsPossibles({ ...creation, statut: 'MASQUE' })).toEqual([
+      'AUCUNE',
+      'RETABLIR',
+      'SUPPRIMER',
+      'AVERTIR',
+      'SUSPENDRE',
+      'AJOUTER_AVERTISSEMENT_AGENT',
+    ]);
+  });
+
+  it('retire l’avertissement posé, n’ajoute pas celui que la modération a déjà posé', () => {
+    const avec = (avertissementAgent: 'AUTEUR' | 'MODERATION') =>
+      actionsPossibles({ ...creation, statut: 'VISIBLE', avertissementAgent }).filter((a) =>
+        a.endsWith('AVERTISSEMENT_AGENT'),
+      );
+    expect(avec('AUTEUR')).toEqual(['AJOUTER_AVERTISSEMENT_AGENT', 'RETIRER_AVERTISSEMENT_AGENT']);
+    expect(avec('MODERATION')).toEqual(['RETIRER_AVERTISSEMENT_AGENT']);
+  });
+
+  it('réserve l’avertissement aux créations et ne décide plus rien sur un contenu supprimé', () => {
+    expect(
+      actionsPossibles({ type: 'COMMENTAIRE', statut: 'VISIBLE', avertissementAgent: null }),
+    ).toEqual(['AUCUNE', 'MASQUER', 'SUPPRIMER', 'AVERTIR', 'SUSPENDRE']);
+    expect(actionsPossibles({ ...creation, statut: 'SUPPRIME' })).toEqual([]);
   });
 });
 

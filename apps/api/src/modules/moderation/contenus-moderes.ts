@@ -1,4 +1,9 @@
-import type { ContenuModereApi, PageDuContenuApi, TypeContenu } from '@vysora/shared';
+import type {
+  AvertissementAgent,
+  ContenuModereApi,
+  PageDuContenuApi,
+  TypeContenu,
+} from '@vysora/shared';
 import { eq, inArray, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { BaseDeDonnees, Transaction } from '../../db/client.js';
@@ -131,6 +136,34 @@ export async function presenterContenus(
       ];
     }),
   );
+}
+
+/** Ce que le dossier d'un contenu montre en plus (F-91) : le texte entier d'un commentaire, d'une
+    réponse, d'un sujet ou du retour d'un essai, lisible même masqué ; l'avertissement « instructions
+    pour agent » d'une création (RG-23). */
+export async function detailsDuContenu(
+  db: BaseDeDonnees,
+  id: number,
+): Promise<{ texte: string | null; avertissementAgent: AvertissementAgent | null }> {
+  const [ligne] = await db
+    .select({
+      avertissementAgent: creation.avertissementAgent,
+      commentaire: commentaire.corps,
+      message: message.corps,
+      sujet: sujet.corps,
+      retour: reproduction.retour,
+    })
+    .from(contenu)
+    .leftJoin(creation, eq(creation.id, contenu.id))
+    .leftJoin(commentaire, eq(commentaire.id, contenu.id))
+    .leftJoin(message, eq(message.id, contenu.id))
+    .leftJoin(sujet, eq(sujet.id, contenu.id))
+    .leftJoin(reproduction, eq(reproduction.id, contenu.id))
+    .where(eq(contenu.id, id));
+  return {
+    texte: ligne?.commentaire ?? ligne?.message ?? ligne?.sujet ?? ligne?.retour ?? null,
+    avertissementAgent: ligne?.avertissementAgent ?? null,
+  };
 }
 
 /** RG-19, RG-82 : un contenu et ceux qui n'existent que par lui (commentaires et reproductions d'une

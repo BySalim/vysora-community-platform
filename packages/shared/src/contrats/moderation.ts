@@ -1,5 +1,7 @@
 import type {
   ActionDecision,
+  ActionDecisionModerateur,
+  AvertissementAgent,
   MotifSignalement,
   StatutContenu,
   StatutSignalement,
@@ -63,6 +65,9 @@ export interface ElementFileModerationApi {
 export interface FileModerationApi {
   elements: ElementFileModerationApi[];
   suivant: string | null;
+  /** Contenus de la file, toutes pages comprises, et ceux qui attendent depuis plus de 72 heures. */
+  total: number;
+  enRetard: number;
 }
 
 export interface SignalementApi {
@@ -86,6 +91,8 @@ export interface DecisionApi {
   finSuspension: string | null;
   decideur: MembreResumeApi;
   contenuId: number | null;
+  /** Titre ou début du texte du contenu visé (historique de l'auteur). */
+  intituleContenu: string | null;
   /** Membre sanctionné (avertissement, suspension). */
   membreVise: MembreResumeApi | null;
   /** Signalements clos par la décision (CI-20). */
@@ -95,6 +102,13 @@ export interface DecisionApi {
 /** Dossier d'un contenu : ce que la modération examine avant de décider (F-91). */
 export interface DossierModerationApi {
   contenu: ContenuModereApi;
+  /** Texte entier d'un commentaire, d'une réponse, d'un sujet ou du retour d'un essai, qui se lit
+      ici même s'il est masqué ; null pour une création ou un cas, qui ont leur page. */
+  texte: string | null;
+  /** Avertissement « instructions pour agent » d'une création (RG-23) ; null pour un autre contenu. */
+  avertissementAgent: AvertissementAgent | null;
+  /** Décisions possibles dans l'état du contenu (actionsPossibles) ; aucune s'il est supprimé. */
+  actions: ActionDecisionModerateur[];
   /** Tous les signalements du contenu, du plus ancien au plus récent. */
   signalements: SignalementApi[];
   /** Décisions qui portent sur ce contenu, de la plus récente à la plus ancienne. */
