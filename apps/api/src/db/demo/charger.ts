@@ -9,6 +9,7 @@ import {
   type TypeContenu,
 } from '@vysora/shared';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { indexerCas } from '../../modules/apprentissage/contenu-cas.js';
 import { DocumentsLegauxService } from '../../modules/auth/documents-legaux.service.js';
 import { hacherMotDePasse } from '../../modules/auth/mots-de-passe.service.js';
 import { indexerSujet } from '../../modules/forum/contenu-sujet.js';
@@ -904,25 +905,43 @@ async function chargerSujet(ctx: Contexte, s: SujetDemo): Promise<void> {
     voter(ctx, cible, 'TESTE_OK', nombreDeVotes(s.testes), periode);
 }
 
-/** RG-31 : document de recherche des sujets de démonstration visibles qui n'en ont pas (la recherche
-    du forum les trouve ; celui des créations et des cas viendra avec DEC-01). */
+/** RG-31 : document de recherche des sujets et des cas validés de démonstration, visibles, qui n'en
+    ont pas (le forum et la liste des cas les trouvent ; celui des créations viendra avec DEC-01). */
 async function completerRecherche(ctx: Contexte): Promise<void> {
-  const ids = [...ctx.sujets.values()];
-  if (!ids.length) return;
-  const sansDocument = await ctx.tx
-    .select({ id: sujet.id })
-    .from(sujet)
-    .innerJoin(contenu, eq(contenu.id, sujet.id))
-    .leftJoin(rechercheDocument, eq(rechercheDocument.contenuId, sujet.id))
-    .where(
-      and(
-        inArray(sujet.id, ids),
-        eq(contenu.statut, 'VISIBLE'),
-        isNull(rechercheDocument.contenuId),
-      ),
-    );
-  for (const { id } of sansDocument) await indexerSujet(ctx.tx, id);
-  ctx.bilan.documents += sansDocument.length;
+  const sujets = [...ctx.sujets.values()];
+  const cas = [...ctx.cas.values()];
+  const sujetsSansDocument = sujets.length
+    ? await ctx.tx
+        .select({ id: sujet.id })
+        .from(sujet)
+        .innerJoin(contenu, eq(contenu.id, sujet.id))
+        .leftJoin(rechercheDocument, eq(rechercheDocument.contenuId, sujet.id))
+        .where(
+          and(
+            inArray(sujet.id, sujets),
+            eq(contenu.statut, 'VISIBLE'),
+            isNull(rechercheDocument.contenuId),
+          ),
+        )
+    : [];
+  const casSansDocument = cas.length
+    ? await ctx.tx
+        .select({ id: casBonReflexe.id })
+        .from(casBonReflexe)
+        .innerJoin(contenu, eq(contenu.id, casBonReflexe.id))
+        .leftJoin(rechercheDocument, eq(rechercheDocument.contenuId, casBonReflexe.id))
+        .where(
+          and(
+            inArray(casBonReflexe.id, cas),
+            eq(contenu.statut, 'VISIBLE'),
+            eq(casBonReflexe.statutValidation, 'VALIDE'),
+            isNull(rechercheDocument.contenuId),
+          ),
+        )
+    : [];
+  for (const { id } of sujetsSansDocument) await indexerSujet(ctx.tx, id);
+  for (const { id } of casSansDocument) await indexerCas(ctx.tx, id);
+  ctx.bilan.documents += sujetsSansDocument.length + casSansDocument.length;
 }
 
 /* Bon réflexe --------------------------------------------------------------- */
