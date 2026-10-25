@@ -82,8 +82,8 @@
 |---|---|---|
 | `sujet` | SUJET (EVOQUER, ACCEPTER_REPONSE, FERMER) | sous-type ; `message_accepte_id` unique, réservé à QUESTION et CLINIQUE ; exemples avant/après obligatoires pour une ASTUCE ; fermeture datée ; outil et modèle facultatifs (`outil_id`, `modele_id` ou `modele_non_reference`, jamais les deux, jamais sans outil) comme dans le prototype (migration `0004`). Le `corps` d’une CLINIQUE porte ses rubriques (RG-62) : le contexte, puis les titres « ### Prompt utilisé » (prompt dans un bloc de code), « ### Résultat obtenu », « ### Résultat attendu » et « ### Outil et modèle », composés et relus par `composerClinique` et `lireClinique` (paquet partagé) |
 | `message` | MESSAGE (REPONDRE) | sous-type ; `sujet_id`. Un prompt proposé suit le texte du `corps`, dans un bloc de code « text » final (`composerMessage`, `lireMessage`) |
-| `cas_bon_reflexe` | CAS_BON_REFLEXE (EXAMINER) | sous-type ; examen présent si et seulement si le cas est VALIDE ou REFUSE (CI-18) ; motif obligatoire si REFUSE ; outil et modèle de la réponse étudiée, mêmes règles que pour un sujet (migration `0004`) |
-| `option_reponse` | OPTION_REPONSE (PROPOSER) | unique différé `(cas_id, ordre)` ; au plus une option correcte par cas (index partiel) |
+| `cas_bon_reflexe` | CAS_BON_REFLEXE (EXAMINER) | sous-type ; examen présent si et seulement si le cas est VALIDE ou REFUSE (CI-18), effacé à une nouvelle soumission (RG-71) ; motif obligatoire si REFUSE ; outil et modèle de la réponse étudiée, mêmes règles que pour un sujet (migration `0004`). Seul un cas VALIDE et visible a un document de recherche (RG-31) |
+| `option_reponse` | OPTION_REPONSE (PROPOSER) | unique différé `(cas_id, ordre)` ; au plus une option correcte par cas (index partiel, **non différé** : l’API retire la bonne réponse avant de la reposer quand elle change). Options gardées par identifiant à la modification ; figées dès qu’une réponse les désigne (RG-72, contrôlé par l’API) |
 | `choix_option` | CHOISIR | clé `(utilisateur_id, cas_id)` : une réponse définitive par cas (RG-72) ; clé étrangère `(option_id, cas_id)` qui garantit que l'option appartient au cas |
 
 ### Modération
