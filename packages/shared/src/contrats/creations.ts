@@ -25,6 +25,8 @@ export interface MembreResumeApi {
   nom: string;
   avatar: string | null;
   niveau: { code: CodeNiveau; libelle: string };
+  /** RG-83 : somme des mouvements, plancher à 0 (prototype : réputation à côté du nom). */
+  reputation: number;
 }
 
 export interface OutilResumeApi {

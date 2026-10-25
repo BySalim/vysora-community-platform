@@ -5,7 +5,7 @@ import { mouvementReputation, niveau, utilisateur } from '../../db/schema/index.
 import type { Stockage } from '../medias/stockage.js';
 
 /** Membres tels que les pages les présentent à côté d'un contenu : nom affiché (à défaut le pseudo),
-    photo, niveau (RG-83, RG-84). */
+    photo, niveau et réputation (RG-83, RG-84). */
 export async function resumerMembres(
   db: BaseDeDonnees,
   stockage: Stockage,
@@ -37,7 +37,8 @@ export async function resumerMembres(
   const definitions = niveaux.map((n) => ({ ...n, code: n.code as CodeNiveau }));
   return new Map(
     membres.map((m) => {
-      const atteint = niveauPourReputation(points.get(m.id) ?? 0, definitions);
+      const reputation = Math.max(0, points.get(m.id) ?? 0);
+      const atteint = niveauPourReputation(reputation, definitions);
       return [
         m.id,
         {
@@ -46,6 +47,7 @@ export async function resumerMembres(
           nom: m.nomAffiche ?? m.pseudo,
           avatar: m.avatar ? stockage.adresse(m.avatar) : null,
           niveau: { code: atteint.code, libelle: atteint.libelle },
+          reputation,
         },
       ];
     }),
