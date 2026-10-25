@@ -12,6 +12,7 @@ import { DroitsGuard } from './modules/auth/droits.js';
 import { ContactModule } from './modules/contact/contact.module.js';
 import { CreationsModule } from './modules/creations/creations.module.js';
 import { EmailModule } from './modules/email/email.module.js';
+import { ForumModule } from './modules/forum/forum.module.js';
 import { InteractionsModule } from './modules/interactions/interactions.module.js';
 import { MediasModule, StockageModule } from './modules/medias/medias.module.js';
 import { ModerationModule } from './modules/moderation/moderation.module.js';
@@ -60,6 +61,7 @@ import { SanteModule } from './modules/sante/sante.module.js';
     CreationsModule,
     InteractionsModule,
     ModerationModule,
+    ForumModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: FiltreErreurs },

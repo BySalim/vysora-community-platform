@@ -402,7 +402,7 @@ async function verifierReferences(
 }
 
 /** Étiquettes du référentiel ; une étiquette absente est ajoutée (CI-04), repérée par son adresse. */
-async function resoudreEtiquettes(tx: Transaction, libelles: string[]): Promise<number[]> {
+export async function resoudreEtiquettes(tx: Transaction, libelles: string[]): Promise<number[]> {
   const ids: number[] = [];
   for (const libelle of libelles) {
     const slug = slugifier(libelle, 60);

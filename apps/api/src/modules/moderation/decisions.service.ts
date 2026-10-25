@@ -28,6 +28,7 @@ import {
 } from '../../db/schema/index.js';
 import { indexer, retirerDeLaRecherche } from '../creations/contenu-creation.js';
 import { EmailService } from '../email/email.service.js';
+import { indexerSujet, oublierAcceptation } from '../forum/contenu-sujet.js';
 import { Stockage } from '../medias/stockage.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import { contenusLies, presenterContenus } from './contenus-moderes.js';
@@ -127,10 +128,13 @@ export class DecisionsService {
             );
           if (cible.type === 'CREATION' && cible.publication === 'PUBLIEE')
             await indexer(tx, contenuId);
+          if (cible.type === 'SUJET') await indexerSujet(tx, contenuId);
           break;
         }
         case 'SUPPRIMER': {
           await tx.update(contenu).set({ statut: 'SUPPRIME' }).where(eq(contenu.id, contenuId));
+          // RG-63 : une réponse supprimée n'est plus la réponse acceptée de son sujet.
+          if (cible.type === 'MESSAGE') await oublierAcceptation(tx, contenuId);
           const lies = await contenusLies(tx, contenuId, cible.type);
           await this.reputation.annulerContenus(tx, lies, maintenant);
           await retirerDeLaRecherche(tx, contenuId);

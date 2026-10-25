@@ -1,12 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { SEUILS, type MotifMouvementReputation } from '@vysora/shared';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, notInArray, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Transaction } from '../../db/client.js';
 import { contenu, mouvementReputation, utilisateur } from '../../db/schema/index.js';
 
 /** Motifs plafonnés par jour (RG-81). */
 const MOTIFS_DE_VOTE: MotifMouvementReputation[] = ['VOTE_UTILE_RECU', 'VOTE_TESTE_RECU'];
+/** Points d'une réponse acceptée, pour son auteur et pour celui du sujet (RG-63). */
+const MOTIFS_D_ACCEPTATION: MotifMouvementReputation[] = [
+  'REPONSE_ACCEPTEE',
+  'ACCEPTATION_REPONSE',
+];
 
 /** Début du jour (temps universel) d'une date : le plafond de RG-81 se compte par jour UTC. */
 const debutDuJour = (date: Date): Date =>
@@ -107,8 +124,10 @@ export class ReputationService {
 
   /** RG-82 : un contenu rétabli après masquage génère de nouveau les mouvements que le masquage a
       annulés : ceux dont l'annulation porte la date de la décision (annulerContenus reçoit la même),
-      sauf pour un contenu supprimé depuis. Les mouvements regénérés gardent leur date d'origine : le
-      plafond du jour (RG-81) et les points de la semaine (RG-87) ne s'en trouvent pas faussés. */
+      sauf pour un contenu supprimé depuis, et sauf les points d'une réponse qui n'est plus la réponse
+      acceptée de son sujet (RG-63 : l'auteur du sujet en a choisi une autre entre-temps). Les
+      mouvements regénérés gardent leur date d'origine : le plafond du jour (RG-81) et les points de
+      la semaine (RG-87) ne s'en trouvent pas faussés. */
   async retablirContenus(tx: Transaction, contenuIds: number[], dateDuMasquage: Date) {
     if (!contenuIds.length) return;
     const initial = alias(mouvementReputation, 'initial');
@@ -130,6 +149,10 @@ export class ReputationService {
           inArray(mouvementReputation.contenuId, contenuIds),
           eq(mouvementReputation.date, dateDuMasquage),
           ne(contenu.statut, 'SUPPRIME'),
+          or(
+            notInArray(initial.motif, MOTIFS_D_ACCEPTATION),
+            sql`exists (select 1 from sujet s where s.message_accepte_id = ${initial.contenuId})`,
+          ),
         ),
       );
     if (annules.length) await tx.insert(mouvementReputation).values(annules);
