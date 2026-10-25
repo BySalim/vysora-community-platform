@@ -1,0 +1,206 @@
+---
+/* Éditeur d'une création (CREA-02), porté de prototype/nouvelle-creation.html : la porte d'entrée
+   (visiteur, compte en lecture seule, création introuvable) est rendue par le serveur ; le formulaire,
+   le panneau de publication et les fenêtres sont construits par scripts/publier.ts, comme dans le
+   prototype, à partir des données posées dans la page (référentiels, création de l'auteur). */
+import {
+  liensMaximum,
+  raisonRefus,
+  type CreationFicheApi,
+  type ReferentielsApi,
+} from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { appelerApi } from '../lib/api';
+import { ROUTES } from '../lib/navigation';
+import type { Referentiels } from '../lib/publier/modele';
+import { outilsDeLaFiche } from '../lib/publier/modele';
+import { typo } from '../lib/texte';
+import AccesBloc from './AccesBloc.astro';
+import '../styles/nouvelle-creation.css';
+
+interface Props {
+  /** Création de l'auteur à modifier ; null pour une nouvelle création. */
+  creation: CreationFicheApi | null;
+  /** Création inconnue, ou qui n'est pas celle du membre. */
+  introuvable?: boolean;
+}
+
+const { creation, introuvable = false } = Astro.props;
+const { etat } = Astro.locals;
+const ferme = introuvable || raisonRefus('contribuer', etat) !== null;
+
+let referentiels: Referentiels | null = null;
+if (!ferme) {
+  const r = await appelerApi<ReferentielsApi>('/api/v1/referentiels', { requete: Astro.request });
+  referentiels = {
+    outils: r.outils.map((o) => ({
+      id: o.id,
+      nom: o.nom,
+      logo: o.logo,
+      logoMonochrome: o.logoMonochrome,
+      famille: o.famille,
+      alias: o.alias,
+      estAgent: o.estAgent,
+      modeles: o.modeles,
+    })),
+    categories: r.categories,
+    licences: r.licences,
+  };
+  if (creation) referentiels.outils.push(...outilsDeLaFiche(creation, referentiels));
+}
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+const donnees = ferme
+  ? ''
+  : JSON.stringify({ referentiels, creation, liensMaximum: liensMaximum(etat) }).replaceAll(
+      '<',
+      '\\u003c',
+    );
+
+const publiee = creation?.statut === 'PUBLIEE';
+const titre = introuvable
+  ? 'Création introuvable'
+  : publiee
+    ? 'Modifier la création'
+    : 'Publier une création';
+const icones = [
+  'arrow',
+  'plus',
+  'close',
+  'check',
+  'chevron-down',
+  'utile',
+  'moment',
+  'check-circle',
+  'circle',
+  'layers',
+  'message',
+  'alert',
+  'route',
+  'image',
+  'doc',
+  'code',
+  'lock',
+  'sliders',
+  'clock',
+  'user',
+  'external',
+  'mail',
+  'help',
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+  'link',
+  'up',
+  'down',
+  'clipboard',
+  'eye',
+  'eye-off',
+  'trash',
+  'monitor',
+  'phone',
+  'key',
+  'box',
+  'paperclip',
+  'search',
+  'copy',
+  'pen',
+  'shield',
+  'flag',
+  'tag',
+];
+---
+
+<Base
+  titre={titre}
+  description="Publiez sur Vysora ce que vous avez créé avec l’IA, avec le chemin parcouru et les moments clés."
+  classeCorps="pub-page"
+  donneesCorps={ferme ? { 'pub-ferme': '' } : {}}
+  classeMain="pub"
+  reglages={{ indications: 'visibles', largeur: 'standard' }}
+  icones={icones}
+  nonIndexee
+  piedDePage={false}
+>
+  <div class="pub-porte" data-pub-gate hidden={!ferme}>
+    {introuvable ? (
+      <div class="container pub-porte-in">
+        <h1>Cette création est introuvable</h1>
+        <p class="pub-intro">Elle a peut-être été supprimée, ou le lien est incomplet.</p>
+        <div class="pub-porte-actions">
+          <a class="btn btn-primary" href={ROUTES.publier}>
+            Publier une création
+          </a>
+          <a class="btn btn-secondary" href={ROUTES.explorer}>
+            Explorer les créations
+          </a>
+        </div>
+      </div>
+    ) : (
+      ferme && (
+        <div class="container pub-porte-in">
+          <h1>{titre}</h1>
+          <p class="pub-intro">
+            Montrez ce que vous avez obtenu avec l’IA et comment : vos prompts, vos outils et les
+            moments où vous avez repris la main.
+          </p>
+          <AccesBloc quoi={publiee ? 'modifier une création' : 'publier une création'} />
+          {creation?.titre && (
+            <p class="pub-note">
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-lock" />
+              </svg>
+              <span>
+                {typo(
+                  publiee
+                    ? `Votre création « ${creation.titre} » reste publiée.`
+                    : `Votre brouillon « ${creation.titre} » reste enregistré.`,
+                )}
+              </span>
+            </p>
+          )}
+          <p class="pub-porte-liens">
+            <a class="link-arrow" href={ROUTES.explorer}>
+              Voir des créations publiées
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+            </a>
+          </p>
+        </div>
+      )
+    )}
+  </div>
+  <div class="pub-fin" data-pub-done hidden></div>
+
+  <div class="container pub-wrap" data-pub-editor hidden={ferme}>
+    <header class="pub-entete" data-pub-entete></header>
+    <div class="pub-cadre">
+      <form class="pub-form" novalidate data-pub-form></form>
+      <aside class="pub-cote" aria-label="Publication" data-pub-cote></aside>
+    </div>
+  </div>
+  <div class="pub-barre" data-pub-barre hidden={ferme}></div>
+
+  <Fragment slot="fin">
+    <input
+      type="file"
+      multiple
+      hidden
+      accept="image/png,image/jpeg,image/webp,image/gif"
+      data-pub-fichier
+    />
+    <div class="pub-pop" data-pub-pop hidden></div>
+    <dialog class="pub-dialogue" aria-labelledby="import-titre" data-pub-import></dialog>
+    <dialog class="pub-apercu" aria-labelledby="apercu-titre" data-pub-apercu></dialog>
+    <dialog
+      class="pub-dialogue pub-confirm"
+      aria-labelledby="confirm-titre"
+      data-pub-confirm
+    ></dialog>
+    {donnees && <script type="application/json" id="publier-donnees" set:html={donnees} />}
+  </Fragment>
+</Base>
+
+<script>
+  import '../scripts/publier';
+</script>

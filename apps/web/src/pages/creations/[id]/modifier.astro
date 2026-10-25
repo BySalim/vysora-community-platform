@@ -1,0 +1,25 @@
+---
+/* Modifier une création (CREA-02) : brouillon repris ou création publiée, ouverts par leur auteur.
+   Une création inconnue, supprimée ou qui n'est pas celle du membre est introuvable (404). */
+import type { CreationFicheApi } from '@vysora/shared';
+import EditeurCreation from '../../../components/EditeurCreation.astro';
+import { ErreurApi, appelerApi } from '../../../lib/api';
+
+const id = /^[1-9]\d{0,8}$/.test(Astro.params.id ?? '') ? Number(Astro.params.id) : null;
+const membre = Astro.locals.etat.session === 'membre';
+let creation: CreationFicheApi | null = null;
+if (id !== null && membre) {
+  try {
+    creation = await appelerApi<CreationFicheApi>(`/api/v1/creations/${id}`, {
+      requete: Astro.request,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+  }
+}
+if (creation && !creation.moi?.auteur) creation = null;
+const introuvable = (membre || id === null) && !creation;
+if (introuvable) Astro.response.status = 404;
+---
+
+<EditeurCreation creation={creation} introuvable={introuvable} />

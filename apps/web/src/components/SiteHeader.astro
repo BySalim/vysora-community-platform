@@ -1,10 +1,11 @@
 ---
 /* En-tête commun (prototype : <header class="site-header"> de chaque page, complété par commun.js :
    menu, liens de retour, zone du compte). Rendu côté serveur selon la personne qui consulte. */
-import { NAVIGATION, ROUTES, adresseRetour } from '../lib/navigation';
+import { NAVIGATION, ROUTES, adresseRetour, estEditeur } from '../lib/navigation';
 import CompteMenu from './CompteMenu.astro';
 
 const chemin = Astro.url.pathname;
+const editeur = estEditeur(chemin);
 const retour = adresseRetour(Astro.url);
 const pageCompte = [ROUTES.accueil, ROUTES.connexion, ROUTES.inscription].includes(chemin as never);
 const versConnexion = pageCompte ? ROUTES.connexion : `${ROUTES.connexion}?retour=${retour}`;
@@ -44,7 +45,11 @@ const versInscription = pageCompte ? ROUTES.inscription : `${ROUTES.inscription}
           <use href="#i-search"></use>
         </svg>
       </button>
-      <a class="btn btn-quiet btn-sm header-publish" href={ROUTES.publier}>
+      <a
+        class="btn btn-quiet btn-sm header-publish"
+        href={ROUTES.publier}
+        aria-current={editeur ? 'page' : undefined}
+      >
         <svg class="icon icon-sm" aria-hidden="true">
           <use href="#i-plus"></use>
         </svg>
@@ -82,10 +87,7 @@ const versInscription = pageCompte ? ROUTES.inscription : `${ROUTES.inscription}
           </li>
         ))}
         <li>
-          <a
-            href={ROUTES.publier}
-            aria-current={chemin.startsWith(ROUTES.publier) ? 'page' : undefined}
-          >
+          <a href={ROUTES.publier} aria-current={editeur ? 'page' : undefined}>
             Publier une création
           </a>
         </li>

@@ -20,7 +20,9 @@ export async function api<T = undefined>(
 ): Promise<ReponseApi<T>> {
   try {
     const init: RequestInit = { method: methode, headers: { Accept: 'application/json' } };
-    if (corps !== undefined) {
+    // Fichier (multipart/form-data) : le navigateur pose lui-même l'en-tête et ses délimiteurs.
+    if (corps instanceof FormData) init.body = corps;
+    else if (corps !== undefined) {
       init.headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
       init.body = JSON.stringify(corps);
     }

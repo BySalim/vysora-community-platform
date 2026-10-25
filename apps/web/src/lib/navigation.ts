@@ -39,6 +39,10 @@ export interface EntreeMenu {
   actif: (chemin: string) => boolean;
 }
 
+/** Pages de l'éditeur : nouvelle création ou création existante (/creations/12/modifier). */
+export const estEditeur = (chemin: string): boolean =>
+  chemin === ROUTES.publier || /^\/creations\/\d+\/modifier$/.test(chemin);
+
 const sous =
   (...prefixes: string[]) =>
   (chemin: string) =>
@@ -51,7 +55,7 @@ export const NAVIGATION: EntreeMenu[] = [
     libelle: 'Explorer',
     actif: (chemin) =>
       sous('/explorer', '/categories', '/etiquettes')(chemin) ||
-      (chemin.startsWith('/creations/') && !chemin.startsWith(ROUTES.publier)),
+      (chemin.startsWith('/creations/') && !estEditeur(chemin)),
   },
   { href: ROUTES.forum, libelle: 'Forum', actif: sous('/forum') },
   { href: ROUTES.apprendre, libelle: 'Apprendre', actif: sous('/apprendre', '/bon-reflexe') },

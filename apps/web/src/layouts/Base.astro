@@ -45,6 +45,8 @@ interface Props {
   lienEvitement?: string;
   /** Enveloppe « auth » : lien de retour de l'en-tête. */
   retour?: { href: string; libelle: string };
+  /** Pied de page commun (absent de la page Publier du prototype). */
+  piedDePage?: boolean;
 }
 
 const {
@@ -63,6 +65,7 @@ const {
   couleurTheme = '#ffffff',
   lienEvitement = 'Aller au contenu',
   retour = { href: '/', libelle: 'Retour à l’accueil' },
+  piedDePage = true,
 } = Astro.props;
 
 const REGLAGES_COMMUNS = {
@@ -151,7 +154,7 @@ const etatClient = JSON.stringify({
         <main id="contenu" class={classeMain} tabindex="-1" {...attributsMain}>
           <slot />
         </main>
-        <SiteFooter />
+        {piedDePage && <SiteFooter />}
         <slot name="fin" />
       </>
     )}
