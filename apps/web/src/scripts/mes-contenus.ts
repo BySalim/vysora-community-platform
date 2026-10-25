@@ -7,6 +7,7 @@ import {
   dansLeDelai,
   type EnregistrementListeApi,
   type MaCreationApi,
+  type MasquageApi,
   type MediaApi,
   type MembreResumeApi,
   type MesCreationsApi,
@@ -20,7 +21,7 @@ import {
 } from '@vysora/shared';
 import { adresseCreation, estPortrait } from '../lib/creations';
 import { ROUTES } from '../lib/navigation';
-import { normaliser } from '../lib/texte';
+import { enPhrase, normaliser } from '../lib/texte';
 import { exiger } from './commun/acces';
 import { api } from './commun/api';
 import {
@@ -403,12 +404,18 @@ function demarrer(depart: Donnees): void {
 
   /* Créations publiées ------------------------------------------------------------------ */
 
+  /** Date et motif de la décision (MOD-01). « Voir la décision » attend la page des notifications
+      (NOTIF-01). */
+  function alerteMasquage(masquage: MasquageApi | null): string {
+    const le = masquage?.date ? ` le ${dateLabel(masquage.date)}` : '';
+    const motif = masquage?.motif ? ` ${t(enPhrase(masquage.motif))}` : '';
+    // Un mois abrégé porte déjà son point (« le 12 oct. »).
+    return `<p class="mc-alerte is-masquee">${icon('eye-off')}<span><b>${t(`Masquée par la modération${le}`.replace(/\.?$/, '.'))}</b>${motif} Elle reste visible de vous et de la modération.</span></p>`;
+  }
   function alertes(c: Creation): string {
     const o = c.api.obsolescence;
     return [
-      c.api.masquee
-        ? `<p class="mc-alerte is-masquee">${icon('eye-off')}<span><b>Masquée par la modération.</b> Elle reste visible de vous et de la modération.</span></p>`
-        : '',
+      c.api.masquee ? alerteMasquage(c.api.masquage) : '',
       o
         ? `<p class="mc-alerte is-obsolete">${icon('alert')}<span><b>Obsolescence signalée.</b> ${t(`${plusieurs(o.membres, 'membre indique', 'membres indiquent')} que le rendu a changé avec ${o.modele} depuis le ${dateLabel(o.depuis)}`.replace(/\.?$/, '.'))} <a href="${esc(editeur(c))}">Mettre à jour</a></span></p>`
         : '',

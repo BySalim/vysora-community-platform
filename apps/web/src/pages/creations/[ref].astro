@@ -4,6 +4,9 @@
    GET /api/v1/creations/:id (F-23). L'adresse /creations/[id]-[slug] redirige vers la bonne si le
    texte a changé ; une création que la personne ne peut pas voir (RG-30) répond 404. */
 import {
+  LIBELLES_MOTIF_SIGNALEMENT,
+  LONGUEURS,
+  MOTIFS_SIGNALEMENT,
   raisonRefus,
   srcsetImage,
   type CreationFicheApi,
@@ -43,7 +46,7 @@ import {
 } from '../../lib/creations';
 import { rendreMarkdown } from '../../lib/markdown';
 import { ROUTES } from '../../lib/navigation';
-import { dateCourte, dateLongue, typo } from '../../lib/texte';
+import { dateCourte, dateLongue, enPhrase, typo } from '../../lib/texte';
 import '../../styles/fiche-creation.css';
 import '../../styles/fiche-creation-complements.css';
 
@@ -90,6 +93,15 @@ const statut = !fiche
       : fiche.statut === 'BROUILLON'
         ? 'brouillon'
         : 'publiee';
+
+/* Masquage par la modération (MOD-01) : date et motif de la décision ; nombre de signalements
+   qu'elle a clos, pour la modération seulement. */
+const masquage = fiche?.masquage ?? null;
+const masqueeLe = masquage?.date ? ` le ${dateLongue(masquage.date)}` : '';
+const motifMasquage = masquage?.motif ? `Motif : ${enPhrase(masquage.motif)}` : null;
+const signalementsClos = masquage?.signalements ?? 0;
+// Signaler (F-90) : une création visible de tous, que la personne n'a pas écrite (RG-100).
+const signalable = ACTIONS_OUVERTES.signaler && statut === 'publiee' && !auteur && !modeApercu;
 
 /* Résultat ----------------------------------------------------------------- */
 const titre = fiche?.titre ? typo(fiche.titre) : 'Création sans titre';
@@ -274,8 +286,9 @@ const icones = [
             )}
             {statut === 'masquee' && (
               <>
-                <b>Masquée par la modération.</b> Modifiez la création pour demander un nouvel
-                examen.
+                <b>{`Masquée par la modération${masqueeLe}.`}</b>{' '}
+                {motifMasquage && <>{typo(motifMasquage)} </>}
+                Modifiez la création pour demander un nouvel examen.
               </>
             )}
           </p>
@@ -307,7 +320,10 @@ const icones = [
         moderation && (
           <div class="creation-status" data-status>
             <p>
-              <b>Masquée par la modération</b> · visible de son auteur et de l’équipe de modération.
+              <b>{`Masquée par la modération${masqueeLe}`}</b>
+              {signalementsClos > 0 &&
+                ` · ${signalementsClos} ${signalementsClos > 1 ? 'signalements' : 'signalement'}`}
+              {motifMasquage ? ` · ${typo(motifMasquage)}` : '.'}
             </p>
           </div>
         )
@@ -925,7 +941,8 @@ const icones = [
           class="text-button"
           id="report-open"
           type="button"
-          hidden={!ACTIONS_OUVERTES.signaler}
+          hidden={!signalable}
+          data-signale={fiche.moi?.signalementOuvert ? '' : undefined}
         >
           <svg class="icon" aria-hidden="true">
             <use href="#i-flag" />
@@ -995,6 +1012,36 @@ const icones = [
               placeholder="Qu’avez-vous obtenu ? Qu’avez-vous adapté ?"
             ></textarea>
             <button class="btn btn-primary wide">Publier mon essai</button>
+          </form>
+        </dialog>
+      )}
+      {signalable && (
+        <dialog id="report-dialog" class="creation-dialog" aria-labelledby="report-title">
+          <div class="dialog-heading">
+            <h2 id="report-title">Signaler un contenu</h2>
+            <button class="icon-btn" type="button" data-close aria-label="Fermer le signalement">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close" />
+              </svg>
+            </button>
+          </div>
+          <form id="report-form">
+            <label for="report-reason">Motif du signalement</label>
+            <select id="report-reason" required>
+              <option value="" selected disabled>
+                Choisissez un motif
+              </option>
+              {MOTIFS_SIGNALEMENT.map((motif) => (
+                <option value={motif}>{LIBELLES_MOTIF_SIGNALEMENT[motif]}</option>
+              ))}
+            </select>
+            <label for="report-note">Précisions</label>
+            <textarea
+              id="report-note"
+              rows="3"
+              maxlength={LONGUEURS.precisionSignalement.max}
+            ></textarea>
+            <button class="btn btn-primary wide">Envoyer le signalement</button>
           </form>
         </dialog>
       )}

@@ -22,6 +22,13 @@ export const typo = (valeur: unknown): string =>
     .replace(/(\d) (\d{3})(?!\d)/g, '$1 $2')
     .replace(/(\d) (%|FCFA|min|h|j|s|points|px|Mo)(?![\wÀ-ÿ])/g, '$1 $2');
 
+/** Texte terminé par une ponctuation finale, pour le citer dans une phrase (motif d'une décision
+    de la modération : « Motif : … »). */
+export const enPhrase = (valeur: string): string => {
+  const texte = valeur.trim();
+  return /[.!?…]$/.test(texte) ? texte : `${texte}.`;
+};
+
 /** Typographie puis échappement : pour tout texte inséré dans un gabarit HTML. */
 export const t = (valeur: unknown): string => esc(typo(valeur));
 
