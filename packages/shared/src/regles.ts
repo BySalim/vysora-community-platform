@@ -58,6 +58,8 @@ export const LIMITES = {
   echangesParEtape: 50,
   momentsParEtape: 50,
   essaisParEchange: 1000,
+  // Brouillons d'un membre (aucune règle ne les limite ; chacun peut porter 20 images) : garde-fou de CREA-02.
+  brouillonsParMembre: 50,
 } as const;
 
 /** Seuils d'affichage et de déclenchement. */

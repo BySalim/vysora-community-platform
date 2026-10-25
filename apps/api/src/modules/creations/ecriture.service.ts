@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   controlerPublication,
+  LIMITES,
   limiteQuotidienne,
   liensMaximum,
   MESSAGES_PUBLICATION,
@@ -14,7 +15,7 @@ import {
   type StatutPublication,
   type TypeCreation,
 } from '@vysora/shared';
-import { and, asc, eq, gt, ne } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, ne } from 'drizzle-orm';
 import {
   conflit,
   ErreurApplication,
@@ -94,6 +95,7 @@ export class EcritureCreationsService {
     maintenant = new Date(),
   ): Promise<CreationFicheApi> {
     const id = await this.db.transaction(async (tx) => {
+      await this.verifierBrouillons(tx, auteur.id);
       const licenceId = await licenceDe(tx, saisie.licenceId);
       const [ligne] = await tx
         .insert(contenu)
@@ -230,6 +232,34 @@ export class EcritureCreationsService {
       throw interdit('Seul son auteur peut modifier cette création.');
     }
     return ligne;
+  }
+
+  /** Garde-fou : 50 brouillons au plus par membre (registre, points tranchés de CREA-02). */
+  private async verifierBrouillons(tx: Transaction, auteurId: number): Promise<void> {
+    // Les brouillons d'un même membre se comptent l'un après l'autre (limite exacte).
+    await tx
+      .select({ id: utilisateur.id })
+      .from(utilisateur)
+      .where(eq(utilisateur.id, auteurId))
+      .for('update');
+    const brouillons = await tx.$count(
+      creation,
+      and(
+        eq(creation.statutPublication, 'BROUILLON'),
+        inArray(
+          creation.id,
+          tx
+            .select({ id: contenu.id })
+            .from(contenu)
+            .where(and(eq(contenu.auteurId, auteurId), ne(contenu.statut, 'SUPPRIME'))),
+        ),
+      ),
+    );
+    if (brouillons >= LIMITES.brouillonsParMembre)
+      throw new ErreurApplication(
+        'LIMITE_ATTEINTE',
+        `Vous avez ${LIMITES.brouillonsParMembre} brouillons. Publiez-en ou supprimez-en un pour en commencer un autre.`,
+      );
   }
 
   /** RG-10 à RG-16 et règle du résultat, sur ce qui est enregistré. */

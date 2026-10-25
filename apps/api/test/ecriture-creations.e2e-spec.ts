@@ -1,4 +1,9 @@
-import type { ContenuCreationSaisi, CreationFicheApi, MediaApi } from '@vysora/shared';
+import {
+  LIMITES,
+  type ContenuCreationSaisi,
+  type CreationFicheApi,
+  type MediaApi,
+} from '@vysora/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import request from 'supertest';
@@ -186,6 +191,22 @@ describe('Écriture des créations (CREA-05, F-10 à F-17)', () => {
         .get(`/api/v1/creations/${fiche.id}`)
         .expect(404);
       await request(serveur()).get(`/api/v1/creations/${fiche.id}`).expect(404);
+    });
+
+    it('limite les brouillons d’un membre à 50 (garde-fou de CREA-02)', async () => {
+      for (let i = 0; i < LIMITES.brouillonsParMembre - 1; i += 1)
+        await creerCreation(contexte, awaId, { publiee: false });
+      // Les créations publiées et les brouillons supprimés ne comptent pas.
+      await creerCreation(contexte, awaId);
+      await creerCreation(contexte, awaId, { publiee: false, statut: 'SUPPRIME' });
+      const awa = await agentConnecte();
+      await creer(awa, { type: 'UN_PROMPT', titre: 'Le cinquantième' }).expect(201);
+      const refus = await creer(awa, { type: 'UN_PROMPT', titre: 'Un de trop' }).expect(429);
+      expect(refus.body).toMatchObject({
+        code: 'LIMITE_ATTEINTE',
+        detail:
+          'Vous avez 50 brouillons. Publiez-en ou supprimez-en un pour en commencer un autre.',
+      });
     });
 
     it('réserve l’écriture aux comptes actifs : visiteur 401, adresse non vérifiée 403', async () => {
