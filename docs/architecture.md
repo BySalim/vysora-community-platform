@@ -68,6 +68,7 @@ apps/
       components/            composants partagés (en-tête, pied de page, bandeau, sprite…)
       pages/                 une route par écran (plan du site) ; pages/api/[...chemin].ts = relais
       scripts/               scripts de page (portés du JS du prototype) ; scripts/commun/
+                             (publier.ts : éditeur des créations, lib/publier/ : son modèle et ses contrôles)
       styles/                CSS du prototype, recopiées sans modification ; socle.css pour les ajouts
       lib/                   accès API côté serveur, session, routes, typographie, icônes
 packages/shared/src/         enums, règles, droits, schémas, contrats
