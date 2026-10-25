@@ -11,6 +11,7 @@ import {
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DocumentsLegauxService } from '../../modules/auth/documents-legaux.service.js';
 import { hacherMotDePasse } from '../../modules/auth/mots-de-passe.service.js';
+import { indexerSujet } from '../../modules/forum/contenu-sujet.js';
 import { enregistrerImage } from '../../modules/medias/medias.service.js';
 import { ecrireDeclinaisons, type Stockage } from '../../modules/medias/stockage.js';
 import {
@@ -45,6 +46,7 @@ import {
   optionReponse,
   outil,
   outilModele,
+  rechercheDocument,
   reproduction,
   signalementObsolescence,
   sujet,
@@ -120,6 +122,8 @@ export interface BilanDemo {
   resultats: number;
   /** Noms affichés, titres, formats, listes « À adapter » et outils ajoutés à des données déjà en base. */
   completes: number;
+  /** Documents de recherche des sujets (RG-31), ajoutés aussi à une base chargée avant FORUM-01. */
+  documents: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -140,6 +144,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     await chargerImages(ctx, options.stockage);
     await completerResultats(ctx);
     await completerFidelite(ctx);
+    await completerRecherche(ctx);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
@@ -164,6 +169,7 @@ export function decrireBilan(bilan: BilanDemo): string {
     [bilan.avatars, 'photo de profil', 'photos de profil'],
     [bilan.resultats, 'résultat en texte ou en code', 'résultats en texte ou en code'],
     [bilan.completes, 'élément complété', 'éléments complétés'],
+    [bilan.documents, 'document de recherche', 'documents de recherche'],
   ];
   const ajoutes = parties.filter(([nombre]) => nombre > 0);
   if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
@@ -275,6 +281,7 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
       avatars: 0,
       resultats: 0,
       completes: 0,
+      documents: 0,
     },
   };
 }
@@ -895,6 +902,27 @@ async function chargerSujet(ctx: Contexte, s: SujetDemo): Promise<void> {
   voter(ctx, cible, 'UTILE', nombreDeVotes(s.utiles), periode);
   if (s.type === 'ASTUCE' && s.testes)
     voter(ctx, cible, 'TESTE_OK', nombreDeVotes(s.testes), periode);
+}
+
+/** RG-31 : document de recherche des sujets de démonstration visibles qui n'en ont pas (la recherche
+    du forum les trouve ; celui des créations et des cas viendra avec DEC-01). */
+async function completerRecherche(ctx: Contexte): Promise<void> {
+  const ids = [...ctx.sujets.values()];
+  if (!ids.length) return;
+  const sansDocument = await ctx.tx
+    .select({ id: sujet.id })
+    .from(sujet)
+    .innerJoin(contenu, eq(contenu.id, sujet.id))
+    .leftJoin(rechercheDocument, eq(rechercheDocument.contenuId, sujet.id))
+    .where(
+      and(
+        inArray(sujet.id, ids),
+        eq(contenu.statut, 'VISIBLE'),
+        isNull(rechercheDocument.contenuId),
+      ),
+    );
+  for (const { id } of sansDocument) await indexerSujet(ctx.tx, id);
+  ctx.bilan.documents += sansDocument.length;
 }
 
 /* Bon réflexe --------------------------------------------------------------- */

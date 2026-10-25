@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
-import type { CreationFicheApi, SessionApi } from '@vysora/shared';
+import type { CreationFicheApi, ListeSujetsApi, SessionApi, SujetApi } from '@vysora/shared';
 import { isNotNull, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import request from 'supertest';
@@ -137,6 +137,7 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
         messages: 39,
         cas: 8,
         enregistrements: 8,
+        documents: 17,
       });
       expect(bilan.reproductions).toBeGreaterThan(250);
       expect(bilan.votes).toBeGreaterThan(1500);
@@ -429,6 +430,42 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
       expect(await etatDeLaPresentation()).toEqual(attendu);
       expect(await compter()).toEqual(avant);
     }, 120_000);
+  });
+
+  describe('forum (FORUM-01)', () => {
+    it('se lit par l’API : recherche, clinique relue, prompt de la réponse acceptée', async () => {
+      const lire = (adresse: string) =>
+        request(contexte.app.getHttpServer())
+          .get(adresse)
+          .set('X-Forwarded-For', ipDeTest())
+          .expect(200);
+      const liste = (await lire('/api/v1/sujets?q=visage&type=CLINIQUE')).body as ListeSujetsApi;
+      const trouve = liste.elements.find(
+        (s) => s.titre === 'Mon personnage change de visage à chaque nouvelle image',
+      );
+      expect(trouve).toMatchObject({
+        etat: 'RESOLU',
+        solution: { auteur: { pseudo: 'claire-dubois' } },
+      });
+
+      const sujet = (await lire(`/api/v1/sujets/${trouve?.id}`)).body as SujetApi;
+      expect(sujet).toMatchObject({
+        corps: expect.stringMatching(/^Je prépare une série de six portraits/),
+        clinique: {
+          prompt:
+            'Portrait d’un jeune homme aux cheveux courts, manteau bleu, assis dans un café, illustration à la gouache, lumière douce du matin.',
+          obtenu:
+            'Six visages différents : la mâchoire, les yeux et l’âge apparent changent à chaque scène.',
+          attendu:
+            'Le même personnage, reconnaissable d’une scène à l’autre ; seul le décor change.',
+        },
+        outil: { nom: 'Midjourney' },
+      });
+      const acceptee = sujet.reponses.elements.find((r) => r.acceptee);
+      expect(acceptee?.auteur.pseudo).toBe('claire-dubois');
+      expect(acceptee?.prompt).toMatch(/--cref planche-personnage\.png --cw 80$/);
+      expect(acceptee?.corps).toMatch(/ne faites varier que le décor\.$/);
+    });
   });
 
   describe('idempotence', () => {
