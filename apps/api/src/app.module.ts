@@ -12,6 +12,7 @@ import { DroitsGuard } from './modules/auth/droits.js';
 import { ContactModule } from './modules/contact/contact.module.js';
 import { CreationsModule } from './modules/creations/creations.module.js';
 import { EmailModule } from './modules/email/email.module.js';
+import { FileModule } from './modules/file/file.module.js';
 import { InteractionsModule } from './modules/interactions/interactions.module.js';
 import { MediasModule, StockageModule } from './modules/medias/medias.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
@@ -51,6 +52,7 @@ import { SanteModule } from './modules/sante/sante.module.js';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     BaseDeDonneesModule,
     StockageModule,
+    FileModule,
     EmailModule,
     AuthModule,
     SanteModule,

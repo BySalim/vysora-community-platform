@@ -58,7 +58,7 @@ export class ReinitialisationService {
       DELAIS.lienReinitialisationMinutes * 60_000,
     );
     const lien = new URL(`/connexion?jeton=${encodeURIComponent(valeur)}`, this.config.SITE_URL);
-    // Envoi sans attendre : la durée de la réponse ne dit pas si l'adresse possède un compte.
+    // Mise en file sans attendre : la durée de la réponse ne dit pas si l'adresse possède un compte.
     void this.emails
       .envoyer(emailReinitialisation(compte.email, lien.href))
       .catch((erreur: unknown) =>

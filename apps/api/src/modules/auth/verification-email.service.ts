@@ -27,7 +27,8 @@ export class VerificationEmailService {
     private readonly emails: EmailService,
   ) {}
 
-  /** Nouveau lien envoyé à l'adresse du compte. Un échec d'envoi est journalisé : le lien peut être renvoyé. */
+  /** Nouveau lien envoyé à l'adresse du compte, par la file (reprises en cas d'échec, EMAIL-01). Une
+      mise en file impossible est journalisée : le lien peut être renvoyé. */
   async envoyer(utilisateurId: number, email: string): Promise<void> {
     const valeur = await this.jetons.creer(
       utilisateurId,

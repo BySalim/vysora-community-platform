@@ -2,6 +2,7 @@ import pg from 'pg';
 import { creerBaseDeDonnees } from '../src/db/client.js';
 import { migrer } from '../src/db/migrations.js';
 import { semer } from '../src/db/seed/semer.js';
+import { SCHEMA_FILE } from '../src/modules/file/file-pg-boss.js';
 
 /* Avant les tests de bout en bout : la base de test est recréée à partir des migrations,
    puis les référentiels sont chargés. Refuse toute base dont le nom ne contient pas « test ». */
@@ -17,6 +18,8 @@ export default async function preparer(): Promise<void> {
   const client = new pg.Client({ connectionString: url });
   await client.connect();
   await client.query('drop schema if exists drizzle cascade');
+  // File des tâches (EMAIL-01), recréée par pg-boss au démarrage de file.e2e-spec.ts.
+  await client.query(`drop schema if exists ${SCHEMA_FILE} cascade`);
   await client.query('drop schema public cascade');
   await client.query('create schema public');
   await client.end();

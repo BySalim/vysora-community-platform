@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { lireConfiguration } from '../config/env.js';
+import { SCHEMA_FILE } from '../modules/file/file-pg-boss.js';
 import { creerBaseDeDonnees } from './client.js';
 import { migrer } from './migrations.js';
 import { semer } from './seed/semer.js';
@@ -16,6 +17,8 @@ if (config.NODE_ENV === 'production') {
 const client = new pg.Client({ connectionString: config.DATABASE_URL });
 await client.connect();
 await client.query('drop schema if exists drizzle cascade');
+// File des tâches (EMAIL-01) : ses tâches désignent des lignes effacées ; pg-boss la recrée au démarrage de l'API.
+await client.query(`drop schema if exists ${SCHEMA_FILE} cascade`);
 await client.query('drop schema public cascade');
 await client.query('create schema public');
 await client.query('drop text search configuration if exists vysora_fr');

@@ -244,8 +244,9 @@ export class NotificationsService {
     await db.delete(notification).where(inArray(notification.contenuId, contenuIds));
   }
 
-  /** E-mails des notifications qui en demandent un (WF-25), après la validation de l'action.
-      Un échec est journalisé : la notification reste dans l'application. */
+  /** E-mails des notifications qui en demandent un (WF-25), après la validation de l'action. Ils
+      partent par la file, repris en cas d'échec (EMAIL-01) ; une mise en file impossible est
+      journalisée : la notification reste dans l'application. */
   async envoyerEmails(ids: (number | null)[]): Promise<void> {
     const choisis = ids.filter((id): id is number => id !== null);
     if (!choisis.length) return;

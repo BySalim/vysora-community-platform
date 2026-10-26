@@ -9,7 +9,10 @@ import type { BaseDeDonnees } from '../src/db/client.js';
 import { contenu, creation, licence, utilisateur } from '../src/db/schema/index.js';
 import { DocumentsLegauxService } from '../src/modules/auth/documents-legaux.service.js';
 import { MotsDePasseService } from '../src/modules/auth/mots-de-passe.service.js';
-import { EmailService, type EmailAEnvoyer } from '../src/modules/email/email.service.js';
+import type { EmailAEnvoyer } from '../src/modules/email/email.service.js';
+import { TransportEmail } from '../src/modules/email/transport-email.js';
+import { FileTachesImmediate } from '../src/modules/file/file-immediate.js';
+import { FileTaches } from '../src/modules/file/file-taches.js';
 
 /** Origine du site, acceptée par la protection CSRF (valeur par défaut de SITE_URL). */
 export const ORIGINE_SITE = 'http://localhost:4321';
@@ -19,20 +22,31 @@ export interface ApplicationDeTest {
   db: BaseDeDonnees;
   /** E-mails « envoyés » pendant le test, gardés en mémoire. */
   emails: EmailAEnvoyer[];
+  /** File des tâches exécutées aussitôt ; `taches.lancer(nom)` joue une tâche planifiée. */
+  taches: FileTachesImmediate;
 }
 
-/** L'API complète, avec la même configuration HTTP qu'en production, et un service d'e-mail factice. */
+/** L'API complète, avec la même configuration HTTP qu'en production. La file traite chaque tâche
+    dans l'appel qui la publie (EMAIL-01) et le transport garde les e-mails en mémoire : ils sont
+    dans `emails` dès la réponse de l'API. */
 export async function demarrerApplication(): Promise<ApplicationDeTest> {
   const emails: EmailAEnvoyer[] = [];
   const module = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(EmailService)
+    .overrideProvider(FileTaches)
+    .useClass(FileTachesImmediate)
+    .overrideProvider(TransportEmail)
     .useValue({ envoyer: async (email: EmailAEnvoyer) => void emails.push(email) })
     .compile();
 
   const app = module.createNestApplication<NestExpressApplication>({ bufferLogs: true });
   configurerApplication(app);
   await app.init();
-  return { app, db: app.get<BaseDeDonnees>(BASE), emails };
+  return {
+    app,
+    db: app.get<BaseDeDonnees>(BASE),
+    emails,
+    taches: app.get<FileTachesImmediate>(FileTaches),
+  };
 }
 
 /** Vide des tables entre deux tests (les référentiels restent chargés). */

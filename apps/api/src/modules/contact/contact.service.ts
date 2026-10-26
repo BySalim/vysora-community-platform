@@ -66,7 +66,8 @@ export class ContactService {
     throw new Error('Impossible d’attribuer une référence unique au message de contact');
   }
 
-  /** L'échec d'un envoi n'annule pas le message, déjà enregistré : il est journalisé pour être repris. */
+  /** Les e-mails partent par la file, repris en cas d'échec (EMAIL-01). Une mise en file impossible
+      n'annule pas le message, déjà enregistré : elle est journalisée. */
   private async prevenir(message: MessageContact, reference: string): Promise<void> {
     const motif = LIBELLE_MOTIF[message.motif];
     const equipe = miseEnForme({
