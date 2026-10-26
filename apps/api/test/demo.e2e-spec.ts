@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
-import type { CreationFicheApi, SessionApi } from '@vysora/shared';
+import type { CreationFicheApi, NotificationsApi, SessionApi } from '@vysora/shared';
 import { isNotNull, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import request from 'supertest';
@@ -54,6 +54,7 @@ const TABLES = [
   'signalement_obsolescence',
   'mouvement_reputation',
   'media',
+  'notification',
 ] as const;
 
 /** Images du prototype attendues : résultats des créations et images jointes aux échanges. */
@@ -65,6 +66,12 @@ const IMAGES_ATTENDUES = CREATIONS.reduce(
   0,
 );
 const AVATARS_ATTENDUS = MEMBRES.filter((m) => m.avatar).length;
+/** Commentaires des créations publiées, réponses comprises. */
+const COMMENTAIRES_ATTENDUS = CREATIONS.filter((c) => c.publication).reduce(
+  (total, c) =>
+    total + (c.commentaires ?? []).reduce((n, com) => n + 1 + (com.reponses?.length ?? 0), 0),
+  0,
+);
 
 describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => {
   let contexte: ApplicationDeTest;
@@ -132,7 +139,7 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
         membres: 53,
         defis: 3,
         creations: 50,
-        commentaires: 2,
+        commentaires: COMMENTAIRES_ATTENDUS,
         sujets: 17,
         messages: 39,
         cas: 8,
@@ -246,6 +253,67 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
         expect(session.etat).toMatchObject({ session: 'membre', niveau, compte: 'actif' });
         expect(session.membre).toMatchObject({ pseudo, points });
       }
+    });
+  });
+
+  describe('notifications (NOTIF-01)', () => {
+    it('tire les notifications des données chargées, sans jamais notifier un membre de sa propre action', async () => {
+      expect(bilan.notifications).toBeGreaterThan(1000);
+      const types = await contexte.db.execute<{ type: string; n: number }>(
+        sql`select type, count(*)::int as n from notification group by type order by type`,
+      );
+      expect(types.rows.map((r) => r.type)).toEqual([
+        'BADGE_OBTENU',
+        'COMMENTAIRE_RECU',
+        'NIVEAU_ATTEINT',
+        'REPONSE_ACCEPTEE',
+        'REPONSE_COMMENTAIRE',
+        'REPONSE_SUJET',
+        'REPRODUCTION_RECUE',
+        'VOTES_UTILE_RECUS',
+      ]);
+      expect(
+        await valeur(
+          sql`select count(*)::int from notification where declencheur_id = destinataire_id`,
+        ),
+      ).toBe(0);
+      // Trois non lues au plus par membre, comme au retour d'une visite.
+      expect(
+        await valeur(sql`select max(n)::int from (select count(*) as n from notification
+          where not est_lue group by destinataire_id) x`),
+      ).toBe(3);
+    });
+
+    it('présente à Clarisse les notifications du prototype : commentaires, réponses, essais, votes', async () => {
+      const agent = request.agent(contexte.app.getHttpServer());
+      await agent
+        .post('/api/v1/session')
+        .set('Origin', ORIGINE_SITE)
+        .set('X-Forwarded-For', ipDeTest())
+        .send({ email: emailDemo('clarisse-mendy'), motDePasse: MOT_DE_PASSE_DEMO })
+        .expect(200);
+      const page = (await agent.get('/api/v1/notifications').expect(200)).body as NotificationsApi;
+      expect(page.nonLues).toBe(3);
+      const kofi = page.elements.find((n) => n.par?.pseudo === 'kofi-mensah');
+      expect(kofi).toMatchObject({
+        type: 'COMMENTAIRE_RECU',
+        cible: { titre: 'Affiche touristique de Ziguinchor en trois prompts', aMoi: true },
+      });
+      const moussa = page.elements.find((n) => n.par?.pseudo === 'moussa-diallo');
+      expect(moussa?.reponse).toMatchObject({ moi: true });
+      const aissatou = page.elements.find((n) => n.type === 'REPONSE_COMMENTAIRE');
+      expect(aissatou).toMatchObject({
+        par: { pseudo: 'aissatou-ndiaye' },
+        origine: {
+          moi: true,
+          texte:
+            'Le créneau est-il aussi vérifié par le serveur, ou seulement grisé dans la page ?',
+        },
+      });
+      expect(page.elements.some((n) => n.type === 'NIVEAU_ATTEINT')).toBe(true);
+      expect(page.elements.some((n) => n.type === 'VOTES_UTILE_RECUS' && n.votants.length)).toBe(
+        true,
+      );
     });
   });
 

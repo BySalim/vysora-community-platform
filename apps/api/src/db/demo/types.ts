@@ -127,7 +127,13 @@ export interface CreationDemo {
   reproductions?: ReproductionsDemo;
   /** Signalements d'obsolescence (RG-44) : nom complet du modèle, nombre de membres, date du premier. */
   obsolescence?: { modele: string; membres: number; depuis: string };
-  commentaires?: { auteur: string; date: string; corps: string }[];
+  /** Commentaires et leurs réponses (rattachées au commentaire, F-42). */
+  commentaires?: {
+    auteur: string;
+    date: string;
+    corps: string;
+    reponses?: { auteur: string; date: string; corps: string }[];
+  }[];
 }
 
 export interface MessageDemo {

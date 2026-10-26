@@ -87,6 +87,21 @@ export const CREATIONS: CreationDemo[] = [
       ],
       dernier: { date: '2026-10-12T18:30', outil: 'ChatGPT', modele: 'GPT-5' },
     },
+    commentaires: [
+      {
+        auteur: 'clarisse-mendy',
+        date: '2026-10-07T17:05',
+        corps: 'Le créneau est-il aussi vérifié par le serveur, ou seulement grisé dans la page ?',
+        reponses: [
+          {
+            auteur: 'aissatou-ndiaye',
+            date: '2026-10-07T18:22',
+            corps:
+              'Oui, le créneau est vérifié par le serveur au moment de confirmer : c’est le troisième échange du parcours.',
+          },
+        ],
+      },
+    ],
   },
   {
     cle: 'cite-ciel-mer',
@@ -2775,6 +2790,19 @@ export const CREATIONS: CreationDemo[] = [
       configurations: [{ outil: 'ChatGPT', modele: 'GPT Image 1', essais: 1, reussis: 1 }],
     },
     obsolescence: { modele: 'GPT Image 1', membres: 2, depuis: '2026-10-12T21:00' },
+    commentaires: [
+      {
+        auteur: 'ibrahima-sow',
+        date: '2026-10-12T20:15',
+        corps: 'Le titre reste lisible même en vignette. Vous la proposez au défi de la semaine ?',
+      },
+      {
+        auteur: 'kofi-mensah',
+        date: '2026-10-13T10:05',
+        corps:
+          'Le fromager à gauche équilibre très bien la pirogue. Vous avez imposé la police du titre dès le premier prompt, ou seulement au troisième ?',
+      },
+    ],
   },
   {
     cle: 'clarisse-prompt',
@@ -2822,6 +2850,20 @@ export const CREATIONS: CreationDemo[] = [
     reproductions: {
       configurations: [{ outil: 'ChatGPT', modele: 'GPT-5', essais: 3, reussis: 2 }],
     },
+    commentaires: [
+      {
+        auteur: 'koffi-amoussou',
+        date: '2026-10-09T17:50',
+        corps:
+          'Précisez peut-être qu’il faut installer Pillow avant le premier lancement : j’ai cherché un moment.',
+      },
+      {
+        auteur: 'hugo-girard',
+        date: '2026-10-11T11:20',
+        corps:
+          'Le suffixe en cas de doublon m’a évité une belle erreur : 40 photos prises en rafale pendant un mariage.',
+      },
+    ],
   },
   {
     cle: 'clarisse-projet',
@@ -2958,6 +3000,59 @@ export const CREATIONS: CreationDemo[] = [
     ],
     utiles: 4,
     vues: 586,
+    commentaires: [
+      {
+        auteur: 'claire-dubois',
+        date: '2026-10-04T11:00',
+        corps:
+          'Très clair. Ajoutez la capture de l’erreur de fuseau horaire : le moment clé se comprendrait d’un coup d’œil.',
+      },
+      {
+        auteur: 'lea-martin',
+        date: '2026-10-05T16:10',
+        corps:
+          'Le passage à l’heure de Dakar m’a fait revoir mes propres réservations. Merci pour ce détail.',
+      },
+      {
+        auteur: 'awa-sarr',
+        date: '2026-10-06T10:15',
+        corps: 'Le gérant reçoit-il un message quand une sortie est complète ?',
+        reponses: [
+          {
+            auteur: 'clarisse-mendy',
+            date: '2026-10-06T12:40',
+            corps: 'Oui, un message lui part dès que la dernière place est réservée.',
+          },
+        ],
+      },
+      {
+        auteur: 'ousmane-sy',
+        date: '2026-10-08T19:45',
+        corps:
+          'Bonne idée d’écrire les règles avant de générer. Vous pourriez joindre la liste obtenue à la première étape ?',
+        reponses: [
+          {
+            auteur: 'clarisse-mendy',
+            date: '2026-10-08T21:02',
+            corps: 'Bonne idée, je l’ajoute à la première étape ce week-end.',
+          },
+        ],
+      },
+      {
+        auteur: 'moussa-diallo',
+        date: '2026-10-10T09:40',
+        corps:
+          'Comment avez-vous envoyé les deux réservations à la même seconde ? Avec deux téléphones en main ?',
+        reponses: [
+          {
+            auteur: 'clarisse-mendy',
+            date: '2026-10-10T12:15',
+            corps:
+              'Oui, deux téléphones et le même départ, envoyés au même moment. La seconde réservation a bien été refusée.',
+          },
+        ],
+      },
+    ],
   },
   {
     cle: 'clarisse-avis',

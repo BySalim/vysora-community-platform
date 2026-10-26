@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
+  BAREME_REPUTATION,
   slugifier,
   type MotifMouvementReputation,
   type ResultatReproduction,
@@ -120,6 +121,8 @@ export interface BilanDemo {
   resultats: number;
   /** Noms affichés, titres, formats, listes « À adapter » et outils ajoutés à des données déjà en base. */
   completes: number;
+  /** Notifications tirées des données chargées (NOTIF-01). */
+  notifications: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -140,11 +143,13 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     await chargerImages(ctx, options.stockage);
     await completerResultats(ctx);
     await completerFidelite(ctx);
+    await chargerCommentaires(ctx);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
     ctx.bilan.votes = ctx.votes.length;
     ctx.bilan.mouvements = ctx.mouvements.length;
+    await chargerNotifications(ctx);
     return ctx.bilan;
   });
 }
@@ -154,6 +159,7 @@ export function decrireBilan(bilan: BilanDemo): string {
     [bilan.membres, 'membre', 'membres'],
     [bilan.creations, 'création', 'créations'],
     [bilan.reproductions, 'reproduction', 'reproductions'],
+    [bilan.commentaires, 'commentaire', 'commentaires'],
     [bilan.sujets, 'sujet', 'sujets'],
     [bilan.messages, 'réponse du forum', 'réponses du forum'],
     [bilan.cas, 'cas Bon réflexe', 'cas Bon réflexe'],
@@ -164,6 +170,7 @@ export function decrireBilan(bilan: BilanDemo): string {
     [bilan.avatars, 'photo de profil', 'photos de profil'],
     [bilan.resultats, 'résultat en texte ou en code', 'résultats en texte ou en code'],
     [bilan.completes, 'élément complété', 'éléments complétés'],
+    [bilan.notifications, 'notification', 'notifications'],
   ];
   const ajoutes = parties.filter(([nombre]) => nombre > 0);
   if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
@@ -275,8 +282,124 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
       avatars: 0,
       resultats: 0,
       completes: 0,
+      notifications: 0,
     },
   };
+}
+
+/* Notifications --------------------------------------------------------------- */
+
+/** NOTIF-01 : les notifications que les données chargées auraient fait naître (RG-91) — commentaires,
+    réponses, essais, votes « Utile » regroupés par contenu et par jour, réponses du forum et réponses
+    acceptées, badges, niveaux atteints —, pour les membres de démonstration qui n'en ont aucune.
+    Comme pour un membre qui revient, les trois plus récentes restent non lues. */
+async function chargerNotifications(ctx: Contexte): Promise<void> {
+  const demo = sql`d.email like ${`%@${DOMAINE_DEMO}`}`;
+  const compter = async () => {
+    const resultat = await ctx.tx.execute<{ n: number }>(
+      sql`select count(*)::int as n from notification x join utilisateur d on d.id = x.destinataire_id where ${demo}`,
+    );
+    return Number(resultat.rows[0]?.n ?? 0);
+  };
+  if ((await compter()) > 0) return;
+
+  const pointsVote = BAREME_REPUTATION.voteUtileSurCreation;
+  const pointsAutreVote = BAREME_REPUTATION.voteUtileSurAutreContenu;
+  const requetes = [
+    // Commentaire sur ma création (une seule notification si l'on répond à mon propre commentaire).
+    sql`insert into notification (destinataire_id, declencheur_id, contenu_id, type, date)
+      select cr.auteur_id, cc.auteur_id, cm.id, 'COMMENTAIRE_RECU', cc.date_creation
+      from commentaire cm
+      join contenu cc on cc.id = cm.id
+      join contenu cr on cr.id = cm.creation_id
+      left join contenu pc on pc.id = cm.parent_id
+      join utilisateur d on d.id = cr.auteur_id
+      where cc.statut = 'VISIBLE' and cc.auteur_id <> cr.auteur_id
+        and (pc.id is null or pc.auteur_id <> cr.auteur_id) and ${demo}`,
+    // Réponse à mon commentaire.
+    sql`insert into notification (destinataire_id, declencheur_id, contenu_id, type, date, donnees)
+      select pc.auteur_id, cc.auteur_id, cm.id, 'REPONSE_COMMENTAIRE', cc.date_creation,
+        jsonb_build_object('origineId', cm.parent_id)
+      from commentaire cm
+      join contenu cc on cc.id = cm.id
+      join contenu pc on pc.id = cm.parent_id
+      join utilisateur d on d.id = pc.auteur_id
+      where cc.statut = 'VISIBLE' and cc.auteur_id <> pc.auteur_id and ${demo}`,
+    // Reproduction de ma création.
+    sql`insert into notification (destinataire_id, declencheur_id, contenu_id, type, date, donnees)
+      select cr.auteur_id, rc.auteur_id, r.id, 'REPRODUCTION_RECUE', rc.date_creation,
+        case when r.resultat = 'SUCCES'
+          then jsonb_build_object('points', ${BAREME_REPUTATION.reproductionReussieRecue}::int) end
+      from reproduction r
+      join contenu rc on rc.id = r.id
+      join contenu cr on cr.id = r.creation_id
+      join utilisateur d on d.id = cr.auteur_id
+      where rc.statut = 'VISIBLE' and rc.auteur_id <> cr.auteur_id and ${demo}`,
+    // Votes « Utile » reçus, regroupés par contenu et par jour (UTC).
+    sql`insert into notification (destinataire_id, declencheur_id, contenu_id, type, date,
+        nombre_regroupe, donnees, cle_regroupement)
+      select c.auteur_id, (array_agg(v.votant_id order by v.date_vote desc))[1], v.contenu_id,
+        'VOTES_UTILE_RECUS', max(v.date_vote), count(*)::int,
+        jsonb_build_object('points', count(*)::int * case when c.type_contenu = 'CREATION'
+          then ${pointsVote}::int else ${pointsAutreVote}::int end),
+        'VOTES_UTILE_RECUS:' || v.contenu_id || ':' || to_char(v.date_vote at time zone 'UTC', 'YYYY-MM-DD')
+      from vote v
+      join contenu c on c.id = v.contenu_id
+      join utilisateur d on d.id = c.auteur_id
+      where v.type_vote_code = 'UTILE' and v.votant_id <> c.auteur_id and ${demo}
+      group by c.auteur_id, v.contenu_id, c.type_contenu,
+        to_char(v.date_vote at time zone 'UTC', 'YYYY-MM-DD')`,
+    // Réponse à mon sujet du forum.
+    sql`insert into notification (destinataire_id, declencheur_id, contenu_id, type, date)
+      select sc.auteur_id, mc.auteur_id, m.id, 'REPONSE_SUJET', mc.date_creation
+      from message m
+      join contenu mc on mc.id = m.id
+      join contenu sc on sc.id = m.sujet_id
+      join utilisateur d on d.id = sc.auteur_id
+      where mc.statut = 'VISIBLE' and mc.auteur_id <> sc.auteur_id and ${demo}`,
+    // Ma réponse acceptée.
+    sql`insert into notification (destinataire_id, declencheur_id, contenu_id, type, date, donnees)
+      select mc.auteur_id, sc.auteur_id, s.message_accepte_id, 'REPONSE_ACCEPTEE',
+        coalesce(s.date_acceptation_reponse, mc.date_creation),
+        jsonb_build_object('points', ${BAREME_REPUTATION.reponseAcceptee}::int)
+      from sujet s
+      join contenu sc on sc.id = s.id
+      join contenu mc on mc.id = s.message_accepte_id
+      join utilisateur d on d.id = mc.auteur_id
+      where mc.auteur_id <> sc.auteur_id and ${demo}`,
+    // Badge obtenu.
+    sql`insert into notification (destinataire_id, type, date, donnees, cle_regroupement)
+      select o.utilisateur_id, 'BADGE_OBTENU', o.date_obtention, jsonb_build_object('badge', b.code),
+        'BADGE_OBTENU:' || b.code
+      from obtention_badge o
+      join badge b on b.id = o.badge_id
+      join utilisateur d on d.id = o.utilisateur_id
+      where ${demo}`,
+    // Niveau atteint : le moment où la réputation cumulée a passé le seuil.
+    sql`insert into notification (destinataire_id, type, date, donnees, cle_regroupement)
+      select c.beneficiaire_id, 'NIVEAU_ATTEINT', min(c.date), jsonb_build_object('niveau', n.code),
+        'NIVEAU_ATTEINT:' || n.code
+      from (
+        select m.beneficiaire_id, m.date,
+          sum(m.points) over (partition by m.beneficiaire_id order by m.date, m.id) as total
+        from mouvement_reputation m
+        join utilisateur d on d.id = m.beneficiaire_id
+        where ${demo}
+      ) c
+      join niveau n on n.seuil_points > 0 and c.total >= n.seuil_points
+      group by c.beneficiaire_id, n.code`,
+  ];
+  for (const requete of requetes) await ctx.tx.execute(requete);
+
+  // Les trois plus récentes de chaque membre restent non lues.
+  await ctx.tx.execute(sql`update notification n set est_lue = r.rang > 3
+    from (
+      select x.id, row_number() over (partition by x.destinataire_id order by x.date desc, x.id desc) as rang
+      from notification x join utilisateur d on d.id = x.destinataire_id
+      where ${demo}
+    ) r
+    where r.id = n.id`);
+  ctx.bilan.notifications = await compter();
 }
 
 /* Outils -------------------------------------------------------------------- */
@@ -683,19 +806,6 @@ async function chargerCreation(ctx: Contexte, c: CreationDemo): Promise<void> {
   await etiqueter(ctx, id, c.etiquettes);
   if (!publication) return;
 
-  for (const com of c.commentaires ?? []) {
-    const auteurCommentaire = membre(ctx, com.auteur);
-    const idCommentaire = await nouveauContenu(
-      ctx,
-      'COMMENTAIRE',
-      auteurCommentaire.id,
-      dater(ctx, com.date),
-    );
-    await ctx.tx
-      .insert(commentaire)
-      .values({ id: idCommentaire, creationId: id, corps: com.corps });
-    ctx.bilan.commentaires += 1;
-  }
   await chargerReproductions(ctx, c, { id, auteurId: auteur.id, publication });
 
   // RG-75 : les votes d'une participation tombent pendant le défi.
@@ -724,6 +834,36 @@ async function chargerCreation(ctx: Contexte, c: CreationDemo): Promise<void> {
           date: s.date,
         })),
       );
+  }
+}
+
+/** Commentaires des créations publiées et leurs réponses (F-42), ajoutés aussi aux créations déjà
+    en base : un commentaire est reconnu à sa création, son auteur et son texte. */
+async function chargerCommentaires(ctx: Contexte): Promise<void> {
+  for (const c of CREATIONS) {
+    const creationId = ctx.creations.get(c.cle);
+    if (!c.publication || creationId === undefined || !c.commentaires?.length) continue;
+    const existants = await ctx.tx
+      .select({ id: commentaire.id, corps: commentaire.corps, auteurId: contenu.auteurId })
+      .from(commentaire)
+      .innerJoin(contenu, eq(contenu.id, commentaire.id))
+      .where(eq(commentaire.creationId, creationId));
+    const ajouter = async (
+      com: { auteur: string; date: string; corps: string },
+      parentId: number | null,
+    ): Promise<number> => {
+      const auteur = membre(ctx, com.auteur);
+      const deja = existants.find((e) => e.auteurId === auteur.id && e.corps === com.corps);
+      if (deja) return deja.id;
+      const id = await nouveauContenu(ctx, 'COMMENTAIRE', auteur.id, dater(ctx, com.date));
+      await ctx.tx.insert(commentaire).values({ id, creationId, parentId, corps: com.corps });
+      ctx.bilan.commentaires += 1;
+      return id;
+    };
+    for (const com of c.commentaires) {
+      const id = await ajouter(com, null);
+      for (const reponse of com.reponses ?? []) await ajouter(reponse, id);
+    }
   }
 }
 
