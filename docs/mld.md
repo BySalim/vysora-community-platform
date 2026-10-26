@@ -46,7 +46,7 @@
 | `acceptation_document` | ACCEPTER | clé `(utilisateur_id, document_legal_id)`, date |
 | `demande_droit` | DEMANDE_DROIT (DEMANDER) | une demande EN_COURS par membre et par type (index partiel, CI-31) ; fichier d'export et expiration |
 | `mouvement_reputation` | MOUVEMENT_REPUTATION (CREDITER, ORIGINER, JUSTIFIER) | `beneficiaire_id`, `contenu_id` (origine), `decision_id` (ajustement) ; `acteur_id` et `mouvement_annule_id` (techniques, RG-82) ; CI-24 en base pour la justification |
-| `notification` | NOTIFICATION (DESTINER, DECLENCHER, CONCERNER) | `donnees` (JSONB figé), `cle_regroupement` unique par destinataire (votes regroupés par contenu et par jour, RG-91) |
+| `notification` | NOTIFICATION (DESTINER, DECLENCHER, CONCERNER) | `contenu_id` : l'objet de l'événement (le commentaire, l'essai, la réponse du forum, le contenu voté ou masqué, la variante), la création ou le sujet qui le porte se déduit à l'affichage ; `donnees` (JSONB figé : points gagnés, commentaire d'origine, badge, niveau, motif, défi et rang, décision, obsolescence ; type `DonneesNotification`) ; `cle_regroupement` unique par destinataire : `VOTES_UTILE_RECUS:<contenu>:<jour UTC>` (votes regroupés, RG-91), `NIVEAU_ATTEINT:<code>` et `BADGE_OBTENU:<code>` (une fois) |
 | `obtention_badge` | OBTENIR | clé `(utilisateur_id, badge_id)` (CI-27) |
 | `preference_notification` | extension (paramètres du prototype) | clé `(utilisateur_id, evenement)` ; canaux application et e-mail |
 | `invitation` | extension (bêta fermée sur invitation) | `code` unique ; créateur, utilisateur, expiration |
