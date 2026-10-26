@@ -1,0 +1,237 @@
+---
+/* Notifications (NOTIF-01, EC-16, F-81), portée de prototype/notifications.html : boîte de réception
+   du membre connecté. Le serveur pose dans la page la première page de notifications
+   (GET /api/v1/notifications) ; la liste, le volet de lecture et la vue d'ensemble sont construits
+   par scripts/notifications.ts, comme dans le prototype. Une visiteuse voit l'invitation à se
+   connecter, avec l'illustration de la boîte de réception. */
+import type { NotificationsApi } from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { blocAccesHtml, contexteServeur, messageAcces } from '../lib/acces';
+import { appelerApi } from '../lib/api';
+import { ROUTES } from '../lib/navigation';
+import '../styles/notifications.css';
+
+const { etat, membre } = Astro.locals;
+const estMembre = etat.session === 'membre' && membre !== null;
+
+let notifications: NotificationsApi | null = null;
+if (estMembre) {
+  try {
+    notifications = await appelerApi<NotificationsApi>('/api/v1/notifications', {
+      requete: Astro.request,
+    });
+  } catch {
+    // La page s'affiche quand même : le script présente l'erreur et propose de réessayer.
+    notifications = null;
+  }
+}
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+const donnees = estMembre
+  ? JSON.stringify({ notifications, maintenant: new Date().toISOString() }).replaceAll(
+      '<',
+      '\\u003c',
+    )
+  : '';
+
+const accesVisiteur = estMembre
+  ? ''
+  : blocAccesHtml({
+      ...messageAcces(
+        'connexion',
+        'retrouver vos notifications',
+        contexteServeur(Astro.locals, Astro.url, Astro.site),
+      ),
+      texte:
+        'Commentaires sur vos créations, essais, votes « Utile » et réponses à vos questions : tout ce qui se passe autour de vos contributions se lit et se traite ici.',
+    });
+
+/* Illustration de la boîte de réception (prototype : illustration), décorative. */
+const APERCU: [string, string, string][] = [
+  ['kofi-mensah', 'message', 'accent'],
+  ['aissatou-ndiaye', 'repeat', 'succes'],
+  ['lea-martin', 'utile', 'accent'],
+  ['mariam-diop', 'check', 'succes'],
+];
+const LARGEURS = [
+  [76, 52],
+  [64, 44],
+  [70, 36],
+  [58, 48],
+];
+
+const icones = [
+  'alert',
+  'arrow',
+  'arrow-up',
+  'award',
+  'bell-off',
+  'branche',
+  'bulb',
+  'calendar',
+  'check-circle',
+  'check-double',
+  'chevron-down',
+  'chevron-left',
+  'chevron-up',
+  'circle-dot',
+  'eye',
+  'eye-off',
+  'half-circle',
+  'help',
+  'history',
+  'inbox',
+  'layers',
+  'message',
+  'moment',
+  'palier',
+  'pen',
+  'repeat',
+  'replay',
+  'reply',
+  'route',
+  'send',
+  'shield-x',
+  'sliders',
+  'trend-up',
+  'trophy',
+  'type-iteration',
+  'type-projet',
+  'type-prompt',
+  'utile',
+  'wifi-off',
+  'x-circle',
+];
+---
+
+<Base
+  titre="Notifications"
+  description="Commentaires, essais, votes et réponses autour de vos contributions sur Vysora."
+  classeCorps="nt"
+  icones={icones}
+  nonIndexee
+>
+  <div class="container nt-tete">
+    <nav class="nt-ariane" aria-label="Fil d’Ariane" data-nt-ariane hidden={!estMembre}>
+      <ol>
+        <li>
+          <a href={membre ? ROUTES.profil(membre.pseudo) : ROUTES.accueil}>Mon profil</a>
+        </li>
+        <li>
+          <span aria-current="page">Notifications</span>
+        </li>
+      </ol>
+    </nav>
+    <div class="nt-titre-ligne">
+      <div class="nt-titre">
+        <h1>Notifications</h1>
+        <p class="nt-statut" data-nt-statut></p>
+      </div>
+      <div class="nt-tout" data-nt-tout></div>
+    </div>
+  </div>
+
+  <div class="container nt-acces" data-nt-acces hidden={estMembre}>
+    {!estMembre && (
+      <div class="nt-acces-in">
+        <Fragment set:html={accesVisiteur} />
+        <div class="nt-illu" aria-hidden="true">
+          <div class="nt-illu-liste">
+            {APERCU.map(([avatar, icone, ton], i) => (
+              <div
+                class:list={['nt-illu-ligne', { 'is-choisie': i === 0, 'is-nonlue': i < 2 }]}
+                style={`--i:${i}`}
+              >
+                <span class="nt-illu-point" />
+                <span class="nt-visuel">
+                  <img
+                    class="nt-photo"
+                    src={`/assets/avatars/${avatar}.webp`}
+                    alt=""
+                    width="56"
+                    height="56"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span class="nt-puce" data-ton={ton}>
+                    <svg class="icon" aria-hidden="true">
+                      <use href={`#i-${icone}`} />
+                    </svg>
+                  </span>
+                </span>
+                <span class="nt-illu-traits">
+                  <i style={`width:${LARGEURS[i]?.[0]}%`} />
+                  <i style={`width:${LARGEURS[i]?.[1]}%`} />
+                </span>
+              </div>
+            ))}
+          </div>
+          <div class="nt-illu-volet">
+            <span class="nt-visuel">
+              <img
+                class="nt-photo"
+                src="/assets/avatars/kofi-mensah.webp"
+                alt=""
+                width="56"
+                height="56"
+                loading="lazy"
+                decoding="async"
+              />
+              <span class="nt-puce" data-ton="accent">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-message" />
+                </svg>
+              </span>
+            </span>
+            <i class="is-titre" />
+            <i class="is-court" />
+            <span class="nt-illu-bulle" />
+            <span class="nt-illu-bulle is-vous" />
+            <span class="nt-illu-champ" />
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <div class="container nt-boite" data-nt-boite hidden={!estMembre}>
+    <section class="nt-colonne" aria-labelledby="nt-liste-titre">
+      <h2 class="sr-only" id="nt-liste-titre">
+        Liste des notifications
+      </h2>
+      <div class="nt-barre" data-nt-barre>
+        <div class="nt-vues" role="group" aria-label="Notifications affichées" data-nt-vues></div>
+        <div class="nt-type">
+          <label class="sr-only" for="nt-type">
+            Type de notification
+          </label>
+          <select id="nt-type" data-nt-type></select>
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-chevron-down" />
+          </svg>
+        </div>
+      </div>
+      <div class="nt-arrivee-zone">
+        <button class="nt-arrivee" type="button" data-nt-arrivee hidden></button>
+      </div>
+      <div class="nt-liste-zone" data-nt-liste></div>
+      <p class="sr-only" id="nt-aide-clavier">
+        Flèches haut et bas pour parcourir la liste, Entrée pour lire une notification.
+      </p>
+    </section>
+    <section
+      class="nt-volet"
+      id="nt-volet"
+      aria-labelledby="nt-volet-titre"
+      data-nt-volet
+    ></section>
+  </div>
+  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-nt-annonce></p>
+
+  <Fragment slot="fin">
+    {donnees && <script type="application/json" id="nt-donnees" set:html={donnees} />}
+  </Fragment>
+</Base>
+
+<script>
+  import '../scripts/notifications';
+</script>

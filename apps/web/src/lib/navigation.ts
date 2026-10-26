@@ -6,6 +6,9 @@ export const ROUTES = {
   explorer: '/explorer',
   forum: '/forum',
   nouveauSujet: '/forum/nouveau',
+  /** Sujet du forum (/forum/12-comment-verifier-un-script), page portée par FORUM-02. */
+  sujet: (id: number, slug?: string | null) => `/forum/${id}${slug ? `-${slug}` : ''}`,
+  forumSansReponse: '/forum?onglet=sans-reponse',
   clinique: '/forum?type=clinique',
   apprendre: '/apprendre',
   bonReflexe: '/apprendre?rubrique=bon-reflexe',

@@ -65,6 +65,15 @@ export const etats = {
       racine.setAttribute(nom, valeur);
     for (const abonne of abonnes) abonne(page.etat);
   },
+  /** Notifications lues ou reçues : le nombre et l'attribut data-notifications de <html> suivent. */
+  definirNonLues(nombre: number): void {
+    page = { ...page, nonLues: nombre };
+    if (page.etat.session === 'membre')
+      document.documentElement.setAttribute(
+        'data-notifications',
+        nombre > 0 ? 'nouvelles' : 'lues',
+      );
+  },
   /** Prévient la page quand l'état change ; renvoie la fonction qui désabonne. */
   on(abonne: (etat: EtatVisiteur) => void): () => void {
     abonnes.add(abonne);
