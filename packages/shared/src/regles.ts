@@ -100,6 +100,9 @@ export const DELAIS = {
   defiJours: { min: 1, max: 30 }, // RG-73
   traitementSignalementHeures: 72, // RG-105
   sessionJours: 30,
+  // Politique de confidentialité, « Durées de conservation » (appliquées chaque jour, EMAIL-01).
+  conservationNotificationsMois: 12, // « Vous informer »
+  conservationConnexionsJours: 365, // « Sécuriser le service » : tentatives et dates de connexion
 } as const;
 
 export const CODES_NIVEAU = ['curieux', 'apprenti', 'artisan', 'expert', 'maitre'] as const;

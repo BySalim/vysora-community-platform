@@ -4,8 +4,8 @@ import { MediasService } from '../modules/medias/medias.service.js';
 import { StockageDisque } from '../modules/medias/stockage-disque.js';
 
 /* pnpm medias:nettoyer : supprime les images déposées et jamais enregistrées dans un contenu depuis
-   24 heures, puis les fichiers qu'aucune ligne ne désigne plus. À lancer chaque jour ; la file de
-   tâches (EMAIL-01) le planifiera. */
+   24 heures, puis les fichiers qu'aucune ligne ne désigne plus. L'API le fait chaque jour à 3 h 30 UTC
+   (tâche « medias.nettoyer », EMAIL-01) ; la commande sert à le lancer à la main. */
 
 const config = lireConfiguration();
 const { db, pool } = creerBaseDeDonnees(config.DATABASE_URL);

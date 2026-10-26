@@ -18,6 +18,7 @@ import { MediasModule, StockageModule } from './modules/medias/medias.module.js'
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ReferentielsModule } from './modules/referentiels/referentiels.module.js';
 import { SanteModule } from './modules/sante/sante.module.js';
+import { TachesModule } from './modules/taches/taches.module.js';
 
 /* Racine de l'API. Un domaine fonctionnel = un module dans src/modules (docs/architecture.md). */
 @Module({
@@ -62,6 +63,7 @@ import { SanteModule } from './modules/sante/sante.module.js';
     CreationsModule,
     InteractionsModule,
     NotificationsModule,
+    TachesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: FiltreErreurs },

@@ -36,6 +36,13 @@
       "when": 1792861294904,
       "tag": "0004_fidelite-prototype",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793044659052,
+      "tag": "0005_annonce-documents",
+      "breakpoints": true
     }
   ]
 }

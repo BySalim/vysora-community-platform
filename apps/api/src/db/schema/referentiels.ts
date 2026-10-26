@@ -22,7 +22,7 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { identifiant, reference, valeursPermises } from './_outils.js';
+import { horodatage, identifiant, reference, valeursPermises } from './_outils.js';
 
 /* Référentiels administrés (F-95). Un élément utilisé n'est jamais supprimé : il est archivé (RG-110). */
 
@@ -219,6 +219,8 @@ export const documentLegal = pgTable(
     resumeChangements: text(),
     /** Extension : texte complet en Markdown, pour publier une version sans redéployer. */
     texte: text(),
+    /** RG-90, WF-03 : envoi de l'e-mail aux membres à la date d'effet (EMAIL-01) ; jamais deux fois. */
+    dateAnnonce: horodatage(),
   },
   (t) => [
     uniqueIndex('document_legal_type_version_unique').on(t.type, t.version),

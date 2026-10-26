@@ -13,9 +13,17 @@ export interface ContenuEmail {
   details?: [string, string][];
   /** Bouton (lien d'action) placé après le premier paragraphe ; l'adresse figure aussi en clair. */
   action?: { libelle: string; url: string };
+  /** Liens placés en fin de message, quand il y en a plusieurs (un par document, par exemple). */
+  liens?: { libelle: string; url: string }[];
 }
 
-export function miseEnForme({ titre, paragraphes, details = [], action }: ContenuEmail): {
+export function miseEnForme({
+  titre,
+  paragraphes,
+  details = [],
+  action,
+  liens = [],
+}: ContenuEmail): {
   texte: string;
   html: string;
 } {
@@ -27,6 +35,7 @@ export function miseEnForme({ titre, paragraphes, details = [], action }: Conten
     ...(action ? [`${action.libelle} : ${action.url}`, ''] : []),
     ...suite.flatMap((p) => [p, '']),
     ...details.map(([libelle, valeur]) => `${libelle} : ${valeur}`),
+    ...(liens.length ? ['', ...liens.map((lien) => `${lien.libelle} : ${lien.url}`)] : []),
     '',
     '— Vysora',
   ].join('\n');
@@ -49,6 +58,7 @@ export function miseEnForme({ titre, paragraphes, details = [], action }: Conten
 <h1 style="margin:0 0 16px;color:#000000;font-size:20px;line-height:1.3">${echapper(titre)}</h1>
 ${premier === undefined ? '' : paragraphe(premier)}${bouton}${suite.map(paragraphe).join('')}
 ${lignes ? `<table style="margin-top:8px;font-size:14px;line-height:1.5;border-collapse:collapse">${lignes}</table>` : ''}
+${liens.map((lien) => `<p style="margin:14px 0 0;font-size:15px;line-height:1.5"><a href="${echapper(lien.url)}" style="color:#2563EB;font-weight:600">${echapper(lien.libelle)}</a></p>`).join('')}
 </div>
 <p style="margin:20px 0 0;color:#737373;font-size:12px">Voir comment l’IA crée. Apprendre à créer avec elle.</p>
 </div></body></html>`;

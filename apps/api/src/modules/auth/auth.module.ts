@@ -1,4 +1,5 @@
 import { Module, RequestMethod, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
+import { AnnonceDocumentsService } from './annonce-documents.service.js';
 import { ChargementSession } from './chargement-session.middleware.js';
 import { ComptesController } from './comptes.controller.js';
 import { ComptesService } from './comptes.service.js';
@@ -36,9 +37,16 @@ import { VerificationEmailService } from './verification-email.service.js';
     JetonsService,
     VerificationEmailService,
     ReinitialisationService,
+    AnnonceDocumentsService,
     DroitsGuard,
   ],
-  exports: [SessionsService, EtatCompteService, DocumentsLegauxService, DroitsGuard],
+  exports: [
+    SessionsService,
+    EtatCompteService,
+    DocumentsLegauxService,
+    AnnonceDocumentsService,
+    DroitsGuard,
+  ],
 })
 export class AuthModule implements NestModule {
   configure(consommateur: MiddlewareConsumer): void {
