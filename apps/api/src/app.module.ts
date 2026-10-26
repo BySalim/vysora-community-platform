@@ -14,6 +14,7 @@ import { CreationsModule } from './modules/creations/creations.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { InteractionsModule } from './modules/interactions/interactions.module.js';
 import { MediasModule, StockageModule } from './modules/medias/medias.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ReferentielsModule } from './modules/referentiels/referentiels.module.js';
 import { SanteModule } from './modules/sante/sante.module.js';
 
@@ -58,6 +59,7 @@ import { SanteModule } from './modules/sante/sante.module.js';
     MediasModule,
     CreationsModule,
     InteractionsModule,
+    NotificationsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: FiltreErreurs },

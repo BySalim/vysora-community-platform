@@ -102,7 +102,7 @@
 | MOD-02 | Écrans de modération | P1 | ⬜ | Sans maquette : à concevoir dans le style du prototype (EC-19, EC-20), puis à faire valider |
 | ADM-01 | Administration | P1 | ⬜ | Référentiels (archiver plutôt que supprimer), rôles (dernier administrateur protégé, journalisé), documents légaux, journal des décisions. F-95, F-96, EC-21 à EC-25 ; écrans à concevoir |
 | SEC-02 | Double authentification | P1 | ⬜ | TOTP obligatoire pour modération et administration, codes de secours. ENF-05 |
-| NOTIF-01 | Notifications | P1 | ⬜ | Création des notifications (RG-91, votes regroupés par jour), compteur de l'en-tête, page portée (proto `notifications.*`), préférences ; e-mails RG-90. F-80, F-81 |
+| NOTIF-01 | Notifications | P1 | 🔄 2026-10-26 | Création des notifications (RG-91, votes regroupés par jour), compteur de l'en-tête, page portée (proto `notifications.*`), préférences ; e-mails RG-90. F-80, F-81 |
 | PARAM-01 | Paramètres et données personnelles | P1 | ⬜ | proto `parametres.*` : e-mail (vérification et alerte), mot de passe, langue, fuseau, notifications, appareils connectés ; export JSON (F-07) ; suppression avec délai de 30 jours et anonymisation (F-08, D-09) |
 | EMAIL-01 | File d'envoi des e-mails | P1 | ⬜ | `pg-boss` : envoi asynchrone avec reprises (aujourd'hui l'envoi est direct, un échec est seulement journalisé) ; tâches planifiées (suppressions à 30 jours, purge des vues, exports, **nettoyage des images chaque jour (`pnpm medias:nettoyer`, MEDIA-01)**, **purge des sessions expirées et des tentatives de connexion de plus de 24 h**, **e-mail aux membres à la date d’effet d’une nouvelle version des documents légaux**, RG-90, reste d’AUTH-05) |
 

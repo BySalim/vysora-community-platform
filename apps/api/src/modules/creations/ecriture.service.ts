@@ -32,6 +32,7 @@ import {
   reproduction,
   utilisateur,
 } from '../../db/schema/index.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import {
   ecrireContenu,
@@ -86,6 +87,7 @@ export class EcritureCreationsService {
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly lecture: CreationsService,
     private readonly reputation: ReputationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Nouveau brouillon. */
@@ -194,11 +196,10 @@ export class EcritureCreationsService {
           .from(reproduction)
           .where(eq(reproduction.creationId, id)),
       ];
-      await this.reputation.annulerContenus(
-        tx,
-        [id, ...commentaires.map((c) => c.id), ...reproductions.map((r) => r.id)],
-        maintenant,
-      );
+      const nes = [id, ...commentaires.map((c) => c.id), ...reproductions.map((r) => r.id)];
+      await this.reputation.annulerContenus(tx, nes, maintenant);
+      // Votes, commentaires et essais de la création ne sont plus notifiés (NOTIF-01).
+      await this.notifications.retirer(tx, nes);
       await retirerDeLaRecherche(tx, id);
     });
   }

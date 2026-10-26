@@ -12,6 +12,7 @@ import type { BaseDeDonnees } from '../../db/client.js';
 import { contenu, creation, modele, outil, reproduction } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import { lireCible } from './cibles.js';
 
@@ -24,6 +25,7 @@ export class ReproductionsService {
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly stockage: Stockage,
     private readonly reputation: ReputationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async declarer(
@@ -77,17 +79,26 @@ export class ReproductionsService {
         motif: 'REPRODUCTION_DECLAREE',
         points: BAREME_REPUTATION.reproductionDeclaree,
       });
-      if (saisie.resultat === 'SUCCES')
-        await this.reputation.crediterUneFois(tx, {
-          beneficiaireId: cible.auteurId,
-          acteurId: membreId,
-          contenuId: creationId,
-          motif: 'REPRODUCTION_REUSSIE_RECUE',
-          points: BAREME_REPUTATION.reproductionReussieRecue,
-        });
+      const points =
+        saisie.resultat === 'SUCCES'
+          ? await this.reputation.crediterUneFois(tx, {
+              beneficiaireId: cible.auteurId,
+              acteurId: membreId,
+              contenuId: creationId,
+              motif: 'REPRODUCTION_REUSSIE_RECUE',
+              points: BAREME_REPUTATION.reproductionReussieRecue,
+            })
+          : 0;
+      // RG-91 : reproduction de ma création, avec les points qu'elle m'a rapportés.
+      await this.notifications.notifier(tx, {
+        type: 'REPRODUCTION_RECUE',
+        destinataireId: cible.auteurId,
+        declencheurId: membreId,
+        contenuId: ligne.id,
+        donnees: points ? { points } : undefined,
+      });
       return ligne.id;
     });
-    // La notification de l'auteur de la création viendra avec NOTIF-01.
     return this.presenter(id, creationId);
   }
 

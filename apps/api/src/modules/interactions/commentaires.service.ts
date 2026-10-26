@@ -18,6 +18,7 @@ import type { BaseDeDonnees } from '../../db/client.js';
 import { commentaire, contenu } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { lireCible } from './cibles.js';
 
 const JOUR_MS = 24 * 60 * 60_000;
@@ -30,12 +31,14 @@ export interface Commentateur {
 
 /* INT-03 : commentaires d'une création publiée (F-40, F-42, RG-50, RG-51, RG-85).
    Un commentaire retiré par son auteur passe au statut SUPPRIME : il disparaît, ou reste sous la
-   forme « Commentaire supprimé » s'il a des réponses (lecture : CreationsService). */
+   forme « Commentaire supprimé » s'il a des réponses (lecture : CreationsService).
+   RG-91 : l'auteur de la création et celui du commentaire auquel on répond sont notifiés. */
 @Injectable()
 export class CommentairesService {
   constructor(
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly stockage: Stockage,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async commenter(
@@ -68,15 +71,22 @@ export class CommentairesService {
 
     // F-42 : une réponse à une réponse est rattachée au commentaire d'origine.
     let parentId: number | null = null;
+    let auteurDuParent: number | null = null;
     if (saisie.parentId) {
       const [parent] = await this.db
-        .select({ id: commentaire.id, parentId: commentaire.parentId, statut: contenu.statut })
+        .select({
+          id: commentaire.id,
+          parentId: commentaire.parentId,
+          statut: contenu.statut,
+          auteurId: contenu.auteurId,
+        })
         .from(commentaire)
         .innerJoin(contenu, eq(contenu.id, commentaire.id))
         .where(and(eq(commentaire.id, saisie.parentId), eq(commentaire.creationId, creationId)));
       if (!parent || parent.statut !== 'VISIBLE')
         throw erreurValidation({ parentId: 'Ce commentaire n’est plus disponible.' });
       parentId = parent.parentId ?? parent.id;
+      auteurDuParent = parent.auteurId;
     }
 
     const id = await this.db.transaction(async (tx) => {
@@ -88,9 +98,27 @@ export class CommentairesService {
       await tx
         .insert(commentaire)
         .values({ id: ligne.id, creationId, parentId, corps: saisie.corps });
+      // RG-91 : réponse à mon commentaire ; commentaire sur ma création (une seule notification
+      // quand l'auteur de la création est aussi celui du commentaire auquel on répond).
+      if (auteurDuParent !== null)
+        await this.notifications.notifier(tx, {
+          type: 'REPONSE_COMMENTAIRE',
+          destinataireId: auteurDuParent,
+          declencheurId: membre.id,
+          contenuId: ligne.id,
+          donnees: { origineId: saisie.parentId ?? undefined },
+          date: maintenant,
+        });
+      if (cible.auteurId !== auteurDuParent)
+        await this.notifications.notifier(tx, {
+          type: 'COMMENTAIRE_RECU',
+          destinataireId: cible.auteurId,
+          declencheurId: membre.id,
+          contenuId: ligne.id,
+          date: maintenant,
+        });
       return ligne.id;
     });
-    // La notification de l'auteur de la création viendra avec NOTIF-01.
     return this.presenter(id);
   }
 
@@ -111,7 +139,11 @@ export class CommentairesService {
   /** RG-51 : retiré par son auteur ; il reste « Commentaire supprimé » s'il a des réponses. */
   async supprimer(membreId: number, id: number): Promise<void> {
     await this.sien(membreId, id);
-    await this.db.update(contenu).set({ statut: 'SUPPRIME' }).where(eq(contenu.id, id));
+    await this.db.transaction(async (tx) => {
+      await tx.update(contenu).set({ statut: 'SUPPRIME' }).where(eq(contenu.id, id));
+      // Ses notifications disparaissent avec lui (texte retiré, compteur à jour).
+      await this.notifications.retirer(tx, [id]);
+    });
   }
 
   /** Commentaire visible, sur une création visible, écrit par ce membre. */

@@ -10,6 +10,7 @@ import { conflit, interdit, introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees, Transaction } from '../../db/client.js';
 import { enregistrement, vote } from '../../db/schema/index.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import { lireCible, type Cible } from './cibles.js';
 
@@ -25,9 +26,11 @@ export class InteractionsService {
   constructor(
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly reputation: ReputationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
-  /** RG-40, RG-41, RG-80 : vote enregistré une fois ; l'auteur du contenu reçoit ses points. */
+  /** RG-40, RG-41, RG-80 : vote enregistré une fois ; l'auteur du contenu reçoit ses points et,
+      pour un vote « Utile », une notification regroupée par contenu et par jour (RG-91). */
   voter(membreId: number, contenuId: number, type: CodeTypeVote): Promise<VoteApi> {
     return this.db.transaction(async (tx) => {
       const cible = await this.cibleVisible(tx, contenuId);
@@ -49,9 +52,9 @@ export class InteractionsService {
         .insert(vote)
         .values({ votantId: membreId, contenuId, typeVoteCode: type })
         .onConflictDoNothing()
-        .returning({ contenuId: vote.contenuId });
-      if (nouveau)
-        await this.reputation.crediterVote(tx, {
+        .returning({ dateVote: vote.dateVote });
+      if (nouveau) {
+        const points = await this.reputation.crediterVote(tx, {
           beneficiaireId: cible.auteurId,
           acteurId: membreId,
           contenuId,
@@ -63,14 +66,22 @@ export class InteractionsService {
                 ? BAREME_REPUTATION.voteUtileSurCreation
                 : BAREME_REPUTATION.voteUtileSurAutreContenu,
         });
+        // Le jour du regroupement est celui du vote enregistré.
+        if (type === 'UTILE')
+          await this.notifications.voteRecu(
+            tx,
+            { destinataireId: cible.auteurId, votantId: membreId, contenuId, points },
+            nouveau.dateVote,
+          );
+      }
       return this.etatDuVote(tx, contenuId, type, membreId);
     });
   }
 
-  /** RG-40, RG-82 : vote retiré, points de l'auteur annulés. */
+  /** RG-40, RG-82 : vote retiré, points de l'auteur annulés, notification du jour recomptée. */
   retirerVote(membreId: number, contenuId: number, type: CodeTypeVote): Promise<VoteApi> {
     return this.db.transaction(async (tx) => {
-      await this.cibleVisible(tx, contenuId);
+      const cible = await this.cibleVisible(tx, contenuId);
       const [retire] = await tx
         .delete(vote)
         .where(
@@ -80,13 +91,21 @@ export class InteractionsService {
             eq(vote.typeVoteCode, type),
           ),
         )
-        .returning({ contenuId: vote.contenuId });
-      if (retire)
-        await this.reputation.annuler(tx, {
+        .returning({ dateVote: vote.dateVote });
+      if (retire) {
+        const pointsAnnules = await this.reputation.annuler(tx, {
           acteurId: membreId,
           contenuId,
           motif: type === 'UTILE' ? 'VOTE_UTILE_RECU' : 'VOTE_TESTE_RECU',
         });
+        if (type === 'UTILE')
+          await this.notifications.voteRetire(tx, {
+            destinataireId: cible.auteurId,
+            contenuId,
+            dateVote: retire.dateVote,
+            pointsAnnules,
+          });
+      }
       return this.etatDuVote(tx, contenuId, type, membreId);
     });
   }
