@@ -37,6 +37,9 @@
 | Interactions (votes, enregistrements, commentaires, reproductions) : compte actif exigé (`@Exige('contribuer')`), contenu visible seulement (un contenu invisible répond 404, comme s’il n’existait pas), jamais sur son propre contenu pour les votes et les essais ; plafond quotidien des points de votes (RG-81, lignes du bénéficiaire verrouillées) ; limite quotidienne des commentaires (RG-85) ; 20 commentaires ou essais par minute et par IP | `modules/interactions`, `modules/progression` |
 | Notifications : chaque requête porte sur les seules notifications du membre connecté (en marquer une d'un autre membre n'a aucun effet) ; ce qu'elles montrent d'un contenu (texte, titre, image) est lu à l'affichage avec les règles de visibilité de RG-30, du point de vue du destinataire : un commentaire retiré, masqué ou une création dépubliée ne s'affiche plus ; les notifications d'un commentaire ou d'une création supprimés sont effacées ; textes affichés comme du texte (échappés) ; e-mails seulement à l'adresse vérifiée d'un compte actif, envoyés après la validation de l'action ; données de la page en JSON avec `<` échappé | `modules/notifications`, `scripts/notifications.ts` (NOTIF-01) |
 | Fichiers servis sans lire la session (aucun cookie renouvelé sur une réponse mise en cache) | `AuthModule` (exclusion de `/api/v1/fichiers`) |
+| E-mails en attente chiffrés dans la file (AES-256-GCM authentifié, `CLE_CHIFFREMENT`) : ni adresse, ni message, ni lien à usage unique en clair dans la base (les jetons n'y sont qu'en empreinte) ; tâche d'e-mail supprimée un jour après son envoi ou son abandon ; journaux de la file sans les données des tâches (nom, identifiant, numéro d'essai, erreur seulement) ; l'appelant n'attend jamais le serveur SMTP (« mot de passe oublié » répond aussi vite que l'adresse existe ou non) | `EmailService`, `commun/securite/chiffrement.ts`, `FileTachesPgBoss` (EMAIL-01) |
+| Durées de conservation de la politique de confidentialité appliquées chaque jour : sessions expirées supprimées, tentatives et dates de connexion gardées un an, notifications 12 mois ; images abandonnées supprimées après 24 h | `ConservationService`, `TachesPlanifiees` (EMAIL-01) |
+| Nouvelle version d'un document légal annoncée par e-mail aux seuls comptes actifs d'adresse vérifiée (RG-90), une seule fois | `AnnonceDocumentsService` (EMAIL-01) |
 | Données de démonstration refusées en production (la fonction et la commande vérifient `NODE_ENV`) ; comptes en `@example.test` (domaine réservé), mot de passe de développement commun consigné dans le dépôt et haché en Argon2id comme les vrais ; deux comptes d'équipe (modération, administration) qui ne doivent exister que hors production | `db/demo/` (DEMO-01) |
 
 ## 2. À mettre en place (par ordre d'arrivée)
@@ -51,20 +54,20 @@
 
 **Contenus des membres**
 - [x] Markdown rendu côté serveur sans HTML brut, assaini (liste blanche), liens `rel="ugc nofollow noopener"` (ENF-06) ; code affiché comme texte, jamais exécuté (SEC-01, `lib/markdown.ts`, 16 vecteurs d’injection testés). Les commentaires et les retours d’essai sont affichés comme du texte.
-- [x] Images : type vérifié par signature (pas par l'extension), 5 Mo, ré-encodage (suppression des métadonnées EXIF), noms de fichiers aléatoires, servies avec `Content-Type` exact et `nosniff` (MEDIA-01). Limite connue : une image est publique pour qui connaît son adresse (clé non devinable), y compris celle d'un brouillon ou d'un contenu masqué ; voir « Points à trancher » du registre. Le nettoyage doit être planifié chaque jour (EMAIL-01) et le dossier des images sauvegardé (OPS-02).
+- [x] Images : type vérifié par signature (pas par l'extension), 5 Mo, ré-encodage (suppression des métadonnées EXIF), noms de fichiers aléatoires, servies avec `Content-Type` exact et `nosniff` (MEDIA-01). Limite connue : une image est publique pour qui connaît son adresse (clé non devinable), y compris celle d'un brouillon ou d'un contenu masqué ; voir « Points à trancher » du registre. Le nettoyage est planifié chaque jour par la file (EMAIL-01, 3 h 30 UTC) ; le dossier des images reste à sauvegarder (OPS-02).
 - [ ] Détection de données sensibles avant publication (RG-22) : clés d'API, jetons, e-mails, téléphones.
 - [ ] Limites par niveau (RG-85) et masquage automatique (RG-101).
 
 **Exploitation**
 - [ ] HTTPS partout (Caddy, certificats automatiques), HSTS.
-- [ ] Secrets hors du dépôt (variables d'environnement du serveur), rotation documentée.
+- [ ] Secrets hors du dépôt (variables d'environnement du serveur), rotation documentée. Changer `CLE_CHIFFREMENT` rend illisibles les e-mails encore en file (ils échouent puis sont abandonnés, journalisés) : attendre que la file soit vide, ou prévoir une clé précédente acceptée en lecture (et le secret TOTP chiffré de SEC-02 à rechiffrer).
 - [ ] Sauvegardes quotidiennes chiffrées, conservées 30 jours, restauration testée chaque trimestre (ENF-08).
 - [ ] Mises à jour des dépendances (Renovate ou Dependabot) et audit (`pnpm audit`) en CI.
 - [ ] Journal d'audit des actions d'administration conservé 1 an (ENF-09).
 - [ ] Supervision : disponibilité, erreurs 5xx, alertes.
 
 **Données personnelles (C-05, ENF-07)**
-- [ ] Registre des traitements, durées de conservation (messages de contact : 1 an après réponse), cookies strictement nécessaires uniquement. Cookies déposés aujourd'hui : la session (`vysora_session`, ADR-0005) et, seulement si le visiteur refuse la mesure d'audience sur la page Cookies, `vysora_audience=refusee` (13 mois, sans donnée personnelle, lisible par le navigateur). La liste publiée sur `/cookies` mentionne aussi un cookie « Sécurité » qui n'existe pas (la protection des formulaires passe par l'origine) : voir les points à trancher du registre.
+- [ ] Registre des traitements, durées de conservation, cookies strictement nécessaires uniquement. Durées appliquées chaque jour (EMAIL-01) : sessions, connexions (1 an), notifications (12 mois), images abandonnées ; restent les messages de contact (1 an après réponse), les signalements et décisions (1 an après la décision), les comptes sans connexion depuis 2 ans et les suppressions à 30 jours (PARAM-01), les vues (INT-04). Cookies déposés aujourd'hui : la session (`vysora_session`, ADR-0005) et, seulement si le visiteur refuse la mesure d'audience sur la page Cookies, `vysora_audience=refusee` (13 mois, sans donnée personnelle, lisible par le navigateur). La liste publiée sur `/cookies` mentionne aussi un cookie « Sécurité » qui n'existe pas (la protection des formulaires passe par l'origine) : voir les points à trancher du registre.
 - [ ] Export (F-07) et suppression (F-08, D-09) complets, testés.
 - [ ] Hébergement dans l'Union européenne (ou conforme à la loi du pays d'établissement).
 

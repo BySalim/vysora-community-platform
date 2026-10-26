@@ -35,7 +35,7 @@
 | `type_vote` | TYPE_VOTE | clé `code` (UTILE, TESTE_OK) |
 | `niveau` | NIVEAU (+ privilèges RG-85) | clé `rang` 1 à 5 ; `code`, `seuil_points` uniques ; limites par 24 h (null = sans limite) |
 | `badge` | BADGE (+ `ton`) | `code` unique ; `icone` = nom d'icône du sprite |
-| `document_legal` | DOCUMENT_LEGAL (+ extensions) | unique `(type, version)` ; `acceptation_requise`, `resume_changements`, `texte` (Markdown) |
+| `document_legal` | DOCUMENT_LEGAL (+ extensions) | unique `(type, version)` ; `acceptation_requise`, `resume_changements`, `texte` (Markdown) ; `date_annonce` : e-mail envoyé aux membres à la date d'effet (RG-90, WF-03), jamais deux fois ; les versions déjà en vigueur à la migration `0005` sont tenues pour annoncées |
 
 ### Comptes, conformité, progression, notifications
 
@@ -46,7 +46,7 @@
 | `acceptation_document` | ACCEPTER | clé `(utilisateur_id, document_legal_id)`, date |
 | `demande_droit` | DEMANDE_DROIT (DEMANDER) | une demande EN_COURS par membre et par type (index partiel, CI-31) ; fichier d'export et expiration |
 | `mouvement_reputation` | MOUVEMENT_REPUTATION (CREDITER, ORIGINER, JUSTIFIER) | `beneficiaire_id`, `contenu_id` (origine), `decision_id` (ajustement) ; `acteur_id` et `mouvement_annule_id` (techniques, RG-82) ; CI-24 en base pour la justification |
-| `notification` | NOTIFICATION (DESTINER, DECLENCHER, CONCERNER) | `contenu_id` : l'objet de l'événement (le commentaire, l'essai, la réponse du forum, le contenu voté ou masqué, la variante), la création ou le sujet qui le porte se déduit à l'affichage ; `donnees` (JSONB figé : points gagnés, commentaire d'origine, badge, niveau, motif, défi et rang, décision, obsolescence ; type `DonneesNotification`) ; `cle_regroupement` unique par destinataire : `VOTES_UTILE_RECUS:<contenu>:<jour UTC>` (votes regroupés, RG-91), `NIVEAU_ATTEINT:<code>` et `BADGE_OBTENU:<code>` (une fois) |
+| `notification` | NOTIFICATION (DESTINER, DECLENCHER, CONCERNER) | `contenu_id` : l'objet de l'événement (le commentaire, l'essai, la réponse du forum, le contenu voté ou masqué, la variante), la création ou le sujet qui le porte se déduit à l'affichage ; `donnees` (JSONB figé : points gagnés, commentaire d'origine, badge, niveau, motif, défi et rang, décision, obsolescence ; type `DonneesNotification`) ; `cle_regroupement` unique par destinataire : `VOTES_UTILE_RECUS:<contenu>:<jour UTC>` (votes regroupés, RG-91), `NIVEAU_ATTEINT:<code>` et `BADGE_OBTENU:<code>` (une fois) ; supprimée après 12 mois (politique de confidentialité, EMAIL-01), clé de regroupement comprise |
 | `obtention_badge` | OBTENIR | clé `(utilisateur_id, badge_id)` (CI-27) |
 | `preference_notification` | extension (paramètres du prototype) | clé `(utilisateur_id, evenement)` ; canaux application et e-mail |
 | `invitation` | extension (bêta fermée sur invitation) | `code` unique ; créateur, utilisateur, expiration |
@@ -97,14 +97,15 @@
 
 | Table | Rôle |
 |---|---|
-| `session` | Session ouverte sur un appareil ; identifiant = empreinte SHA-256 du jeton du cookie ; appareil, lieu approximatif, empreinte d'IP, double authentification validée. |
+| `session` | Session ouverte sur un appareil ; identifiant = empreinte SHA-256 du jeton du cookie ; appareil, lieu approximatif, empreinte d'IP, double authentification validée. Supprimée chaque jour une fois expirée (EMAIL-01). |
 | `jeton` | Liens à usage unique envoyés par e-mail (vérification, réinitialisation, changement d'e-mail, confirmation de suppression) ; seule l'empreinte est stockée. |
 | `double_authentification` | Secret TOTP chiffré, codes de secours hachés (ENF-05). |
-| `tentative_connexion` | Échecs et réussites, pour temporiser après 5 échecs consécutifs (F-03). Désignées par l'empreinte salée de l'adresse saisie (`empreinte_identifiant`), qu'elle corresponde à un compte ou non : la temporisation ne révèle pas les comptes existants (migration `0002`). |
+| `tentative_connexion` | Échecs et réussites, pour temporiser après 5 échecs consécutifs (F-03). Désignées par l'empreinte salée de l'adresse saisie (`empreinte_identifiant`), qu'elle corresponde à un compte ou non : la temporisation ne révèle pas les comptes existants (migration `0002`). Conservées un an (politique de confidentialité), puis supprimées (EMAIL-01). |
 | `journal_audit` | Changements de rôle et actions d'administration (ENF-09). |
 | `vue_contenu` | Une vue par visiteur et par jour (F-23) ; empreinte anonyme, purge rapide. |
 | `recherche_document` | Index plein texte des contenus publiés (RG-31). |
 | `message_contact` | Messages de la page Contact, y compris les signalements sans compte. |
+| schéma `pgboss` | File des tâches différées (EMAIL-01), créé et mis à jour par pg-boss au démarrage de l'API, hors des migrations Drizzle : files, tâches (les e-mails y attendent chiffrés), planifications. |
 
 ## 3. Contraintes d'intégrité : où elles vivent
 

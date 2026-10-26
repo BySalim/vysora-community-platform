@@ -12,17 +12,17 @@ flowchart LR
   N[Navigateur] -->|pages HTML| W[Site<br/>Astro SSR · Node]
   N -->|/api/* même origine| W
   W -->|relais /api/*<br/>rendu des pages| A[API<br/>NestJS · Node]
-  A --> P[(PostgreSQL 18)]
-  A -->|SMTP| M[E-mails<br/>Mailpit en dev]
+  A --> P[(PostgreSQL 18<br/>+ file pg-boss)]
+  A -->|SMTP, par la file| M[E-mails<br/>Mailpit en dev]
   A --> S[(Images<br/>disque, puis stockage S3)]
 ```
 
 | Bloc | Rôle | Ne fait pas |
 |---|---|---|
 | `apps/web` (Astro) | Rend chaque page du prototype en HTML côté serveur, avec les données de l'API ; scripts de page pour les interactions ; relais `/api/*` vers l'API. | Aucune règle de gestion, aucun accès direct à la base. |
-| `apps/api` (NestJS) | Seule porte d'accès aux données et **seule autorité** sur les droits et les règles (RG-xx) ; authentification, validation, e-mails, tâches. | Aucun rendu HTML. |
+| `apps/api` (NestJS) | Seule porte d'accès aux données et **seule autorité** sur les droits et les règles (RG-xx) ; authentification, validation, e-mails, tâches différées et planifiées (exécutées par l'API elle-même). | Aucun rendu HTML. |
 | `packages/shared` | Vocabulaire commun : énumérations du MCD, règles chiffrées, droits (`raisonRefus`), schémas Zod, contrats des réponses. | Aucun effet de bord, aucune dépendance au framework. |
-| PostgreSQL | Données, contraintes d'intégrité (CI-xx), recherche plein texte (`vysora_fr`). | — |
+| PostgreSQL | Données, contraintes d'intégrité (CI-xx), recherche plein texte (`vysora_fr`) ; file des tâches (schéma `pgboss`). | — |
 
 ## 2. Stack technique de départ
 
@@ -39,12 +39,13 @@ Versions installées au démarrage du projet (octobre 2026) ; les mises à jour 
 | Validation | Zod 4, schémas partagés | Mêmes règles et mêmes messages côté navigateur et côté API. |
 | Erreurs | RFC 9457 (`application/problem+json`) | Format standard, code stable + message par champ. |
 | Journalisation | pino (nestjs-pino) | Journaux JSON, sans cookie ni IP ni corps de requête. |
-| E-mails | Nodemailer + SMTP ; Mailpit en développement | Fournisseur interchangeable (Brevo, Scaleway TEM, Mailjet…). |
+| E-mails | Nodemailer + SMTP, envoyés par la file ; Mailpit en développement | Fournisseur interchangeable (Brevo, Scaleway TEM, Mailjet…). |
+| Tâches différées et planifiées | pg-boss 12 (file sur PostgreSQL) | Reprises, planification et partage entre instances sans autre service (pas de Redis). |
 | Tests | Vitest 5, Supertest ; base `vysora_test` | Tests unitaires rapides, tests de bout en bout sur une vraie base. |
 | Qualité | oxlint, Prettier, `astro check`, `tsc` | Rapide ; `pnpm verifier` enchaîne tout. |
 | Infra de développement | Docker Compose : PostgreSQL, Mailpit | Démarrage en une commande. |
 
-Installés depuis : `@node-rs/argon2` (mots de passe, AUTH-01), `sharp` (contrôle et ré-encodage des images, MEDIA-01), `multer` (envois `multipart/form-data`, MEDIA-01), `markdown-it` (rendu assaini des textes des membres par le site, SEC-01). Prévus mais non installés (ajoutés quand une tâche en a besoin) : `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), Playwright (tests de navigateur).
+Installés depuis : `@node-rs/argon2` (mots de passe, AUTH-01), `sharp` (contrôle et ré-encodage des images, MEDIA-01), `multer` (envois `multipart/form-data`, MEDIA-01), `markdown-it` (rendu assaini des textes des membres par le site, SEC-01), `pg-boss` (file des tâches sur PostgreSQL, EMAIL-01). Prévus mais non installés (ajoutés quand une tâche en a besoin) : `arctic` (GitHub/Google), un générateur TOTP (double authentification), Playwright (tests de navigateur).
 
 ## 3. Arborescence
 
@@ -59,7 +60,8 @@ apps/
       db/demo/               données de démonstration tirées du prototype (pnpm db:demo, jamais en production)
       commun/                erreurs, filtre RFC 9457, validation Zod, garde d'origine, sécurité
       modules/<domaine>/     contrôleur (HTTP) → service (règles) → base
-      taches/                commandes à lancer chaque jour (nettoyage des images), planifiées plus tard par la file de tâches
+                             (file/ : file des tâches ; taches/ : tâches planifiées, durées de conservation)
+      taches/                commandes à lancer à la main (nettoyage des images), aussi planifiées par la file
     test/                    tests de bout en bout (*.e2e-spec.ts)
   web/
     public/assets/           polices, logos, logos d'outils (repris du prototype)
@@ -87,6 +89,8 @@ infra/                       configuration des services (PostgreSQL)
 
 **Texte rédigé par un membre.** L'API renvoie le Markdown brut ; le site le rend avec `rendreMarkdown` (`lib/markdown.ts`) : aucun HTML brut, code affiché tel quel, liens limités et marqués `ugc nofollow`. Un prompt n'est jamais rendu : il s'affiche et se copie à l'identique (F-24).
 
+**Tâche différée.** Un service qui doit envoyer un e-mail appelle `EmailService.envoyer` : l'e-mail est chiffré (AES-256-GCM, `CLE_CHIFFREMENT`) puis mis dans la file pg-boss (`FileTaches.publier`, une ligne dans le schéma `pgboss`), et la requête se termine sans attendre le serveur SMTP. L'API elle-même exécute la file : `TransportEmail` remet l'e-mail ; un échec est repris avec un délai qui double à chaque essai, puis journalisé comme abandon. Les tâches planifiées (nettoyages, purges, annonces) sont déclarées avec leur expression cron et lancées par la même file, une seule fois par échéance quel que soit le nombre d'instances. En test, `FileTachesImmediate` exécute chaque tâche dans l'appel qui la publie.
+
 **En production**, un serveur frontal (Caddy) termine HTTPS et peut envoyer `/api/*` directement à l'API ; le relais du site reste une solution de repli.
 
 ## 5. Découpage de l'API en modules
@@ -98,7 +102,9 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `sante` | `GET /api/health` | Fait |
 | `referentiels` | Référentiels publics (outils, catégories, licences, niveaux, badges) | Fait (lecture) |
 | `contact` | Messages à l'équipe, signalement sans compte | Fait |
-| `email` | Envoi SMTP, gabarit | Fait (envoi direct, file d'attente à venir) |
+| `email` | Envoi SMTP, gabarit | Fait : `EmailService.envoyer` et `envoyerPlusieurs` mettent l'e-mail en file, chiffré ; `TransportEmail` le remet au serveur SMTP (tâche `emails.envoyer` : 6 reprises, sept essais sur une heure au plus, gardée un jour). Appelants : vérification de l'adresse, réinitialisation du mot de passe, contact, `NotificationsService.envoyerEmails`, annonce des documents légaux (EMAIL-01) |
+| `file` | File des tâches différées et planifiées | Fait (EMAIL-01) : `FileTaches` (déclarer, publier, publier en nombre), `FileTachesPgBoss` (démarrée après l'initialisation des modules, arrêtée avant la fermeture des connexions ; planifications en UTC, échéance manquée rattrapée une fois ; planification retirée du code retirée de la base), `FileTachesImmediate` pour les tests ; `journaliserEchec` (reprise ou abandon, sans les données de la tâche) |
+| `taches` | Tâches planifiées, durées de conservation | Fait (EMAIL-01) : `TachesPlanifiees` déclare `medias.nettoyer` (3 h 30 UTC), `conservation.appliquer` (4 h : sessions expirées, connexions de plus d'un an, notifications de plus de 12 mois, `ConservationService`) et `documents-legaux.annoncer` (8 h : RG-90, `AnnonceDocumentsService` du module `auth`). À venir avec leurs données : vues (INT-04), suppressions à 30 jours et exports (PARAM-01) |
 | `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes ; garde des droits (`@Exige`) | Fait : comptes, sessions, connexion, droits, vérification de l’adresse, mot de passe oublié, documents en vigueur (AUTH-01 à AUTH-06). À faire : double authentification (SEC-02), Google et GitHub (S-10) |
 | `membres` | Profil public, paramètres, export, suppression | Commencé : `resumes.ts` (membre présenté à côté d’un contenu : pseudo, photo, niveau) |
 | `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | Lecture d’une fiche (CREA-01, RG-30) ; écriture (CREA-05) : brouillon, enregistrement du contenu complet (`contenu-creation.ts` : étapes et échanges gardés par identifiant, le reste réécrit, images rattachées), publication avec `controlerPublication` du paquet partagé et RG-85, modification, dépublication, suppression (`ecriture.service.ts`), document de recherche (RG-31). À faire : variantes |
@@ -128,6 +134,6 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | Carnéo (V2) | L'API REST versionnée (`/api/v1`) accueillera des jetons d'accès personnels pour l'outil de traçage. |
 | Anglais (D-06) | Textes d'interface externalisés au fil du portage ; dictionnaires par langue ; `langue_interface` déjà en base. |
 | Recherche | PostgreSQL (`recherche_document`, configuration `vysora_fr`) au MVP ; un moteur dédié (Meilisearch) si le volume l'exige. |
-| Tâches différées | `pg-boss` (file sur PostgreSQL, sans Redis) pour e-mails, exports, suppressions à 30 jours, nettoyage. |
+| Tâches différées | `pg-boss` en place (EMAIL-01) : e-mails, nettoyage des images, durées de conservation, annonce des documents légaux. Exports et suppressions à 30 jours s'y ajouteront (PARAM-01). Si la charge l'exige, un processus dédié aux tâches pourra exécuter la file à la place de l'API (même code, sans serveur HTTP). |
 | Images | Disque local, puis stockage objet compatible S3 (Scaleway, Cloudflare R2) derrière une interface `Stockage`. |
 | Hébergement | Un serveur en Europe avec Docker Compose (Caddy, web, api, PostgreSQL, sauvegardes) : ADR-0008, à confirmer. |

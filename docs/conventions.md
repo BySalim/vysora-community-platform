@@ -42,6 +42,7 @@
 - Accès à la base par le client Drizzle injecté (`@Inject(BASE)`), requêtes typées ; SQL brut seulement si nécessaire, toujours paramétré (`sql\`… ${valeur}\``).
 - Configuration par `@Inject(CONFIG)` (variables validées au démarrage) ; jamais `process.env` ailleurs que dans `config/env.ts`.
 - Imports relatifs avec l'extension `.js` (ESM, NestJS 12).
+- E-mails : toujours `EmailService.envoyer` (mise en file, jamais d'envoi SMTP dans une requête), après la validation de la transaction. Travail différé ou planifié : une tâche déclarée avec `FileTaches.declarer` dans `onModuleInit` (nom `domaine.action`, reprises, durée maximale, conservation, cron UTC s'il y a lieu), rejouable sans effet de bord ; les tâches planifiées sont listées dans `modules/taches/taches-planifiees.ts`.
 
 ## Code du site
 
@@ -64,7 +65,7 @@
 | Niveau | Où | Quand |
 |---|---|---|
 | Unitaire (règles, schémas, utilitaires) | `*.test.ts` (shared, web), `*.spec.ts` (api) | Toute règle de gestion, avec son identifiant dans le titre ou un commentaire |
-| Bout en bout API | `apps/api/test/*.e2e-spec.ts` | Chaque route : cas nominal, refus (droits, validation), effets en base. `creerMembre` crée un membre en base, `request.agent` garde le cookie de session, `ipDeTest()` isole les limites de débit par test |
+| Bout en bout API | `apps/api/test/*.e2e-spec.ts` | Chaque route : cas nominal, refus (droits, validation), effets en base. `creerMembre` crée un membre en base, `request.agent` garde le cookie de session, `ipDeTest()` isole les limites de débit par test ; la file y est immédiate : `contexte.emails` reçoit les e-mails dès la réponse, `contexte.taches.lancer(nom)` joue une tâche planifiée |
 | Navigateur | à mettre en place (Playwright) | Parcours critiques et comparaison visuelle avec le prototype |
 
 `pnpm verifier` doit passer avant de considérer une tâche comme faite.
