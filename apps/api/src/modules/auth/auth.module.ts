@@ -1,5 +1,7 @@
 import { Module, RequestMethod, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { AnnonceDocumentsService } from './annonce-documents.service.js';
+import { ChangementEmailService } from './changement-email.service.js';
+import { ChangementMotDePasseService } from './changement-mot-de-passe.service.js';
 import { ChargementSession } from './chargement-session.middleware.js';
 import { ComptesController } from './comptes.controller.js';
 import { ComptesService } from './comptes.service.js';
@@ -38,6 +40,8 @@ import { VerificationEmailService } from './verification-email.service.js';
     VerificationEmailService,
     ReinitialisationService,
     AnnonceDocumentsService,
+    ChangementEmailService,
+    ChangementMotDePasseService,
     DroitsGuard,
   ],
   exports: [
@@ -45,6 +49,9 @@ import { VerificationEmailService } from './verification-email.service.js';
     EtatCompteService,
     DocumentsLegauxService,
     AnnonceDocumentsService,
+    MotsDePasseService,
+    ChangementEmailService,
+    ChangementMotDePasseService,
     DroitsGuard,
   ],
 })

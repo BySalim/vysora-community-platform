@@ -8,6 +8,7 @@ import type {
 } from '../enums';
 import type { MembreResumeApi, OutilResumeApi } from './creations';
 import type { MediaApi } from './medias';
+import type { PreferencesEvenements } from '../parametres';
 import type { BadgeApi, NiveauApi } from './referentiels';
 
 /* Contrats de la page Notifications (NOTIF-01, F-81, RG-91) : GET /api/v1/notifications et les
@@ -121,7 +122,10 @@ export interface LectureNotificationsApi {
   ids: number[];
 }
 
-/** Réponse de PUT /api/v1/moi/preferences-notifications. */
+/** Réponse de PUT /api/v1/moi/preferences-notifications (F-81, WF-25). */
 export interface PreferencesNotificationsApi {
+  /** Envoi par e-mail en général : faux, aucune notification ne part par e-mail. */
   email: boolean;
+  /** Choix par événement : valeur par défaut sans choix enregistré, mesures de la modération toujours vraies. */
+  evenements: PreferencesEvenements;
 }

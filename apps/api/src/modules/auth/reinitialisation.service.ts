@@ -95,7 +95,7 @@ export class ReinitialisationService {
       // Ouvrir le lien prouve l'accès à la boîte : l'adresse est vérifiée du même coup (RG-02).
       await tx
         .update(utilisateur)
-        .set({ empreinteMotDePasse: empreinte, emailVerifie: true })
+        .set({ empreinteMotDePasse: empreinte, emailVerifie: true, dateMotDePasse: new Date() })
         .where(eq(utilisateur.id, compte.id));
       await this.sessions.fermerToutes(compte.id, tx);
     });

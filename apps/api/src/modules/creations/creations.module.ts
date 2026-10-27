@@ -15,6 +15,6 @@ import { MesCreationsService } from './mes-creations.service.js';
   imports: [AuthModule, ProgressionModule, NotificationsModule],
   controllers: [CreationsController, MesCreationsController],
   providers: [CreationsService, EcritureCreationsService, MesCreationsService],
-  exports: [CreationsService],
+  exports: [CreationsService, EcritureCreationsService],
 })
 export class CreationsModule {}

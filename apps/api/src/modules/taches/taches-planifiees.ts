@@ -2,6 +2,7 @@ import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { AnnonceDocumentsService } from '../auth/annonce-documents.service.js';
 import { FileTaches, type DefinitionTache } from '../file/file-taches.js';
 import { MediasService } from '../medias/medias.service.js';
+import { SuppressionService } from '../membres/suppression.service.js';
 import { ConservationService } from './conservation.service.js';
 
 /** Noms des tâches planifiées, dans la file et dans les journaux. */
@@ -9,6 +10,7 @@ export const TACHES_PLANIFIEES = {
   nettoyerMedias: 'medias.nettoyer',
   appliquerConservation: 'conservation.appliquer',
   annoncerDocuments: 'documents-legaux.annoncer',
+  supprimerComptes: 'comptes.supprimer',
 } as const;
 
 /** Réglages communs : trois reprises espacées de 5 minutes au moins, résultat gardé une semaine. */
@@ -20,10 +22,10 @@ const QUOTIDIENNE = {
 
 /* Tâches lancées à heure fixe par la file (EMAIL-01), en UTC. Chacune est rejouable : une échéance
    manquée ou reprise après un échec ne fait rien deux fois. Une nouvelle tâche s'ajoute ici, avec
-   le service de son domaine. Viendront avec leurs données :
-   - purge des vues de plus de 2 jours (INT-04, F-23, table `vue_contenu`) ;
-   - comptes supprimés 30 jours après la demande, puis anonymisés (PARAM-01, RG-05, F-08) ;
-   - fichiers d'export effacés 7 jours après leur production (PARAM-01, F-07). */
+   le service de son domaine. Les tâches d'un domaine qui tournent souvent ou à la demande se
+   déclarent avec leur service : e-mails (`emails.envoyer`), e-mails des notifications
+   (`notifications.emails`, chaque minute), préparation des exports (`exports.preparer`). Viendra
+   avec ses données la purge des vues de plus de 2 jours (INT-04, F-23, table `vue_contenu`). */
 @Injectable()
 export class TachesPlanifiees implements OnModuleInit {
   private readonly journal = new Logger(TachesPlanifiees.name);
@@ -33,6 +35,7 @@ export class TachesPlanifiees implements OnModuleInit {
     private readonly medias: MediasService,
     private readonly conservation: ConservationService,
     private readonly annonces: AnnonceDocumentsService,
+    private readonly suppressions: SuppressionService,
   ) {}
 
   onModuleInit(): void {
@@ -65,6 +68,16 @@ export class TachesPlanifiees implements OnModuleInit {
         const bilan = await this.annonces.annoncer();
         if (bilan.documents)
           this.journal.log({ bilan }, 'Nouvelles versions des documents légaux annoncées');
+      },
+    });
+    // RG-05, F-08 : comptes dont la demande de suppression a 30 jours sans reconnexion.
+    this.file.declarer({
+      nom: TACHES_PLANIFIEES.supprimerComptes,
+      planification: '30 4 * * *',
+      ...QUOTIDIENNE,
+      executer: async () => {
+        const bilan = await this.suppressions.appliquer();
+        if (bilan.comptes) this.journal.log({ bilan }, 'Comptes supprimés');
       },
     });
   }

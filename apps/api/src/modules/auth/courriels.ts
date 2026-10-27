@@ -36,6 +36,41 @@ export function emailReinitialisation(a: string, lien: string): EmailAEnvoyer {
   };
 }
 
+/** F-06, WF-02 : lien envoyé à la nouvelle adresse ; elle ne remplace l'actuelle qu'une fois confirmée. */
+export function emailConfirmationChangement(a: string, lien: string): EmailAEnvoyer {
+  return {
+    a,
+    sujet: 'Confirmez votre nouvelle adresse e-mail',
+    ...miseEnForme({
+      titre: 'Confirmez votre nouvelle adresse e-mail',
+      paragraphes: [
+        'Bonjour, confirmez cette adresse pour qu’elle devienne celle de votre compte Vysora. Ce lien reste valable 24 heures ; d’ici là, votre adresse actuelle reste active.',
+        'Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : l’adresse du compte ne changera pas.',
+      ],
+      action: { libelle: 'Confirmer cette adresse', url: lien },
+    }),
+  };
+}
+
+/** F-06 : alerte envoyée à l'adresse actuelle quand un changement est demandé. */
+export function emailAlerteChangement(a: string, nouvelle: string, siteUrl: string): EmailAEnvoyer {
+  return {
+    a,
+    sujet: 'Changement d’adresse e-mail demandé',
+    ...miseEnForme({
+      titre: 'Changement d’adresse e-mail demandé',
+      paragraphes: [
+        `Bonjour, une demande vient d’être faite pour que ${nouvelle} devienne l’adresse de votre compte Vysora. Votre adresse actuelle reste celle du compte tant que la nouvelle n’est pas confirmée.`,
+        'Si vous n’êtes pas à l’origine de cette demande, annulez-la depuis vos paramètres et changez votre mot de passe : quelqu’un d’autre le connaît peut-être.',
+      ],
+      action: {
+        libelle: 'Ouvrir mes paramètres',
+        url: new URL('/parametres#compte', siteUrl).href,
+      },
+    }),
+  };
+}
+
 /** Nom de chaque document, seul et dans une phrase (« la charte », « de la charte »). */
 const NOMS_DOCUMENTS: Record<TypeDocumentLegal, { titre: string; le: string; de: string }> = {
   CGU: {

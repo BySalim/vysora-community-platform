@@ -19,6 +19,7 @@ import {
   schemaRenvoiVerification,
   type DisponibiliteEmail,
   type DisponibilitePseudo,
+  type EmailConfirmeApi,
   type Inscription,
   type LienEnvoye,
   type ModificationMembre,
@@ -29,6 +30,7 @@ import { CONFIG } from '../../config/configuration.module.js';
 import type { Configuration } from '../../config/env.js';
 import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { nomCookieSession, poserCookieSession } from '../../commun/securite/cookies.js';
+import { ChangementEmailService } from './changement-email.service.js';
 import { ComptesService } from './comptes.service.js';
 import { Exige, SessionCourante } from './droits.js';
 import { EtatCompteService } from './etat-compte.service.js';
@@ -44,6 +46,7 @@ export class ComptesController {
     private readonly sessions: SessionsService,
     private readonly etatCompte: EtatCompteService,
     private readonly verification: VerificationEmailService,
+    private readonly changementEmail: ChangementEmailService,
     @Inject(CONFIG) private readonly config: Configuration,
   ) {}
 
@@ -81,6 +84,17 @@ export class ComptesController {
     @Body(new ValidationZod(schemaJeton)) { jeton }: { jeton: string },
   ): Promise<void> {
     await this.verification.verifier(jeton);
+  }
+
+  /** POST /api/v1/comptes/email/confirmation : le lien reçu à la nouvelle adresse la rend adresse du
+      compte (PARAM-01, F-06). Sans session : le lien suffit, la demande a exigé le mot de passe. */
+  @Post('comptes/email/confirmation')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 15 * 60_000 } })
+  confirmerEmail(
+    @Body(new ValidationZod(schemaJeton)) { jeton }: { jeton: string },
+  ): Promise<EmailConfirmeApi> {
+    return this.changementEmail.confirmer(jeton);
   }
 
   /** POST /api/v1/comptes/verification/renvoi : nouveau lien, au membre connecté ou depuis un lien expiré. */

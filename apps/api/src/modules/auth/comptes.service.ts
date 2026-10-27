@@ -114,7 +114,8 @@ export class ComptesService {
     };
   }
 
-  /** Le membre modifie ses informations : son pseudo ; son adresse tant qu'elle n'est pas vérifiée. */
+  /** Le membre modifie ses informations : son pseudo, son nom, son fuseau horaire ; son adresse tant
+      qu'elle n'est pas vérifiée. */
   async modifier(utilisateurId: number, modification: ModificationMembre): Promise<void> {
     if (modification.pseudo !== undefined)
       await this.modifierPseudo(utilisateurId, modification.pseudo);
@@ -122,6 +123,11 @@ export class ComptesService {
       await this.db
         .update(utilisateur)
         .set({ nomAffiche: modification.nomAffiche })
+        .where(eq(utilisateur.id, utilisateurId));
+    if (modification.fuseauHoraire !== undefined)
+      await this.db
+        .update(utilisateur)
+        .set({ fuseauHoraire: modification.fuseauHoraire })
         .where(eq(utilisateur.id, utilisateurId));
     if (modification.email !== undefined)
       await this.modifierEmail(utilisateurId, modification.email);

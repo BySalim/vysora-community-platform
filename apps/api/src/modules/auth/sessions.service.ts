@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DELAIS } from '@vysora/shared';
-import { and, eq, gt, notInArray } from 'drizzle-orm';
+import { DELAIS, type AppareilApi } from '@vysora/shared';
+import { and, desc, eq, gt, ne, notInArray } from 'drizzle-orm';
 import { CONFIG } from '../../config/configuration.module.js';
 import type { Configuration } from '../../config/env.js';
 import { empreinteSalee, jetonAleatoire, sha256 } from '../../commun/securite/empreintes.js';
@@ -96,4 +96,50 @@ export class SessionsService {
   async fermerToutes(utilisateurId: number, db: Executeur = this.db): Promise<void> {
     await db.delete(session).where(eq(session.utilisateurId, utilisateurId));
   }
+
+  /** PARAM-01 : appareils où le compte est ouvert, celui de la requête en tête, puis du plus
+      récemment actif au plus ancien. */
+  async lister(
+    utilisateurId: number,
+    courante: string,
+    maintenant = new Date(),
+  ): Promise<AppareilApi[]> {
+    const lignes = await this.db
+      .select()
+      .from(session)
+      .where(and(eq(session.utilisateurId, utilisateurId), gt(session.dateExpiration, maintenant)))
+      .orderBy(desc(session.dateDerniereActivite));
+    return lignes
+      .map((ligne) => ({
+        cle: cleAppareil(ligne.id),
+        nom: ligne.appareil,
+        telephone: /iPhone|Android/.test(ligne.appareil ?? ''),
+        lieu: ligne.lieu,
+        actuel: ligne.id === courante,
+        derniereActivite: ligne.dateDerniereActivite.toISOString(),
+      }))
+      .toSorted((a, b) => Number(b.actuel) - Number(a.actuel));
+  }
+
+  /** « Déconnecter » un autre appareil ; faux si la clé ne désigne aucune autre session du membre. */
+  async fermerAppareil(utilisateurId: number, cle: string, courante: string): Promise<boolean> {
+    const lignes = await this.db
+      .select({ id: session.id })
+      .from(session)
+      .where(and(eq(session.utilisateurId, utilisateurId), ne(session.id, courante)));
+    const cible = lignes.find((ligne) => cleAppareil(ligne.id) === cle);
+    if (!cible) return false;
+    await this.db.delete(session).where(eq(session.id, cible.id));
+    return true;
+  }
+
+  /** « Déconnecter les autres appareils », ou après un changement de mot de passe. */
+  async fermerAutres(utilisateurId: number, courante: string, db: Executeur = this.db) {
+    await db
+      .delete(session)
+      .where(and(eq(session.utilisateurId, utilisateurId), ne(session.id, courante)));
+  }
 }
+
+/** Désigne une session dans la liste des appareils sans en donner l'identifiant (empreinte du jeton). */
+const cleAppareil = (id: string): string => sha256(`appareil:${id}`).slice(0, 24);

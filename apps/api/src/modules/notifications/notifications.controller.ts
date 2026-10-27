@@ -47,13 +47,13 @@ export class NotificationsController {
     return this.notifications.toutLire(session.utilisateur.id);
   }
 
-  /** PUT /api/v1/moi/preferences-notifications : réponses à ses sujets et réponses acceptées par e-mail. */
+  /** PUT /api/v1/moi/preferences-notifications : envoi par e-mail en général et par événement (F-81, PARAM-01). */
   @Put('moi/preferences-notifications')
   @Exige('parametres')
   preferences(
     @SessionCourante() session: SessionOuverte,
     @Body(new ValidationZod(schemaPreferencesNotifications)) saisie: PreferencesNotifications,
   ): Promise<PreferencesNotificationsApi> {
-    return this.notifications.modifierPreferences(session.utilisateur.id, saisie.email);
+    return this.notifications.modifierPreferences(session.utilisateur.id, saisie);
   }
 }

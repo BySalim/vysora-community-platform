@@ -282,9 +282,10 @@ describe('Notifications (NOTIF-01, F-81, RG-91)', () => {
     const page = await lister(moussa);
     expect(page).toMatchObject({ elements: [], suivant: null, nonLues: 0, email: true });
 
-    await envoyer(moussa.put('/api/v1/moi/preferences-notifications'))
+    const preferences = await envoyer(moussa.put('/api/v1/moi/preferences-notifications'))
       .send({ email: false })
-      .expect(200, { email: false });
+      .expect(200);
+    expect(preferences.body).toMatchObject({ email: false, evenements: { REPONSE_SUJET: true } });
     expect((await lister(moussa)).email).toBe(false);
   });
 
@@ -362,7 +363,8 @@ describe('Notifications (NOTIF-01, F-81, RG-91)', () => {
       });
     };
 
-    await service.envoyerEmails([await repondre()]);
+    await repondre();
+    await service.envoyerEmails();
     expect(contexte.emails).toHaveLength(1);
     expect(contexte.emails[0]).toMatchObject({
       a: 'lea@example.com',
@@ -372,7 +374,8 @@ describe('Notifications (NOTIF-01, F-81, RG-91)', () => {
 
     const lea = await agentConnecte('lea@example.com');
     await envoyer(lea.put('/api/v1/moi/preferences-notifications')).send({ email: false });
-    await service.envoyerEmails([await repondre()]);
+    await repondre();
+    await service.envoyerEmails();
     expect(contexte.emails).toHaveLength(1);
     // Un commentaire reçu ne part jamais par e-mail.
     expect((await lister(lea)).elements.map((n) => n.type)).toEqual([

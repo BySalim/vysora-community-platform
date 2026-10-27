@@ -17,6 +17,7 @@ import { FileModule } from './modules/file/file.module.js';
 import { ForumModule } from './modules/forum/forum.module.js';
 import { InteractionsModule } from './modules/interactions/interactions.module.js';
 import { MediasModule, StockageModule } from './modules/medias/medias.module.js';
+import { MembresModule } from './modules/membres/membres.module.js';
 import { ModerationModule } from './modules/moderation/moderation.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ReferentielsModule } from './modules/referentiels/referentiels.module.js';
@@ -70,6 +71,7 @@ import { TachesModule } from './modules/taches/taches.module.js';
     ModerationModule,
     ForumModule,
     ApprentissageModule,
+    MembresModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: FiltreErreurs },

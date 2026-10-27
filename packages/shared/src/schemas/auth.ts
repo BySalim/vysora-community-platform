@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LONGUEURS } from '../regles';
 import { evaluerMotDePasse } from '../mots-de-passe';
+import { IDS_FUSEAUX } from '../parametres';
 import { champEmail, champMotDePasse, champNomAffiche, champPseudo } from './commun';
 
 /* Comptes et sessions (F-01, F-03) : inscription, connexion, disponibilité, modification du pseudo. */
@@ -71,13 +72,16 @@ export const schemaAcceptationDocuments = z.object({
   accepte: z.literal(true, { error: 'Cochez la case pour accepter les nouvelles versions.' }),
 });
 
-/** Modification par le membre de ses propres informations (pseudo, puis profil et paramètres).
-    L'adresse ne se modifie ici que tant qu'elle n'est pas vérifiée (inscription) ; ensuite, PARAM-01. */
+/** Modification par le membre de ses propres informations (pseudo, nom, fuseau, puis profil).
+    L'adresse ne se modifie ici que tant qu'elle n'est pas vérifiée (inscription) ; ensuite, par
+    `POST /api/v1/moi/email` (PARAM-01). */
 export const schemaModificationMembre = z.object({
   pseudo: champPseudo.optional(),
   /** null ou vide : retire le nom affiché (le pseudo s'affiche). */
   nomAffiche: champNomAffiche.nullable().optional(),
   email: champEmail.optional(),
+  /** Horaires des défis et des notifications (PARAM-01). */
+  fuseauHoraire: z.enum(IDS_FUSEAUX, { error: 'Choisissez un fuseau de la liste.' }).optional(),
 });
 
 export type ModificationMembre = z.output<typeof schemaModificationMembre>;

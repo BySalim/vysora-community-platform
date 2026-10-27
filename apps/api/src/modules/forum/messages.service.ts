@@ -108,7 +108,7 @@ export class MessagesService {
         }),
       };
     });
-    await this.notifications.envoyerEmails([notification]);
+    if (notification) await this.notifications.envoyerEmails();
     return this.presenter(id, membre);
   }
 
@@ -194,7 +194,7 @@ export class MessagesService {
         }),
       };
     });
-    await this.notifications.envoyerEmails([notification]);
+    if (notification) await this.notifications.envoyerEmails();
     return this.sujets.sujet(sujetId, membre);
   }
 

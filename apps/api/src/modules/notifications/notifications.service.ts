@@ -1,6 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import {
+  NOTIFICATIONS_EMAIL_IMPOSE,
+  NOTIFICATIONS_EMAIL_REGLABLE,
   accepteUneReponse,
+  emailDeNotification,
+  preferencesEvenements,
   type ActionDecision,
   type BadgeApi,
   type CibleNotificationApi,
@@ -11,10 +15,25 @@ import {
   type NotificationApi,
   type NotificationsApi,
   type OutilResumeApi,
+  type PreferencesNotifications,
+  type PreferencesNotificationsApi,
   type TypeContenu,
   type TypeNotification,
 } from '@vysora/shared';
-import { and, asc, desc, eq, gte, inArray, isNotNull, lt, notInArray, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { CONFIG } from '../../config/configuration.module.js';
 import type { Configuration } from '../../config/env.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
@@ -36,12 +55,14 @@ import {
   niveau,
   notification,
   outil,
+  preferenceNotification,
   reproduction,
   sujet,
   utilisateur,
   vote,
 } from '../../db/schema/index.js';
 import { EmailService } from '../email/email.service.js';
+import { FileTaches } from '../file/file-taches.js';
 import { presenterMedia } from '../medias/medias.service.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
@@ -84,9 +105,10 @@ export interface Evenement {
   date?: Date;
 }
 
-/** Notifications aussi envoyées par e-mail selon la préférence du membre (WF-25, F-81). Une
-    décision de modération a son propre e-mail, toujours envoyé (RG-90, moderation/courriels.ts). */
-const EMAIL_SELON_PREFERENCE: TypeNotification[] = ['REPONSE_SUJET', 'REPONSE_ACCEPTEE'];
+/** Tâche de la file qui envoie les e-mails des notifications en attente (WF-25, PARAM-01). */
+export const TACHE_EMAILS_NOTIFICATIONS = 'notifications.emails';
+/** Notifications traitées par lot : chaque lot est réservé avant l'envoi (jamais deux fois). */
+const LOT_EMAILS = 100;
 /** Décisions de modération : elles restent lisibles quand le contenu visé est retiré. */
 export const NOTIFICATIONS_DE_MODERATION: TypeNotification[] = [
   'CONTENU_MASQUE',
@@ -134,11 +156,13 @@ interface ContenuLu {
 }
 
 /* NOTIF-01 : notifications dans l'application (F-81, RG-91, WF-25) et e-mails qui les accompagnent.
-   Les modules appellent `notifier` (ou `voteRecu`, `niveauAtteint`) dans la transaction de l'action ;
-   les e-mails partent après la validation (`envoyerEmails`). Ce qu'une notification montre d'un
+   Les modules appellent `notifier` (ou `voteRecu`, `niveauAtteint`) dans la transaction de l'action.
+   Chaque notification naît « e-mail en attente » : la tâche `notifications.emails`, lancée chaque
+   minute ou aussitôt par `envoyerEmails`, décide selon les préférences du destinataire (PARAM-01) et
+   envoie ; une notification retirée entre-temps ne part pas. Ce qu'une notification montre d'un
    contenu (texte, titre, image) est lu à l'affichage, avec les règles de visibilité de RG-30. */
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly journal = new Logger(NotificationsService.name);
 
   constructor(
@@ -146,7 +170,22 @@ export class NotificationsService {
     @Inject(CONFIG) private readonly config: Configuration,
     private readonly stockage: Stockage,
     private readonly email: EmailService,
+    private readonly file: FileTaches,
   ) {}
+
+  onModuleInit(): void {
+    this.file.declarer({
+      nom: TACHE_EMAILS_NOTIFICATIONS,
+      planification: '* * * * *',
+      executer: async () => {
+        const envoyes = await this.envoyerEmailsEnAttente();
+        if (envoyes) this.journal.log({ envoyes }, 'E-mails de notification envoyés');
+      },
+      reprises: { nombre: 2, delaiSecondes: 60 },
+      dureeMaximaleSecondes: 300,
+      conservationSecondes: 3600,
+    });
+  }
 
   /** RG-91 : crée la notification d'un événement. Renvoie son identifiant, ou null si le membre
       est l'auteur de l'action. */
@@ -161,6 +200,7 @@ export class NotificationsService {
         type: evenement.type,
         donnees: (evenement.donnees ?? null) as Record<string, unknown> | null,
         date: evenement.date ?? new Date(),
+        emailEnAttente: !NOTIFICATIONS_EMAIL_IMPOSE.includes(evenement.type),
       })
       .returning({ id: notification.id });
     return ligne?.id ?? null;
@@ -184,6 +224,8 @@ export class NotificationsService {
         date: maintenant,
         donnees: { points: recu.points },
         cleRegroupement: cleVotes(recu.contenuId, maintenant),
+        // RG-91 : l'e-mail résume la journée ; il part le lendemain (envoyerEmailsEnAttente).
+        emailEnAttente: true,
       })
       .onConflictDoUpdate({
         target: [notification.destinataireId, notification.cleRegroupement],
@@ -241,6 +283,7 @@ export class NotificationsService {
         date,
         donnees: { niveau: code },
         cleRegroupement: `NIVEAU_ATTEINT:${code}`,
+        emailEnAttente: true,
       })
       .onConflictDoNothing();
   }
@@ -261,33 +304,81 @@ export class NotificationsService {
       );
   }
 
-  /** E-mails des notifications qui en demandent un (WF-25), après la validation de l'action. Ils
-      partent par la file, repris en cas d'échec (EMAIL-01) ; une mise en file impossible est
-      journalisée : la notification reste dans l'application. */
-  async envoyerEmails(ids: (number | null)[]): Promise<void> {
-    const choisis = ids.filter((id): id is number => id !== null);
-    if (!choisis.length) return;
+  /** Après la validation d'une action dont le membre attend vite l'e-mail (réponse du forum) : la
+      tâche des e-mails en attente part aussitôt, sans attendre la minute suivante. */
+  async envoyerEmails(): Promise<void> {
+    try {
+      await this.file.publier(TACHE_EMAILS_NOTIFICATIONS, {});
+    } catch (erreur) {
+      // La tâche planifiée les enverra à la minute suivante.
+      this.journal.warn({ err: erreur }, 'Envoi des e-mails de notification différé');
+    }
+  }
+
+  /** WF-25, F-81 : e-mails des notifications en attente, selon les préférences de chaque
+      destinataire, à une adresse vérifiée d'un compte actif. Les votes « Utile » d'un jour partent
+      le lendemain, en un seul e-mail (RG-91). Chaque lot est réservé avant l'envoi : une notification
+      ne part jamais deux fois ; une mise en file impossible est journalisée. */
+  async envoyerEmailsEnAttente(maintenant = new Date()): Promise<number> {
+    const debutDuJour = new Date(`${jourUtc(maintenant)}T00:00:00Z`);
+    let envoyes = 0;
+    for (;;) {
+      const lot = this.db
+        .select({ id: notification.id })
+        .from(notification)
+        .where(
+          and(
+            eq(notification.emailEnAttente, true),
+            or(ne(notification.type, 'VOTES_UTILE_RECUS'), lt(notification.date, debutDuJour)),
+          ),
+        )
+        .orderBy(asc(notification.id))
+        .limit(LOT_EMAILS)
+        .for('update', { skipLocked: true });
+      const reserves = await this.db
+        .update(notification)
+        .set({ emailEnAttente: false })
+        .where(inArray(notification.id, lot))
+        .returning({ id: notification.id });
+      if (!reserves.length) return envoyes;
+      envoyes += await this.envoyerLot(reserves.map((ligne) => ligne.id));
+      if (reserves.length < LOT_EMAILS) return envoyes;
+    }
+  }
+
+  private async envoyerLot(ids: number[]): Promise<number> {
     const lignes = await this.db
       .select({
         notification,
         email: utilisateur.email,
         emailVerifie: utilisateur.emailVerifie,
         statut: utilisateur.statutCompte,
-        preference: utilisateur.notificationsEmail,
+        general: utilisateur.notificationsEmail,
+        choix: preferenceNotification.email,
       })
       .from(notification)
       .innerJoin(utilisateur, eq(utilisateur.id, notification.destinataireId))
-      .where(inArray(notification.id, choisis));
+      .leftJoin(
+        preferenceNotification,
+        and(
+          eq(preferenceNotification.utilisateurId, notification.destinataireId),
+          eq(preferenceNotification.evenement, notification.type),
+        ),
+      )
+      .where(inArray(notification.id, ids))
+      .orderBy(asc(notification.id));
+    let envoyes = 0;
     for (const ligne of lignes) {
-      const { type } = ligne.notification;
-      const voulu = EMAIL_SELON_PREFERENCE.includes(type) && ligne.preference;
+      const voulu = emailDeNotification(ligne.notification.type, ligne.general, ligne.choix);
       if (!voulu || !ligne.email || !ligne.emailVerifie || ligne.statut !== 'ACTIF') continue;
       const [presentee] = await this.presenter(ligne.notification.destinataireId, [
         ligne.notification,
       ]);
-      if (!presentee) continue;
+      // Contenu retiré ou devenu invisible entre-temps : rien à annoncer.
+      if (!presentee?.disponible) continue;
       try {
         await this.email.envoyer(emailNotification(ligne.email, presentee, this.config.SITE_URL));
+        envoyes += 1;
       } catch (erreur) {
         this.journal.error(
           { err: erreur, notification: presentee.id },
@@ -295,6 +386,7 @@ export class NotificationsService {
         );
       }
     }
+    return envoyes;
   }
 
   /** GET /api/v1/notifications : la plus récente d'abord, par pages de 50. */
@@ -373,13 +465,55 @@ export class NotificationsService {
     return { nonLues: 0, ids: lues.map((n) => n.id) };
   }
 
-  /** F-81 : réponses à ses sujets et réponses acceptées aussi reçues par e-mail (vrai par défaut). */
-  async modifierPreferences(membreId: number, email: boolean): Promise<{ email: boolean }> {
-    await this.db
-      .update(utilisateur)
-      .set({ notificationsEmail: email })
-      .where(eq(utilisateur.id, membreId));
-    return { email };
+  /** F-81, WF-25 : envoi par e-mail en général et choix par événement (valeur par défaut sans ligne). */
+  async preferences(membreId: number): Promise<PreferencesNotificationsApi> {
+    const [[membre], choix] = await Promise.all([
+      this.db
+        .select({ email: utilisateur.notificationsEmail })
+        .from(utilisateur)
+        .where(eq(utilisateur.id, membreId)),
+      this.db
+        .select({
+          evenement: preferenceNotification.evenement,
+          email: preferenceNotification.email,
+        })
+        .from(preferenceNotification)
+        .where(eq(preferenceNotification.utilisateurId, membreId)),
+    ]);
+    return {
+      email: membre?.email ?? true,
+      evenements: preferencesEvenements(
+        Object.fromEntries(choix.map((ligne) => [ligne.evenement, ligne.email])),
+      ),
+    };
+  }
+
+  /** PARAM-01 : les mesures de la modération ne se règlent pas (RG-90) ; leur choix est ignoré. */
+  async modifierPreferences(
+    membreId: number,
+    saisie: PreferencesNotifications,
+  ): Promise<PreferencesNotificationsApi> {
+    const choix = Object.entries(saisie.evenements ?? {}).filter(([type]) =>
+      NOTIFICATIONS_EMAIL_REGLABLE.includes(type as TypeNotification),
+    ) as [TypeNotification, boolean][];
+    await this.db.transaction(async (tx) => {
+      if (saisie.email !== undefined)
+        await tx
+          .update(utilisateur)
+          .set({ notificationsEmail: saisie.email })
+          .where(eq(utilisateur.id, membreId));
+      if (choix.length)
+        await tx
+          .insert(preferenceNotification)
+          .values(
+            choix.map(([evenement, email]) => ({ utilisateurId: membreId, evenement, email })),
+          )
+          .onConflictDoUpdate({
+            target: [preferenceNotification.utilisateurId, preferenceNotification.evenement],
+            set: { email: sql`excluded.email` },
+          });
+    });
+    return this.preferences(membreId);
   }
 
   compterNonLues(membreId: number): Promise<number> {

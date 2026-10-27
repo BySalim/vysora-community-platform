@@ -12,7 +12,8 @@ export type LigneJeton = typeof jeton.$inferSelect;
 export type LectureJeton =
   { etat: 'valable' | 'expire' | 'utilise'; ligne: LigneJeton } | { etat: 'inconnu' };
 
-/* Liens à usage unique envoyés par e-mail (vérification de l'adresse, réinitialisation du mot de passe).
+/* Liens à usage unique envoyés par e-mail (vérification de l'adresse, réinitialisation du mot de passe,
+   changement d'adresse).
    Le jeton part dans le lien ; la base n'en garde que l'empreinte SHA-256. Un nouveau lien remplace
    les précédents du même type, qui cessent de fonctionner. */
 @Injectable()
@@ -23,7 +24,8 @@ export class JetonsService {
     utilisateurId: number,
     type: TypeJeton,
     dureeMs: number,
-    db: Executeur = this.db,
+    /** `emailCible` : nouvelle adresse que le lien confirme (changement d'adresse). */
+    { emailCible, db = this.db }: { emailCible?: string; db?: Executeur } = {},
   ): Promise<string> {
     const valeur = jetonAleatoire();
     await db
@@ -39,6 +41,7 @@ export class JetonsService {
       utilisateurId,
       type,
       empreinte: sha256(valeur),
+      emailCible: emailCible ?? null,
       dateExpiration: new Date(Date.now() + dureeMs),
     });
     return valeur;

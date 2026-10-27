@@ -42,6 +42,8 @@ export const utilisateur = pgTable(
     emailVerifie: boolean().notNull().default(false),
     /** Absente si le compte n'utilise qu'un compte externe (ENF-05 : jamais le mot de passe en clair). */
     empreinteMotDePasse: varchar({ length: 255 }),
+    /** Extension (prototype, paramètres) : dernier changement du mot de passe ; nulle s'il date de l'inscription. */
+    dateMotDePasse: horodatage(),
     role: text({ enum: ROLES }).notNull().default('MEMBRE'),
     statutCompte: text({ enum: STATUTS_COMPTE }).notNull().default('ACTIF'),
     /** Clé du fichier dans le stockage des images. */
@@ -191,9 +193,14 @@ export const notification = pgTable(
     donnees: jsonb().$type<Record<string, unknown>>(),
     /** Technique : clé de regroupement (votes par contenu et par jour, RG-91). */
     cleRegroupement: varchar({ length: 120 }),
+    /** Technique : e-mail encore à décider selon les préférences du destinataire (WF-25, PARAM-01). */
+    emailEnAttente: boolean().notNull().default(false),
   },
   (t) => [
     index('notification_destinataire_idx').on(t.destinataireId, t.estLue, t.date),
+    index('notification_email_en_attente_idx')
+      .on(t.id)
+      .where(sql`${t.emailEnAttente}`),
     uniqueIndex('notification_regroupement_unique')
       .on(t.destinataireId, t.cleRegroupement)
       .where(sql`${t.cleRegroupement} is not null`),
