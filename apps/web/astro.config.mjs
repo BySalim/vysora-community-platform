@@ -26,6 +26,10 @@ export default defineConfig({
       ],
       // Les pages du prototype règlent leurs animations par des attributs style (--i, --h…).
       styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
+      // Script en ligne du gabarit (layouts/Base.astro, is:inline : classe « js » et niveau
+      // d'animation avant le premier affichage) : Astro n'en calcule pas l'empreinte. Elle change
+      // avec son texte ; src/lib/csp.test.ts le vérifie.
+      scriptDirective: { hashes: ['sha256-pqGAyBpt+13BPqWetK4xFh/+/clYjS0lByD959HxEqE='] },
     },
   },
   devToolbar: { enabled: false },
