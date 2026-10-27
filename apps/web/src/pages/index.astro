@@ -1,68 +1,1812 @@
 ---
-/* Page d'attente du socle technique, remplacée par le portage de l'accueil (registre : ACC-01).
-   Elle vérifie la chaîne complète : rendu serveur → API → base de données. */
-import type { ReferentielsApi } from '@vysora/shared';
+/* Accueil (ACC-01, EC-01, F-21), porté de prototype/index.html : même balisage et mêmes styles
+   (styles.css), réglages du panneau Tweaks figés sur leurs valeurs par défaut. Les zones que le
+   prototype remplissait avec data.js viennent de l'API (GET /api/v1/accueil, référentiels) et sont
+   rendues par le serveur avec les fonctions de lib/accueil, que le script reprend pour les onglets,
+   le fil d'activité et la correction d'un cas. Le constat, la méthode, les profils illustrés, les
+   engagements et les questions fréquentes restent les textes du prototype. */
+import {
+  BAREME_REPUTATION,
+  NIVEAUX,
+  type AccueilApi,
+  type BadgeApi,
+  type ReferentielsApi,
+} from '@vysora/shared';
 import Base from '../layouts/Base.astro';
 import { appelerApi } from '../lib/api';
+import { domainesHTML, listeHTML } from '../lib/accueil/cartes';
+import { courbeHTML, repartitionHTML, tendance, totalSemaine } from '../lib/accueil/courbe';
+import type { DonneesAccueil } from '../lib/accueil/donnees';
+import { duree } from '../lib/accueil/elements';
+import { filHTML } from '../lib/accueil/fil';
+import {
+  astuceHTML,
+  badgesHTML,
+  casHTML,
+  cliniqueHTML,
+  defiHTML,
+  emblemesHTML,
+  ligneClassement,
+  sujetsHTML,
+} from '../lib/accueil/laboratoire';
 import { ROUTES } from '../lib/navigation';
-import { fmt } from '../lib/texte';
-import '../styles/documents-legaux.css';
+import { avecLogos } from '../lib/outils-texte';
+import { fmt, pluriel, t, typo } from '../lib/texte';
+import '../styles/accueil-complements.css';
 
-let referentiels: ReferentielsApi | null = null;
+let adresseClient: string | undefined;
 try {
-  referentiels = await appelerApi<ReferentielsApi>('/api/v1/referentiels', {
-    requete: Astro.request,
-  });
+  adresseClient = Astro.clientAddress;
 } catch {
-  referentiels = null;
+  adresseClient = undefined;
 }
-const familles = referentiels ? new Set(referentiels.outils.map((o) => o.famille)).size : 0;
+const options = { requete: Astro.request, adresseClient };
+const [accueil, referentiels] = await Promise.all([
+  appelerApi<AccueilApi>('/api/v1/accueil', options).catch(() => null),
+  appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null),
+]);
+const maintenant = accueil ? new Date(accueil.maintenant) : new Date();
+
+const outils = referentiels?.outils ?? [];
+const logos = avecLogos(outils);
+const creations = accueil?.creations ?? { utiles: [], recentes: [], reproduites: [], exemples: {} };
+const exemples = creations.exemples;
+const chiffres = accueil?.chiffres ?? { creations: 0, reproductions: 0, questionsResolues: 0 };
+const activite = accueil?.activite ?? [];
+const apprentissage = accueil?.apprentissage ?? {
+  debut: maintenant.toISOString().slice(0, 10),
+  parJour: [0],
+  semaine: { votes: 0, reproductions: 0, casReussis: 0, reponsesAcceptees: 0 },
+};
+const evolution = tendance(apprentissage);
+const enAttente = accueil?.enAttente ?? [];
+const astuce = accueil?.astuce ?? null;
+const classement = accueil?.classement ?? [];
+const niveaux = referentiels?.niveaux.length ? referentiels.niveaux : NIVEAUX;
+
+/** Badges présentés par « Progresser » et par le profil illustré (prototype : data.js, badges). */
+const BADGES_ACCUEIL = [
+  'PIONNIER',
+  'PREMIERE_CREATION',
+  'PARCOURS_COMPLET',
+  'REPRODUCTIBLE',
+  'BON_REFLEXE',
+  'MENTOR',
+  'ASTUCIEUX',
+  'PODIUM',
+];
+const EMBLEMES_PROFIL = ['MENTOR', 'REPRODUCTIBLE', 'PARCOURS_COMPLET'];
+const badgesDe = (codes: string[]): BadgeApi[] =>
+  codes.flatMap((code) => referentiels?.badges.find((b) => b.code === code) ?? []);
+
+const filVide = `<li class="feed-item feed-vide"><p>${t('Aucune contribution pour l’instant.')}</p></li>`;
+const sujetsVides = `<li class="topic topic-vide"><p>${t('Aucune question n’attend de réponse pour l’instant.')}</p></li>`;
+const indisponible = `<li class="cards-vide"><p>${t('Les créations ne peuvent pas s’afficher pour le moment. Réessayez dans un instant.')}</p></li>`;
+const classementVide = `<li class="board-vide"><p>${t('Aucun point gagné cette semaine pour l’instant.')}</p></li>`;
+
+/* « Apprendre » : un onglet par format qui a de quoi s'afficher. */
+const bonReflexe = accueil?.bonReflexe;
+const clinique = accueil?.clinique;
+const defi = accueil?.defi ?? null;
+const onglets = [
+  bonReflexe?.cas && {
+    cle: 'reflex',
+    nom: 'Bon réflexe',
+    description: typo(
+      'Jugez une vraie réponse d’IA, puis comparez votre décision avec l’analyse d’un expert.',
+    ),
+    meta: typo(`${pluriel(bonReflexe.reponsesSemaine, 'réponse', 'réponses')} cette semaine`),
+    attributs: { 'data-reflex': '' },
+    html: casHTML(bonReflexe.cas),
+  },
+  clinique?.exemple && {
+    cle: 'clinic',
+    nom: 'Clinique du prompt',
+    description: typo(
+      'Un prompt qui résiste ? La communauté vous aide à le reformuler, en expliquant chaque changement.',
+    ),
+    meta:
+      clinique.resolutionMoyenneMinutes === null
+        ? null
+        : typo(`Résolue en ${duree(clinique.resolutionMoyenneMinutes)} en moyenne`),
+    attributs: { 'data-clinic': '' },
+    html: cliniqueHTML(clinique.exemple),
+  },
+  defi && {
+    cle: 'challenge',
+    nom: 'Défi de la semaine',
+    description: typo(
+      'Une contrainte commune, puis les méthodes de tous les participants à comparer.',
+    ),
+    meta: typo(pluriel(defi.participations, 'participation', 'participations')),
+    attributs: {},
+    html: defiHTML(defi),
+  },
+].filter((o) => Boolean(o)) as {
+  cle: string;
+  nom: string;
+  description: string;
+  meta: string | null;
+  attributs: Record<string, string>;
+  html: string;
+}[];
+
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+const donnees: DonneesAccueil = {
+  accueil,
+  outils: outils.map((o) => ({
+    nom: o.nom,
+    logo: o.logo,
+    logoMonochrome: o.logoMonochrome,
+    famille: o.famille,
+  })),
+  maintenant: maintenant.toISOString(),
+};
+const json = JSON.stringify(donnees).replaceAll('<', '\\u003c');
+
+const description =
+  'Vysora est la communauté où l’on publie ce que l’on crée avec l’IA avec le chemin parcouru : prompts, outils, modèles et corrections. Reproduisez ce qui fonctionne et apprenez de la communauté.';
+
+/** Réglages du prototype (Tweaks), à leur valeur par défaut. */
+const REGLAGES = {
+  herolead: 'court',
+  herowaves: 'houle',
+  herolimit: 'text',
+  heroblue: 'deep',
+  herobg: 'constellation',
+  herosize: 'full',
+  band: 'dark',
+  cards: 'path',
+  eyebrow: 'icon',
+  toolsbg: 'trame',
+  methodfocus: 'suivi',
+};
+
+const ICONES_PAGE = [
+  'arrow',
+  'arrow-down',
+  'arrow-up-right',
+  'search',
+  'plus',
+  'menu',
+  'close',
+  'check',
+  'x',
+  'pause',
+  'play',
+  'chevron-down',
+  'chevron-left',
+  'chevron-right',
+  'copy',
+  'utile',
+  'repeat',
+  'moment',
+  'check-circle',
+  'layers',
+  'bulb',
+  'message',
+  'award',
+  'flag',
+  'alert',
+  'trophy',
+  'route',
+  'browser',
+  'image',
+  'pen',
+  'code',
+  'flow',
+  'chart',
+  'film',
+  'music',
+  'school',
+  'shapes',
+  'shield',
+  'lock',
+  'scale',
+  'gift',
+  'heart',
+  'sliders',
+  'replay',
+  'clock',
+  'user',
+  'external',
+  'mail',
+  'folder',
+  'scan',
+  'trend-up',
+  'users',
+  'help',
+  'globe',
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+  'compass',
+  'rotate',
+];
 ---
 
 <Base
-  titre="Socle technique"
-  description="Vysora : voir comment l’IA crée, apprendre à créer avec elle."
-  classeCorps="lg"
-  reglages={{ lecture: 'standard', texte: 'standard', sommaire: 'colonne', eyebrow: 'icon' }}
-  icones={['layers', 'arrow']}
-  nonIndexee
+  titre="Voir comment l’IA crée"
+  description={description}
+  classeCorps="accueil"
+  reglages={REGLAGES}
+  icones={ICONES_PAGE}
 >
-  <header class="lg-tete">
-    <div class="container">
-      <p class="kicker lg-entree" style="--i:0">
-        <svg class="icon" aria-hidden="true">
-          <use href="#i-layers"></use>
-        </svg>
-        Socle technique
-      </p>
-      <h1 class="lg-titre lg-entree" style="--i:1">
-        Voir comment l’IA crée. Apprendre à créer avec elle.
+  <section class="hero" aria-labelledby="hero-title" data-hero-section>
+    <canvas class="hero-canvas" data-constellation aria-hidden="true"></canvas>
+    <canvas class="hero-vagues" data-hero-vagues aria-hidden="true"></canvas>
+    <div class="container hero-inner">
+      <h1 id="hero-title" class="hero-title" data-vague-apres="title">
+        <span class="line">
+          <span>Voir comment l’IA crée.</span>
+        </span>
+        <span class="line line-accent">
+          <span>Apprendre à créer avec elle.</span>
+        </span>
       </h1>
-      <p class="ct-intro lg-entree" style="--i:2">
-        {referentiels ? (
-          <>
-            Site, API et base de données reliés : {fmt(referentiels.outils.length)} outils en{' '}
-            {familles} familles, {referentiels.categories.length} catégories,{' '}
-            {referentiels.licences.length} licences et {referentiels.badges.length} badges chargés.
-          </>
-        ) : (
-          <>L’API ne répond pas. Lancez-la avec « pnpm dev » après « pnpm infra:up ».</>
-        )}
+      <span class="hero-respiration" data-respiration="title" aria-hidden="true"></span>
+      <p class="hero-lead" data-vague-apres="text" data-vague-avant="title" data-enter="2">
+        Vysora est la communauté où l’on publie ce que l’on crée avec l’IA. Pour reproduire ce qui
+        fonctionne, et comprendre pourquoi.
       </p>
-      <p class="lg-entree" style="--i:3; display:flex; flex-wrap:wrap; gap:10px; margin-top:24px">
-        <a class="btn btn-primary" href={ROUTES.contact}>
-          Page Contact portée
-          <svg class="icon icon-sm" aria-hidden="true">
-            <use href="#i-arrow"></use>
+      <span class="hero-respiration" data-respiration="text" aria-hidden="true"></span>
+      <form
+        class="intent"
+        action={ROUTES.explorer}
+        method="get"
+        role="search"
+        data-vague-avant="text"
+        data-vague-apres="search"
+        data-enter="3"
+      >
+        <label class="intent-label" for="intent-input">
+          Que voulez-vous créer ?
+        </label>
+        <div class="intent-field">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-search" />
           </svg>
-        </a>
-        <a class="btn btn-secondary" href="http://localhost:5173/index.html">
-          Prototype (pnpm prototype)
-        </a>
-        <a class="btn btn-secondary" href="http://localhost:8025">
-          E-mails capturés (Mailpit)
-        </a>
+          <input
+            id="intent-input"
+            name="q"
+            type="search"
+            autocomplete="off"
+            placeholder="un site de réservation"
+            data-intent
+          />
+          <button class="btn btn-primary" type="submit" data-magnetic>
+            Explorer
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </button>
+        </div>
+      </form>
+      <span class="hero-respiration" data-respiration="search" aria-hidden="true"></span>
+    </div>
+  </section>
+
+  <section class="section tools" id="outils" aria-labelledby="tools-title" data-outils>
+    <canvas class="tools-trame" data-tools-trame aria-hidden="true"></canvas>
+    <div class="container tools-grid">
+      <div class="tools-copy" data-reveal>
+        <p class="kicker">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-globe" />
+          </svg>
+          Les outils
+        </p>
+        <h2 id="tools-title" class="section-title">
+          Tous les outils sont les bienvenus.
+        </h2>
+        <p class="section-lead">
+          Publiez avec l’outil que vous utilisez déjà : assistant, générateur d’images, éditeur de
+          code ou automatisation. Chacun a la même place sur Vysora, et une création se distingue
+          par sa méthode, pas par son outil.
+        </p>
+        <p class="tools-hint" aria-hidden="true">
+          <svg class="icon icon-sm">
+            <use href="#i-rotate" />
+          </svg>
+          Faites tourner la sphère pour parcourir les {fmt(outils.length)} outils référencés.
+        </p>
+      </div>
+      <div class="sphere" data-sphere aria-hidden="true">
+        <canvas class="sphere-canvas" data-sphere-canvas></canvas>
+        <div class="sphere-items" data-sphere-items></div>
+      </div>
+    </div>
+    <ul class="sr-only" id="tools-list" aria-label="Outils référencés" data-tools-list>
+      {outils.map((o) => (
+        <li data-family={o.famille.toLowerCase()}>{o.nom}</li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="section" id="constat" aria-labelledby="constat-title">
+    <div class="container">
+      <div class="section-intro" data-reveal>
+        <p class="kicker">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-scan" />
+          </svg>
+          Le constat
+        </p>
+        <h2 id="constat-title" class="section-title">
+          Le résultat circule. <em>La méthode se perd.</em>
+        </h2>
+        <p class="section-lead">
+          Sur les réseaux, une création impressionnante récolte des milliers de réactions, mais sa
+          méthode reste dans l’ombre. Ceux qui tentent de la refaire avancent par essais et erreurs,
+          et ce qu’ils découvrent se perd dans les commentaires. Sur Vysora, la méthode est publiée
+          avec le résultat, et chaque reproduction la confirme ou la complète.
+        </p>
+      </div>
+
+      <div class="compare" data-compare data-reveal style="--pos: 50%">
+        <div class="compare-pane compare-before">
+          <span class="compare-label">Ailleurs</span>
+          <ul
+            class="compare-notes compare-notes-before"
+            aria-label="Ce qui manque sur un réseau social"
+          >
+            <li>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-x" />
+              </svg>
+              Aucun outil ni modèle indiqué
+            </li>
+            <li>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-x" />
+              </svg>
+              Aucun prompt partagé
+            </li>
+            <li>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-x" />
+              </svg>
+              Impossible de savoir si cela fonctionne encore
+            </li>
+          </ul>
+          <article class="post" aria-label="Publication sur un réseau social">
+            <header class="post-head">
+              <img
+                class="avatar"
+                src="/assets/avatars/lea-martin.webp"
+                alt=""
+                width="32"
+                height="32"
+                loading="lazy"
+                decoding="async"
+              />
+              <span>
+                <b>lea.cree</b>
+                <small>il y a 3 jours</small>
+              </span>
+            </header>
+            <p class="post-text">Ma nouvelle illustration, faite avec l’IA.</p>
+            <div class="post-media">
+              <img
+                src="/assets/images/cite-imaginaire-720.webp"
+                alt=""
+                width="720"
+                height="540"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <p class="post-stats">
+              <span>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-heart" />
+                </svg>
+                2,4 k
+              </span>
+              <span>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-message" />
+                </svg>
+                312 commentaires
+              </span>
+            </p>
+            <ul class="post-comments">
+              <li>
+                <b>sam_designs</b> Tu as utilisé quel outil ?
+              </li>
+              <li>
+                <b>nadia.k</b> Le prompt, s’il te plaît
+              </li>
+              <li>
+                <b>tom.r</b> Chez moi, ça ne donne pas du tout ça…
+              </li>
+            </ul>
+          </article>
+        </div>
+        <div class="compare-pane compare-after">
+          <span class="compare-label compare-label-after">Sur Vysora</span>
+          <article class="sheet-card" aria-label="La même création publiée sur Vysora">
+            <header class="post-head">
+              <img
+                class="avatar"
+                src="/assets/avatars/lea-martin.webp"
+                alt=""
+                width="32"
+                height="32"
+                loading="lazy"
+                decoding="async"
+              />
+              <span>
+                <b>Léa Martin</b>
+                <small>Apprenti · publiée le 6 oct. 2026</small>
+              </span>
+              <span class="type-tag" data-type="prompt">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-type-prompt" />
+                </svg>
+                1 prompt
+              </span>
+            </header>
+            <p class="post-text post-title">Cité imaginaire entre ciel et mer</p>
+            <div class="post-media">
+              <img
+                src="/assets/images/cite-imaginaire-720.webp"
+                alt=""
+                width="720"
+                height="540"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <dl class="sheet-config">
+              <div>
+                <dt>Outil</dt>
+                <dd set:html={logos('ChatGPT')} />
+              </div>
+              <div>
+                <dt>Modèle</dt>
+                <dd>GPT Image 1</dd>
+              </div>
+              <div>
+                <dt>Essais</dt>
+                <dd>Meilleur de 4</dd>
+              </div>
+            </dl>
+            <p class="sheet-prompt">
+              Illustration panoramique d’une cité méditerranéenne imaginaire, tours élancées au
+              centre, mer bleu cobalt, ciel abricot…
+            </p>
+            <p class="sheet-moment">
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-moment" />
+              </svg>
+              <span>
+                <b>Découverte</b> « Tours élancées au centre » évite les compositions chargées.
+              </span>
+            </p>
+            <p class="sheet-proof">
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-repeat" />
+              </svg>
+              44 reproductions · 61 % de succès · dernière le 12 oct.
+            </p>
+          </article>
+          <ul class="compare-notes compare-notes-after" aria-label="Ce que montre Vysora">
+            <li>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-check" />
+              </svg>
+              Outil, modèle et nombre d’essais
+            </li>
+            <li>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-check" />
+              </svg>
+              Prompt complet, prêt à copier
+            </li>
+            <li>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-check" />
+              </svg>
+              Reproductions déclarées et datées
+            </li>
+          </ul>
+        </div>
+        <div class="compare-handle" aria-hidden="true">
+          <span>
+            <svg class="icon icon-sm">
+              <use href="#i-chevron-left" />
+            </svg>
+            <svg class="icon icon-sm">
+              <use href="#i-chevron-right" />
+            </svg>
+          </span>
+        </div>
+        <input
+          class="compare-range"
+          type="range"
+          min="0"
+          max="100"
+          value="50"
+          aria-label="Comparer la publication sur un réseau social et la fiche Vysora"
+          data-compare-range
+        />
+      </div>
+
+      <ul class="facts" aria-label="Chiffres sur l’usage de l’IA">
+        <li data-reveal style="--stagger:0">
+          <p class="fact-value">
+            <span data-count="84">84</span> %
+          </p>
+          <p>
+            des développeurs utilisent l’IA ou prévoient de le faire. Ils sont 46 % à se méfier de
+            la justesse de ses réponses.
+          </p>
+          <a
+            href="https://www.techrepublic.com/article/news-developer-trust-in-ai-declines/"
+            target="_blank"
+            rel="noopener"
+          >
+            Stack Overflow, enquête 2025
+            <svg class="icon icon-xs" aria-hidden="true">
+              <use href="#i-external" />
+            </svg>
+          </a>
+        </li>
+        <li data-reveal style="--stagger:1">
+          <p class="fact-value">
+            <span data-count="45">45</span> %
+          </p>
+          <p>
+            des tâches testées : le code généré par plus de 100 modèles introduisait une faille de
+            sécurité.
+          </p>
+          <a
+            href="https://www.veracode.com/press-release/ai-generated-code-poses-major-security-risks-in-nearly-half-of-all-development-tasks-veracode-research-reveals/"
+            target="_blank"
+            rel="noopener"
+          >
+            Veracode, rapport 2025
+            <svg class="icon icon-xs" aria-hidden="true">
+              <use href="#i-external" />
+            </svg>
+          </a>
+        </li>
+        <li data-reveal style="--stagger:2">
+          <p class="fact-value">
+            <span data-count="17">17</span> %
+          </p>
+          <p>
+            de compréhension en moins chez les développeurs assistés par l’IA dans un essai
+            contrôlé. L’écart se réduit quand l’IA sert à comprendre.
+          </p>
+          <a
+            href="https://www.anthropic.com/research/AI-assistance-coding-skills"
+            target="_blank"
+            rel="noopener"
+          >
+            Anthropic, étude 2026
+            <svg class="icon icon-xs" aria-hidden="true">
+              <use href="#i-external" />
+            </svg>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section methode" id="methode" aria-labelledby="method-title">
+    <div class="container">
+      <div class="section-intro section-intro-split" data-reveal>
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-layers" />
+            </svg>
+            La méthode
+          </p>
+          <h2 id="method-title" class="section-title">
+            Chaque création se lit en cinq couches.
+          </h2>
+        </div>
+        <p class="section-lead">
+          Toutes les fiches suivent le même ordre : ce qui a été produit, le chemin parcouru pour y
+          arriver, puis la preuve que la méthode fonctionne encore.
+        </p>
+      </div>
+
+      <div class="anatomie" data-anatomie>
+        <ol class="anat-etapes">
+          <li data-couche="1">
+            <span class="anat-num" aria-hidden="true">
+              1
+            </span>
+            <div>
+              <h3>Le résultat</h3>
+              <p>
+                Ce qui a été produit, avec ses liens de démonstration et les limites constatées par
+                l’auteur.
+              </p>
+            </div>
+          </li>
+          <li data-couche="2">
+            <span class="anat-num" aria-hidden="true">
+              2
+            </span>
+            <div>
+              <h3>Le parcours</h3>
+              <p>
+                Les prompts et les réponses dans l’ordre. Un projet se découpe en étapes racontées.
+              </p>
+            </div>
+          </li>
+          <li data-couche="3">
+            <span class="anat-num" aria-hidden="true">
+              3
+            </span>
+            <div>
+              <h3>Les moments clés</h3>
+              <p>
+                Là où l’auteur a corrigé, refusé ou vérifié. C’est souvent là que se trouve la vraie
+                compétence.
+              </p>
+            </div>
+          </li>
+          <li data-couche="4">
+            <span class="anat-num" aria-hidden="true">
+              4
+            </span>
+            <div>
+              <h3>La configuration</h3>
+              <p>
+                Outil, modèle, paramètres et contexte caché : ce qui influence la réponse sans
+                figurer dans le prompt.
+              </p>
+            </div>
+          </li>
+          <li data-couche="5">
+            <span class="anat-num" aria-hidden="true">
+              5
+            </span>
+            <div>
+              <h3>La preuve</h3>
+              <p>
+                Les reproductions déclarées par la communauté, le taux de succès et la date du
+                dernier essai.
+              </p>
+            </div>
+          </li>
+        </ol>
+        <div class="anat-liens" aria-hidden="true">
+          <span data-couche="1"></span>
+          <span data-couche="2"></span>
+          <span data-couche="3"></span>
+          <span data-couche="4"></span>
+          <span data-couche="5"></span>
+        </div>
+        <div class="anat-fiche" aria-hidden="true">
+          <div class="anat-tete">
+            <span class="type-tag" data-type="iteration">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-type-iteration" />
+              </svg>
+              Itération
+            </span>
+            <span class="anat-cat">Application web</span>
+            <b class="anat-titre">Prise de rendez-vous pour un salon de coiffure</b>
+            <span class="anat-auteur">
+              <img
+                class="avatar"
+                src="/assets/avatars/aissatou-ndiaye.webp"
+                alt=""
+                width="28"
+                height="28"
+                loading="lazy"
+                decoding="async"
+              />
+              Aïssatou Ndiaye · Artisan
+            </span>
+          </div>
+          <div class="anat-couche anat-c1" data-couche="1">
+            <p class="anat-legende">
+              <span class="anat-legende-num">1</span>
+              <span>
+                Le résultat
+                <small>
+                  Ce qui a été produit, avec ses liens de démonstration et les limites constatées.
+                </small>
+              </span>
+            </p>
+            <div class="mock-window anat-mock">
+              <div class="mock-bar">
+                <i></i>Keur Awa<small>Coiffure · Dakar</small>
+              </div>
+              <div class="mock-pad">
+                <p class="mock-label">Samedi 18 octobre</p>
+                <div class="mock-slots">
+                  <span>09:00</span>
+                  <span class="off">10:30</span>
+                  <span class="on">12:00</span>
+                  <span>14:00</span>
+                  <span class="off">15:30</span>
+                  <span>17:00</span>
+                </div>
+                <div class="mock-btn">Confirmer le rendez-vous</div>
+              </div>
+            </div>
+          </div>
+          <div class="anat-couche anat-c2" data-couche="2">
+            <p class="anat-legende">
+              <span class="anat-legende-num">2</span>
+              <span>
+                Le parcours · 3 échanges<small>Les prompts et les réponses dans l’ordre.</small>
+              </span>
+            </p>
+            <ol class="anat-fil">
+              <li>
+                <i></i>
+                <span>Créer la page de réservation avec récapitulatif</span>
+              </li>
+              <li>
+                <i></i>
+                <span>Bloquer les créneaux déjà réservés</span>
+              </li>
+              <li>
+                <i></i>
+                <span>Ne rien stocker dans le navigateur</span>
+              </li>
+            </ol>
+          </div>
+          <div class="anat-couche anat-c3" data-couche="3">
+            <p class="anat-legende">
+              <span class="anat-legende-num">3</span>
+              <span>
+                Les moments clés<small>Là où l’auteur a corrigé, refusé ou vérifié.</small>
+              </span>
+            </p>
+            <ul class="anat-moments">
+              <li>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-moment" />
+                </svg>
+                <span>
+                  <b>Vérification</b>Deux réservations passaient sur le même créneau.
+                </span>
+              </li>
+              <li>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-moment" />
+                </svg>
+                <span>
+                  <b>Refus</b>Les numéros de téléphone étaient stockés dans le navigateur.
+                </span>
+              </li>
+            </ul>
+          </div>
+          <div class="anat-couche anat-c4" data-couche="4">
+            <p class="anat-legende">
+              <span class="anat-legende-num">4</span>
+              <span>
+                La configuration
+                <small>Ce qui influence la réponse sans figurer dans le prompt.</small>
+              </span>
+            </p>
+            <dl class="anat-config">
+              <div>
+                <dt>Outil</dt>
+                <dd set:html={logos('Claude Sonnet 4.5')} />
+              </div>
+              <div>
+                <dt>Température</dt>
+                <dd>Par défaut</dd>
+              </div>
+              <div>
+                <dt>Contexte</dt>
+                <dd>Instructions du projet</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="anat-couche anat-c5" data-couche="5">
+            <p class="anat-legende">
+              <span class="anat-legende-num">5</span>
+              <span>
+                La preuve
+                <small>Les reproductions déclarées, le taux de succès et le dernier essai.</small>
+              </span>
+            </p>
+            <div class="anat-preuve">
+              <div class="fiche-gauge">
+                <svg viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15.9" class="gauge-track" />
+                  <circle cx="18" cy="18" r="15.9" class="gauge-fill" />
+                </svg>
+                <b>84 %</b>
+              </div>
+              <div>
+                <p class="fiche-proof-title">31 reproductions</p>
+                <p
+                  class="fiche-proof-sub"
+                  set:html={logos('Dernière le 11 oct. · Claude, GPT-5, Gemini')}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-soft" id="types" aria-labelledby="types-title">
+    <div class="container">
+      <div class="section-intro section-intro-split" data-reveal>
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-route" />
+            </svg>
+            Du prompt au projet
+          </p>
+          <h2 id="types-title" class="section-title">
+            D’un seul prompt à plusieurs semaines de travail.
+          </h2>
+        </div>
+        <p class="section-lead">
+          Trois formats couvrent toutes les créations, d’une image générée en une demande jusqu’à
+          une application construite en plusieurs étapes.
+        </p>
+      </div>
+      <ul class="types">
+        <li class="type-card" data-reveal style="--stagger:0">
+          <svg class="type-diagram diagram-prompt" viewBox="0 0 240 120" aria-hidden="true">
+            <path class="d-path" d="M40 60 H200" />
+            <path class="d-flow" d="M40 60 H200" />
+            <circle class="d-node" cx="40" cy="60" r="9" />
+            <rect class="d-result" x="182" y="42" width="36" height="36" rx="8" />
+          </svg>
+          <p class="type-name type-tag" data-type="prompt">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-type-prompt" />
+            </svg>
+            1 prompt
+          </p>
+          <h3>Une demande, un résultat.</h3>
+          <p>Indiquez si vous avez retenu le premier essai ou le meilleur parmi plusieurs.</p>
+          {exemples.UN_PROMPT && (
+            <a
+              class="type-example"
+              href={ROUTES.creation(exemples.UN_PROMPT.id, exemples.UN_PROMPT.slug)}
+            >
+              <span>Exemple</span>
+              {typo(exemples.UN_PROMPT.titre)}
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+            </a>
+          )}
+        </li>
+        <li class="type-card" data-reveal style="--stagger:1">
+          <svg class="type-diagram diagram-iteration" viewBox="0 0 240 120" aria-hidden="true">
+            <path class="d-path" d="M28 60 H212" />
+            <path class="d-flow" d="M28 60 H212" />
+            <path class="d-loop" d="M96 50 C96 18 144 18 144 50" />
+            <circle class="d-node" cx="28" cy="60" r="8" />
+            <circle class="d-node" cx="74" cy="60" r="8" />
+            <circle class="d-moment" cx="120" cy="60" r="7" />
+            <circle class="d-node" cx="166" cy="60" r="8" />
+            <rect class="d-result" x="196" y="44" width="32" height="32" rx="7" />
+          </svg>
+          <p class="type-name type-tag" data-type="iteration">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-type-iteration" />
+            </svg>
+            Itération
+          </p>
+          <h3>Une conversation, plusieurs échanges.</h3>
+          <p>Montrez comment vous avez guidé l’IA, échange après échange, jusqu’au bon résultat.</p>
+          {exemples.ITERATION && (
+            <a
+              class="type-example"
+              href={ROUTES.creation(exemples.ITERATION.id, exemples.ITERATION.slug)}
+            >
+              <span>Exemple</span>
+              {typo(exemples.ITERATION.titre)}
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+            </a>
+          )}
+        </li>
+        <li class="type-card" data-reveal style="--stagger:2">
+          <svg class="type-diagram diagram-projet" viewBox="0 0 240 120" aria-hidden="true">
+            <path class="d-path" d="M24 84 C60 84 60 36 96 36 S132 84 168 84 S196 36 212 36" />
+            <path class="d-flow" d="M24 84 C60 84 60 36 96 36 S132 84 168 84 S196 36 212 36" />
+            <circle class="d-node" cx="24" cy="84" r="8" />
+            <rect class="d-step" x="84" y="24" width="24" height="24" rx="6" />
+            <circle class="d-moment" cx="132" cy="60" r="7" />
+            <rect class="d-step" x="156" y="72" width="24" height="24" rx="6" />
+            <rect class="d-result" x="198" y="20" width="32" height="32" rx="7" />
+          </svg>
+          <p class="type-name type-tag" data-type="projet">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-type-projet" />
+            </svg>
+            Projet
+          </p>
+          <h3>Plusieurs étapes, outils et conversations.</h3>
+          <p>
+            Racontez votre méthode de bout en bout, avec les outils et les prompts clés de chaque
+            étape.
+          </p>
+          {exemples.PROJET && (
+            <a
+              class="type-example"
+              href={ROUTES.creation(exemples.PROJET.id, exemples.PROJET.slug)}
+            >
+              <span>Exemple</span>
+              {typo(exemples.PROJET.titre)}
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+            </a>
+          )}
+        </li>
+      </ul>
+      <p class="types-note" data-reveal>
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-repeat" />
+        </svg>
+        Les créations « 1 prompt » et « Itération » peuvent être reproduites par la communauté. Un
+        projet se lit étape par étape.
       </p>
     </div>
-  </header>
+  </section>
+
+  <section class="section" id="explorer" aria-labelledby="explore-title">
+    <div class="container">
+      <div class="section-intro section-intro-row" data-reveal>
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-compass" />
+            </svg>
+            À explorer
+          </p>
+          <h2 id="explore-title" class="section-title">
+            Ce que la communauté a trouvé le plus utile.
+          </h2>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Sélection de créations" data-tabs="explore">
+          <button
+            role="tab"
+            type="button"
+            id="tab-useful"
+            aria-controls="explore-panel"
+            aria-selected="true"
+            data-list="useful"
+          >
+            Plus utiles
+          </button>
+          <button
+            role="tab"
+            type="button"
+            id="tab-recent"
+            aria-controls="explore-panel"
+            aria-selected="false"
+            tabindex="-1"
+            data-list="recent"
+          >
+            Nouveautés
+          </button>
+          <button
+            role="tab"
+            type="button"
+            id="tab-reproduced"
+            aria-controls="explore-panel"
+            aria-selected="false"
+            tabindex="-1"
+            data-list="reproduced"
+          >
+            Plus reproduites
+          </button>
+        </div>
+      </div>
+      <div id="explore-panel" role="tabpanel" aria-labelledby="tab-useful" tabindex="-1">
+        <p class="explore-caption" data-explore-caption>
+          Classées selon les votes « Utile » reçus ces 7 derniers jours.
+        </p>
+        <div class="cards-stage" data-cards-stage>
+          <svg class="cards-path" data-cards-path aria-hidden="true" focusable="false"></svg>
+          <ol
+            class="cards"
+            data-cards-list
+            set:html={accueil ? listeHTML(creations.utiles, 'utiles', maintenant) : indisponible}
+          />
+          <div class="cards-nodes" data-cards-nodes aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="domains" data-reveal>
+        <div class="domains-head">
+          <h3>Parcourir par domaine</h3>
+          <a class="link-arrow" href="/explorer">
+            Toutes les créations
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </a>
+        </div>
+        <ul class="domain-list" data-domains set:html={domainesHTML(accueil?.domaines ?? [])} />
+      </div>
+    </div>
+  </section>
+
+  <section class="section band" id="apprendre" aria-labelledby="learn-title">
+    <div class="band-grid" aria-hidden="true"></div>
+    <div class="container">
+      <div class="section-intro section-intro-split" data-reveal>
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-bulb" />
+            </svg>
+            Apprendre
+          </p>
+          <h2 id="learn-title" class="section-title">
+            Apprendre à juger <em>ce que l’IA propose.</em>
+          </h2>
+        </div>
+        <p class="section-lead">
+          Trois formats pour acquérir le réflexe des créateurs expérimentés : savoir quand l’IA se
+          trompe, et comment la corriger.
+        </p>
+      </div>
+
+      {onglets.length > 0 && (
+        <div class="lab" id="defis" data-lab data-reveal>
+          <div
+            class="lab-nav"
+            role="tablist"
+            aria-label="Formats d’apprentissage"
+            aria-orientation="vertical"
+            data-tabs="lab"
+          >
+            {onglets.map((o, i) => (
+              <button
+                role="tab"
+                type="button"
+                id={`lab-tab-${o.cle}`}
+                aria-controls={`lab-${o.cle}`}
+                aria-selected={i === 0 ? 'true' : 'false'}
+                tabindex={i === 0 ? undefined : '-1'}
+              >
+                <span class="lab-name">{o.nom}</span>
+                <span class="lab-more">
+                  <span class="lab-desc">{o.description}</span>
+                  {o.meta && <span class="lab-meta">{o.meta}</span>}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div class="lab-stage">
+            {onglets.map((o, i) => (
+              <div
+                class={`lab-panel${o.cle === 'challenge' ? ' lab-challenge' : ''}${i === 0 ? ' is-active' : ''}`}
+                role="tabpanel"
+                id={`lab-${o.cle}`}
+                aria-labelledby={`lab-tab-${o.cle}`}
+                tabindex="0"
+                hidden={i !== 0}
+                {...o.attributs}
+                set:html={o.html}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="section" id="communaute" aria-labelledby="community-title">
+    <div class="container">
+      <div class="section-intro section-intro-split" data-reveal>
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-users" />
+            </svg>
+            La communauté
+          </p>
+          <h2 id="community-title" class="section-title">
+            Une communauté qui reproduit, répond et corrige.
+          </h2>
+        </div>
+        <p class="section-lead">
+          Chaque jour, les membres refont les créations publiées, testent les astuces et aident à
+          débloquer les prompts des autres.
+        </p>
+      </div>
+
+      <dl class="chiffres" aria-label="La communauté en chiffres" data-reveal>
+        <div>
+          <dt>Créations documentées</dt>
+          <dd data-count={chiffres.creations} data-live="creations">
+            {typo(fmt(chiffres.creations))}
+          </dd>
+        </div>
+        <div>
+          <dt>Reproductions déclarées</dt>
+          <dd data-count={chiffres.reproductions} data-live="repro">
+            {typo(fmt(chiffres.reproductions))}
+          </dd>
+        </div>
+        <div>
+          <dt>Questions résolues</dt>
+          <dd data-count={chiffres.questionsResolues} data-live="answers">
+            {typo(fmt(chiffres.questionsResolues))}
+          </dd>
+        </div>
+        <div>
+          <dt>Outils et modèles référencés</dt>
+          <dd data-count={outils.length}>{fmt(outils.length)}</dd>
+        </div>
+      </dl>
+
+      <div class="community">
+        <div class="feed-card" data-reveal>
+          <div class="card-head">
+            <h3>Dernières contributions</h3>
+            <button
+              class="round-btn round-btn-sm"
+              type="button"
+              data-feed-toggle
+              aria-label="Mettre en pause le fil d’activité"
+            >
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-pause" />
+              </svg>
+            </button>
+          </div>
+          <ol
+            class="feed"
+            data-feed
+            aria-label="Activité récente de la communauté"
+            set:html={activite.length ? filHTML(activite, maintenant) : filVide}
+          />
+        </div>
+
+        <div class="pulse-card" data-reveal>
+          <div class="card-head">
+            <h3>Interactions d’apprentissage</h3>
+            <span class="muted">3 dernières semaines</span>
+          </div>
+          <p class="pulse-value">
+            <span data-pulse-total>{typo(fmt(totalSemaine(apprentissage)))}</span>
+            <span class="pulse-unit">cette semaine</span>
+            {evolution && (
+              <span class="pulse-trend">
+                {evolution.hausse && (
+                  <svg class="icon icon-sm" aria-hidden="true">
+                    <use href="#i-trend-up" />
+                  </svg>
+                )}
+                <span data-pulse-trend>{evolution.texte}</span>
+              </span>
+            )}
+          </p>
+          <div class="chart" data-chart set:html={courbeHTML(apprentissage)} />
+          <div class="mix" data-breakdown set:html={repartitionHTML(apprentissage)} />
+        </div>
+
+        <div class="help-card" data-reveal>
+          <div class="card-head">
+            <h3>Ces questions attendent votre aide</h3>
+            <a class="link-arrow" href="/forum?onglet=sans-reponse">
+              Forum
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+            </a>
+          </div>
+          <ul
+            class="topics"
+            data-topics
+            set:html={enAttente.length ? sujetsHTML(enAttente, maintenant) : sujetsVides}
+          />
+        </div>
+
+        {astuce && <div class="tip-card" data-reveal set:html={astuceHTML(astuce)} />}
+      </div>
+    </div>
+  </section>
+
+  <section class="section profiles-section" id="profils" aria-labelledby="profiles-title">
+    <div class="profiles-bg" aria-hidden="true">
+      <img
+        src="/assets/images/pour-vous-1200.webp"
+        srcset="/assets/images/pour-vous-1200.webp 1200w, /assets/images/pour-vous-2000.webp 2000w"
+        sizes="100vw"
+        width="2000"
+        height="1333"
+        alt=""
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+    <div class="container">
+      <div class="section-intro section-intro-center" data-reveal>
+        <p class="kicker">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-user" />
+          </svg>
+          Pour vous
+        </p>
+        <h2 id="profiles-title" class="section-title">
+          Vysora s’adapte à votre niveau.
+        </h2>
+        <p class="section-lead">
+          Que vous découvriez l’IA ou que vous la pratiquiez chaque jour, vous trouvez le bon point
+          de départ.
+        </p>
+      </div>
+      <div class="profiles" data-reveal>
+        <div class="tabs tabs-center" role="tablist" aria-label="Profils" data-tabs="profiles">
+          <button
+            role="tab"
+            type="button"
+            id="ptab-1"
+            aria-controls="ppanel-1"
+            aria-selected="true"
+          >
+            Je débute
+          </button>
+          <button
+            role="tab"
+            type="button"
+            id="ptab-2"
+            aria-controls="ppanel-2"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            J’utilise l’IA au quotidien
+          </button>
+          <button
+            role="tab"
+            type="button"
+            id="ptab-3"
+            aria-controls="ppanel-3"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Je maîtrise l’IA
+          </button>
+        </div>
+
+        <div class="profile-panels">
+          <div
+            class="profile-panel is-active"
+            role="tabpanel"
+            id="ppanel-1"
+            aria-labelledby="ptab-1"
+            tabindex="0"
+          >
+            <div class="profile-copy">
+              <h3>Comprenez ce que l’IA produit avant de lui faire confiance.</h3>
+              <ul class="check-list">
+                <li>Des créations classées par objectif, chaque étape expliquée</li>
+                <li>Des cas Bon réflexe de deux minutes pour repérer les erreurs</li>
+                <li>Une clinique du prompt bienveillante pour poser toutes vos questions</li>
+              </ul>
+              <a class="btn btn-primary" href="/inscription" data-pour="visiteur">
+                Commencer gratuitement
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-arrow" />
+                </svg>
+              </a>
+              <a class="btn btn-primary" href="/apprendre?rubrique=bon-reflexe" data-pour="membre">
+                Faire un cas Bon réflexe
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-arrow" />
+                </svg>
+              </a>
+            </div>
+            <div class="profile-visual" aria-hidden="true">
+              <div class="mini-card">
+                <p class="mini-label">Votre progression</p>
+                <p class="mini-big">Apprenti</p>
+                <div class="meter">
+                  <span style="--v:.61"></span>
+                </div>
+                <p class="mini-row">
+                  <span>182 points</span>
+                  <span>118 avant Artisan</span>
+                </p>
+                <ul class="mini-stats">
+                  <li>
+                    <b>12</b>cas réussis
+                  </li>
+                  <li>
+                    <b>4</b>reproductions
+                  </li>
+                  <li>
+                    <b>2</b>badges
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="profile-panel"
+            role="tabpanel"
+            id="ppanel-2"
+            aria-labelledby="ptab-2"
+            tabindex="0"
+            hidden
+          >
+            <div class="profile-copy">
+              <h3>Trouvez la méthode qui fonctionne encore avec votre outil.</h3>
+              <ul class="check-list">
+                <li>Filtres par outil, modèle, catégorie et date de publication</li>
+                <li>La date de la dernière reproduction et les modèles testés</li>
+                <li>Des astuces avec exemple avant et après, testées par la communauté</li>
+              </ul>
+              <a class="btn btn-primary" href="/explorer">
+                Explorer par outil
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-arrow" />
+                </svg>
+              </a>
+            </div>
+            <div class="profile-visual" aria-hidden="true">
+              <div class="mini-card">
+                <p class="mini-label">Filtres</p>
+                <ul class="mini-filters">
+                  <li class="on" set:html={logos('Claude')} />
+                  <li class="on">Sonnet 4.5</li>
+                  <li>Application web</li>
+                  <li class="on">Reproduite avec succès</li>
+                </ul>
+                <p class="mini-label">Compatibilité testée</p>
+                <ul class="compat">
+                  <li>
+                    <span class="compat-model" set:html={logos('Claude Sonnet 4.5')} />
+                    <span class="reliab" data-r="5">
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                    </span>
+                    <span class="compat-note">
+                      <b>91 %</b>12 oct.
+                    </span>
+                  </li>
+                  <li>
+                    <span class="compat-model" set:html={logos('GPT-5')} />
+                    <span class="reliab" data-r="4">
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                    </span>
+                    <span class="compat-note">
+                      <b>84 %</b>12 oct.
+                    </span>
+                  </li>
+                  <li class="is-off">
+                    <span class="compat-model" set:html={logos('Midjourney v6')} />
+                    <span class="reliab" data-r="0">
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                      <i></i>
+                    </span>
+                    <span class="compat-note">
+                      <b>Obsolète</b>4 signalements
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="profile-panel"
+            role="tabpanel"
+            id="ppanel-3"
+            aria-labelledby="ptab-3"
+            tabindex="0"
+            hidden
+          >
+            <div class="profile-copy">
+              <h3>Faites reconnaître votre savoir-faire autant que vos résultats.</h3>
+              <ul class="check-list">
+                <li>Un format qui met en valeur votre méthode : étapes et moments clés</li>
+                <li>Un profil vérifiable : reproductions reçues, réponses acceptées, niveau</li>
+                <li>Les variantes de vos créations vous créditent automatiquement</li>
+              </ul>
+              <a class="btn btn-primary" href="/creations/nouvelle">
+                Publier une création
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-arrow" />
+                </svg>
+              </a>
+            </div>
+            <div class="profile-visual" aria-hidden="true">
+              <div class="mini-card">
+                <div class="mini-profile">
+                  <img
+                    class="avatar avatar-lg"
+                    src="/assets/avatars/claire-dubois.webp"
+                    alt=""
+                    width="48"
+                    height="48"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span>
+                    <b>Claire Dubois</b>
+                    <small>Maître · consultante en IA</small>
+                  </span>
+                </div>
+                <ul class="mini-stats mini-stats-4">
+                  <li>
+                    <b>27</b>créations
+                  </li>
+                  <li>
+                    <b>412</b>reproductions reçues
+                  </li>
+                  <li>
+                    <b>91 %</b>de succès
+                  </li>
+                  <li>
+                    <b>148</b>réponses acceptées
+                  </li>
+                </ul>
+                <ul class="mini-badges" set:html={emblemesHTML(badgesDe(EMBLEMES_PROFIL))} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="progression" aria-labelledby="progress-title">
+    <div class="container">
+      <div class="section-intro section-intro-split" data-reveal>
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-trophy" />
+            </svg>
+            Progresser
+          </p>
+          <h2 id="progress-title" class="section-title">
+            Chaque contribution fait avancer votre niveau.
+          </h2>
+        </div>
+        <p class="section-lead">
+          La réputation récompense autant ceux qui apprennent que ceux qui transmettent : ici, on
+          progresse en aidant les autres.
+        </p>
+      </div>
+
+      <div class="progress-grid">
+        <div class="levels-card" data-reveal data-levels>
+          <ol class="levels">
+            {niveaux.map((n) => (
+              <li>
+                <span class="lvl-node"></span>
+                <b>{n.libelle}</b>
+                <span>
+                  {n.seuilPoints ? typo(`${fmt(n.seuilPoints)} points`) : typo('dès l’inscription')}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <table class="points">
+            <caption>Comment gagner des points</caption>
+            <tbody>
+              <tr>
+                <th scope="row">Réponse acceptée</th>
+                <td>+{BAREME_REPUTATION.reponseAcceptee}</td>
+              </tr>
+              <tr>
+                <th scope="row">Vote « Utile » reçu sur une création</th>
+                <td>+{BAREME_REPUTATION.voteUtileSurCreation}</td>
+              </tr>
+              <tr>
+                <th scope="row">Reproduction réussie de votre création</th>
+                <td>+{BAREME_REPUTATION.reproductionReussieRecue}</td>
+              </tr>
+              <tr>
+                <th scope="row">Cas Bon réflexe réussi</th>
+                <td>+{BAREME_REPUTATION.casReussi}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="board-card" data-reveal>
+          <div class="card-head">
+            <h3>Classement de la semaine</h3>
+            <a class="link-arrow" href="/classements">
+              Voir le classement
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+            </a>
+          </div>
+          <ol
+            class="board"
+            data-board
+            aria-label="Cinq premiers membres de la semaine"
+            set:html={
+              classement.length
+                ? classement
+                    .map((c, i) => ligneClassement(c, i, classement[0]?.points ?? 0))
+                    .join('')
+                : classementVide
+            }
+          />
+          <p class="board-note">Points gagnés depuis lundi 00:00 (UTC).</p>
+          <a class="board-cta" href="/apprendre">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-bulb" />
+            </svg>
+            <span>
+              <b>Gagnez vos premiers points</b>Réussissez un cas Bon réflexe ou déclarez une
+              reproduction.
+            </span>
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </a>
+        </div>
+
+        <div class="badges-card" data-reveal>
+          <div class="card-head card-head-stack">
+            <h3>Badges</h3>
+            <span class="muted">
+              Survolez ou sélectionnez un badge pour savoir comment l’obtenir.
+            </span>
+          </div>
+          <ul class="badges" data-badges set:html={badgesHTML(badgesDe(BADGES_ACCUEIL))} />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section band band-commit" id="engagements" aria-labelledby="commit-title">
+    <div class="container">
+      <div class="section-intro section-intro-split" data-reveal>
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-shield" />
+            </svg>
+            Nos engagements
+          </p>
+          <h2 id="commit-title" class="section-title">
+            Les principes qui guident Vysora.
+          </h2>
+        </div>
+        <p class="section-lead">
+          Six principes appliqués à chaque fonctionnalité, de la publication à la modération.
+        </p>
+      </div>
+      <ul class="commits">
+        <li data-reveal style="--stagger:0">
+          <span class="commit-icon">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-route" />
+            </svg>
+          </span>
+          <h3>Le parcours avant le résultat</h3>
+          <p>Chaque création montre le chemin qui a mené au résultat.</p>
+        </li>
+        <li data-reveal style="--stagger:1">
+          <span class="commit-icon">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-lock" />
+            </svg>
+          </span>
+          <h3>Vous gardez la main</h3>
+          <p>
+            Toute création commence en brouillon privé. Vous choisissez le moment de la publier.
+          </p>
+        </li>
+        <li data-reveal style="--stagger:2">
+          <span class="commit-icon">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-scale" />
+            </svg>
+          </span>
+          <h3>Tous les outils à égalité</h3>
+          <p>La visibilité d’une création se gagne grâce aux votes « Utile » de la communauté.</p>
+        </li>
+        <li data-reveal style="--stagger:3">
+          <span class="commit-icon">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-gift" />
+            </svg>
+          </span>
+          <h3>Gratuit pour tous</h3>
+          <p>
+            Explorer, publier, apprendre et relever les défis : tout est accessible gratuitement.
+          </p>
+        </li>
+        <li data-reveal style="--stagger:4">
+          <span class="commit-icon">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-heart" />
+            </svg>
+          </span>
+          <h3>Un espace bienveillant</h3>
+          <p>
+            Des votes positifs pour encourager, et une charte communautaire appliquée par la
+            modération.
+          </p>
+        </li>
+        <li data-reveal style="--stagger:5">
+          <span class="commit-icon">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-shield" />
+            </svg>
+          </span>
+          <h3>La sécurité par défaut</h3>
+          <p>Un avertissement avant de publier une clé d’API ou une donnée personnelle.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faq-title">
+    <div class="container faq-grid">
+      <div data-reveal>
+        <p class="kicker">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-help" />
+          </svg>
+          Questions fréquentes
+        </p>
+        <h2 id="faq-title" class="section-title">
+          Avant de commencer.
+        </h2>
+        <p class="section-lead">
+          D’autres réponses dans la <a href="/charte-communautaire">charte communautaire</a>.
+        </p>
+      </div>
+      <div class="faq-list" data-reveal>
+        <details name="faq" open>
+          <summary>
+            Vysora est-il gratuit ?
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+          </summary>
+          <p>
+            Oui. Toutes les fonctionnalités sont gratuites. Pour reproduire une création, vous
+            utilisez vos propres outils d’IA, selon leurs conditions.
+          </p>
+        </details>
+        <details name="faq">
+          <summary>
+            Avec quels outils puis-je créer ?
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+          </summary>
+          <p
+            set:html={logos(
+              'Avec ceux que vous préférez : ChatGPT, Claude, Midjourney, Cursor ou tout autre outil. Vous créez dans votre outil, puis vous publiez sur Vysora le résultat et le parcours qui y a mené.',
+            )}
+          />
+        </details>
+        <details name="faq">
+          <summary>
+            Qui voit mes créations ?
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+          </summary>
+          <p>
+            Une création commence toujours en brouillon privé. Elle devient visible lorsque vous la
+            publiez, et vous pouvez la retirer à tout moment.
+          </p>
+        </details>
+        <details name="faq">
+          <summary>
+            Comment publier une création ?
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+          </summary>
+          <p>
+            Dans l’éditeur, vous ajoutez vos prompts, vos étapes et vos moments clés. Pour un
+            projet, gardez l’essentiel : chaque étape et le prompt qui l’a fait avancer.
+          </p>
+        </details>
+        <details name="faq">
+          <summary>
+            Comment savoir si une méthode fonctionne encore ?
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+          </summary>
+          <p>
+            Chaque création indique l’outil, le modèle et la date. Les reproductions déclarées, leur
+            taux de succès et les signalements d’obsolescence montrent si elle fonctionne toujours.
+          </p>
+        </details>
+        <details name="faq">
+          <summary>
+            Qui peut réutiliser ce que je publie ?
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+          </summary>
+          <p>
+            Vous choisissez la licence de chaque création. Par défaut, c’est CC BY 4.0 : la
+            réutilisation est permise à condition de vous créditer, et les variantes affichent
+            automatiquement votre nom.
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final" aria-labelledby="final-title">
+    <div class="container">
+      <div class="final-card" data-reveal>
+        <div class="final-lattice" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="final-copy">
+          <h2 id="final-title">Partagez votre méthode. Apprenez de celle des autres.</h2>
+          <p data-pour="visiteur">
+            Gratuit. Vos créations restent privées jusqu’à ce que vous décidiez de les publier.
+          </p>
+          <p data-pour="membre">
+            Vos brouillons restent privés jusqu’à ce que vous décidiez de les publier.
+          </p>
+        </div>
+        <div class="final-actions">
+          <a class="btn btn-inverse btn-lg" href="/inscription" data-magnetic data-pour="visiteur">
+            Créer un compte gratuit
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </a>
+          <a
+            class="btn btn-inverse btn-lg"
+            href="/creations/nouvelle"
+            data-magnetic
+            data-pour="membre"
+          >
+            Publier une création
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </a>
+          <a class="btn btn-ghost-inverse btn-lg" href="/explorer">
+            Explorer les créations
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <Fragment slot="fin">
+    <script type="application/json" id="accueil-donnees" set:html={json} />
+  </Fragment>
 </Base>
+
+<script>
+  import '../scripts/accueil';
+</script>

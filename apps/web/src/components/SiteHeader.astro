@@ -6,6 +6,8 @@ import CompteMenu from './CompteMenu.astro';
 
 const chemin = Astro.url.pathname;
 const editeur = estEditeur(chemin);
+// Sur l'accueil, l'en-tête est posé sur le bandeau bleu du héros : son logo passe au blanc.
+const accueil = chemin === ROUTES.accueil;
 const retour = adresseRetour(Astro.url);
 const pageCompte = [ROUTES.accueil, ROUTES.connexion, ROUTES.inscription].includes(chemin as never);
 const versConnexion = pageCompte ? ROUTES.connexion : `${ROUTES.connexion}?retour=${retour}`;
@@ -18,7 +20,26 @@ const versInscription = pageCompte ? ROUTES.inscription : `${ROUTES.inscription}
   </div>
   <div class="container header-bar">
     <a class="brand" href={ROUTES.accueil} aria-label="Vysora, accueil">
-      <img src="/assets/logos/vysora%20Bleu-Black.png" alt="" width="337" height="122" />
+      {accueil ? (
+        <>
+          <img
+            class="brand-fonce"
+            src="/assets/logos/vysora%20Bleu-Black.png"
+            alt=""
+            width="337"
+            height="122"
+          />
+          <img
+            class="brand-clair"
+            src="/assets/logos/vysora%20white%20all.png"
+            alt=""
+            width="337"
+            height="122"
+          />
+        </>
+      ) : (
+        <img src="/assets/logos/vysora%20Bleu-Black.png" alt="" width="337" height="122" />
+      )}
     </a>
     <nav class="main-nav" aria-label="Navigation principale">
       <ul>

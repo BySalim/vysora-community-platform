@@ -1,0 +1,21 @@
+/* Accueil : états sans contenu, absents du prototype (il avait toujours des données simulées). */
+.cards > .cards-vide,
+.feed > .feed-vide,
+.topics > .topic-vide,
+.board > .board-vide {
+  grid-column: 1 / -1;
+  list-style: none;
+}
+.cards-vide p,
+.feed-vide p,
+.topic-vide p,
+.board-vide p {
+  margin: 0;
+  padding: 18px 0;
+  color: var(--text-muted);
+  font: 500 0.9375rem/1.5 var(--font-body);
+}
+
+/* Bon réflexe : les options d'un vrai cas sont des phrases ; trop longues pour trois colonnes. */
+.verdict-options.is-long { grid-template-columns: minmax(0, 1fr); }
+.verdict-options.is-long button { padding-block: 12px; line-height: 1.35; }
