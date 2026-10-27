@@ -9,10 +9,11 @@ import { InteractionsController } from './interactions.controller.js';
 import { InteractionsService } from './interactions.service.js';
 import { MesEnregistrementsController } from './mes-enregistrements.controller.js';
 import { ReproductionsService } from './reproductions.service.js';
+import { VuesService } from './vues.service.js';
 
-/* Interactions (INT-01 à INT-03, S-01) : votes, reproductions, commentaires, enregistrements et leur
-   liste (« Mes contenus », CREA-04). Les vues suivront. Chaque interaction reçue est notifiée à l'auteur
-   du contenu (NOTIF-01). */
+/* Interactions (INT-01 à INT-04, S-01) : votes, reproductions, commentaires, vues, enregistrements et
+   leur liste (« Mes contenus », CREA-04). Chaque interaction reçue, sauf une vue, est notifiée à
+   l'auteur du contenu (NOTIF-01). */
 @Module({
   imports: [AuthModule, ProgressionModule, NotificationsModule],
   controllers: [InteractionsController, ContributionsController, MesEnregistrementsController],
@@ -21,6 +22,7 @@ import { ReproductionsService } from './reproductions.service.js';
     CommentairesService,
     ReproductionsService,
     EnregistrementsService,
+    VuesService,
   ],
 })
 export class InteractionsModule {}

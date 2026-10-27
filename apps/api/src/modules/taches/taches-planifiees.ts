@@ -24,8 +24,7 @@ const QUOTIDIENNE = {
    manquée ou reprise après un échec ne fait rien deux fois. Une nouvelle tâche s'ajoute ici, avec
    le service de son domaine. Les tâches d'un domaine qui tournent souvent ou à la demande se
    déclarent avec leur service : e-mails (`emails.envoyer`), e-mails des notifications
-   (`notifications.emails`, chaque minute), préparation des exports (`exports.preparer`). Viendra
-   avec ses données la purge des vues de plus de 2 jours (INT-04, F-23, table `vue_contenu`). */
+   (`notifications.emails`, chaque minute), préparation des exports (`exports.preparer`). */
 @Injectable()
 export class TachesPlanifiees implements OnModuleInit {
   private readonly journal = new Logger(TachesPlanifiees.name);

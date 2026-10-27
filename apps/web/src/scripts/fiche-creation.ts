@@ -83,6 +83,15 @@ if (fiche && fiche.dataset.affichage === 'creation') {
 
   const creationId = fiche.dataset.creation;
 
+  /* F-23 : une fiche publiée compte une vue à son ouverture ; l'API la compte une fois par visiteur
+     et par jour, jamais pour l'auteur. L'aperçu de l'éditeur ne compte pas. */
+  if (
+    fiche.dataset.statut === 'publiee' &&
+    !fiche.hasAttribute('data-auteur') &&
+    !document.documentElement.hasAttribute('data-apercu')
+  )
+    void api('POST', `/api/v1/contenus/${creationId}/vues`);
+
   /* F-30 : vote « Utile », retiré par un second clic. */
   const utile = $<HTMLButtonElement>('#useful');
   utile?.addEventListener('click', async () => {

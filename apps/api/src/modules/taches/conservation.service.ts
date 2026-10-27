@@ -3,12 +3,13 @@ import { DELAIS } from '@vysora/shared';
 import { lt } from 'drizzle-orm';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
-import { notification, session, tentativeConnexion } from '../../db/schema/index.js';
+import { notification, session, tentativeConnexion, vueContenu } from '../../db/schema/index.js';
 
 export interface BilanConservation {
   sessions: number;
   tentatives: number;
   notifications: number;
+  vues: number;
 }
 
 const JOUR_MS = 24 * 3600_000;
@@ -41,10 +42,16 @@ export class ConservationService {
     const notifications = await this.db
       .delete(notification)
       .where(lt(notification.date, moisAvant(maintenant, DELAIS.conservationNotificationsMois)));
+    // F-23 : empreintes des vues, inutiles une fois le jour passé (seul le compteur reste).
+    const limiteVues = new Date(maintenant.getTime() - DELAIS.conservationVuesJours * JOUR_MS)
+      .toISOString()
+      .slice(0, 10);
+    const vues = await this.db.delete(vueContenu).where(lt(vueContenu.jour, limiteVues));
     return {
       sessions: sessions.rowCount ?? 0,
       tentatives: tentatives.rowCount ?? 0,
       notifications: notifications.rowCount ?? 0,
+      vues: vues.rowCount ?? 0,
     };
   }
 }

@@ -1,4 +1,14 @@
-import { Controller, Delete, Param, Put, type PipeTransform } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Req,
+  type PipeTransform,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   CODES_TYPE_VOTE,
   type CodeTypeVote,
@@ -8,8 +18,9 @@ import {
 import { introuvable } from '../../commun/erreurs.js';
 import { IdentifiantPipe } from '../../commun/http/identifiant.pipe.js';
 import { Exige, SessionCourante } from '../auth/droits.js';
-import type { SessionOuverte } from '../auth/requete.js';
+import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { InteractionsService } from './interactions.service.js';
+import { VuesService } from './vues.service.js';
 
 /** Type de vote dans l'adresse (UTILE, TESTE_OK) ; tout autre ne désigne rien. */
 class TypeVotePipe implements PipeTransform<string, CodeTypeVote> {
@@ -19,11 +30,30 @@ class TypeVotePipe implements PipeTransform<string, CodeTypeVote> {
   }
 }
 
-/* Interactions sur un contenu publié (F-30, F-31, F-34). Voter et enregistrer demandent un compte
-   actif (e-mail vérifié, conditions acceptées, pas de suspension). */
+/* Interactions sur un contenu publié (F-23, F-30, F-31, F-34). Voter et enregistrer demandent un
+   compte actif (e-mail vérifié, conditions acceptées, pas de suspension) ; une vue compte pour tous. */
 @Controller('contenus/:id')
 export class InteractionsController {
-  constructor(private readonly interactions: InteractionsService) {}
+  constructor(
+    private readonly interactions: InteractionsService,
+    private readonly vues: VuesService,
+  ) {}
+
+  /** POST /api/v1/contenus/:id/vues : envoyé par la page du contenu à son ouverture (INT-04). La
+      réponse est la même que la vue compte ou non. */
+  @Post('vues')
+  @HttpCode(204)
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
+  async vue(
+    @Param('id', IdentifiantPipe) id: number,
+    @Req() requete: RequeteVysora,
+  ): Promise<void> {
+    await this.vues.compter(id, {
+      membreId: requete.sessionOuverte?.utilisateur.id ?? null,
+      ip: requete.ip,
+      userAgent: requete.headers['user-agent'],
+    });
+  }
 
   /** PUT /api/v1/contenus/:id/votes/:type : sans effet si le vote existe déjà. */
   @Put('votes/:type')
