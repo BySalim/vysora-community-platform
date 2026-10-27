@@ -6,6 +6,7 @@ import {
   NIVEAUX,
   type NotificationApi,
   type ResultatReproduction,
+  type TypeContenu,
   type TypeNotification,
   type TypeSujet,
 } from '@vysora/shared';
@@ -117,6 +118,55 @@ export const nomDe = (n: NotificationApi): string => n.par?.nom ?? 'Un membre';
 export const titreCible = (n: NotificationApi): string =>
   n.cible?.titre ?? 'Contenu qui n’est plus disponible';
 
+/** Contenu visé par une décision de modération, avec son accord (« masquée », « masqué »). */
+const DESIGNATIONS: Record<TypeContenu, { nom: string; feminin: boolean }> = {
+  CREATION: { nom: 'création', feminin: true },
+  COMMENTAIRE: { nom: 'commentaire', feminin: false },
+  REPRODUCTION: { nom: 'essai', feminin: false },
+  SUJET: { nom: 'sujet', feminin: false },
+  MESSAGE: { nom: 'réponse', feminin: true },
+  CAS_BON_REFLEXE: { nom: 'cas Bon réflexe', feminin: false },
+};
+
+/** Le prototype ne connaît que la création masquée ; la modération vise aussi commentaires, essais,
+    sujets, réponses et cas (MOD-01). `e` accorde le participe, `ce` le démonstratif. */
+export function contenuVise(n: NotificationApi): {
+  type: TypeContenu;
+  nom: string;
+  e: string;
+  ce: string;
+  intitule: string;
+} {
+  const type = n.decision?.contenu?.type ?? 'CREATION';
+  const { nom, feminin } = DESIGNATIONS[type];
+  return {
+    type,
+    nom,
+    e: feminin ? 'e' : '',
+    ce: feminin ? 'Cette' : 'Ce',
+    intitule: n.decision?.contenu?.intitule ?? titreCible(n),
+  };
+}
+
+/** Titre d'une décision de modération qui vise un contenu (« Votre réponse a été supprimée… »). */
+function titreDecision(n: NotificationApi): string {
+  const { nom, e } = contenuVise(n);
+  switch (n.decision?.action) {
+    case 'SUSPENDRE':
+      return `Votre compte est suspendu jusqu’au ${finSuspension(n)}`;
+    case 'AVERTIR':
+      return 'La modération vous adresse un avertissement';
+    case 'SUPPRIMER':
+      return `Votre ${nom} a été supprimé${e} par la modération`;
+    case 'AJOUTER_AVERTISSEMENT_AGENT':
+      return 'Un avertissement a été ajouté à votre création';
+    case 'RETIRER_AVERTISSEMENT_AGENT':
+      return 'L’avertissement de votre création a été retiré';
+    default:
+      return 'La modération a pris une décision qui vous concerne';
+  }
+}
+
 /** Fin de la suspension, « 20 octobre 2026 ». */
 export const finSuspension = (n: NotificationApi): string =>
   n.decision?.finSuspension ? dateLongue(n.decision.finSuspension) : '';
@@ -152,10 +202,12 @@ export function titreDetail(n: NotificationApi): string {
       )} « Utile »`;
     case 'OBSOLESCENCE_SIGNALEE':
       return `Votre création est signalée comme ne fonctionnant plus avec ${n.obsolescence?.modele ?? 'un modèle'}`;
-    case 'CONTENU_MASQUE':
-      return 'Votre création a été masquée par la modération';
+    case 'CONTENU_MASQUE': {
+      const { nom, e } = contenuVise(n);
+      return `Votre ${nom} a été masqué${e} par la modération`;
+    }
     case 'CONTENU_RETABLI':
-      return 'Votre création est de nouveau visible';
+      return `Votre ${contenuVise(n).nom} est de nouveau visible`;
     case 'BADGE_OBTENU':
       return `Vous avez obtenu le badge « ${n.badge?.libelle ?? ''} »`;
     case 'NIVEAU_ATTEINT':
@@ -167,9 +219,7 @@ export function titreDetail(n: NotificationApi): string {
     case 'RESULTAT_DEFI':
       return `Vous terminez ${rangTexte(n.defi?.rang ?? 0)} du défi`;
     case 'DECISION_MODERATION':
-      return n.decision?.action === 'SUSPENDRE'
-        ? `Votre compte est suspendu jusqu’au ${finSuspension(n)}`
-        : 'La modération vous adresse un avertissement';
+      return titreDecision(n);
   }
 }
 
@@ -194,10 +244,12 @@ export function resume(n: NotificationApi): string {
       return `${pluriel(n.nombre, 'membre a', 'membres ont')} voté « Utile » pour ${n.surReponse ? 'votre réponse' : nom}`;
     case 'OBSOLESCENCE_SIGNALEE':
       return `${nom} est signalée comme ne fonctionnant plus avec ${n.obsolescence?.modele ?? 'un modèle'}`;
-    case 'CONTENU_MASQUE':
-      return `${nom} a été masquée par la modération`;
+    case 'CONTENU_MASQUE': {
+      const { e, intitule } = contenuVise(n);
+      return `« ${intitule} » a été masqué${e} par la modération`;
+    }
     case 'CONTENU_RETABLI':
-      return `${nom} est de nouveau visible`;
+      return `« ${contenuVise(n).intitule} » est de nouveau visible`;
     case 'BADGE_OBTENU':
       return `vous avez obtenu le badge « ${n.badge?.libelle ?? ''} »`;
     case 'NIVEAU_ATTEINT':
@@ -208,10 +260,10 @@ export function resume(n: NotificationApi): string {
       return `votre cas ${nom} n’a pas été validé`;
     case 'RESULTAT_DEFI':
       return `vous terminez ${rangTexte(n.defi?.rang ?? 0)} du défi ${nom}`;
-    case 'DECISION_MODERATION':
-      return n.decision?.action === 'SUSPENDRE'
-        ? `votre compte est suspendu jusqu’au ${finSuspension(n)}`
-        : 'la modération vous adresse un avertissement';
+    case 'DECISION_MODERATION': {
+      const titre = titreDecision(n);
+      return titre.charAt(0).toLowerCase() + titre.slice(1);
+    }
   }
 }
 

@@ -12,13 +12,16 @@ import {
   LONGUEURS,
   NIVEAUX,
   niveauPourReputation,
+  schemaMessage,
   type CommentaireApi,
   type LectureNotificationsApi,
   type MembreResumeApi,
+  type MessageApi,
   type MessageNotificationApi,
   type NotificationApi,
   type NotificationsApi,
   type PreferencesNotificationsApi,
+  type SujetApi,
 } from '@vysora/shared';
 import { LIBELLES_TYPE } from '../lib/creations';
 import { ROUTES } from '../lib/navigation';
@@ -31,6 +34,7 @@ import {
   VUES,
   aTraiter,
   categorieDe,
+  contenuVise,
   courte,
   dateLongue,
   deNom,
@@ -47,7 +51,7 @@ import {
   titreDetail,
   type Vue,
 } from '../lib/notifications';
-import { dateCourte } from '../lib/texte';
+import { dateCourte, enPhrase } from '../lib/texte';
 import { exiger, invitation } from './commun/acces';
 import { api } from './commun/api';
 import { afficherNonLues } from './commun/compte';
@@ -99,6 +103,8 @@ const ui = {
   minuteurFait: undefined as ReturnType<typeof setTimeout> | undefined,
   jaugeVue: false,
   chargementPlus: false,
+  /** Réponse du forum dont l'acceptation attend la confirmation du membre. */
+  confirmer: null as number | null,
 };
 
 const parId = (id: number | null) => liste.find((n) => n.id === id);
@@ -289,10 +295,20 @@ function entete(n: NotificationApi): { quoi: string; titre: string; extrait: str
           ? t(`Avec ${n.obsolescence.modele} · ${n.obsolescence.membres} membres`)
           : '',
       };
-    case 'CONTENU_MASQUE':
-      return { quoi: 'Masquée par la modération', titre, extrait: t(n.motif ?? '') };
+    case 'CONTENU_MASQUE': {
+      const vise = contenuVise(n);
+      return {
+        quoi: `Masqué${vise.e} par la modération`,
+        titre: vise.intitule,
+        extrait: t(n.motif ?? ''),
+      };
+    }
     case 'CONTENU_RETABLI':
-      return { quoi: 'De nouveau visible', titre, extrait: t(n.motif ?? '') };
+      return {
+        quoi: 'De nouveau visible',
+        titre: contenuVise(n).intitule,
+        extrait: t(n.motif ?? ''),
+      };
     case 'BADGE_OBTENU':
       return {
         quoi: 'Badge obtenu',
@@ -315,15 +331,21 @@ function entete(n: NotificationApi): { quoi: string; titre: string; extrait: str
         titre,
         extrait: points(n.points),
       };
-    case 'DECISION_MODERATION':
+    case 'DECISION_MODERATION': {
+      const vise = contenuVise(n);
+      const decisions: Partial<Record<string, string>> = {
+        SUSPENDRE: `Compte suspendu jusqu’au ${finSuspension(n)}`,
+        AVERTIR: 'Avertissement',
+        SUPPRIMER: `${majuscule(vise.nom)} supprimé${vise.e} : « ${vise.intitule} »`,
+        AJOUTER_AVERTISSEMENT_AGENT: `Avertissement « instructions pour agent » : « ${vise.intitule} »`,
+        RETIRER_AVERTISSEMENT_AGENT: `Avertissement retiré : « ${vise.intitule} »`,
+      };
       return {
         quoi: 'Décision de la modération',
-        titre:
-          n.decision?.action === 'SUSPENDRE'
-            ? `Compte suspendu jusqu’au ${finSuspension(n)}`
-            : 'Avertissement',
+        titre: decisions[n.decision?.action ?? ''] ?? 'Décision',
         extrait: t(n.motif ?? ''),
       };
+    }
   }
 }
 
@@ -459,28 +481,41 @@ const bulleDe = (m: MessageNotificationApi, q: string) =>
   m.moi ? bulle(m.texte, { vous: true, quand: q }) : bulle(m.texte, { de: m.auteur, quand: q });
 
 function composeur(n: NotificationApi): string {
-  if (n.reponse || !n.repondreA) return '';
+  if (n.reponse || (!n.repondreA && !n.repondreSujet)) return '';
   const porte = invitation('contribuer', 'répondre');
   if (porte) return `<p class="nt-invitation">${icon('lock')}<span>${porte}</span></p>`;
+  // Une réponse du forum se publie dans le sujet (RG-64), un commentaire sous le commentaire (F-42).
+  const dansSujet = !n.repondreA;
+  const max = dansSujet ? LONGUEURS.reponseForum.max : LONGUEURS.commentaire.max;
+  const aide = dansSujet
+    ? `Publiée dans le sujet, ${LONGUEURS.reponseForum.min} caractères au moins. Ctrl + Entrée pour publier.`
+    : 'Publiée sous le commentaire. Ctrl + Entrée pour publier.';
   return `<form class="nt-repondre" data-nt-form="${n.id}" novalidate>
       <label class="nt-repondre-label" for="nt-rep-${n.id}">${t(`Répondre à ${nomPar(n)}`)}</label>
-      <textarea id="nt-rep-${n.id}" rows="3" maxlength="${LONGUEURS.commentaire.max}" aria-describedby="nt-rep-aide-${n.id}" data-nt-saisie="${n.id}" placeholder="${esc(typo('Votre réponse…'))}">${esc(ui.brouillons.get(n.id) ?? '')}</textarea>
+      <textarea id="nt-rep-${n.id}" rows="3" maxlength="${max}" aria-describedby="nt-rep-aide-${n.id}" data-nt-saisie="${n.id}" placeholder="${esc(typo(dansSujet ? 'Votre réponse dans le sujet…' : 'Votre réponse…'))}">${esc(ui.brouillons.get(n.id) ?? '')}</textarea>
       <p class="nt-erreur" id="nt-rep-err-${n.id}" hidden></p>
       <div class="nt-repondre-pied">
-        <p class="nt-repondre-aide" id="nt-rep-aide-${n.id}">${t('Publiée sous le commentaire. Ctrl + Entrée pour publier.')}</p>
+        <p class="nt-repondre-aide" id="nt-rep-aide-${n.id}">${t(aide)}</p>
         <button class="btn btn-primary btn-sm" type="submit">${icon('send')}Publier la réponse</button>
       </div>
     </form>`;
 }
 
-/** Réponse du forum : acceptée, ou sujet déjà résolu (accepter une réponse viendra avec le forum). */
+/** Réponse du forum : acceptée, sujet déjà résolu, ou bouton « Accepter cette réponse » et sa
+    confirmation (F-52, RG-63). */
 function acceptation(n: NotificationApi): string {
   if (n.type !== 'REPONSE_SUJET') return '';
   if (n.acceptee)
     return `<p class="nt-fait-note">${icon('check-circle')}<span>${t('Vous avez accepté cette réponse : elle est épinglée en tête du sujet, désormais résolu.')}</span></p>`;
   if (n.sujetResolu)
     return `<p class="nt-fait-note is-neutre">${icon('check-circle')}<span>${t('Vous avez déjà accepté une autre réponse à cette question.')}</span></p>`;
-  return '';
+  if (!n.repondreSujet?.accepter) return '';
+  if (ui.confirmer === n.id)
+    return `<div class="nt-confirmer" role="group" aria-labelledby="nt-conf-${n.id}">
+        <p id="nt-conf-${n.id}"><b>${t(`Accepter la réponse ${deNom(nomPar(n))} ?`)}</b>${t(' Elle sera épinglée en tête du sujet, qui sera marqué résolu. Vous pourrez changer d’avis plus tard.')}</p>
+        <div><button class="btn btn-quiet btn-sm" type="button" data-nt-confirmer-non id="nt-conf-non-${n.id}">Annuler</button><button class="btn btn-primary btn-sm" type="button" data-nt-confirmer-oui="${n.id}">${icon('check')}Accepter la réponse</button></div>
+      </div>`;
+  return `<button class="btn btn-secondary btn-sm nt-accepter" type="button" id="nt-acc-${n.id}" data-nt-accepter="${n.id}">${icon('check-circle')}Accepter cette réponse</button>`;
 }
 
 const periode = (debut: string, fin: string): string => {
@@ -494,7 +529,8 @@ const periode = (debut: string, fin: string): string => {
 };
 
 function corps(n: NotificationApi): string {
-  if (!n.disponible)
+  // Une décision de modération se lit encore quand le contenu visé a été retiré (intitulé gardé).
+  if (!n.disponible && !n.decision)
     return `<p class="nt-texte-detail">${t('Le contenu concerné n’est plus disponible : il a été retiré par son auteur ou par la modération.')}</p>`;
   switch (n.type) {
     case 'COMMENTAIRE_RECU':
@@ -569,18 +605,69 @@ function corps(n: NotificationApi): string {
     case 'OBSOLESCENCE_SIGNALEE':
       return `<div class="nt-essai" data-resultat="partiel"><span class="nt-essai-icone">${icon('alert', '')}</span><div><p class="nt-essai-res">${t(`${n.obsolescence?.membres ?? 0} membres, un même modèle`)}</p><p class="nt-essai-outil"><span class="nt-outil">${t(n.obsolescence?.modele ?? '')}</span></p></div></div>
           <p class="nt-texte-detail">${t('Le seuil de trois signalements est atteint : un bandeau prévient désormais les lecteurs. Refaites l’essai avec ce modèle, puis mettez à jour la création ou ses limites constatées.')}</p>`;
-    case 'CONTENU_MASQUE':
+    case 'CONTENU_MASQUE': {
+      const vise = contenuVise(n);
+      const effets =
+        vise.type === 'CREATION'
+          ? [
+              [
+                'eye-off',
+                'La création n’est plus visible des autres membres ; ses votes et ses commentaires sont suspendus.',
+              ],
+              ['pen', 'Modifiez-la : la modération l’examinera de nouveau.'],
+            ]
+          : [
+              [
+                'eye-off',
+                `${vise.ce} ${vise.nom} n’est plus visible des autres membres ; les points de réputation liés sont suspendus.`,
+              ],
+            ];
       return `${n.motif ? `<div class="nt-motif"><p><b>Motif</b>${t(n.motif)}</p></div>` : ''}
-          <ul class="nt-effets"><li>${icon('eye-off')}<span>${t('La création n’est plus visible des autres membres ; ses votes et ses commentaires sont suspendus.')}</span></li><li>${icon('pen')}<span>${t('Modifiez-la : la modération l’examinera de nouveau.')}</span></li></ul>`;
-    case 'CONTENU_RETABLI':
-      return `<p class="nt-texte-detail">${t(n.motif ?? 'Les votes, les commentaires et les points liés sont rétablis.')}</p>`;
-    case 'DECISION_MODERATION':
+          <ul class="nt-effets">${effets.map(([i, texte]) => `<li>${icon(i as string)}<span>${t(texte)}</span></li>`).join('')}</ul>`;
+    }
+    case 'CONTENU_RETABLI': {
+      const effet =
+        contenuVise(n).type === 'CREATION'
+          ? 'Les votes, les commentaires et les points liés sont rétablis.'
+          : 'Les points de réputation liés sont rétablis.';
+      return `<p class="nt-texte-detail">${t(n.motif ? `${enPhrase(n.motif)} ${effet}` : effet)}</p>`;
+    }
+    case 'DECISION_MODERATION': {
+      const vise = contenuVise(n);
+      const effets: [string, string][] =
+        n.decision?.action === 'SUSPENDRE'
+          ? [
+              ['check-circle', 'Vous pouvez lire les contenus et gérer vos paramètres.'],
+              [
+                'lock',
+                `Publier, voter, commenter et répondre redeviendront possibles le ${finSuspension(n)}.`,
+              ],
+            ]
+          : n.decision?.action === 'SUPPRIMER'
+            ? [
+                [
+                  'trash',
+                  `« ${vise.intitule} » ne figure plus sur Vysora ; les points de réputation liés sont annulés.`,
+                ],
+              ]
+            : n.decision?.action === 'AJOUTER_AVERTISSEMENT_AGENT'
+              ? [
+                  [
+                    'alert',
+                    `Les lecteurs de « ${vise.intitule} » sont invités à relire le prompt avant de le confier à un outil qui peut agir sur leurs fichiers, leurs commandes ou leurs services. Seule la modération peut retirer cet avertissement.`,
+                  ],
+                ]
+              : n.decision?.action === 'RETIRER_AVERTISSEMENT_AGENT'
+                ? [
+                    [
+                      'check-circle',
+                      `« ${vise.intitule} » ne porte plus l’avertissement « instructions pour agent ».`,
+                    ],
+                  ]
+                : [['alert', 'Un nouvel écart peut entraîner la suspension du compte.']];
       return `${n.motif ? `<div class="nt-motif"><p><b>Motif</b>${t(n.motif)}</p></div>` : ''}
-          ${
-            n.decision?.action === 'SUSPENDRE'
-              ? `<ul class="nt-effets"><li>${icon('check-circle')}<span>${t('Vous pouvez lire les contenus et gérer vos paramètres.')}</span></li><li>${icon('lock')}<span>${t(`Publier, voter, commenter et répondre redeviendront possibles le ${finSuspension(n)}.`)}</span></li><li>${icon('mail')}<span>${t('Cette décision vous a aussi été envoyée par e-mail.')}</span></li></ul>`
-              : `<ul class="nt-effets"><li>${icon('alert')}<span>${t('Un nouvel écart peut entraîner la suspension du compte.')}</span></li><li>${icon('mail')}<span>${t('Cette décision vous a aussi été envoyée par e-mail.')}</span></li></ul>`
-          }`;
+          <ul class="nt-effets">${[...effets, ['mail', 'Cette décision vous a aussi été envoyée par e-mail.']].map(([i, texte]) => `<li>${icon(i as string)}<span>${t(texte)}</span></li>`).join('')}</ul>`;
+    }
   }
 }
 
@@ -639,7 +726,8 @@ function actionsDetail(n: NotificationApi, inline: boolean): string {
       sorties.push(
         `<a class="btn btn-primary btn-sm" href="${modifier}" data-exige="contribuer" data-exige-quoi="mettre à jour cette création" data-nt-lien="${n.id}">${icon('pen')}Mettre à jour la création</a>`,
       );
-    if (n.type === 'CONTENU_MASQUE')
+    // Une création masquée se corrige ; un commentaire masqué sur sa propre création ne la concerne pas.
+    if (n.type === 'CONTENU_MASQUE' && contenuVise(n).type === 'CREATION')
       sorties.push(
         `<a class="btn btn-primary btn-sm" href="${modifier}" data-exige="contribuer" data-exige-quoi="modifier cette création" data-nt-lien="${n.id}">${icon('pen')}Modifier la création</a>`,
       );
@@ -1008,6 +1096,7 @@ function choisir(id: number): void {
   const n = parId(id);
   if (!n) return;
   const mode = lecture();
+  ui.confirmer = null;
   if (mode === 'deplie' && ui.selection === id) {
     ui.selection = null;
     ecrireAdresse();
@@ -1165,7 +1254,7 @@ async function afficherPlus(): Promise<void> {
   }
 }
 
-/* Répondre à un commentaire depuis la notification (F-42, INT-03) --------------------------------- */
+/* Répondre depuis la notification : à un commentaire (F-42, INT-03), dans un sujet (F-51) ----------- */
 
 async function publierReponse(formulaire: HTMLFormElement): Promise<void> {
   const id = Number(formulaire.dataset.ntForm);
@@ -1173,7 +1262,7 @@ async function publierReponse(formulaire: HTMLFormElement): Promise<void> {
   const champ = $<HTMLTextAreaElement>('textarea', formulaire);
   const erreur = $('.nt-erreur', formulaire);
   const bouton = $<HTMLButtonElement>('button[type="submit"]', formulaire);
-  if (!n?.repondreA || !champ || !erreur) return;
+  if (!n || (!n.repondreA && !n.repondreSujet) || !champ || !erreur) return;
   const texte = champ.value.trim();
   const montrer = (message: string) => {
     erreur.textContent = typo(message);
@@ -1186,20 +1275,36 @@ async function publierReponse(formulaire: HTMLFormElement): Promise<void> {
     montrer('Écrivez votre réponse avant de la publier.');
     return;
   }
+  // RG-64 : une réponse du forum compte 20 caractères au moins (mêmes messages que l'API).
+  const controle = n.repondreA ? null : schemaMessage.safeParse({ corps: texte });
+  if (controle && !controle.success) {
+    montrer(controle.error.issues[0]?.message ?? 'Votre réponse est trop courte.');
+    return;
+  }
   if (!exiger('contribuer', 'répondre')) return;
   if (bouton) bouton.disabled = true;
-  const reponse = await api<CommentaireApi>(
-    'POST',
-    `/api/v1/creations/${n.repondreA.creationId}/commentaires`,
-    { corps: texte, parentId: n.repondreA.commentaireId },
-  );
+  const reponse = n.repondreA
+    ? await api<CommentaireApi>(
+        'POST',
+        `/api/v1/creations/${n.repondreA.creationId}/commentaires`,
+        {
+          corps: texte,
+          parentId: n.repondreA.commentaireId,
+        },
+      )
+    : await api<MessageApi>('POST', `/api/v1/sujets/${n.repondreSujet?.sujetId}/messages`, {
+        corps: texte,
+      });
   if (bouton) bouton.disabled = false;
   if (!reponse.ok) {
     const { probleme } = reponse;
     const parChamp = probleme.erreurs?.corps ?? probleme.erreurs?.parentId;
     if (parChamp) montrer(parChamp);
-    else if (probleme.status === 404) montrer('Ce commentaire n’est plus disponible.');
-    else if ([401, 403, 422, 429].includes(probleme.status))
+    else if (probleme.status === 404)
+      montrer(
+        n.repondreA ? 'Ce commentaire n’est plus disponible.' : 'Ce sujet n’est plus disponible.',
+      );
+    else if ([401, 403, 409, 422, 429].includes(probleme.status))
       montrer(probleme.detail ?? probleme.title);
     else montrer('Votre réponse n’a pas pu être publiée. Réessayez dans un instant.');
     return;
@@ -1217,6 +1322,34 @@ async function publierReponse(formulaire: HTMLFormElement): Promise<void> {
   titre?.focus({ preventScroll: true });
   toast('Réponse publiée.', 'message');
   annoncer(`Réponse publiée pour ${nomPar(n)}.`);
+}
+
+/** F-52, RG-63 : l'auteur du sujet accepte la réponse ; ses autres notifications du sujet le savent
+    résolu. */
+async function accepterReponse(id: number): Promise<void> {
+  const n = parId(id);
+  if (!n?.repondreSujet || !exiger('contribuer', 'accepter une réponse')) return;
+  const { sujetId, messageId } = n.repondreSujet;
+  const reponse = await api<SujetApi>('PUT', `/api/v1/messages/${messageId}/acceptation`);
+  ui.confirmer = null;
+  if (!reponse.ok) {
+    rafraichir();
+    const { probleme } = reponse;
+    echec([403, 404, 409].includes(probleme.status) ? probleme.detail : undefined);
+    $(`#nt-acc-${id}`)?.focus();
+    return;
+  }
+  for (const x of liste)
+    if (x.repondreSujet?.sujetId === sujetId) {
+      x.sujetResolu = true;
+      x.acceptee = x.repondreSujet.messageId === messageId;
+    }
+  rafraichir();
+  const titre =
+    lecture() === 'volet' ? $('#nt-volet-titre') : document.getElementById(`nt-dt-${id}`);
+  titre?.focus({ preventScroll: true });
+  toast('Réponse acceptée. Le sujet est marqué résolu.', 'check-circle');
+  annoncer(`Réponse ${deNom(nomPar(n))} acceptée. Le sujet est marqué résolu.`);
 }
 
 /* Préférence d'e-mail (F-81) ----------------------------------------------------------------------- */
@@ -1283,10 +1416,28 @@ function ecrireAdresse(): void {
 function brancher(main: HTMLElement): void {
   main.addEventListener('click', (evenement) => {
     const el = (evenement.target as Element).closest<HTMLElement>(
-      '[data-nt-basculer], [data-nt-choisir], [data-nt-vue], [data-nt-vue-directe], [data-nt-tout-lire], [data-nt-annuler-tout], [data-nt-plus], [data-nt-tout-voir], [data-nt-email-switch], [data-nt-reessayer], [data-nt-apercu], [data-nt-lu-volet], [data-nt-voisin], [data-nt-lien]',
+      '[data-nt-basculer], [data-nt-choisir], [data-nt-vue], [data-nt-vue-directe], [data-nt-tout-lire], [data-nt-annuler-tout], [data-nt-plus], [data-nt-tout-voir], [data-nt-email-switch], [data-nt-reessayer], [data-nt-apercu], [data-nt-lu-volet], [data-nt-voisin], [data-nt-lien], [data-nt-accepter], [data-nt-confirmer-oui], [data-nt-confirmer-non]',
     );
     if (!el) return;
     const d = el.dataset;
+    if (d.ntAccepter !== undefined) {
+      if (!exiger('contribuer', 'accepter une réponse')) return;
+      ui.confirmer = Number(d.ntAccepter);
+      rafraichir();
+      $(`#nt-conf-non-${ui.confirmer}`)?.focus();
+      return;
+    }
+    if (d.ntConfirmerOui !== undefined) {
+      void accepterReponse(Number(d.ntConfirmerOui));
+      return;
+    }
+    if (d.ntConfirmerNon !== undefined) {
+      const id = ui.confirmer;
+      ui.confirmer = null;
+      rafraichir();
+      $(`#nt-acc-${id}`)?.focus();
+      return;
+    }
     if (d.ntBasculer !== undefined) {
       const n = parId(Number(d.ntBasculer));
       if (!n) return;

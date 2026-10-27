@@ -406,7 +406,7 @@ if (fiche && fiche.dataset.affichage === 'creation') {
     // Points à compléter (RG-10 à RG-16) ou limite de publication (RG-85) : affichés dans la fenêtre.
     const { probleme } = reponse;
     const points = Object.entries(probleme.erreurs ?? {}).filter(
-      ([champ]) => champ !== 'confirmationDonnees',
+      ([cle]) => cle !== 'confirmationDonnees',
     );
     if (!points.length && probleme.erreurs?.confirmationDonnees) return signalerCase(true);
     if (erreursPublication && (points.length || probleme.code === 'LIMITE_ATTEINTE')) {

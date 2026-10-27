@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   aTraiter,
   categorieDe,
+  contenuVise,
   courte,
   deNom,
   ecart,
@@ -51,6 +52,7 @@ const notification = (valeurs: Partial<NotificationApi> = {}): NotificationApi =
   origine: null,
   reponse: null,
   repondreA: { creationId: 12, commentaireId: 40 },
+  repondreSujet: null,
   points: null,
   reproduction: null,
   variante: null,
@@ -137,12 +139,49 @@ describe('Ce qui reste « À traiter »', () => {
   it('épingle une suspension, range chaque type dans sa catégorie', () => {
     const suspension = notification({
       type: 'DECISION_MODERATION',
-      decision: { action: 'SUSPENDRE', finSuspension: '2026-10-20T00:00:00Z' },
+      decision: { action: 'SUSPENDRE', finSuspension: '2026-10-20T00:00:00Z', contenu: null },
     });
     expect(epinglee(suspension)).toBe(true);
     expect(titreDetail(suspension)).toBe('Votre compte est suspendu jusqu’au 20 octobre 2026');
     expect(categorieDe('REPRODUCTION_RECUE')).toBe('preuves');
     expect(categorieDe('NIVEAU_ATTEINT')).toBe('progression');
+  });
+
+  it('nomme le contenu visé par la modération, accordé à son type (MOD-01)', () => {
+    const decision = (
+      type: NotificationApi['type'],
+      action: 'MASQUER' | 'RETABLIR' | 'SUPPRIMER' | 'AJOUTER_AVERTISSEMENT_AGENT',
+      contenu: { type: 'CREATION' | 'MESSAGE' | 'COMMENTAIRE'; intitule: string } | null,
+    ) => notification({ type, par: null, decision: { action, finSuspension: null, contenu } });
+    const reponse = { type: 'MESSAGE', intitule: 'Demandez une exécution à blanc.' } as const;
+    expect(titreDetail(decision('CONTENU_MASQUE', 'MASQUER', reponse))).toBe(
+      'Votre réponse a été masquée par la modération',
+    );
+    expect(resume(decision('CONTENU_MASQUE', 'MASQUER', reponse))).toBe(
+      '« Demandez une exécution à blanc. » a été masquée par la modération',
+    );
+    const commentaire = { type: 'COMMENTAIRE', intitule: 'Merci pour le prompt' } as const;
+    expect(titreDetail(decision('CONTENU_RETABLI', 'RETABLIR', commentaire))).toBe(
+      'Votre commentaire est de nouveau visible',
+    );
+    expect(titreDetail(decision('DECISION_MODERATION', 'SUPPRIMER', commentaire))).toBe(
+      'Votre commentaire a été supprimé par la modération',
+    );
+    expect(
+      resume(
+        decision('DECISION_MODERATION', 'AJOUTER_AVERTISSEMENT_AGENT', {
+          type: 'CREATION',
+          intitule: 'Renommer des photos',
+        }),
+      ),
+    ).toBe('un avertissement a été ajouté à votre création');
+    // Sans contenu connu (notification du prototype) : la création et son titre.
+    expect(titreDetail(decision('CONTENU_MASQUE', 'MASQUER', null))).toBe(
+      'Votre création a été masquée par la modération',
+    );
+    expect(contenuVise(decision('CONTENU_MASQUE', 'MASQUER', null)).intitule).toBe(
+      'Affiche touristique de Ziguinchor',
+    );
   });
 });
 

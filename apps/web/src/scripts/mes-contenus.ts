@@ -404,13 +404,13 @@ function demarrer(depart: Donnees): void {
 
   /* Créations publiées ------------------------------------------------------------------ */
 
-  /** Date et motif de la décision (MOD-01). « Voir la décision » attend la page des notifications
-      (NOTIF-01). */
+  /** Date et motif de la décision (MOD-01) ; « Voir la décision » ouvre les notifications de la
+      modération (NOTIF-01). */
   function alerteMasquage(masquage: MasquageApi | null): string {
     const le = masquage?.date ? ` le ${dateLabel(masquage.date)}` : '';
     const motif = masquage?.motif ? ` ${t(enPhrase(masquage.motif))}` : '';
     // Un mois abrégé porte déjà son point (« le 12 oct. »).
-    return `<p class="mc-alerte is-masquee">${icon('eye-off')}<span><b>${t(`Masquée par la modération${le}`.replace(/\.?$/, '.'))}</b>${motif} Elle reste visible de vous et de la modération.</span></p>`;
+    return `<p class="mc-alerte is-masquee">${icon('eye-off')}<span><b>${t(`Masquée par la modération${le}`.replace(/\.?$/, '.'))}</b>${motif} Elle reste visible de vous et de la modération. <a href="${ROUTES.notifications}?type=moderation">Voir la décision</a></span></p>`;
   }
   function alertes(c: Creation): string {
     const o = c.api.obsolescence;
