@@ -19,12 +19,16 @@ export const ROUTES = {
   creation: (id: number, slug?: string | null) => `/creations/${id}${slug ? `-${slug}` : ''}`,
   /** Éditeur d'une création existante (CREA-02). */
   modifierCreation: (id: number) => `/creations/${id}/modifier`,
+  /** Cas Bon réflexe (plan du site, à confirmer ; page portée avec APP-02). */
+  casBonReflexe: (id: number, slug: string) => `/bon-reflexe/${id}-${slug}`,
   connexion: '/connexion',
   inscription: '/inscription',
   notifications: '/notifications',
   mesContenus: '/mes-contenus',
   parametres: '/parametres',
   moderation: '/moderation/signalements',
+  /** Dossier d'un contenu dans la modération (MOD-02) : l'identifiant est celui du contenu. */
+  dossierModeration: (contenuId: number) => `/moderation/signalements/${contenuId}`,
   administration: '/admin/referentiels',
   cgu: '/cgu',
   confidentialite: '/confidentialite',

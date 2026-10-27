@@ -10,8 +10,10 @@ import {
   type TypeContenu,
 } from '@vysora/shared';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { indexerCas } from '../../modules/apprentissage/contenu-cas.js';
 import { DocumentsLegauxService } from '../../modules/auth/documents-legaux.service.js';
 import { hacherMotDePasse } from '../../modules/auth/mots-de-passe.service.js';
+import { indexerSujet } from '../../modules/forum/contenu-sujet.js';
 import { enregistrerImage } from '../../modules/medias/medias.service.js';
 import { ecrireDeclinaisons, type Stockage } from '../../modules/medias/stockage.js';
 import {
@@ -46,6 +48,7 @@ import {
   optionReponse,
   outil,
   outilModele,
+  rechercheDocument,
   reproduction,
   signalementObsolescence,
   sujet,
@@ -123,6 +126,8 @@ export interface BilanDemo {
   completes: number;
   /** Notifications tirées des données chargées (NOTIF-01). */
   notifications: number;
+  /** Documents de recherche des sujets (RG-31), ajoutés aussi à une base chargée avant FORUM-01. */
+  documents: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -144,6 +149,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     await completerResultats(ctx);
     await completerFidelite(ctx);
     await chargerCommentaires(ctx);
+    await completerRecherche(ctx);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
@@ -171,6 +177,7 @@ export function decrireBilan(bilan: BilanDemo): string {
     [bilan.resultats, 'résultat en texte ou en code', 'résultats en texte ou en code'],
     [bilan.completes, 'élément complété', 'éléments complétés'],
     [bilan.notifications, 'notification', 'notifications'],
+    [bilan.documents, 'document de recherche', 'documents de recherche'],
   ];
   const ajoutes = parties.filter(([nombre]) => nombre > 0);
   if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
@@ -283,6 +290,7 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
       resultats: 0,
       completes: 0,
       notifications: 0,
+      documents: 0,
     },
   };
 }
@@ -1035,6 +1043,45 @@ async function chargerSujet(ctx: Contexte, s: SujetDemo): Promise<void> {
   voter(ctx, cible, 'UTILE', nombreDeVotes(s.utiles), periode);
   if (s.type === 'ASTUCE' && s.testes)
     voter(ctx, cible, 'TESTE_OK', nombreDeVotes(s.testes), periode);
+}
+
+/** RG-31 : document de recherche des sujets et des cas validés de démonstration, visibles, qui n'en
+    ont pas (le forum et la liste des cas les trouvent ; celui des créations viendra avec DEC-01). */
+async function completerRecherche(ctx: Contexte): Promise<void> {
+  const sujets = [...ctx.sujets.values()];
+  const cas = [...ctx.cas.values()];
+  const sujetsSansDocument = sujets.length
+    ? await ctx.tx
+        .select({ id: sujet.id })
+        .from(sujet)
+        .innerJoin(contenu, eq(contenu.id, sujet.id))
+        .leftJoin(rechercheDocument, eq(rechercheDocument.contenuId, sujet.id))
+        .where(
+          and(
+            inArray(sujet.id, sujets),
+            eq(contenu.statut, 'VISIBLE'),
+            isNull(rechercheDocument.contenuId),
+          ),
+        )
+    : [];
+  const casSansDocument = cas.length
+    ? await ctx.tx
+        .select({ id: casBonReflexe.id })
+        .from(casBonReflexe)
+        .innerJoin(contenu, eq(contenu.id, casBonReflexe.id))
+        .leftJoin(rechercheDocument, eq(rechercheDocument.contenuId, casBonReflexe.id))
+        .where(
+          and(
+            inArray(casBonReflexe.id, cas),
+            eq(contenu.statut, 'VISIBLE'),
+            eq(casBonReflexe.statutValidation, 'VALIDE'),
+            isNull(rechercheDocument.contenuId),
+          ),
+        )
+    : [];
+  for (const { id } of sujetsSansDocument) await indexerSujet(ctx.tx, id);
+  for (const { id } of casSansDocument) await indexerCas(ctx.tx, id);
+  ctx.bilan.documents += sujetsSansDocument.length + casSansDocument.length;
 }
 
 /* Bon réflexe --------------------------------------------------------------- */

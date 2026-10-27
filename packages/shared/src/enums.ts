@@ -253,6 +253,18 @@ export const ACTIONS_DECISION_ADMINISTRATEUR = valeurs(
   'AJUSTER_REPUTATION',
   'RETIRER_BADGE',
 );
+/** RG-102 : actions des modérateurs (et des administrateurs). */
+export const ACTIONS_DECISION_MODERATEUR = valeurs(
+  'AUCUNE',
+  'MASQUER',
+  'RETABLIR',
+  'SUPPRIMER',
+  'AVERTIR',
+  'SUSPENDRE',
+  'AJOUTER_AVERTISSEMENT_AGENT',
+  'RETIRER_AVERTISSEMENT_AGENT',
+);
+export type ActionDecisionModerateur = (typeof ACTIONS_DECISION_MODERATEUR)[number];
 
 /* Données techniques -------------------------------------------------------- */
 

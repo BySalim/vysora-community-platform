@@ -1,0 +1,218 @@
+---
+/* Mes contenus (CREA-04, EC-15), portée de prototype/mes-contenus.html : brouillons, créations publiées
+   et contenus enregistrés du membre connecté. La tête de la page et la porte d'entrée (visiteur) sont
+   rendues par le serveur ; les onglets, la recherche, les filtres, les tris, le menu et les fenêtres
+   sont construits par scripts/mes-contenus.ts, comme dans le prototype, à partir de
+   GET /api/v1/moi/creations et GET /api/v1/moi/enregistrements. */
+import { NIVEAUX, type MesCreationsApi, type MesEnregistrementsApi } from '@vysora/shared';
+import AccesBloc from '../components/AccesBloc.astro';
+import Base from '../layouts/Base.astro';
+import { appelerApi } from '../lib/api';
+import { ROUTES } from '../lib/navigation';
+import { fmt } from '../lib/texte';
+import '../styles/mes-contenus.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const { etat, membre } = Astro.locals;
+const connecte = etat.session === 'membre';
+const ONGLETS = [
+  ['brouillons', 'Brouillons'],
+  ['publies', 'Publiées'],
+  ['enregistres', 'Enregistrés'],
+] as const;
+const demande = Astro.url.searchParams.get('onglet');
+const onglet = ONGLETS.find(([cle]) => cle === demande)?.[0] ?? 'brouillons';
+
+let donnees = '';
+let comptes: Record<string, number> = {};
+if (connecte) {
+  const [creations, enregistrements] = await Promise.all([
+    appelerApi<MesCreationsApi>('/api/v1/moi/creations', { requete: Astro.request, adresseClient }),
+    appelerApi<MesEnregistrementsApi>('/api/v1/moi/enregistrements', {
+      requete: Astro.request,
+      adresseClient,
+    }),
+  ]);
+  comptes = {
+    brouillons: creations.elements.filter((c) => c.statut === 'BROUILLON').length,
+    publies: creations.elements.filter((c) => c.statut === 'PUBLIEE').length,
+    enregistres: enregistrements.elements.length,
+  };
+  // « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+  donnees = JSON.stringify({
+    creations,
+    enregistrements,
+    niveau: NIVEAUX.find((n) => n.code === etat.niveau)?.libelle ?? '',
+  }).replaceAll('<', '\\u003c');
+}
+
+const icones = [
+  'arrow',
+  'arrow-up-right',
+  'search',
+  'plus',
+  'menu',
+  'close',
+  'check',
+  'check-circle',
+  'circle',
+  'chevron-down',
+  'chevron-left',
+  'chevron-up-down',
+  'more',
+  'pen',
+  'eye',
+  'eye-off',
+  'trash',
+  'send',
+  'undo',
+  'bookmark',
+  'bookmark-x',
+  'alert',
+  'trophy',
+  'clock',
+  'user',
+  'lock',
+  'utile',
+  'repeat',
+  'message',
+  'help',
+  'scan',
+  'bulb',
+  'route',
+  'users',
+  'shield',
+  'layers',
+  'folder',
+  'sliders',
+  'replay',
+  'mail',
+  'bell',
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+  'type-vide',
+];
+---
+
+<Base
+  titre="Mes contenus"
+  description="Vos brouillons, vos créations publiées et les contenus que vous avez enregistrés sur Vysora."
+  classeCorps="mc"
+  reglages={{ onglets: 'rail', publiees: 'tableau', vignettes: 'affichees' }}
+  icones={icones}
+  nonIndexee
+>
+  <div class="container mc-tete">
+    <nav class="mc-ariane" aria-label="Fil d’Ariane" data-mc-ariane hidden={!connecte}>
+      <ol>
+        <li>
+          <a href={membre ? ROUTES.profil(membre.pseudo) : ROUTES.connexion} data-mc-lien-profil>
+            Mon profil
+          </a>
+        </li>
+        <li>
+          <span aria-current="page">Mes contenus</span>
+        </li>
+      </ol>
+    </nav>
+    <div class="mc-titre-ligne">
+      <div class="mc-titre">
+        <h1>Mes contenus</h1>
+        <p class="mc-chapo" data-mc-chapo hidden={!connecte}>
+          Vos brouillons restent privés jusqu’à leur publication.
+        </p>
+      </div>
+      <a class="btn btn-primary mc-nouvelle" href={ROUTES.publier} data-pour="membre">
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-plus"></use>
+        </svg>
+        Nouvelle création
+      </a>
+    </div>
+  </div>
+
+  <div class="container mc-acces" data-mc-acces hidden={connecte}>
+    {!connecte && <AccesBloc quoi="retrouver vos brouillons et vos créations" />}
+  </div>
+
+  <div class="mc-onglets-zone" data-mc-zone hidden={!connecte}>
+    <div class="container">
+      <div class="mc-onglets" role="tablist" aria-label="Mes contenus" data-mc-onglets>
+        {ONGLETS.map(([cle, libelle]) => (
+          <button
+            type="button"
+            role="tab"
+            id={`mc-tab-${cle}`}
+            aria-controls={`mc-panneau-${cle}`}
+            aria-selected={cle === onglet ? 'true' : 'false'}
+            aria-label={connecte ? `${libelle}, ${comptes[cle] ?? 0}` : undefined}
+            tabindex={cle === onglet ? 0 : -1}
+            data-mc-onglet={cle}
+          >
+            <span>{libelle}</span>
+            <span class="mc-nb" data-mc-nb={cle}>
+              {connecte ? fmt(comptes[cle] ?? 0) : ''}
+            </span>
+          </button>
+        ))}
+        <span class="mc-indicateur" aria-hidden="true" data-mc-indicateur></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mc-corps" data-mc-corps hidden={!connecte}>
+    {ONGLETS.map(([cle]) => (
+      <section
+        class="mc-panneau"
+        id={`mc-panneau-${cle}`}
+        role="tabpanel"
+        aria-labelledby={`mc-tab-${cle}`}
+        tabindex="0"
+        data-mc-panneau={cle}
+        hidden={cle !== onglet}
+      />
+    ))}
+    <p class="sr-only" role="status" aria-live="polite" data-mc-annonce></p>
+  </div>
+
+  <Fragment slot="fin">
+    <dialog
+      class="mc-dialogue"
+      aria-labelledby="mc-dialogue-titre"
+      aria-describedby="mc-dialogue-texte"
+      data-mc-dialogue
+    >
+      <form method="dialog" class="mc-dialogue-form" data-mc-dialogue-form>
+        <span class="mc-dialogue-icone" aria-hidden="true" data-mc-dialogue-icone></span>
+        <h2 id="mc-dialogue-titre" data-mc-dialogue-titre></h2>
+        <p id="mc-dialogue-texte" data-mc-dialogue-texte></p>
+        <div class="mc-dialogue-plus" data-mc-dialogue-plus></div>
+        <div class="mc-dialogue-actions">
+          <button class="btn btn-secondary" type="button" value="annuler" data-mc-dialogue-annuler>
+            Annuler
+          </button>
+          <button
+            class="btn btn-primary"
+            type="submit"
+            value="confirmer"
+            data-mc-dialogue-confirmer
+          ></button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="mc-menu" role="menu" tabindex="-1" data-mc-menu hidden></div>
+    {donnees && <script type="application/json" id="mes-contenus-donnees" set:html={donnees} />}
+  </Fragment>
+</Base>
+
+<script>
+  import '../scripts/mes-contenus';
+</script>

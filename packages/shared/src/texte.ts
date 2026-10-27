@@ -10,3 +10,14 @@ export function slugifier(texte: string, longueurMax = 80): string {
     .slice(0, longueurMax)
     .replace(/-+$/g, '');
 }
+
+/** Durée avant une échéance, sans heure ni fuseau (RG-85) : « dans 5 h 12 min », « dans 40 min »,
+    « dans moins d’une minute » (espaces insécables avant les unités). */
+export function dansLeDelai(secondes: number): string {
+  const minutes = Math.ceil(secondes / 60);
+  if (minutes <= 1) return 'dans moins d’une minute';
+  const heures = Math.floor(minutes / 60);
+  const reste = minutes % 60;
+  if (!heures) return `dans ${reste} min`;
+  return reste ? `dans ${heures} h ${reste} min` : `dans ${heures} h`;
+}

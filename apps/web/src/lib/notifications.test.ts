@@ -21,6 +21,7 @@ const membre = (nom: string): MembreResumeApi => ({
   nom,
   avatar: null,
   niveau: { code: 'expert', libelle: 'Expert' },
+  reputation: 0,
 });
 
 const notification = (valeurs: Partial<NotificationApi> = {}): NotificationApi => ({

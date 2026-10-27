@@ -5,14 +5,31 @@ import {
   type CodeNiveau,
   type MotifMouvementReputation,
 } from '@vysora/shared';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Transaction } from '../../db/client.js';
-import { mouvementReputation, niveau, utilisateur } from '../../db/schema/index.js';
+import { contenu, mouvementReputation, niveau, utilisateur } from '../../db/schema/index.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
 /** Motifs plafonnés par jour (RG-81). */
 const MOTIFS_DE_VOTE: MotifMouvementReputation[] = ['VOTE_UTILE_RECU', 'VOTE_TESTE_RECU'];
+/** Points d'une réponse acceptée, pour son auteur et pour celui du sujet (RG-63). */
+const MOTIFS_D_ACCEPTATION: MotifMouvementReputation[] = [
+  'REPONSE_ACCEPTEE',
+  'ACCEPTATION_REPONSE',
+];
 
 /** Début du jour (temps universel) d'une date : le plafond de RG-81 se compte par jour UTC. */
 const debutDuJour = (date: Date): Date =>
@@ -93,8 +110,8 @@ export class ReputationService {
   }
 
   /** RG-19, RG-82 : annule, action par action, les mouvements encore en cours nés de ces contenus
-      (création supprimée, avec ses commentaires et ses reproductions). Les ajustements de la
-      modération restent. */
+      (création supprimée ou masquée, avec ses commentaires et ses reproductions). Les ajustements
+      de la modération restent. */
   async annulerContenus(tx: Transaction, contenuIds: number[], maintenant = new Date()) {
     if (!contenuIds.length) return;
     const annulation = alias(mouvementReputation, 'annulation');
@@ -117,6 +134,49 @@ export class ReputationService {
     for (const { acteurId, contenuId, motif } of actions)
       if (acteurId !== null && contenuId !== null)
         await this.annuler(tx, { acteurId, contenuId, motif }, maintenant);
+  }
+
+  /** RG-82 : un contenu rétabli après masquage génère de nouveau les mouvements que le masquage a
+      annulés : ceux dont l'annulation porte la date de la décision (annulerContenus reçoit la même),
+      sauf pour un contenu supprimé depuis, sauf les points d'une réponse qui n'est plus la réponse
+      acceptée de son sujet (RG-63 : l'auteur du sujet en a choisi une autre entre-temps), et sauf
+      ceux de la validation d'un cas qui n'est plus validé (RG-71 : modifié ou refusé depuis). Les
+      mouvements regénérés gardent leur date d'origine : le plafond du jour (RG-81) et les points de
+      la semaine (RG-87) ne s'en trouvent pas faussés. */
+  async retablirContenus(tx: Transaction, contenuIds: number[], dateDuMasquage: Date) {
+    if (!contenuIds.length) return;
+    const initial = alias(mouvementReputation, 'initial');
+    const annules = await tx
+      .select({
+        beneficiaireId: initial.beneficiaireId,
+        points: initial.points,
+        motif: initial.motif,
+        date: initial.date,
+        contenuId: initial.contenuId,
+        acteurId: initial.acteurId,
+      })
+      .from(mouvementReputation)
+      .innerJoin(initial, eq(initial.id, mouvementReputation.mouvementAnnuleId))
+      .innerJoin(contenu, eq(contenu.id, initial.contenuId))
+      .where(
+        and(
+          eq(mouvementReputation.motif, 'ANNULATION'),
+          inArray(mouvementReputation.contenuId, contenuIds),
+          eq(mouvementReputation.date, dateDuMasquage),
+          ne(contenu.statut, 'SUPPRIME'),
+          or(
+            notInArray(initial.motif, MOTIFS_D_ACCEPTATION),
+            sql`exists (select 1 from sujet s where s.message_accepte_id = ${initial.contenuId})`,
+          ),
+          // RG-71 : les points d'un cas validé ne reviennent pas s'il a été refusé entre-temps.
+          or(
+            ne(initial.motif, 'CAS_VALIDE'),
+            sql`exists (select 1 from cas_bon_reflexe cb
+              where cb.id = ${initial.contenuId} and cb.statut_validation = 'VALIDE')`,
+          ),
+        ),
+      );
+    if (annules.length) await tx.insert(mouvementReputation).values(annules);
   }
 
   /** Mouvement positif ; le bénéficiaire qui passe un palier en est notifié (F-71). */

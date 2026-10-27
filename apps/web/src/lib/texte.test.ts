@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { dateLongue, esc, fmt, masquerEmail, t, typo } from './texte';
+import { dateLongue, enPhrase, esc, fmt, masquerEmail, t, typo } from './texte';
+
+describe('enPhrase', () => {
+  it('termine un motif par un point, sauf s’il porte déjà sa ponctuation finale', () => {
+    expect(enPhrase(' informations personnelles visibles ')).toBe(
+      'informations personnelles visibles.',
+    );
+    expect(enPhrase('Le lien est-il sûr ?')).toBe('Le lien est-il sûr ?');
+    expect(enPhrase('Spam répété.')).toBe('Spam répété.');
+    expect(enPhrase('Il recopie « Le Petit Prince »')).toBe('Il recopie « Le Petit Prince ».');
+  });
+});
 
 describe('typo (règles de prototype/commun.js)', () => {
   it('place une espace insécable avant les deux-points et dans les guillemets', () => {

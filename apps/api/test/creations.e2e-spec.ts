@@ -306,7 +306,12 @@ describe('Lecture d’une création (CREA-01, F-23, RG-30)', () => {
       await (await agentConnecte('awa.sarr@example.com')).get(`/api/v1/creations/${id}`).expect(200)
     ).body as CreationFicheApi;
     expect(fiche.statut).toBe('BROUILLON');
-    expect(fiche.moi).toEqual({ auteur: true, utile: false, enregistree: false });
+    expect(fiche.moi).toEqual({
+      auteur: true,
+      utile: false,
+      enregistree: false,
+      signalementOuvert: false,
+    });
     expect(fiche.preuve.reproductions.total).toBe(0);
     expect(fiche.commentaires).toEqual({ total: 0, elements: [] });
   });
@@ -426,7 +431,12 @@ describe('Lecture d’une création (CREA-01, F-23, RG-30)', () => {
     const fiche = (
       await (await agentConnecte('kofi@example.com')).get(`/api/v1/creations/${id}`).expect(200)
     ).body as CreationFicheApi;
-    expect(fiche.moi).toEqual({ auteur: false, utile: true, enregistree: true });
+    expect(fiche.moi).toEqual({
+      auteur: false,
+      utile: true,
+      enregistree: true,
+      signalementOuvert: false,
+    });
     expect(fiche.preuve.utiles).toBe(1);
   });
 

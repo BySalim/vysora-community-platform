@@ -177,8 +177,8 @@ export function identifiantDeLAdresse(partie: string | undefined): number | null
   return Number.isSafeInteger(id) ? id : null;
 }
 
-/** Actions de la fiche déjà portées ; les autres restent masquées jusqu'à leur tâche (registre :
-    MOD-01 pour le signalement, CREA-02 pour « Modifier », qui ouvre l'éditeur). */
+/** Actions de la fiche déjà portées ; une action sans API reste masquée jusqu'à sa tâche (registre).
+    Toutes le sont désormais : signaler (MOD-01), modifier (CREA-02), publier et supprimer (CREA-05). */
 export const ACTIONS_OUVERTES: Record<
   'voter' | 'enregistrer' | 'essayer' | 'commenter' | 'signaler' | 'gerer' | 'modifier',
   boolean
@@ -187,7 +187,7 @@ export const ACTIONS_OUVERTES: Record<
   enregistrer: true,
   essayer: true,
   commenter: true,
-  signaler: false,
+  signaler: true,
   /** Publier, dépublier, supprimer (CREA-05). */
   gerer: true,
   /** Éditeur (CREA-02). */

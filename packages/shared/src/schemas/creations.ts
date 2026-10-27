@@ -192,7 +192,7 @@ export const schemaResultatSaisi = z
   .nullish()
   .transform((resultat) => (resultat?.texte ? resultat : null));
 
-const champEtiquettes = z
+export const champEtiquettes = z
   .array(
     z
       .string({ error: 'Saisissez une étiquette.' })

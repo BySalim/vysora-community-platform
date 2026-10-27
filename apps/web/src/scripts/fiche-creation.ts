@@ -1,8 +1,8 @@
 /* Fiche création (CREA-03), portée de prototype/fiche-creation.js : copie des prompts (F-24),
    partage du lien (F-26), image en grand, fenêtres, section courante de la navigation,
    vote « Utile » (F-30), enregistrement (F-34), reproductions (F-32), commentaires et réponses
-   (F-40, F-42), actions de l'auteur (CREA-05). Le contenu est rendu par le serveur ; le signalement
-   arrivera avec MOD-01. */
+   (F-40, F-42), signalement (F-90), actions de l'auteur (CREA-05). Le contenu est rendu par le
+   serveur. */
 
 import type {
   CommentaireApi,
@@ -11,6 +11,7 @@ import type {
   ProblemeApi,
   ReproductionDeclareeApi,
   ResultatReproduction,
+  SignalementEnregistreApi,
   VoteApi,
 } from '@vysora/shared';
 import { ISSUES, motReproductions, noteEchantillon } from '../lib/creations';
@@ -259,6 +260,64 @@ if (fiche && fiche.dataset.affichage === 'creation') {
 
   $('#share')?.addEventListener('click', () => {
     void copier(`${location.origin}${location.pathname}`, 'Lien de la création copié.');
+  });
+
+  /* F-90 : signaler la création. RG-100 : un motif de la liste, une précision exigée pour « Autre »,
+     un seul signalement ouvert par membre (le bouton le sait, l'API le refuse). */
+  const boutonSignaler = $<HTMLButtonElement>('#report-open');
+  const dialogueSignalement = $<HTMLDialogElement>('#report-dialog');
+  const formulaireSignalement = $<HTMLFormElement>('#report-form');
+  const motifSignalement = $<HTMLSelectElement>('#report-reason');
+  const precisionSignalement = $<HTMLTextAreaElement>('#report-note');
+  const dejaSignale = () =>
+    toast('Vous avez déjà signalé ce contenu. La modération l’examine.', 'flag');
+  boutonSignaler?.addEventListener('click', () => {
+    if (!exiger('contribuer', 'signaler un contenu')) return;
+    if (boutonSignaler.hasAttribute('data-signale')) return dejaSignale();
+    dialogueSignalement?.showModal();
+  });
+  motifSignalement?.addEventListener('change', () => {
+    motifSignalement.setCustomValidity('');
+    if (precisionSignalement) precisionSignalement.required = motifSignalement.value === 'AUTRE';
+  });
+  precisionSignalement?.addEventListener('input', () => precisionSignalement.setCustomValidity(''));
+  formulaireSignalement?.addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    if (!motifSignalement || !precisionSignalement || !exiger('contribuer', 'signaler un contenu'))
+      return;
+    const signaler = (element: HTMLSelectElement | HTMLTextAreaElement, message: string) => {
+      element.setCustomValidity(message);
+      element.reportValidity();
+    };
+    if (!motifSignalement.value)
+      return signaler(motifSignalement, 'Choisissez le motif du signalement.');
+    if (motifSignalement.value === 'AUTRE' && !precisionSignalement.value.trim())
+      return signaler(precisionSignalement, 'Précisez le motif du signalement.');
+    const bouton = $<HTMLButtonElement>('button:not([data-close])', formulaireSignalement);
+    if (bouton) bouton.disabled = true;
+    const reponse = await api<SignalementEnregistreApi>(
+      'POST',
+      `/api/v1/contenus/${creationId}/signalements`,
+      { motif: motifSignalement.value, precision: precisionSignalement.value },
+    );
+    if (bouton) bouton.disabled = false;
+    if (!reponse.ok) {
+      const { erreurs, status } = reponse.probleme;
+      if (erreurs?.motif) return signaler(motifSignalement, erreurs.motif);
+      if (erreurs?.precision) return signaler(precisionSignalement, erreurs.precision);
+      if (status === 409) {
+        boutonSignaler?.setAttribute('data-signale', '');
+        dialogueSignalement?.close();
+        return dejaSignale();
+      }
+      if (status === 429) return toast(reponse.probleme.title, 'alert');
+      return signalerEchec(reponse.probleme);
+    }
+    boutonSignaler?.setAttribute('data-signale', '');
+    dialogueSignalement?.close();
+    formulaireSignalement.reset();
+    precisionSignalement.required = false;
+    toast('Signalement enregistré.', 'flag');
   });
 
   /* Fenêtres : bouton de fermeture, clic hors de la fenêtre. */

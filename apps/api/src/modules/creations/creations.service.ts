@@ -33,12 +33,14 @@ import {
   momentCle,
   outil,
   reproduction,
+  signalement,
   signalementObsolescence,
   vote,
 } from '../../db/schema/index.js';
 import { presenterMedia } from '../medias/medias.service.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
+import { lireMasquages } from '../moderation/masquages.js';
 
 /** Personne qui consulte une fiche : membre connecté, ou visiteur (null). */
 export interface Lecteur {
@@ -124,6 +126,7 @@ export class CreationsService {
     if (!ligne || !visible) throw introuvable('Cette création est introuvable.');
 
     const publiee = ligne.creation.statutPublication === 'PUBLIEE';
+    const masquee = ligne.statutContenu === 'MASQUE';
     const [
       etiquettes,
       etapes,
@@ -137,6 +140,7 @@ export class CreationsService {
       obsolescence,
       commentaires,
       moi,
+      masquages,
     ] = await Promise.all([
       this.db
         .select({ libelle: etiquette.libelle, slug: etiquette.slug })
@@ -195,6 +199,8 @@ export class CreationsService {
         .orderBy(desc(count())),
       publiee ? this.commentaires(id) : Promise.resolve([]),
       lecteur ? this.relationDuLecteur(id, lecteur.id) : Promise.resolve(null),
+      // Le nombre de signalements n'est donné qu'à la modération, jamais à l'auteur (RG-104).
+      masquee ? lireMasquages(this.db, [id], moderation && !auteur) : Promise.resolve(null),
     ]);
 
     const membres = await resumerMembres(this.db, this.stockage, [
@@ -227,7 +233,8 @@ export class CreationsService {
       slug: c.slug,
       type: c.typeCreation,
       statut: c.statutPublication,
-      masquee: ligne.statutContenu === 'MASQUE',
+      masquee,
+      masquage: masquages?.get(id) ?? null,
       titre: c.titre,
       objectif: c.objectif,
       limites: c.limites,
@@ -390,8 +397,8 @@ export class CreationsService {
   private async relationDuLecteur(
     contenuId: number,
     membreId: number,
-  ): Promise<{ utile: boolean; enregistree: boolean }> {
-    const [utile, enregistree] = await Promise.all([
+  ): Promise<{ utile: boolean; enregistree: boolean; signalementOuvert: boolean }> {
+    const [utile, enregistree, signalementOuvert] = await Promise.all([
       this.db.$count(
         vote,
         and(
@@ -404,8 +411,21 @@ export class CreationsService {
         enregistrement,
         and(eq(enregistrement.contenuId, contenuId), eq(enregistrement.utilisateurId, membreId)),
       ),
+      // RG-100 : un signalement ouvert par membre et par contenu.
+      this.db.$count(
+        signalement,
+        and(
+          eq(signalement.contenuId, contenuId),
+          eq(signalement.signaleurId, membreId),
+          eq(signalement.statut, 'OUVERT'),
+        ),
+      ),
     ]);
-    return { utile: utile > 0, enregistree: enregistree > 0 };
+    return {
+      utile: utile > 0,
+      enregistree: enregistree > 0,
+      signalementOuvert: signalementOuvert > 0,
+    };
   }
 }
 

@@ -1,27 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  limiteQuotidienne,
   type CommentaireApi,
   type EtatVisiteur,
   type ModificationCommentaire,
   type NouveauCommentaire,
 } from '@vysora/shared';
-import { and, eq, gt, inArray } from 'drizzle-orm';
-import {
-  ErreurApplication,
-  erreurValidation,
-  interdit,
-  introuvable,
-} from '../../commun/erreurs.js';
+import { and, eq } from 'drizzle-orm';
+import { erreurValidation, interdit, introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
 import { commentaire, contenu } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { verifierLimiteQuotidienne } from '../progression/limites.js';
 import { lireCible } from './cibles.js';
-
-const JOUR_MS = 24 * 60 * 60_000;
 
 /** Personne qui commente : identifiant et état (niveau et rôle pour RG-85). */
 export interface Commentateur {
@@ -51,24 +44,6 @@ export class CommentairesService {
     if (!cible?.public || cible.type !== 'CREATION')
       throw introuvable('Cette création est introuvable.');
 
-    // RG-85 : réponses du forum et commentaires publiés sur 24 heures glissantes.
-    const limite = limiteQuotidienne('reponses', membre.etat);
-    if (Number.isFinite(limite)) {
-      const publies = await this.db.$count(
-        contenu,
-        and(
-          eq(contenu.auteurId, membre.id),
-          inArray(contenu.typeContenu, ['COMMENTAIRE', 'MESSAGE']),
-          gt(contenu.dateCreation, new Date(maintenant.getTime() - JOUR_MS)),
-        ),
-      );
-      if (publies >= limite)
-        throw new ErreurApplication(
-          'LIMITE_ATTEINTE',
-          `Vous avez publié ${limite} réponses et commentaires en 24 heures, la limite de votre niveau. Elle augmente avec votre réputation.`,
-        );
-    }
-
     // F-42 : une réponse à une réponse est rattachée au commentaire d'origine.
     let parentId: number | null = null;
     let auteurDuParent: number | null = null;
@@ -90,6 +65,8 @@ export class CommentairesService {
     }
 
     const id = await this.db.transaction(async (tx) => {
+      // RG-85 : réponses du forum et commentaires publiés sur 24 heures glissantes.
+      await verifierLimiteQuotidienne(tx, membre, 'reponses', maintenant);
       const [ligne] = await tx
         .insert(contenu)
         .values({ typeContenu: 'COMMENTAIRE', auteurId: membre.id, dateCreation: maintenant })
