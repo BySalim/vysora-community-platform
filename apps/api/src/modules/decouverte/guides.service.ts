@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   MOTIF_SLUG_GUIDE,
-  type CasApi,
+  type CasGuideApi,
   type GuideApi,
   type GuideResumeApi,
   type GuidesApi,
@@ -12,6 +12,7 @@ import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
 import { ErreurApplication, introuvable } from '../../commun/erreurs.js';
 import { CasService } from '../apprentissage/cas.service.js';
+import { corriger, optionsDes } from '../apprentissage/contenu-cas.js';
 import type { Lecteur } from '../creations/creations.service.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
@@ -220,6 +221,7 @@ export class GuidesService {
       slug: g.slug,
       titre: g.titre,
       titreCourt: g.titreCourt,
+      motsCles: g.motsCles,
       domaine: g.domaine,
       domaines: c.domaines,
       parcours: c.parcours.length,
@@ -289,16 +291,24 @@ export class GuidesService {
   }
 
   /** Cas du guide, validés et visibles, tels que la personne les voit (correction après sa réponse). */
-  private async cas(ids: number[], lecteur: Lecteur | null): Promise<CasApi[]> {
-    const lus = await Promise.all(
-      ids.map((id) =>
-        this.lectureCas.cas(id, lecteur).catch((erreur: unknown) => {
-          // Masqué ou retiré entre-temps : le cas n'est plus présenté.
-          if (erreur instanceof ErreurApplication && erreur.code === 'INTROUVABLE') return null;
-          throw erreur;
-        }),
+  private async cas(ids: number[], lecteur: Lecteur | null): Promise<CasGuideApi[]> {
+    const [lus, options] = await Promise.all([
+      Promise.all(
+        ids.map((id) =>
+          this.lectureCas.cas(id, lecteur).catch((erreur: unknown) => {
+            // Masqué ou retiré entre-temps : le cas n'est plus présenté.
+            if (erreur instanceof ErreurApplication && erreur.code === 'INTROUVABLE') return null;
+            throw erreur;
+          }),
+        ),
       ),
-    );
-    return lus.filter((c): c is CasApi => c !== null);
+      optionsDes(this.db, ids),
+    ]);
+    return lus.flatMap((c) => {
+      if (!c) return [];
+      // La part des bonnes réponses se montre avant de répondre (prototype : « 74 % de bonnes réponses »).
+      const { reponses, reussite } = corriger('', options.get(c.id) ?? []);
+      return [{ ...c, reponses, reussite }];
+    });
   }
 }

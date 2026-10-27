@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { RechercheCreationsApi, TypeCreation } from '@vysora/shared';
+import { motsRecherche, type RechercheCreationsApi, type TypeCreation } from '@vysora/shared';
 import { sql } from 'drizzle-orm';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
@@ -8,14 +8,25 @@ import type { BaseDeDonnees } from '../../db/client.js';
 const RESULTATS = 6;
 
 /* DEC-01, RG-31 : recherche plein texte dans les documents des créations publiées et visibles
-   (configuration « vysora_fr »), les plus pertinentes d'abord. Chaque résultat indique le guide qui
-   le présente (« dans le guide Prise de rendez-vous en ligne »). */
+   (configuration « vysora_fr »), les plus pertinentes d'abord. Comme la recherche d'objectif du
+   prototype, les mots vides (« je veux mettre en place… ») sont écartés et chaque mot vaut aussi
+   pour son synonyme (« rdv » : « rendez-vous ») ; tous les mots doivent être trouvés. Chaque résultat
+   indique le guide qui le présente (« dans le guide Prise de rendez-vous en ligne »). */
 @Injectable()
 export class RechercheService {
   constructor(@Inject(BASE) private readonly db: BaseDeDonnees) {}
 
   async creations(q: string): Promise<RechercheCreationsApi> {
-    const requete = sql`websearch_to_tsquery('vysora_fr', ${q})`;
+    const mots = motsRecherche(q);
+    if (!mots.length) return { elements: [] };
+    const requete = sql`(${sql.join(
+      mots.map(({ mot, synonyme }) =>
+        synonyme
+          ? sql`(plainto_tsquery('vysora_fr', ${mot}) || phraseto_tsquery('vysora_fr', ${synonyme}))`
+          : sql`plainto_tsquery('vysora_fr', ${mot})`,
+      ),
+      sql` && `,
+    )})`;
     const { rows } = await this.db.execute<{
       id: string;
       slug: string | null;

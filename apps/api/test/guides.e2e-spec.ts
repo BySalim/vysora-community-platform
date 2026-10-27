@@ -9,7 +9,7 @@ import type {
   StatutContenu,
   TypeCreation,
 } from '@vysora/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import request from 'supertest';
 import {
   categorie,
@@ -400,6 +400,44 @@ describe('Guides d’Explorer (DEC-01)', () => {
       ]);
       const vide = await visiteur().get('/api/v1/recherche/creations?q=').expect(400);
       expect(vide.body.erreurs).toEqual({ q: 'Indiquez ce que vous cherchez.' });
+
+      // Comme le prototype : mots vides écartés, synonymes compris (« rdv » : « rendez-vous »).
+      const chercher = async (q: string) =>
+        (
+          (
+            await visiteur()
+              .get(`/api/v1/recherche/creations?q=${encodeURIComponent(q)}`)
+              .expect(200)
+          ).body as RechercheCreationsApi
+        ).elements.map((e) => e.id);
+      expect(await chercher('rdv')).toEqual([salon]);
+      expect(await chercher('Je veux mettre en place la prise de rendez-vous en ligne')).toEqual([
+        salon,
+      ]);
+      expect(await chercher('je veux')).toEqual([]);
+    });
+
+    it('relie la fiche d’une création à son guide publié (fil d’Ariane, retour)', async () => {
+      const { id, salon, brouillon } = await guideComplet();
+      const fiche = (await visiteur().get(`/api/v1/creations/${salon}`).expect(200)).body as {
+        guide: unknown;
+      };
+      expect(fiche.guide).toEqual({
+        slug: 'rendez-vous',
+        titre: 'Mettre en place la prise de rendez-vous en ligne',
+        titreCourt: 'Prise de rendez-vous en ligne',
+      });
+      // Le guide en préparation (site-vitrine) n'est pas proposé ; un brouillon n'a pas de guide.
+      await db()
+        .delete(guideContenu)
+        .where(and(eq(guideContenu.contenuId, salon), eq(guideContenu.guideId, id)));
+      const seule = (await visiteur().get(`/api/v1/creations/${salon}`).expect(200)).body as {
+        guide: unknown;
+      };
+      expect(seule.guide).toBeNull();
+      const parAwa = (await (await awa()).get(`/api/v1/creations/${brouillon}`).expect(200))
+        .body as { guide: unknown };
+      expect(parAwa.guide).toBeNull();
     });
   });
 

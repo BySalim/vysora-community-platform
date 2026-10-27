@@ -175,6 +175,8 @@ export interface CreationFicheApi {
   /** RG-23 */
   avertissementAgent: AvertissementAgent;
   defi: { id: number; slug: string; titre: string } | null;
+  /** Guide d'Explorer qui présente la création, si elle est publiée et visible (DEC-01). */
+  guide: { slug: string; titre: string; titreCourt: string } | null;
   /** Résultat : images de la création (ILLUSTRER), texte ou code obtenu, liens externes. */
   images: MediaApi[];
   resultat: { nature: NatureResultat; texte: string; nom: string | null } | null;

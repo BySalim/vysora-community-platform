@@ -10,7 +10,7 @@ import {
   type OutilResumeApi,
   type Role,
 } from '@vysora/shared';
-import { and, asc, count, desc, eq, min, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, min, or, sql } from 'drizzle-orm';
 import { introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
@@ -107,6 +107,12 @@ export class CreationsService {
           autoriseVariantes: licence.autoriseVariantes,
         },
         defi: { id: defi.id, slug: defi.slug, titre: defi.titre },
+        // DEC-01 : guide d'Explorer qui présente la création (fil d'Ariane, retour au guide).
+        guide: sql<{ slug: string; titre: string; titreCourt: string } | null>`(
+          select json_build_object('slug', g.slug, 'titre', g.titre, 'titreCourt', g.titre_court)
+          from guide_contenu gc join guide g on g.id = gc.guide_id
+          where gc.contenu_id = ${creation.id} and g.date_publication is not null
+          order by g.id limit 1)`,
       })
       .from(creation)
       .innerJoin(contenu, eq(contenu.id, creation.id))
@@ -249,6 +255,8 @@ export class CreationsService {
       etiquettes,
       avertissementAgent: c.avertissementAgent,
       defi: ligne.defi,
+      // Un guide ne présente que des parcours publiés et visibles (RG-30).
+      guide: publiee && !masquee ? ligne.guide : null,
       images: imagesDeLaCreation,
       resultat:
         c.resultatTexte && c.resultatNature

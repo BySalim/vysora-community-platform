@@ -44,6 +44,8 @@ export interface GuideResumeApi {
   titre: string;
   /** Nom court (« Prise de rendez-vous en ligne ») : navigation, aperçus, guides proches. */
   titreCourt: string;
+  /** Mots qu'une personne peut taper pour trouver l'objectif (comptent comme le titre). */
+  motsCles: string[];
   domaine: DomaineApi;
   /** Domaines de ses parcours, le sien compris (adresses) : filtre et compteurs par domaine. */
   domaines: string[];
@@ -173,6 +175,13 @@ export interface ParcoursGuideApi {
   obsolescence: { modele: string; membres: number } | null;
 }
 
+/** Cas Bon réflexe d'un guide, avec la part des bonnes réponses montrée avant de répondre. */
+export interface CasGuideApi extends CasApi {
+  reponses: number;
+  /** Part des bonnes réponses, en pourcentage entier (« 74 % de bonnes réponses »). */
+  reussite: number;
+}
+
 /** Question de la communauté sur le sujet du guide. */
 export interface SujetGuideApi {
   id: number;
@@ -216,7 +225,7 @@ export interface GuideApi {
   /** Dans l'ordre du guide. */
   parcours: ParcoursGuideApi[];
   /** Cas Bon réflexe du guide, validés et visibles, avec la correction selon la personne (F-62). */
-  cas: CasApi[];
+  cas: CasGuideApi[];
   sujets: SujetGuideApi[];
   /** Guides proches : même domaine, domaines voisins, outils communs. */
   voisins: GuideResumeApi[];

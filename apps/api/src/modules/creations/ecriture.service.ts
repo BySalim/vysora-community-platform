@@ -27,6 +27,7 @@ import {
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees, Transaction } from '../../db/client.js';
 import { contenu, creation, utilisateur } from '../../db/schema/index.js';
+import { rattacherAuGuide } from '../decouverte/rattachement.js';
 import { contenusLies } from '../moderation/contenus-moderes.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReputationService } from '../progression/reputation.service.js';
@@ -149,7 +150,11 @@ export class EcritureCreationsService {
           dateConfirmationDonnees: maintenant,
         })
         .where(eq(creation.id, id));
-      if (existante.statutContenu === 'VISIBLE') await indexer(tx, id);
+      if (existante.statutContenu === 'VISIBLE') {
+        await indexer(tx, id);
+        // DEC-01 : la création rejoint le guide d'Explorer de son objectif.
+        await rattacherAuGuide(tx, id);
+      }
     });
     // Le badge « Première création » viendra avec S-09.
     return this.lecture.fiche(id, auteur);

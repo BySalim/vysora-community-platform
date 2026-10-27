@@ -12,6 +12,8 @@ import {
   contenu,
   creation,
   echange,
+  guide,
+  guideContenu,
   licence,
   media,
   mouvementReputation,
@@ -408,6 +410,52 @@ describe('Écriture des créations (CREA-05, F-10 à F-17)', () => {
       expect(await indexee(id)).toBe(true);
       await (await agentConnecte('lea@example.com')).get(`/api/v1/creations/${id}`).expect(200);
       await publier(awa, id).expect(409);
+    });
+
+    it('fait rejoindre à la création le guide d’Explorer de son objectif (DEC-01)', async () => {
+      await vider(contexte.db, 'guide');
+      const [affiches] = await contexte.db
+        .insert(guide)
+        .values({
+          slug: 'affiches',
+          titre: 'Composer une affiche typographique',
+          titreCourt: 'Affiches typographiques',
+          categorieId,
+          motsCles: ['affiche', 'typographie'],
+          datePublication: new Date(),
+        })
+        .returning({ id: guide.id });
+      const awa = await agentConnecte();
+      const { id } = (await creer(awa, unPrompt()).expect(201)).body as CreationFicheApi;
+      const publiee = (await publier(awa, id).expect(200)).body as CreationFicheApi;
+      expect(publiee.guide).toEqual({
+        slug: 'affiches',
+        titre: 'Composer une affiche typographique',
+        titreCourt: 'Affiches typographiques',
+      });
+
+      // Repassée en brouillon puis publiée de nouveau, elle reste une seule fois dans son guide.
+      await envoyer(awa, 'delete', `/creations/${id}/publication`).expect(200);
+      await publier(awa, id).expect(200);
+      const rangees = await contexte.db
+        .select()
+        .from(guideContenu)
+        .where(eq(guideContenu.guideId, affiches!.id));
+      expect(rangees.map((r) => r.contenuId)).toEqual([id]);
+
+      // Sans mot en commun avec un guide, elle n'en rejoint aucun.
+      const autre = (
+        await creer(awa, {
+          ...unPrompt(),
+          titre: 'Recette de bissap glacé',
+          objectif: 'Une boisson fraîche à servir aux invités du mariage.',
+          etiquettes: ['Cuisine'],
+        }).expect(201)
+      ).body as CreationFicheApi;
+      expect(
+        ((await publier(awa, autre.id).expect(200)).body as CreationFicheApi).guide,
+      ).toBeNull();
+      await vider(contexte.db, 'guide');
     });
 
     it('refuse un brouillon incomplet, champ par champ, avec les messages de l’éditeur (RG-10)', async () => {
