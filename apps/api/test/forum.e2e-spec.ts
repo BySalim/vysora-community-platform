@@ -1,10 +1,17 @@
-import type { ListeSujetsApi, MessageApi, SujetApi, TypeSujet } from '@vysora/shared';
+import type {
+  ListeSujetsApi,
+  MessageApi,
+  NotificationsApi,
+  SujetApi,
+  TypeSujet,
+} from '@vysora/shared';
 import { and, asc, eq } from 'drizzle-orm';
 import request from 'supertest';
 import {
   contenu,
   modele,
   mouvementReputation,
+  notification,
   outil,
   rechercheDocument,
   sujet,
@@ -78,6 +85,12 @@ describe('Forum (FORUM-01)', () => {
   const lister = async (parametres = '') =>
     (await visiteur().get(`/api/v1/sujets${parametres}`).expect(200)).body as ListeSujetsApi;
   const reponseSimple = { corps: 'Demandez une exécution à blanc avant de lancer le tri.' };
+  const envoyerPreference = (agent: Agent, email: boolean) =>
+    agent
+      .put('/api/v1/moi/preferences-notifications')
+      .set('Origin', ORIGINE_SITE)
+      .send({ email })
+      .expect(200);
 
   /** Mouvements de réputation d'un membre : [motif, points]. */
   const mouvements = async (membreId: number) =>
@@ -90,6 +103,15 @@ describe('Forum (FORUM-01)', () => {
     ).map((m) => [m.motif, m.points]);
   const points = async (membreId: number) =>
     (await mouvements(membreId)).reduce((total, [, n]) => total + Number(n), 0);
+  /** Notifications reçues par un membre : [type, déclencheur, contenu]. */
+  const notifications = async (membreId: number) =>
+    (
+      await contexte.db
+        .select()
+        .from(notification)
+        .where(eq(notification.destinataireId, membreId))
+        .orderBy(asc(notification.id))
+    ).map((n) => [n.type, n.declencheurId, n.contenuId]);
 
   /** Sujet écrit directement en base (listes : sans limite RG-85 ni document de recherche). */
   async function sujetEnBase(
@@ -176,8 +198,8 @@ describe('Forum (FORUM-01)', () => {
         moi: { auteur: true, peutFermer: true, peutRouvrir: false },
       });
 
-      const visiteur = await lire(publie.id);
-      expect(visiteur.moi).toBeNull();
+      const vuParUnVisiteur = await lire(publie.id);
+      expect(vuParUnVisiteur.moi).toBeNull();
       const liste = await lister();
       expect(liste).toMatchObject({ total: 1, page: 1, pages: 1, enAttente: 1 });
       expect(liste.elements[0]).toMatchObject({
@@ -436,14 +458,12 @@ describe('Forum (FORUM-01)', () => {
 
     it('applique la limite des réponses et commentaires par 24 heures (RG-85)', async () => {
       const id = await sujetEnBase(leaId);
-      await contexte.db
-        .insert(contenu)
-        .values(
-          Array.from({ length: 20 }, () => ({
-            typeContenu: 'COMMENTAIRE' as const,
-            auteurId: awaId,
-          })),
-        );
+      await contexte.db.insert(contenu).values(
+        Array.from({ length: 20 }, () => ({
+          typeContenu: 'COMMENTAIRE' as const,
+          auteurId: awaId,
+        })),
+      );
       const refus = await repondre(await awa(), id, reponseSimple).expect(429);
       expect(refus.body.detail).toMatch(
         /^Vous avez publié 20 réponses et commentaires en 24 heures, la limite de votre niveau\./,
@@ -507,6 +527,84 @@ describe('Forum (FORUM-01)', () => {
         .delete(`/api/v1/messages/${seconde.id}/acceptation`)
         .set('Origin', ORIGINE_SITE)
         .expect(409);
+    });
+
+    it('notifie l’auteur du sujet d’une réponse et l’auteur d’une réponse acceptée, par e-mail selon sa préférence (RG-91, F-81)', async () => {
+      contexte.emails.length = 0;
+      const auteur = await lea();
+      const publie = (await publier(auteur, question()).expect(201)).body as SujetApi;
+      const agentAwa = await awa();
+      const reponse = (await repondre(agentAwa, publie.id, reponseSimple).expect(201))
+        .body as MessageApi;
+      // Sa propre réponse ne le notifie pas.
+      await repondre(auteur, publie.id, { corps: 'Merci, je teste la méthode ce soir.' }).expect(
+        201,
+      );
+      expect(await notifications(leaId)).toEqual([['REPONSE_SUJET', awaId, reponse.id]]);
+      // La notification propose de répondre dans le sujet et d'accepter la réponse (F-51, F-52).
+      const deLea = (await auteur.get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      expect(deLea.elements[0]?.repondreSujet).toEqual({
+        sujetId: publie.id,
+        messageId: reponse.id,
+        accepter: true,
+      });
+      expect(contexte.emails.map((e) => [e.a, e.sujet])).toEqual([
+        ['lea@example.com', 'awa-sarr a répondu à votre question'],
+      ]);
+
+      await accepter(auteur, reponse.id).expect(200);
+      const recues = (await agentAwa.get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      expect(recues.elements).toHaveLength(1);
+      expect(recues.elements[0]).toMatchObject({
+        type: 'REPONSE_ACCEPTEE',
+        par: { pseudo: 'lea-martin' },
+        points: 15,
+        acceptee: true,
+        sujetResolu: true,
+        texte: reponseSimple.corps,
+        cible: { nature: 'SUJET', id: publie.id, typeSujet: 'QUESTION' },
+      });
+      expect(contexte.emails[1]).toMatchObject({
+        a: 'awa.sarr@example.com',
+        sujet: 'lea-martin a accepté votre réponse',
+      });
+
+      // Sans préférence d'e-mail, la notification seule (F-81).
+      await envoyerPreference(auteur, false);
+      await repondre(await kofi(), publie.id, {
+        corps: 'Remplacez toute suppression par un déplacement vers une corbeille.',
+      }).expect(201);
+      expect(await notifications(leaId)).toHaveLength(2);
+      expect(contexte.emails).toHaveLength(2);
+      // Le sujet résolu ne propose plus d'acceptation ; fermé, plus de réponse non plus (RG-65).
+      const resolu = (await auteur.get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      expect(resolu.elements.map((n) => n.repondreSujet?.accepter)).toEqual([false, false]);
+      await auteur
+        .put(`/api/v1/sujets/${publie.id}/fermeture`)
+        .set('Origin', ORIGINE_SITE)
+        .expect(200);
+      const ferme = (await auteur.get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      expect(ferme.elements.map((n) => n.repondreSujet)).toEqual([null, null]);
+      await auteur
+        .delete(`/api/v1/sujets/${publie.id}/fermeture`)
+        .set('Origin', ORIGINE_SITE)
+        .expect(200);
+
+      // L'acceptation retirée, puis la réponse supprimée : leurs notifications disparaissent.
+      await auteur
+        .delete(`/api/v1/messages/${reponse.id}/acceptation`)
+        .set('Origin', ORIGINE_SITE)
+        .expect(200);
+      expect(await notifications(awaId)).toEqual([]);
+      await agentAwa
+        .delete(`/api/v1/messages/${reponse.id}`)
+        .set('Origin', ORIGINE_SITE)
+        .expect(204);
+      expect((await notifications(leaId)).map(([type]) => type)).toEqual(['REPONSE_SUJET']);
     });
 
     it('réserve l’acceptation aux questions et aux cliniques (RG-63)', async () => {

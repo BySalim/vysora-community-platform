@@ -3,12 +3,15 @@ import {
   ACTIONS_DECISION_MEMBRE,
   actionsPossibles,
   issueDesSignalements,
+  type ActionDecision,
   type AvertissementAgent,
+  type ContenuModereApi,
   type DecisionApi,
   type DecisionModeration,
   type StatutContenu,
   type StatutPublication,
   type TypeContenu,
+  type TypeNotification,
 } from '@vysora/shared';
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { conflit, interdit, introuvable } from '../../commun/erreurs.js';
@@ -31,6 +34,7 @@ import { indexer, retirerDeLaRecherche } from '../creations/contenu-creation.js'
 import { EmailService } from '../email/email.service.js';
 import { indexerSujet, oublierAcceptation } from '../forum/contenu-sujet.js';
 import { Stockage } from '../medias/stockage.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import { contenusLies, presenterContenus } from './contenus-moderes.js';
 import { emailDecision, referenceDecision } from './courriels.js';
@@ -49,14 +53,25 @@ interface Cible {
 
 const JOUR_MS = 86_400_000;
 
+/** RG-91 : notification de l'auteur selon la décision ; « aucune » ne change rien pour lui. */
+const NOTIFICATION_DE: Partial<Record<ActionDecision, TypeNotification>> = {
+  MASQUER: 'CONTENU_MASQUE',
+  RETABLIR: 'CONTENU_RETABLI',
+  SUPPRIMER: 'DECISION_MODERATION',
+  AVERTIR: 'DECISION_MODERATION',
+  SUSPENDRE: 'DECISION_MODERATION',
+  AJOUTER_AVERTISSEMENT_AGENT: 'DECISION_MODERATION',
+  RETIRER_AVERTISSEMENT_AGENT: 'DECISION_MODERATION',
+};
+
 /* F-91 : décisions de modération sur un contenu (RG-102). Une décision a une action et un motif,
    elle est journalisée et n'est plus modifiable (déclencheur en base) : une erreur se corrige par une
    nouvelle décision. Elle clôt les signalements ouverts du contenu, comme non fondés pour « aucune »
    et « rétablir », comme fondés sinon (CI-20). « Avertir » et « suspendre » visent l'auteur du
    contenu (CI-19) ; la suspension dure de 1 à 90 jours (RG-103). RG-104 : jamais sur son propre
    contenu. Points de réputation : annulés au masquage et à la suppression, générés de nouveau au
-   rétablissement (RG-82). L'auteur est informé par e-mail (F-92) ; les notifications viendront avec
-   NOTIF-01. */
+   rétablissement (RG-82). L'auteur est notifié (RG-91 : contenu masqué ou rétabli, décision le
+   concernant, sans que le modérateur soit nommé) et informé par e-mail (F-92, RG-90). */
 @Injectable()
 export class DecisionsService {
   private readonly journal = new Logger(DecisionsService.name);
@@ -68,6 +83,7 @@ export class DecisionsService {
     private readonly dossiers: DossiersService,
     private readonly emails: EmailService,
     private readonly stockage: Stockage,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async decider(
@@ -76,6 +92,8 @@ export class DecisionsService {
     saisie: DecisionModeration,
     maintenant = new Date(),
   ): Promise<DecisionApi> {
+    // Intitulé lu avant la décision : il reste celui que l'auteur connaît, même si le contenu est supprimé.
+    const presente = (await presenterContenus(this.db, this.stockage, [contenuId])).get(contenuId);
     const { decision, fichiers } = await this.db.transaction(async (tx) => {
       const cible = await this.cible(tx, contenuId);
       if (cible.auteurId === decideurId)
@@ -140,6 +158,8 @@ export class DecisionsService {
           if (cible.type === 'MESSAGE') await oublierAcceptation(tx, contenuId);
           const lies = await contenusLies(tx, contenuId, cible.type);
           await this.reputation.annulerContenus(tx, lies, maintenant);
+          // Les notifications nées de ces contenus disparaissent, les décisions de modération restent.
+          await this.notifications.retirer(tx, lies);
           await retirerDeLaRecherche(tx, contenuId);
           aEffacer = await retirerImages(tx, lies);
           break;
@@ -162,6 +182,23 @@ export class DecisionsService {
         case 'SUSPENDRE':
           break;
       }
+      const type = NOTIFICATION_DE[saisie.action];
+      if (type)
+        await this.notifications.notifier(tx, {
+          type,
+          destinataireId: cible.auteurId,
+          contenuId,
+          donnees: {
+            action: saisie.action,
+            motif: saisie.motif,
+            ...(enregistree.dateFinSuspension
+              ? { finSuspension: enregistree.dateFinSuspension.toISOString() }
+              : {}),
+            typeContenu: cible.type,
+            ...(presente ? { intitule: presente.intitule } : {}),
+          },
+          date: maintenant,
+        });
       return { decision: enregistree, fichiers: aEffacer };
     });
 
@@ -173,7 +210,7 @@ export class DecisionsService {
         .catch((erreur: unknown) =>
           this.journal.warn(`Images d’un contenu supprimé non effacées : ${String(erreur)}`),
         );
-    await this.informer(decision).catch((erreur: unknown) =>
+    await this.informer(decision, presente).catch((erreur: unknown) =>
       this.journal.warn(`E-mail de la décision ${decision.id} non envoyé : ${String(erreur)}`),
     );
     const [presentee] = await this.dossiers.presenter([decision]);
@@ -199,21 +236,26 @@ export class DecisionsService {
     return ligne;
   }
 
-  /** F-92 : e-mail à l'auteur du contenu, après l'enregistrement de la décision. */
-  private async informer(decision: typeof decisionModeration.$inferSelect): Promise<void> {
-    if (decision.action === 'AUCUNE' || decision.contenuId === null) return;
+  /** F-92, RG-90 : e-mail à l'auteur du contenu, après l'enregistrement de la décision, quelles que
+      soient ses préférences, à une adresse qu'il a vérifiée (une adresse jamais confirmée peut être
+      celle d'un tiers) ; la décision reste dans ses notifications. */
+  private async informer(
+    decision: typeof decisionModeration.$inferSelect,
+    presente: ContenuModereApi | undefined,
+  ): Promise<void> {
+    if (decision.action === 'AUCUNE' || !presente) return;
     const action = decision.action;
     if (action === 'BANNIR' || action === 'AJUSTER_REPUTATION' || action === 'RETIRER_BADGE')
       return;
-    const presente = (await presenterContenus(this.db, this.stockage, [decision.contenuId])).get(
-      decision.contenuId,
-    );
-    if (!presente) return;
     const [auteur] = await this.db
-      .select({ email: utilisateur.email, fuseau: utilisateur.fuseauHoraire })
+      .select({
+        email: utilisateur.email,
+        emailVerifie: utilisateur.emailVerifie,
+        fuseau: utilisateur.fuseauHoraire,
+      })
       .from(utilisateur)
       .where(eq(utilisateur.id, presente.auteur.id));
-    if (!auteur?.email) return;
+    if (!auteur?.email || !auteur.emailVerifie) return;
     const site = (chemin: string) => new URL(chemin, this.config.SITE_URL).href;
     const fiche = `/creations/${presente.id}${presente.page?.slug ? `-${presente.page.slug}` : ''}`;
     await this.emails.envoyer(

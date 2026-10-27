@@ -5,6 +5,7 @@ import type {
   ListeCasApi,
   ListeCasAValiderApi,
   MesCasApi,
+  NotificationsApi,
   ReponseCasApi,
 } from '@vysora/shared';
 import { and, asc, eq, sql } from 'drizzle-orm';
@@ -288,6 +289,35 @@ describe('Bon réflexe (APP-01)', () => {
       expect((await lister()).elements.map((c) => c.id)).toEqual([propose.id]);
       expect((await lister('?q=septembre')).total).toBe(1);
       expect(await indexe(propose.id)).toBe(true);
+    });
+
+    it('notifie l’auteur du refus et de son motif, puis de la validation et de ses points, sans nommer le modérateur (RG-91)', async () => {
+      const auteur = await lea();
+      const propose = (await proposer(auteur).expect(201)).body as CasApi;
+      const motif = 'Le calcul de la hausse est juste : choisissez un exemple où l’IA se trompe.';
+      await examiner(await thomas(), propose.id, 'REFUSE', motif).expect(200);
+      // Corrigé, le cas perd son motif (CI-18) ; la notification le garde.
+      await modifier(
+        auteur,
+        propose.id,
+        nouveauCas({ titre: 'Des ventes en forte hausse ?' }),
+      ).expect(200);
+      await examiner(await sophie(), propose.id, 'VALIDE').expect(200);
+
+      const recues = (await auteur.get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      expect(
+        recues.elements.map((n) => [n.type, n.par, n.motif, n.points, n.cible?.titre]),
+      ).toEqual([
+        ['CAS_VALIDE', null, null, 10, 'Des ventes en forte hausse ?'],
+        ['CAS_REFUSE', null, motif, null, 'Des ventes en forte hausse ?'],
+      ]);
+
+      // Supprimé par son auteur, le cas n'est plus notifié.
+      await auteur.delete(`/api/v1/cas/${propose.id}`).set('Origin', ORIGINE_SITE).expect(204);
+      const apres = (await auteur.get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      expect(apres.elements).toEqual([]);
     });
 
     it('jamais ses propres cas ; jamais sans le rôle de modération (RG-71)', async () => {

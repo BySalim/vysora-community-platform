@@ -17,6 +17,7 @@ import { contenu, contenuEtiquette, sujet } from '../../db/schema/index.js';
 import { retirerDeLaRecherche } from '../creations/contenu-creation.js';
 import type { Redacteur } from '../creations/ecriture.service.js';
 import { contenusLies } from '../moderation/contenus-moderes.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { verifierLimiteQuotidienne } from '../progression/limites.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import {
@@ -61,6 +62,7 @@ export class EcritureSujetsService {
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly lecture: SujetsService,
     private readonly reputation: ReputationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async creer(auteur: Redacteur, saisie: SaisieSujet, maintenant = new Date()): Promise<SujetApi> {
@@ -117,12 +119,16 @@ export class EcritureSujetsService {
     return this.lecture.sujet(id, auteur);
   }
 
-  /** Suppression définitive pour les autres membres ; points liés annulés (RG-19, RG-82). */
+  /** Suppression définitive pour les autres membres ; points liés annulés (RG-19, RG-82),
+      notifications retirées. */
   async supprimer(auteurId: number, id: number, maintenant = new Date()): Promise<void> {
     await this.db.transaction(async (tx) => {
       await this.sien(tx, auteurId, id, 'supprimer');
       await tx.update(contenu).set({ statut: 'SUPPRIME' }).where(eq(contenu.id, id));
-      await this.reputation.annulerContenus(tx, await contenusLies(tx, id, 'SUJET'), maintenant);
+      const lies = await contenusLies(tx, id, 'SUJET');
+      await this.reputation.annulerContenus(tx, lies, maintenant);
+      // Réponses et votes du sujet ne sont plus notifiés (NOTIF-01).
+      await this.notifications.retirer(tx, lies);
       await retirerDeLaRecherche(tx, id);
     });
   }

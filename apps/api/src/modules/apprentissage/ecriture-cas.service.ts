@@ -16,6 +16,7 @@ import { retirerDeLaRecherche } from '../creations/contenu-creation.js';
 import { AUCUNE_REFERENCE, ecrireEtiquettes, verifierReferences } from '../forum/contenu-sujet.js';
 import type { Intervenant } from '../forum/ecriture-sujets.service.js';
 import { contenusLies } from '../moderation/contenus-moderes.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import { CasService } from './cas.service.js';
 import { colonnesCas, ecrireOptions, indexerCas } from './contenu-cas.js';
@@ -39,7 +40,8 @@ interface CasVerrouille {
    - Suppression par l'auteur : SUPPRIME, points nés du cas annulés (RG-82).
    - Examen par un membre de l'équipe de modération qui n'en est pas l'auteur (RG-71, CI-18) :
      validation (+10 à l'auteur, une fois par cas, RG-80) ou refus motivé (les points d'une
-     validation antérieure sont annulés, RG-82).
+     validation antérieure sont annulés, RG-82). L'auteur en est notifié, avec les points ou le
+     motif, sans que le modérateur soit nommé (RG-91).
    Un cas validé et visible est un document de recherche (RG-31). */
 @Injectable()
 export class EcritureCasService {
@@ -47,6 +49,7 @@ export class EcritureCasService {
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly lecture: CasService,
     private readonly reputation: ReputationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async proposer(auteur: Intervenant, saisie: SaisieCas, maintenant = new Date()): Promise<CasApi> {
@@ -105,16 +108,15 @@ export class EcritureCasService {
     return this.lecture.cas(id, auteur);
   }
 
-  /** Suppression définitive pour les autres membres ; points nés du cas annulés (RG-82). */
+  /** Suppression définitive pour les autres membres ; points nés du cas annulés (RG-82),
+      notifications retirées. */
   async supprimer(auteurId: number, id: number, maintenant = new Date()): Promise<void> {
     await this.db.transaction(async (tx) => {
       await this.sien(tx, auteurId, id, 'supprimer');
       await tx.update(contenu).set({ statut: 'SUPPRIME' }).where(eq(contenu.id, id));
-      await this.reputation.annulerContenus(
-        tx,
-        await contenusLies(tx, id, 'CAS_BON_REFLEXE'),
-        maintenant,
-      );
+      const lies = await contenusLies(tx, id, 'CAS_BON_REFLEXE');
+      await this.reputation.annulerContenus(tx, lies, maintenant);
+      await this.notifications.retirer(tx, lies);
       await retirerDeLaRecherche(tx, id);
     });
   }
@@ -152,16 +154,24 @@ export class EcritureCasService {
       // RG-80 : +10 à l'auteur, une seule fois par cas (le revalider après une modification ne
       // crédite pas de nouveau) ; un refus annule les points d'une validation antérieure (RG-82).
       const action = { acteurId: existant.auteurId, contenuId: id, motif: 'CAS_VALIDE' as const };
+      let points = 0;
       if (examen.decision === 'VALIDE')
-        await this.reputation.crediterUneFois(
+        points = await this.reputation.crediterUneFois(
           tx,
           { ...action, beneficiaireId: existant.auteurId, points: BAREME_REPUTATION.casValide },
           maintenant,
         );
       else await this.reputation.annuler(tx, action, maintenant);
       await indexerCas(tx, id);
+      // Le motif d'un refus est gardé : une nouvelle soumission l'efface du cas (CI-18).
+      await this.notifications.notifier(tx, {
+        type: examen.decision === 'VALIDE' ? 'CAS_VALIDE' : 'CAS_REFUSE',
+        destinataireId: existant.auteurId,
+        contenuId: id,
+        donnees: points ? { points } : examen.motif ? { motif: examen.motif } : undefined,
+        date: maintenant,
+      });
     });
-    // La notification de l'auteur (CAS_VALIDE, CAS_REFUSE) viendra avec NOTIF-01.
     return this.lecture.cas(id, moderateur);
   }
 

@@ -57,7 +57,8 @@ describe('File des e-mails et tâches planifiées (EMAIL-01)', () => {
     expect(envois).toHaveLength(2);
     for (const [, donnees] of envois) {
       expect(Object.keys(donnees)).toEqual(['chiffre']);
-      expect(JSON.stringify(donnees)).not.toMatch(/awa|reproduction/i);
+      // L'adresse et une phrase entières : un texte chiffré en base64 peut contenir « awa » par hasard.
+      expect(JSON.stringify(donnees)).not.toMatch(/awa\.sarr@example\.com|reproduction partielle/i);
     }
     // Déchiffrés par la tâche, les e-mails arrivent intacts au transport.
     expect(contexte.emails.map((email) => email.a).toSorted()).toEqual([

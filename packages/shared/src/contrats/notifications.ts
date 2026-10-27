@@ -1,6 +1,7 @@
 import type {
   ActionDecision,
   ResultatReproduction,
+  TypeContenu,
   TypeCreation,
   TypeNotification,
   TypeSujet,
@@ -66,6 +67,9 @@ export interface NotificationApi {
   reponse: MessageNotificationApi | null;
   /** Commentaire auquel le destinataire peut répondre depuis la notification (F-42). */
   repondreA: { creationId: number; commentaireId: number } | null;
+  /** Réponse à son sujet du forum : y répondre depuis la notification (sujet visible et ouvert,
+      F-51) ; l'accepter s'il s'agit d'une question ou d'une clinique sans réponse acceptée (F-52). */
+  repondreSujet: { sujetId: number; messageId: number; accepter: boolean } | null;
   /** Points gagnés par le destinataire avec cet événement. */
   points: number | null;
   reproduction: {
@@ -81,7 +85,14 @@ export interface NotificationApi {
   defi: { rang: number; participants: number; dateDebut: string; dateFin: string } | null;
   /** Cas refusé, contenu masqué, décision : motif communiqué au membre. */
   motif: string | null;
-  decision: { action: ActionDecision; finSuspension: string | null } | null;
+  /** Contenu masqué ou rétabli, décision de modération : l'action, la fin d'une suspension et le
+      contenu visé, type et intitulé figés au moment de la décision (il peut avoir été supprimé). Le
+      membre de l'équipe de modération qui a décidé n'est jamais nommé. */
+  decision: {
+    action: ActionDecision;
+    finSuspension: string | null;
+    contenu: { type: TypeContenu; intitule: string } | null;
+  } | null;
   /** Obsolescence au-delà du seuil (RG-44). */
   obsolescence: { modele: string; membres: number } | null;
   /** Réponse du forum acceptée par le destinataire ; sujet déjà résolu par une autre réponse. */

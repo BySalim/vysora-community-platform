@@ -3,8 +3,8 @@ import type { EmailAEnvoyer } from '../email/email.service.js';
 import { miseEnForme } from '../email/gabarit.js';
 
 /* E-mails qui accompagnent une notification (WF-25) : réponse à un sujet et réponse acceptée selon
-   la préférence du membre (F-81) ; contenu masqué ou rétabli et décision de modération toujours
-   (RG-90). Le lien ouvre la notification sur la page Notifications. */
+   la préférence du membre (F-81). Le lien ouvre la notification sur la page Notifications. Une
+   décision de modération a son propre e-mail, plus complet (moderation/courriels.ts, RG-90). */
 
 /** « Votre question », « votre astuce »… (mot du prototype pour chaque type de sujet). */
 const MOTS_SUJET: Record<string, string> = {
@@ -39,31 +39,6 @@ function contenuDe(n: NotificationApi): { titre: string; paragraphes: string[] }
         titre: `${qui} a accepté votre réponse`,
         paragraphes: [
           `Votre réponse est épinglée en tête de ${titreCible}, désormais résolu.${n.points ? ` Elle vous rapporte ${n.points} points.` : ''}`,
-        ],
-      };
-    case 'CONTENU_MASQUE':
-      return {
-        titre: 'Votre contenu a été masqué par la modération',
-        paragraphes: [
-          `${titreCible} n’est plus visible des autres membres.`,
-          ...(n.motif ? [`Motif : ${n.motif}`] : []),
-          'Modifiez-le : la modération l’examinera de nouveau.',
-        ],
-      };
-    case 'CONTENU_RETABLI':
-      return {
-        titre: 'Votre contenu est de nouveau visible',
-        paragraphes: [`${titreCible} est de nouveau visible de tous les membres.`],
-      };
-    case 'DECISION_MODERATION':
-      return {
-        titre:
-          n.decision?.action === 'SUSPENDRE'
-            ? 'Votre compte est suspendu'
-            : 'La modération vous adresse un avertissement',
-        paragraphes: [
-          ...(n.motif ? [`Motif : ${n.motif}`] : []),
-          'Le détail de la décision figure dans vos notifications. Vous pouvez la contester depuis la page Contact.',
         ],
       };
     default:

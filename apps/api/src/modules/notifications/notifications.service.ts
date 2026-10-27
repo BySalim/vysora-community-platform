@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  accepteUneReponse,
   type ActionDecision,
   type BadgeApi,
   type CibleNotificationApi,
@@ -13,7 +14,7 @@ import {
   type TypeContenu,
   type TypeNotification,
 } from '@vysora/shared';
-import { and, asc, desc, eq, gte, inArray, isNotNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import { CONFIG } from '../../config/configuration.module.js';
 import type { Configuration } from '../../config/env.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
@@ -61,9 +62,12 @@ export interface DonneesNotification {
   defiId?: number;
   rang?: number;
   participants?: number;
-  /** Décision de modération. */
+  /** Contenu masqué ou rétabli, décision de modération : l'action et le contenu visé (type et
+      intitulé, qui restent lisibles si le contenu est supprimé). */
   action?: ActionDecision;
   finSuspension?: string;
+  typeContenu?: TypeContenu;
+  intitule?: string;
   /** Obsolescence au-delà du seuil (RG-44). */
   modele?: string;
   membres?: number;
@@ -80,13 +84,17 @@ export interface Evenement {
   date?: Date;
 }
 
-/** Notifications aussi envoyées par e-mail (WF-25) : selon la préférence du membre (F-81), ou toujours (RG-90). */
+/** Notifications aussi envoyées par e-mail selon la préférence du membre (WF-25, F-81). Une
+    décision de modération a son propre e-mail, toujours envoyé (RG-90, moderation/courriels.ts). */
 const EMAIL_SELON_PREFERENCE: TypeNotification[] = ['REPONSE_SUJET', 'REPONSE_ACCEPTEE'];
-const EMAIL_TOUJOURS: TypeNotification[] = [
+/** Décisions de modération : elles restent lisibles quand le contenu visé est retiré. */
+export const NOTIFICATIONS_DE_MODERATION: TypeNotification[] = [
   'CONTENU_MASQUE',
   'CONTENU_RETABLI',
   'DECISION_MODERATION',
 ];
+/** Notifications d'un échange auquel le destinataire peut répondre (F-42). */
+const COMMENTAIRES_RECUS: TypeNotification[] = ['COMMENTAIRE_RECU', 'REPONSE_COMMENTAIRE'];
 
 const PAGE = 50;
 const VOTANTS_MAXIMUM = 50;
@@ -237,11 +245,20 @@ export class NotificationsService {
       .onConflictDoNothing();
   }
 
-  /** Contenus retirés (commentaire supprimé par son auteur, création supprimée) : les
-      notifications qu'ils ont fait naître disparaissent, compteur de l'en-tête compris. */
-  async retirer(db: Executeur, contenuIds: number[]): Promise<void> {
+  /** Contenus retirés (par leur auteur ou par la modération) : les notifications qu'ils ont fait
+      naître disparaissent, compteur de l'en-tête compris, sauf les décisions de modération qui les
+      visent. `types` limite le retrait à ces événements (réponse qui n'est plus acceptée). */
+  async retirer(db: Executeur, contenuIds: number[], types?: TypeNotification[]): Promise<void> {
     if (!contenuIds.length) return;
-    await db.delete(notification).where(inArray(notification.contenuId, contenuIds));
+    await db
+      .delete(notification)
+      .where(
+        and(
+          inArray(notification.contenuId, contenuIds),
+          notInArray(notification.type, NOTIFICATIONS_DE_MODERATION),
+          types ? inArray(notification.type, types) : undefined,
+        ),
+      );
   }
 
   /** E-mails des notifications qui en demandent un (WF-25), après la validation de l'action. Ils
@@ -263,9 +280,7 @@ export class NotificationsService {
       .where(inArray(notification.id, choisis));
     for (const ligne of lignes) {
       const { type } = ligne.notification;
-      const voulu =
-        EMAIL_TOUJOURS.includes(type) ||
-        (EMAIL_SELON_PREFERENCE.includes(type) && ligne.preference);
+      const voulu = EMAIL_SELON_PREFERENCE.includes(type) && ligne.preference;
       if (!voulu || !ligne.email || !ligne.emailVerifie || ligne.statut !== 'ACTIF') continue;
       const [presentee] = await this.presenter(ligne.notification.destinataireId, [
         ligne.notification,
@@ -532,7 +547,8 @@ export class NotificationsService {
       const objet = n.contenuId === null ? null : (objets.get(n.contenuId) ?? null);
       const cibleId = cibleIdDe(n);
       const cible = cibleId === null ? null : (cibles.get(cibleId) ?? null);
-      // Objet ou cible absents, retirés, masqués ou devenus privés : rien de leur contenu ne s'affiche.
+      // Objet ou cible absents, retirés, masqués ou devenus privés : rien de leur contenu ne
+      // s'affiche. Une décision de modération se lit encore : action, motif et intitulé gardés.
       const disponible =
         (n.contenuId === null || (objet !== null && this.visible(objet, membreId))) &&
         (cibleId === null || cible !== null);
@@ -555,6 +571,7 @@ export class NotificationsService {
         origine: null,
         reponse: null,
         repondreA: null,
+        repondreSujet: null,
         points: d.points ?? null,
         reproduction: null,
         variante: null,
@@ -562,7 +579,14 @@ export class NotificationsService {
         niveau: null,
         defi: null,
         motif: d.motif ?? null,
-        decision: d.action ? { action: d.action, finSuspension: d.finSuspension ?? null } : null,
+        decision: d.action
+          ? {
+              action: d.action,
+              finSuspension: d.finSuspension ?? null,
+              contenu:
+                d.typeContenu && d.intitule ? { type: d.typeContenu, intitule: d.intitule } : null,
+            }
+          : null,
         obsolescence: d.modele && d.membres ? { modele: d.modele, membres: d.membres } : null,
         acceptee: false,
         sujetResolu: false,
@@ -603,7 +627,11 @@ export class NotificationsService {
           (r) => r.date > objet.date,
         );
         if (reponse) presentee.reponse = fil(membreId, reponse.corps, reponse.date);
-        if (cible?.api.nature === 'CREATION' && cible.publiee)
+        if (
+          COMMENTAIRES_RECUS.includes(n.type) &&
+          cible?.api.nature === 'CREATION' &&
+          cible.publiee
+        )
           presentee.repondreA = { creationId: c.creationId, commentaireId: c.id };
       }
       const r = reproductionDe.get(objet.id);
@@ -623,6 +651,20 @@ export class NotificationsService {
         if (n.type === 'REPONSE_SUJET') {
           const reponse = (reponsesForum.get(m.sujetId) ?? []).find((x) => x.date > objet.date);
           if (reponse) presentee.reponse = fil(membreId, reponse.corps, reponse.date);
+          // F-51 : répondre dans un sujet visible et ouvert ; F-52, RG-63 : son auteur accepte la
+          // réponse visible d'un autre membre à une question ou une clinique pas encore résolue.
+          if (cible?.api.nature === 'SUJET' && cible.publiee && !cible.ferme)
+            presentee.repondreSujet = {
+              sujetId: m.sujetId,
+              messageId: m.id,
+              accepter:
+                cible.api.aMoi &&
+                objet.statut === 'VISIBLE' &&
+                objet.auteurId !== membreId &&
+                !presentee.sujetResolu &&
+                cible.api.typeSujet !== null &&
+                accepteUneReponse(cible.api.typeSujet),
+            };
         }
       }
       if (n.type === 'VARIANTE_PUBLIEE') {
@@ -631,7 +673,6 @@ export class NotificationsService {
           ? { ...variante.api, outil: variante.outil, modele: variante.modele }
           : null;
       }
-      if (n.type === 'CAS_REFUSE' && cible?.motifRefus) presentee.motif = cible.motifRefus;
       return presentee;
     });
   }
@@ -665,8 +706,9 @@ export class NotificationsService {
       {
         api: CibleNotificationApi;
         publiee: boolean;
+        /** Sujet fermé (RG-65) : plus de réponse ni d'acceptation. */
+        ferme: boolean;
         messageAccepteId: number | null;
-        motifRefus: string | null;
         outil: OutilResumeApi | null;
         modele: string | null;
       }
@@ -695,6 +737,7 @@ export class NotificationsService {
           slug: sujet.slug,
           type: sujet.typeSujet,
           messageAccepteId: sujet.messageAccepteId,
+          dateFermeture: sujet.dateFermeture,
         })
         .from(sujet)
         .where(inArray(sujet.id, uniques)),
@@ -704,7 +747,6 @@ export class NotificationsService {
           titre: casBonReflexe.titre,
           slug: casBonReflexe.slug,
           validation: casBonReflexe.statutValidation,
-          motifRefus: casBonReflexe.motifRefus,
         })
         .from(casBonReflexe)
         .where(inArray(casBonReflexe.id, uniques)),
@@ -751,8 +793,8 @@ export class NotificationsService {
           image: image ? presenterMedia(this.stockage, image) : null,
         },
         publiee: ligne.statut === 'PUBLIEE' && c.statut === 'VISIBLE',
+        ferme: false,
         messageAccepteId: null,
-        motifRefus: null,
         outil: configuration?.outil ?? null,
         modele: configuration?.modele ?? null,
       });
@@ -769,8 +811,8 @@ export class NotificationsService {
           typeSujet: ligne.type,
         },
         publiee: c.statut === 'VISIBLE',
+        ferme: ligne.dateFermeture !== null,
         messageAccepteId: ligne.messageAccepteId,
-        motifRefus: null,
         outil: null,
         modele: null,
       });
@@ -782,8 +824,8 @@ export class NotificationsService {
       resultat.set(ligne.id, {
         api: { ...base(c), nature: 'CAS_BON_REFLEXE', slug: ligne.slug, titre: ligne.titre },
         publiee: ligne.validation === 'VALIDE' && c.statut === 'VISIBLE',
+        ferme: false,
         messageAccepteId: null,
-        motifRefus: ligne.motifRefus,
         outil: null,
         modele: null,
       });

@@ -4,6 +4,7 @@ import type {
   DossierModerationApi,
   FileModerationApi,
   MesCreationsApi,
+  NotificationsApi,
   SessionApi,
 } from '@vysora/shared';
 import { eq, sql } from 'drizzle-orm';
@@ -14,7 +15,9 @@ import {
   creation,
   decisionModeration,
   mouvementReputation,
+  notification,
   signalement,
+  utilisateur,
 } from '../src/db/schema/index.js';
 import {
   MOT_DE_PASSE,
@@ -525,6 +528,88 @@ describe('Signalements et décisions (MOD-01)', () => {
       expect([dossier.contenu.statut, dossier.actions]).toEqual(['SUPPRIME', []]);
       expect(contexte.emails[0]?.sujet).toBe('Votre création a été supprimée par la modération');
       expect(contexte.emails[0]?.texte).toContain('/contact?motif=contestation');
+    });
+  });
+
+  describe('notifications de l’auteur (RG-91, RG-90)', () => {
+    it('masque, rétablit, suspend puis supprime : chaque décision notifiée, un seul e-mail, sans nommer la modération', async () => {
+      const id = await creerCreation(contexte, auteurId);
+      const agentAwa = await awa();
+      const texte = 'Écrivez-moi au 06 12 34 56 78 pour la version complète.';
+      const commentaireId = (
+        await agentAwa
+          .post(`/api/v1/creations/${id}/commentaires`)
+          .set('Origin', ORIGINE_SITE)
+          .send({ corps: texte })
+          .expect(201)
+      ).body.id as number;
+      const moderation = await thomas();
+      for (const corps of [
+        { action: 'MASQUER', motif: 'Numéro de téléphone publié.' },
+        { action: 'RETABLIR', motif: 'Le numéro a été retiré.' },
+        { action: 'SUSPENDRE', motif: 'Démarchage répété.', dureeJours: 7 },
+        { action: 'SUPPRIMER', motif: 'Démarchage.' },
+      ])
+        await decider(moderation, commentaireId, corps).expect(201);
+
+      // Un e-mail par décision, celui de la modération (F-92) ; aucun e-mail de notification.
+      expect(contexte.emails.map((e) => [e.a, e.sujet])).toEqual([
+        ['awa.sarr@example.com', 'Votre commentaire a été masqué par la modération'],
+        ['awa.sarr@example.com', 'Votre commentaire est de nouveau visible'],
+        ['awa.sarr@example.com', expect.stringMatching(/^Votre compte est suspendu jusqu’au /)],
+        ['awa.sarr@example.com', 'Votre commentaire a été supprimé par la modération'],
+      ]);
+      const recues = (await (await awa()).get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      const vise = { type: 'COMMENTAIRE', intitule: texte };
+      const decision = (action: string, finSuspension: unknown = null) => ({
+        action,
+        finSuspension,
+        contenu: vise,
+      });
+      // Le commentaire est supprimé : plus disponible, mais chaque décision se lit encore.
+      expect(
+        recues.elements.map((n) => [n.type, n.par, n.disponible, n.motif, n.decision]),
+      ).toEqual([
+        ['DECISION_MODERATION', null, false, 'Démarchage.', decision('SUPPRIMER')],
+        [
+          'DECISION_MODERATION',
+          null,
+          false,
+          'Démarchage répété.',
+          decision('SUSPENDRE', expect.any(String)),
+        ],
+        ['CONTENU_RETABLI', null, false, 'Le numéro a été retiré.', decision('RETABLIR')],
+        ['CONTENU_MASQUE', null, false, 'Numéro de téléphone publié.', decision('MASQUER')],
+      ]);
+      // Le commentaire supprimé ne montre plus son texte ; la notification qu'il avait fait naître
+      // disparaît, les décisions restent.
+      expect(recues.elements.every((n) => n.texte === null && n.repondreA === null)).toBe(true);
+      const deLea = await contexte.db
+        .select({ type: notification.type })
+        .from(notification)
+        .where(eq(notification.destinataireId, auteurId));
+      expect(deLea).toEqual([]);
+    });
+
+    it('n’écrit qu’à une adresse vérifiée ; la décision reste dans les notifications (RG-90)', async () => {
+      const id = await creerCreation(contexte, auteurId);
+      await contexte.db
+        .update(utilisateur)
+        .set({ emailVerifie: false })
+        .where(eq(utilisateur.id, auteurId));
+      await decider(await thomas(), id, { action: 'AVERTIR', motif: 'Sources non citées.' }).expect(
+        201,
+      );
+      expect(contexte.emails).toEqual([]);
+      const [recue] = await contexte.db
+        .select({ type: notification.type, donnees: notification.donnees })
+        .from(notification)
+        .where(eq(notification.destinataireId, auteurId));
+      expect(recue).toMatchObject({
+        type: 'DECISION_MODERATION',
+        donnees: { action: 'AVERTIR', motif: 'Sources non citées.', typeContenu: 'CREATION' },
+      });
     });
   });
 

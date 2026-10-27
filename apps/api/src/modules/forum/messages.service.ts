@@ -20,6 +20,7 @@ import { contenu, message, sujet, vote } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
 import { lireMasquages } from '../moderation/masquages.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { verifierLimiteQuotidienne } from '../progression/limites.js';
 import { ReputationService } from '../progression/reputation.service.js';
 import { oublierAcceptation } from './contenu-sujet.js';
@@ -52,7 +53,9 @@ interface ReponseVerrouillee {
    - Modifier ou supprimer sa réponse ; supprimée, elle disparaît et ses points sont annulés (RG-82).
    - Accepter (RG-63, CI-12) : l'auteur d'une question ou d'une clinique ouverte choisit la réponse
      d'un autre membre ; +15 à son auteur, +2 à l'auteur du sujet (RG-80). En choisir une autre
-     transfère les points ; retirer l'acceptation les annule (RG-82). */
+     transfère les points ; retirer l'acceptation les annule (RG-82).
+   RG-91 : l'auteur du sujet est notifié d'une réponse, l'auteur d'une réponse de son acceptation
+   (retirée avec elle) ; l'e-mail suit selon sa préférence (F-81). */
 @Injectable()
 export class MessagesService {
   constructor(
@@ -60,6 +63,7 @@ export class MessagesService {
     private readonly stockage: Stockage,
     private readonly sujets: SujetsService,
     private readonly reputation: ReputationService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async repondre(
@@ -68,9 +72,13 @@ export class MessagesService {
     saisie: SaisieMessage,
     maintenant = new Date(),
   ): Promise<MessageApi> {
-    const id = await this.db.transaction(async (tx) => {
+    const { id, notification } = await this.db.transaction(async (tx) => {
       const [parent] = await tx
-        .select({ statut: contenu.statut, dateFermeture: sujet.dateFermeture })
+        .select({
+          statut: contenu.statut,
+          auteurId: contenu.auteurId,
+          dateFermeture: sujet.dateFermeture,
+        })
         .from(sujet)
         .innerJoin(contenu, eq(contenu.id, sujet.id))
         .where(eq(sujet.id, sujetId))
@@ -89,9 +97,18 @@ export class MessagesService {
       await tx
         .insert(message)
         .values({ id: ligne.id, sujetId, corps: composerMessage(saisie.corps, saisie.prompt) });
-      return ligne.id;
+      return {
+        id: ligne.id,
+        notification: await this.notifications.notifier(tx, {
+          type: 'REPONSE_SUJET',
+          destinataireId: parent.auteurId,
+          declencheurId: membre.id,
+          contenuId: ligne.id,
+          date: maintenant,
+        }),
+      };
     });
-    // La notification de l'auteur du sujet viendra avec NOTIF-01.
+    await this.notifications.envoyerEmails([notification]);
     return this.presenter(id, membre);
   }
 
@@ -120,18 +137,20 @@ export class MessagesService {
       await tx.update(contenu).set({ statut: 'SUPPRIME' }).where(eq(contenu.id, id));
       await oublierAcceptation(tx, id);
       await this.reputation.annulerContenus(tx, [id], maintenant);
+      await this.notifications.retirer(tx, [id]);
     });
   }
 
   /** RG-63, CI-12 : réponse acceptée par l'auteur du sujet ; une autre déjà acceptée perd ce statut. */
   async accepter(membre: Intervenant, id: number, maintenant = new Date()): Promise<SujetApi> {
-    const sujetId = await this.db.transaction(async (tx) => {
+    const { sujetId, notification } = await this.db.transaction(async (tx) => {
       const reponse = await this.acceptable(tx, membre, id);
-      if (reponse.sujet.messageAccepteId === id) return reponse.sujet.id;
+      if (reponse.sujet.messageAccepteId === id)
+        return { sujetId: reponse.sujet.id, notification: null };
       if (reponse.auteurId === reponse.sujet.auteurId)
         throw conflit('Choisissez la réponse d’un autre membre.');
       if (reponse.sujet.messageAccepteId !== null)
-        await this.annulerPoints(
+        await this.annulerAcceptation(
           tx,
           reponse.sujet.auteurId,
           reponse.sujet.messageAccepteId,
@@ -143,7 +162,7 @@ export class MessagesService {
         .where(eq(sujet.id, reponse.sujet.id));
       // RG-80 : +15 à l'auteur de la réponse, +2 à l'auteur du sujet.
       const action = { acteurId: reponse.sujet.auteurId, contenuId: id };
-      await this.reputation.crediterUneFois(
+      const points = await this.reputation.crediterUneFois(
         tx,
         {
           ...action,
@@ -163,9 +182,19 @@ export class MessagesService {
         },
         maintenant,
       );
-      return reponse.sujet.id;
+      return {
+        sujetId: reponse.sujet.id,
+        notification: await this.notifications.notifier(tx, {
+          type: 'REPONSE_ACCEPTEE',
+          destinataireId: reponse.auteurId,
+          declencheurId: membre.id,
+          contenuId: id,
+          donnees: points ? { points } : undefined,
+          date: maintenant,
+        }),
+      };
     });
-    // La notification de l'auteur de la réponse viendra avec NOTIF-01.
+    await this.notifications.envoyerEmails([notification]);
     return this.sujets.sujet(sujetId, membre);
   }
 
@@ -179,15 +208,15 @@ export class MessagesService {
       const reponse = await this.acceptable(tx, membre, id);
       if (reponse.sujet.messageAccepteId !== id)
         throw conflit('Cette réponse n’est pas la réponse acceptée.');
-      await this.annulerPoints(tx, reponse.sujet.auteurId, id, maintenant);
+      await this.annulerAcceptation(tx, reponse.sujet.auteurId, id, maintenant);
       await oublierAcceptation(tx, id);
       return reponse.sujet.id;
     });
     return this.sujets.sujet(sujetId, membre);
   }
 
-  /** RG-82 : points de l'acceptation de cette réponse annulés. */
-  private async annulerPoints(
+  /** RG-82 : points de l'acceptation de cette réponse annulés, sa notification retirée. */
+  private async annulerAcceptation(
     tx: Transaction,
     auteurDuSujetId: number,
     messageId: number,
@@ -199,6 +228,7 @@ export class MessagesService {
         { acteurId: auteurDuSujetId, contenuId: messageId, motif },
         maintenant,
       );
+    await this.notifications.retirer(tx, [messageId], ['REPONSE_ACCEPTEE']);
   }
 
   private async verrouiller(tx: Transaction, id: number): Promise<ReponseVerrouillee | null> {
