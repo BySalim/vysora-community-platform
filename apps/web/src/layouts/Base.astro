@@ -37,6 +37,9 @@ interface Props {
   remplacementsIcones?: Record<string, Icone>;
   /** Contenu à ne pas indexer (brouillon, page privée). */
   nonIndexee?: boolean;
+  /** Adresse canonique quand la page en a plusieurs selon ses paramètres (guide d'Explorer) ;
+      par défaut, le chemin seul. */
+  canonique?: string;
   /** « site » (en-tête et pied de page communs) ou « auth » (connexion, inscription). */
   enveloppe?: 'site' | 'auth';
   /** Couleur de la barre du navigateur mobile (bleu sur la connexion et l'inscription). */
@@ -61,6 +64,7 @@ const {
   icones = [],
   remplacementsIcones,
   nonIndexee = false,
+  canonique: adresseCanonique,
   enveloppe = 'site',
   couleurTheme = '#ffffff',
   lienEvitement = 'Aller au contenu',
@@ -88,7 +92,7 @@ const attributsCorps = Object.fromEntries(
 const attributsMain = Object.fromEntries(
   Object.entries(donneesMain).map(([nom, valeur]) => [`data-${nom}`, valeur]),
 );
-const canonique = new URL(Astro.url.pathname, Astro.site).href;
+const canonique = new URL(adresseCanonique ?? Astro.url.pathname, Astro.site).href;
 const imagePartage = image ? new URL(image, Astro.site).href : undefined;
 // « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte l'état.
 const etatClient = JSON.stringify({

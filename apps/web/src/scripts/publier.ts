@@ -885,11 +885,24 @@ function editeur(donnees: DonneesPage): void {
 
   function finHTML(): string {
     const fiche = ficheCourante ? adresseCreation(ficheCourante) : ROUTES.mesContenus;
+    // Guide d'Explorer que la création a rejoint (DEC-01) ; défi et badges viendront avec S-07 et S-09.
+    const guide = ficheCourante?.guide;
+    const suites: [string, string, string, string][] = guide
+      ? [
+          [
+            icon('compass'),
+            `Votre création rejoint le guide « ${t(guide.titre)} »`,
+            'Ses moments clés enrichissent les étapes et les pièges du guide.',
+            `<a class="link-arrow" href="${esc(ROUTES.guide(guide.slug))}">Voir le guide${icon('arrow')}</a>`,
+          ],
+        ]
+      : [];
     return `<div class="container pub-fin-in">
       <span class="pub-fin-icone" aria-hidden="true">${icon('check', '')}</span>
       <h1 tabindex="-1" data-fin-titre>Votre création est publiée</h1>
       <p class="pub-intro">« ${t(d.titre)} » est visible de tous. Chaque vote « Utile » et chaque reproduction réussie vous rapporteront des points.</p>
       <div class="pub-porte-actions"><a class="btn btn-primary" href="${esc(fiche)}">Voir la fiche${icon('arrow')}</a><button class="btn btn-secondary" type="button" data-action="copier-lien">${icon('copy')}Copier le lien</button><button class="btn btn-quiet" type="button" data-action="continuer-modifier">Modifier la création</button></div>
+      ${suites.length ? `<ul class="pub-fin-suite">${suites.map(([ic, titre, texte, lien]) => `<li>${ic}<p><b>${titre}</b><span>${t(texte)}</span></p>${lien}</li>`).join('')}</ul>` : ''}
     </div>`;
   }
 

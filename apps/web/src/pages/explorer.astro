@@ -1,0 +1,557 @@
+---
+/* Explorer (DEC-01, EC-02, F-22), portée de prototype/explorer.html : index des guides par objectif
+   (recherche, domaines, tri, « Mes outils », ce que la communauté cherche encore) et guide d'un
+   objectif (?guide=). Le serveur rend la page avec les fonctions de lib/explorer, que le script
+   reprend pour la recherche pendant la saisie et le passage d'une vue à l'autre ; les données sont
+   posées en JSON (#ex-donnees). Réglages retenus : aperçu qui suit la recherche, index détaillé,
+   méthode en chemin, méthode d'abord. */
+import {
+  MOTIF_SLUG_GUIDE,
+  type GuideApi,
+  type GuidesApi,
+  type RechercheCreationsApi,
+  type ReferentielsApi,
+} from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { appelerApi } from '../lib/api';
+import { lireAdresse, type DonneesExplorer, type OutilExplorer } from '../lib/explorer/donnees';
+import { icone } from '../lib/explorer/elements';
+import {
+  apercuActif,
+  carteHero,
+  correspondances,
+  demandesHTML,
+  guidesEnApercu,
+  indexer,
+  vueIndex,
+} from '../lib/explorer/index-guides';
+import { etatInitialCas, navigationGuides, vueGuide, type EtatGuide } from '../lib/explorer/guide';
+import { ROUTES } from '../lib/navigation';
+import { typo } from '../lib/texte';
+import '../styles/explorer.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+const options = { requete: Astro.request, adresseClient };
+const maintenant = new Date();
+
+const [index, referentiels] = await Promise.all([
+  appelerApi<GuidesApi>('/api/v1/guides', options).catch(() => null),
+  appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null),
+]);
+const adresse = lireAdresse(Astro.url.searchParams, index?.domaines ?? []);
+const guide =
+  adresse.guide && MOTIF_SLUG_GUIDE.test(adresse.guide)
+    ? await appelerApi<GuideApi>(`/api/v1/guides/${adresse.guide}`, options).catch(() => null)
+    : null;
+// Comme le prototype, un guide inconnu ramène à l'index.
+if (!guide) adresse.guide = null;
+const recherche =
+  !guide && adresse.q
+    ? (
+        await appelerApi<RechercheCreationsApi>(
+          `/api/v1/recherche/creations?q=${encodeURIComponent(adresse.q)}`,
+          options,
+        ).catch(() => ({ elements: [] }))
+      ).elements
+    : [];
+
+const outils: OutilExplorer[] = (referentiels?.outils ?? []).map((o) => ({
+  id: o.id,
+  nom: o.nom,
+  slug: o.slug,
+  logo: o.logo,
+  logoMonochrome: o.logoMonochrome,
+  famille: o.famille,
+}));
+const guides = (index?.elements ?? []).map(indexer);
+const vue = vueIndex({
+  guides,
+  domaines: index?.domaines ?? [],
+  totaux: index?.totaux ?? { parcours: 0, reproductions: 0 },
+  q: adresse.q,
+  domaine: adresse.domaine,
+  tri: adresse.tri,
+  mesOutils: new Set(),
+  maintenant,
+});
+const enApercu = guidesEnApercu(guides);
+const actif = apercuActif(adresse.q, vue.visibles, enApercu, guides);
+
+const etatGuide: EtatGuide | null = guide && {
+  guide,
+  maintenant,
+  mesOutils: new Set(),
+  outils: new Map(outils.map((o) => [o.slug, o])),
+  coches: new Set([
+    ...(guide.moi?.liste.etapes ?? []).map((id) => `e${id}`),
+    ...(guide.moi?.liste.pieges ?? []).map((id) => `p${id}`),
+  ]),
+  membre: guide.moi !== null,
+  propositions: guide.moi?.propositions ?? [],
+  triParcours: 'reproduits',
+  comparaison: new Set(),
+  casIndex: 0,
+  cas: new Map(guide.cas.map((c) => [c.id, etatInitialCas(c)])),
+  invitation: '',
+};
+
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+const donnees: DonneesExplorer = {
+  index,
+  guide,
+  outils,
+  recherche,
+  maintenant: maintenant.toISOString(),
+};
+const json = JSON.stringify(donnees).replaceAll('<', '\\u003c');
+
+const titre = guide ? `${guide.guide.titreCourt} · Explorer` : 'Explorer';
+const description = guide
+  ? `${guide.guide.titre} : la méthode qui ressort de ${guide.guide.parcours} parcours documentés, les pièges à éviter et ce qui fonctionne avec vos outils.`
+  : 'Choisissez ce que vous voulez réussir : Vysora rassemble les parcours de la communauté, la méthode qui ressort, les pièges à éviter et ce qui fonctionne avec vos outils.';
+const souvent = index?.souventCherches ?? [];
+
+const icones = [
+  'arrow',
+  'arrow-down',
+  'arrow-up-right',
+  'search',
+  'plus',
+  'menu',
+  'close',
+  'check',
+  'x',
+  'pause',
+  'play',
+  'chevron-down',
+  'chevron-left',
+  'chevron-right',
+  'copy',
+  'utile',
+  'repeat',
+  'moment',
+  'check-circle',
+  'layers',
+  'bulb',
+  'message',
+  'award',
+  'flag',
+  'alert',
+  'trophy',
+  'route',
+  'browser',
+  'image',
+  'pen',
+  'code',
+  'flow',
+  'chart',
+  'film',
+  'music',
+  'school',
+  'shapes',
+  'shield',
+  'lock',
+  'scale',
+  'gift',
+  'heart',
+  'sliders',
+  'replay',
+  'clock',
+  'user',
+  'external',
+  'mail',
+  'folder',
+  'scan',
+  'trend-up',
+  'users',
+  'help',
+  'globe',
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+  'compass',
+  'bookmark',
+  'grid',
+  'rows',
+  'filter',
+  'history',
+  'tag',
+  'wrench',
+  'enter',
+  'calendar',
+];
+---
+
+<Base
+  titre={titre}
+  description={typo(description)}
+  classeCorps="ex"
+  reglages={{ apercu: 'recherche', index: 'detail', trace: 'chemin', order: 'methode' }}
+  icones={icones}
+  canonique={guide ? ROUTES.guide(guide.guide.slug) : ROUTES.explorer}
+>
+  <div class="ex-view" data-view="index" hidden={guide !== null}>
+    <section class="ex-hero" aria-labelledby="ex-title">
+      <div class="container ex-hero-inner">
+        <div class="ex-hero-text">
+          <p class="kicker" data-enter="1">
+            <Fragment set:html={icone('compass', '')} />
+            Explorer
+          </p>
+          <h1 id="ex-title" data-enter="2">
+            Que voulez-vous réussir&nbsp;?
+          </h1>
+          <p class="ex-lead" data-enter="3">
+            Chaque guide rassemble les parcours que la communauté a documentés pour un même
+            objectif&nbsp;: la méthode qui ressort, les pièges à éviter et ce qui fonctionne avec
+            vos outils.
+          </p>
+          <form class="ex-search" role="search" data-search data-enter="4" action={ROUTES.explorer}>
+            <label class="sr-only" for="ex-q">
+              Décrivez ce que vous voulez réussir
+            </label>
+            <div class="ex-field">
+              <Fragment set:html={icone('search', '')} />
+              <input
+                id="ex-q"
+                name="q"
+                type="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder={typo('Par exemple : prendre des rendez-vous en ligne')}
+                aria-describedby="ex-search-help"
+                maxlength="200"
+                value={adresse.q}
+              />
+              <button
+                class="ex-clear"
+                type="button"
+                aria-label="Effacer la recherche"
+                data-clear-query
+                hidden={!adresse.q}
+              >
+                <Fragment set:html={icone('close')} />
+              </button>
+              <kbd class="ex-kbd" aria-hidden="true">
+                /
+              </kbd>
+            </div>
+            <p class="sr-only" id="ex-search-help">
+              La liste des guides se met à jour pendant la saisie. Appuyez sur Entrée pour ouvrir le
+              premier guide.
+            </p>
+          </form>
+          <p class="ex-often" data-enter="5" hidden={!souvent.length}>
+            <span>Souvent cherché</span>
+            <span class="ex-often-list" data-often>
+              {souvent.map((terme) => (
+                <a href={`${ROUTES.explorer}?q=${encodeURIComponent(terme)}`} data-term={terme}>
+                  {terme}
+                </a>
+              ))}
+            </span>
+          </p>
+        </div>
+        <figure
+          class:list={['ex-hero-card', { 'is-matching': adresse.q && actif !== 'none' }]}
+          data-hero-card
+          data-enter="6"
+          hidden={!guides.length}
+        >
+          {guides.length > 0 && (
+            <Fragment set:html={carteHero(guides, enApercu, actif, adresse.q, vue.voisins)} />
+          )}
+        </figure>
+      </div>
+    </section>
+
+    <section class="ex-index" aria-labelledby="ex-index-title">
+      <div class="container">
+        <div class="ex-index-head">
+          <div>
+            <h2 id="ex-index-title" data-index-title>
+              Les guides
+            </h2>
+            <p class="ex-index-sub" data-index-sub role="status" aria-live="polite">
+              {typo(
+                index
+                  ? vue.sousTitre
+                  : 'Les guides n’ont pas pu être chargés. Rechargez la page dans un instant.',
+              )}
+            </p>
+          </div>
+          <div class="ex-index-tools">
+            <div class="ex-mytools" data-mytools>
+              <button class="ex-mytools-btn" type="button" data-open-tools>
+                <Fragment set:html={icone('wrench')} />
+                <span>Indiquer mes outils</span>
+              </button>
+            </div>
+            <label class="ex-sort">
+              <span>Trier par</span>
+              <select data-index-sort>
+                <option value="actifs" selected={adresse.tri === 'actifs'}>
+                  Les plus actifs
+                </option>
+                <option value="fiables" selected={adresse.tri === 'fiables'}>
+                  Les plus fiables
+                </option>
+                <option value="recents" selected={adresse.tri === 'recents'}>
+                  Les plus récents
+                </option>
+              </select>
+              <Fragment set:html={icone('chevron-down')} />
+            </label>
+          </div>
+        </div>
+        <nav class="ex-domains" aria-label="Domaines">
+          <ul data-domains set:html={vue.puces} />
+        </nav>
+        <div
+          class="ex-domain-banner"
+          data-domain-banner
+          hidden={!vue.banniere}
+          set:html={vue.banniere}
+        />
+        <p class="ex-legend" aria-hidden="true" hidden={!vue.visibles.length}>
+          <span class="is-main">
+            <i></i>Étape suivie par la plupart des parcours
+          </span>
+          <span>
+            <i></i>Étape suivie par certains
+          </span>
+          <span class="is-pit">
+            <i></i>Piège fréquent à cette étape
+          </span>
+        </p>
+        <ol class="ex-guides" data-guides set:html={vue.lignes} />
+        <div
+          class="ex-none"
+          data-none
+          hidden={!index || vue.visibles.length > 0}
+          set:html={vue.aucun}
+        />
+        <section
+          class="ex-matches"
+          aria-labelledby="ex-matches-title"
+          data-matches
+          hidden={!recherche.length}
+        >
+          <h3 id="ex-matches-title">Parcours qui correspondent</h3>
+          <ul data-matches-list set:html={correspondances(recherche, vue.jetons)} />
+        </section>
+      </div>
+    </section>
+
+    <section class="ex-requests" aria-labelledby="ex-requests-title">
+      <div class="container ex-requests-inner">
+        <div class="ex-requests-intro">
+          <p class="kicker">
+            <Fragment set:html={icone('flag', '')} />À documenter
+          </p>
+          <h2 id="ex-requests-title">Ce que la communauté cherche encore</h2>
+          <p>
+            Ces objectifs n’ont pas encore de guide. Le premier parcours publié ouvre le guide et
+            fait de son auteur la référence du sujet.
+          </p>
+          <div class="ex-requests-actions">
+            <a class="btn btn-primary" href={ROUTES.publier}>
+              Publier un parcours
+              <Fragment set:html={icone('arrow')} />
+            </a>
+            <a class="link-arrow" href={ROUTES.nouveauSujet}>
+              Poser une question
+              <Fragment set:html={icone('arrow')} />
+            </a>
+          </div>
+        </div>
+        <ol class="ex-requests-list" data-requests set:html={demandesHTML(index?.demandes ?? [])} />
+      </div>
+    </section>
+  </div>
+
+  <div class="ex-view" data-view="guide" hidden={guide === null}>
+    <div class="container ex-guide-layout">
+      <aside class="ex-guide-nav" aria-labelledby="ex-guide-nav-title">
+        <a class="ex-back" href={ROUTES.explorer} data-back>
+          <Fragment set:html={icone('chevron-left')} />
+          Tous les guides
+        </a>
+        <h2 id="ex-guide-nav-title" class="sr-only">
+          Autres guides
+        </h2>
+        <ul data-guide-nav set:html={guide ? navigationGuides(guide) : ''} />
+      </aside>
+      <article
+        class="ex-guide"
+        data-guide
+        aria-labelledby="ex-guide-title"
+        set:html={etatGuide ? vueGuide(etatGuide) : ''}
+      />
+    </div>
+  </div>
+
+  <Fragment slot="fin">
+    <div class="ex-compare-bar" data-compare-bar hidden>
+      <div class="container ex-compare-bar-inner">
+        <p data-compare-text role="status" aria-live="polite"></p>
+        <button class="link-btn" type="button" data-compare-clear>
+          Effacer
+        </button>
+        <button class="btn btn-primary btn-sm" type="button" data-compare-open>
+          Comparer les parcours
+        </button>
+      </div>
+    </div>
+
+    <dialog class="ex-dialog ex-compare" aria-labelledby="ex-compare-title" data-compare-dialog>
+      <div class="ex-dialog-head">
+        <h2 id="ex-compare-title">Comparer les parcours</h2>
+        <button class="icon-btn" type="button" aria-label="Fermer la comparaison" data-close-dialog>
+          <Fragment set:html={icone('close', '')} />
+        </button>
+      </div>
+      <div class="ex-compare-body" data-compare-body></div>
+    </dialog>
+
+    <dialog
+      class="ex-dialog ex-propose"
+      aria-labelledby="ex-propose-title"
+      aria-describedby="ex-propose-desc"
+      data-propose-dialog
+    >
+      <form class="ex-propose-form" data-propose-form novalidate>
+        <div class="ex-dialog-head">
+          <div>
+            <h2 id="ex-propose-title">Signaler un piège</h2>
+            <p id="ex-propose-desc">
+              Guide «&nbsp;<span data-propose-guide></span>&nbsp;». Décrivez ce qui s’est mal passé
+              et ce qui vous a permis de corriger&nbsp;: votre signalement est relu avant
+              d’apparaître dans le guide.
+            </p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="Fermer" data-close-dialog>
+            <Fragment set:html={icone('close', '')} />
+          </button>
+        </div>
+        <div class="ex-form-body">
+          <div class="ex-field-group">
+            <label class="ex-label" for="pp-title">
+              Le piège rencontré <span>Obligatoire</span>
+            </label>
+            <textarea
+              id="pp-title"
+              name="titre"
+              rows="2"
+              required
+              maxlength="300"
+              aria-describedby="pp-title-help pp-title-error"
+            ></textarea>
+            <p class="ex-help" id="pp-title-help">
+              Une phrase suffit, par exemple&nbsp;: «&nbsp;Les créneaux pris restaient réservables
+              depuis un autre onglet.&nbsp;»
+            </p>
+            <p class="ex-error" id="pp-title-error" hidden></p>
+          </div>
+          <div class="ex-field-group">
+            <label class="ex-label" for="pp-step">
+              Étape concernée <span>Facultatif</span>
+            </label>
+            <div class="ex-select">
+              <select id="pp-step" name="etapeId" data-propose-steps></select>
+              <Fragment set:html={icone('chevron-down')} />
+            </div>
+          </div>
+          <div class="ex-field-group">
+            <label class="ex-label" for="pp-fix">
+              Ce qui a fonctionné <span>Facultatif</span>
+            </label>
+            <textarea
+              id="pp-fix"
+              name="solution"
+              rows="3"
+              maxlength="1500"
+              aria-describedby="pp-fix-error"
+            ></textarea>
+            <p class="ex-error" id="pp-fix-error" hidden></p>
+          </div>
+          <div class="ex-field-group">
+            <label class="ex-label" for="pp-tool">
+              Outil et modèle <span>Facultatif</span>
+            </label>
+            <input
+              id="pp-tool"
+              name="outil"
+              type="text"
+              autocomplete="off"
+              maxlength="100"
+              placeholder={typo('Par exemple : Claude Sonnet 4.5')}
+              aria-describedby="pp-tool-error"
+            />
+            <p class="ex-error" id="pp-tool-error" hidden></p>
+          </div>
+        </div>
+        <div class="ex-dialog-foot">
+          <button class="link-btn" type="button" data-close-dialog>
+            Annuler
+          </button>
+          <button class="btn btn-primary" type="submit">
+            Envoyer le signalement
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog
+      class="ex-dialog ex-tools"
+      aria-labelledby="ex-tools-title"
+      aria-describedby="ex-tools-desc"
+      data-tools-dialog
+    >
+      <form method="dialog" class="ex-tools-form">
+        <div class="ex-dialog-head">
+          <div>
+            <h2 id="ex-tools-title">Mes outils</h2>
+            <p id="ex-tools-desc">
+              Sélectionnez les outils que vous utilisez. Les guides indiquent ensuite ce qui a déjà
+              été testé avec eux.
+            </p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="Fermer" data-close-tools>
+            <Fragment set:html={icone('close', '')} />
+          </button>
+        </div>
+        <label class="ex-tools-search">
+          <Fragment set:html={icone('search')} />
+          <span class="sr-only">Rechercher un outil</span>
+          <input
+            type="search"
+            placeholder="Rechercher un outil"
+            autocomplete="off"
+            data-tools-filter
+          />
+        </label>
+        <div class="ex-tools-list" data-tools-list></div>
+        <div class="ex-dialog-foot">
+          <button class="link-btn" type="button" data-tools-reset>
+            Effacer la sélection
+          </button>
+          <button class="btn btn-primary" type="submit" value="save" data-tools-save>
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="application/json" id="ex-donnees" set:html={json} />
+  </Fragment>
+</Base>
+
+<script>
+  import '../scripts/explorer';
+</script>

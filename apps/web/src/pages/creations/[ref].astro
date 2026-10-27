@@ -267,7 +267,14 @@ const icones = [
             <span aria-hidden="true">/</span>
           </>
         )}
-        <span>Création</span>
+        {
+          /* Prototype (fiches-explorer.js : linkToGuide) : le guide de la création remplace « Création ». */
+          fiche.guide ? (
+            <a href={ROUTES.guide(fiche.guide.slug)}>{fiche.guide.titreCourt}</a>
+          ) : (
+            <span>Création</span>
+          )
+        }
       </nav>
       {auteur ? (
         <div class="creation-status" data-status>
@@ -936,11 +943,17 @@ const icones = [
       </section>
 
       <div class="creation-bottom">
-        <a href={ROUTES.explorer}>
+        <a
+          href={
+            fiche.guide ? `${ROUTES.guide(fiche.guide.slug)}#parcours-${fiche.id}` : ROUTES.explorer
+          }
+        >
           <svg class="icon" aria-hidden="true">
             <use href="#i-chevron-left" />
           </svg>{' '}
-          Retour aux créations
+          {fiche.guide
+            ? typo(`Retour au guide « ${fiche.guide.titreCourt} »`)
+            : 'Retour aux créations'}
         </a>
         <button
           class="text-button"

@@ -4,6 +4,8 @@
 export const ROUTES = {
   accueil: '/',
   explorer: '/explorer',
+  /** Guide d'un objectif dans Explorer (prototype : explorer.html?guide=rendez-vous). */
+  guide: (slug: string) => `/explorer?guide=${encodeURIComponent(slug)}`,
   forum: '/forum',
   nouveauSujet: '/forum/nouveau',
   /** Sujet du forum (/forum/12-comment-verifier-un-script), page portée par FORUM-02. */
