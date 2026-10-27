@@ -1,0 +1,213 @@
+---
+/* Paramètres (PARAM-01, EC-17 ; F-06, F-07, F-08), portée de prototype/parametres.html : compte,
+   connexion et sécurité, notifications, données et suppression du compte du membre connecté. Le
+   serveur pose dans la page les paramètres (GET /api/v1/moi/parametres) et les documents en vigueur ;
+   le rail, les rubriques, les formulaires et les fenêtres sont construits par scripts/parametres.ts,
+   comme dans le prototype. Le lien de confirmation d'une nouvelle adresse (?email=…) est lu ici, puis
+   retiré de l'adresse : la page recommence sans le jeton (?adresse=confirmee). */
+import type { DocumentLegalApi, EmailConfirmeApi, ParametresApi } from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { blocAccesHtml, contexteServeur, messageAcces } from '../lib/acces';
+import { ErreurApi, appelerApi } from '../lib/api';
+import type { Icone } from '../lib/icones';
+import { ROUTES } from '../lib/navigation';
+import '../styles/parametres.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const jeton = Astro.url.searchParams.get('email');
+if (jeton) {
+  let issue = 'expiree';
+  try {
+    await appelerApi<EmailConfirmeApi>('/api/v1/comptes/email/confirmation', {
+      corps: { jeton },
+      requete: Astro.request,
+      adresseClient,
+    });
+    issue = 'confirmee';
+  } catch (erreur) {
+    if (erreur instanceof ErreurApi && erreur.probleme.status === 409) issue = 'prise';
+  }
+  return Astro.redirect(`${ROUTES.parametres}?adresse=${issue}#compte`, 303);
+}
+
+const { etat, membre } = Astro.locals;
+const estMembre = etat.session === 'membre' && membre !== null;
+
+let parametres: ParametresApi | null = null;
+let documents: DocumentLegalApi[] = [];
+if (estMembre) {
+  try {
+    [parametres, documents] = await Promise.all([
+      appelerApi<ParametresApi>('/api/v1/moi/parametres', {
+        requete: Astro.request,
+        adresseClient,
+      }),
+      appelerApi<DocumentLegalApi[]>('/api/v1/documents-legaux', {
+        requete: Astro.request,
+        adresseClient,
+      }),
+    ]);
+  } catch {
+    // La page s'affiche quand même : le script présente l'erreur et propose de réessayer.
+    parametres = null;
+  }
+}
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+const donnees = estMembre
+  ? JSON.stringify({ parametres, documents }).replaceAll('<', '\\u003c')
+  : '';
+
+const accesVisiteur = estMembre
+  ? ''
+  : blocAccesHtml(
+      messageAcces(
+        'connexion',
+        'gérer vos paramètres',
+        contexteServeur(Astro.locals, Astro.url, Astro.site),
+      ),
+    );
+
+const icones = [
+  'arrow',
+  'arrow-up-right',
+  'check',
+  'check-circle',
+  'chevron-down',
+  'close',
+  'user',
+  'users',
+  'bell',
+  'mail',
+  'message',
+  'repeat',
+  'award',
+  'lock',
+  'shield',
+  'alert',
+  'info',
+  'download',
+  'trash',
+  'monitor',
+  'phone',
+  'clock',
+  'doc',
+  'fichier',
+  'link',
+  'logout',
+  'replay',
+  'eye',
+  'wifi-off',
+];
+
+/* Tracés propres à la page Paramètres du prototype (sprite de parametres.html). */
+const remplacementsIcones: Record<string, Icone> = {
+  trash: {
+    viewBox: '0 0 24 24',
+    corps:
+      '<path d="M4 6.5h16M9.5 6.5V4.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2"/><path d="M6 6.5 7 20a1.5 1.5 0 0 0 1.5 1.4h7A1.5 1.5 0 0 0 17 20l1-13.5"/><path d="M10 11v6M14 11v6"/>',
+  },
+  monitor: {
+    viewBox: '0 0 24 24',
+    corps: '<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8.5 21h7M12 17v4"/>',
+  },
+  phone: {
+    viewBox: '0 0 24 24',
+    corps: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  },
+  link: {
+    viewBox: '0 0 24 24',
+    corps:
+      '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L11.6 6"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.6-1.6"/>',
+  },
+};
+---
+
+<Base
+  titre="Paramètres"
+  description="Pseudo, adresse e-mail, mot de passe, notifications et données de votre compte Vysora."
+  classeCorps="pa"
+  reglages={{ intertitres: 'icone' }}
+  icones={icones}
+  remplacementsIcones={remplacementsIcones}
+  nonIndexee
+>
+  <div class="container pa-tete">
+    <nav class="pa-ariane" aria-label="Fil d’Ariane" data-pa-ariane>
+      <ol>
+        {estMembre && membre ? (
+          <li>
+            <a href={ROUTES.profil(membre.pseudo)}>Mon profil</a>
+          </li>
+        ) : (
+          <li>
+            <a href={ROUTES.accueil}>Accueil</a>
+          </li>
+        )}
+        <li>
+          <span aria-current="page">Paramètres</span>
+        </li>
+      </ol>
+    </nav>
+    <h1>Paramètres</h1>
+    <div class="pa-qui" data-pa-qui hidden={!estMembre}></div>
+  </div>
+
+  <div class="container pa-acces" data-pa-acces hidden={estMembre}>
+    {!estMembre && (
+      <div class="pa-acces-in">
+        <div>
+          <Fragment set:html={accesVisiteur} />
+        </div>
+        <div class="pa-illu" aria-hidden="true">
+          <div class="pa-illu-rail">
+            {['user', 'lock', 'bell', 'download', 'trash'].map((icone, i) => (
+              <span class:list={{ 'is-actif': i === 0 }} style={`--i:${i}`}>
+                <svg class="icon" aria-hidden="true">
+                  <use href={`#i-${icone}`} />
+                </svg>
+                <i />
+              </span>
+            ))}
+          </div>
+          <div class="pa-illu-corps">
+            <i class="pa-illu-titre" />
+            {[
+              ['', 'is-long'],
+              ['is-switch', ''],
+              ['', 'is-court'],
+              ['is-bouton', ''],
+            ].map(([fin, valeur], i) => (
+              <div class="pa-illu-ligne" style={`--i:${i + 1}`}>
+                <i />
+                <i class={valeur || undefined} />
+                <span class={fin || undefined} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <div class="container pa-corps" data-pa-corps hidden={!estMembre}>
+    <nav class="pa-rail" aria-label="Rubriques des paramètres" data-pa-rail></nav>
+    <div class="pa-rubriques" data-pa-rubriques></div>
+  </div>
+  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-pa-annonce></p>
+
+  <dialog class="pa-dialogue" aria-labelledby="pa-dialogue-titre" data-pa-dialogue></dialog>
+
+  <Fragment slot="fin">
+    {donnees && <script type="application/json" id="pa-donnees" set:html={donnees} />}
+  </Fragment>
+</Base>
+
+<script>
+  import '../scripts/parametres';
+</script>
