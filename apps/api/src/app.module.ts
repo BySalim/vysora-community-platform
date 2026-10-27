@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { DroitsGuard } from './modules/auth/droits.js';
 import { ContactModule } from './modules/contact/contact.module.js';
 import { CreationsModule } from './modules/creations/creations.module.js';
+import { DecouverteModule } from './modules/decouverte/decouverte.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { FileModule } from './modules/file/file.module.js';
 import { ForumModule } from './modules/forum/forum.module.js';
@@ -72,6 +73,7 @@ import { TachesModule } from './modules/taches/taches.module.js';
     ForumModule,
     ApprentissageModule,
     MembresModule,
+    DecouverteModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: FiltreErreurs },

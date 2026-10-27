@@ -51,6 +51,21 @@ export const LONGUEURS = {
   precisionSignalement: { max: 1000 },
   contactNom: { max: 100 },
   contactMessage: { min: 20, max: 5000 },
+  // Guides d'Explorer (extension, prototype explorer.html) : rédigés par l'équipe.
+  guideTitre: { max: 150 },
+  guideTitreCourt: { max: 80 },
+  guideMotCle: { max: 40 },
+  guideLacune: { max: 300 },
+  guideEtapeTitre: { max: 150 },
+  guideConseil: { max: 1000 },
+  guideCitation: { max: 5000 },
+  guidePiegeTitre: { max: 200 },
+  guideSolution: { max: 1000 },
+  demandeGuide: { max: 120 }, // « Ce que la communauté cherche encore »
+  // « Signaler un piège » (prototype : une phrase d'au moins 15 caractères).
+  propositionPiegeTitre: { min: 15, max: 300 },
+  propositionPiegeSolution: { max: 1500 },
+  propositionPiegeOutil: { max: 100 },
 } as const;
 
 /** Quantités maximales. */
@@ -70,6 +85,8 @@ export const LIMITES = {
   essaisParEchange: 1000,
   // Brouillons d'un membre (aucune règle ne les limite ; chacun peut porter 20 images) : garde-fou de CREA-02.
   brouillonsParMembre: 50,
+  // Pièges proposés par un membre et pas encore relus (garde-fou de DEC-01, aucune règle ne les limite).
+  propositionsPiegeEnRelecture: 20,
 } as const;
 
 /** Seuils d'affichage et de déclenchement. */
@@ -109,6 +126,9 @@ export const DELAIS = {
   suspensionJours: { min: 1, max: 90 }, // F-91
   defiJours: { min: 1, max: 30 }, // RG-73
   traitementSignalementHeures: 72, // RG-105
+  populariteJours: 7, // RG-32 : votes « Utile » des 7 derniers jours glissants
+  // Explorer (prototype) : « 23 personnes le cherchent ce mois-ci » compte les 30 derniers jours.
+  demandesGuideJours: 30,
   sessionJours: 30,
   // Politique de confidentialité, « Durées de conservation » (appliquées chaque jour, EMAIL-01).
   conservationNotificationsMois: 12, // « Vous informer »

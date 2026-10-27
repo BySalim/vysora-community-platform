@@ -195,6 +195,13 @@ export type DifficulteCas = (typeof DIFFICULTES_CAS)[number];
 export const STATUTS_VALIDATION_CAS = valeurs('PROPOSE', 'VALIDE', 'REFUSE');
 export type StatutValidationCas = (typeof STATUTS_VALIDATION_CAS)[number];
 
+/* Guides d'Explorer (extension, prototype explorer.html) ---------------------- */
+
+/** Extension (prototype, « Signaler un piège ») : un piège proposé par un membre est relu par
+    l'équipe avant de rejoindre le guide. */
+export const STATUTS_PROPOSITION_PIEGE = valeurs('EN_RELECTURE', 'RETENUE', 'ECARTEE');
+export type StatutPropositionPiege = (typeof STATUTS_PROPOSITION_PIEGE)[number];
+
 /* Modération ---------------------------------------------------------------- */
 
 /** RG-100 */

@@ -33,6 +33,8 @@ export interface ContenuExportApi {
   enregistrements: number;
   badges: number;
   mouvements: number;
+  /** Explorer (DEC-01) : listes de contrôle, pièges signalés et objectifs cherchés. */
+  explorer: number;
 }
 
 /** F-07, WF-22 : aucune demande, préparation (EN_COURS), fichier prêt (7 jours), lien expiré. */

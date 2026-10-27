@@ -589,6 +589,7 @@ function exportHTML(): string {
     ['Contenus enregistrés', c.enregistrements],
     ['Badges', c.badges],
     ['Mouvements de réputation', c.mouvements],
+    ['Listes de contrôle, pièges signalés et objectifs cherchés', c.explorer],
   ];
   const pret = x.etat === 'PRET';
   const arbre = `<div class="pa-fichier${pret ? ' is-pret' : ''}">

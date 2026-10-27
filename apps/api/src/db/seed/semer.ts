@@ -53,7 +53,14 @@ export async function semer(db: BaseDeDonnees): Promise<void> {
       .values(
         CATEGORIES.map((c, ordre) => ({ ...c, slug: slugifier(c.libelle), ordreAffichage: ordre })),
       )
-      .onConflictDoUpdate({ target: categorie.libelle, set: { icone: propose('icone') } });
+      .onConflictDoUpdate({
+        target: categorie.libelle,
+        // La présentation d'un domaine (DEC-01) n'est remplie que si l'administration ne l'a pas écrite.
+        set: {
+          icone: propose('icone'),
+          description: sql`coalesce(${categorie.description}, ${propose('description')})`,
+        },
+      });
 
     const nomsEditeurs = [
       ...new Set([...OUTILS.map((o) => o.editeur), ...MODELES.map((m) => m.editeur)]),

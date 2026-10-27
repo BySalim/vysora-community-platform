@@ -4,9 +4,12 @@ import { resolve } from 'node:path';
 import type {
   CasApi,
   CreationFicheApi,
+  GuideApi,
+  GuidesApi,
   ListeCasApi,
   ListeSujetsApi,
   NotificationsApi,
+  RechercheCreationsApi,
   ReponseCasApi,
   SessionApi,
   SujetApi,
@@ -23,6 +26,7 @@ import {
 } from '../src/db/demo/charger.js';
 import { CAS } from '../src/db/demo/donnees/bon-reflexe.js';
 import { CREATIONS } from '../src/db/demo/donnees/creations.js';
+import { DEMANDES, GUIDES } from '../src/db/demo/donnees/guides.js';
 import { MEMBRES } from '../src/db/demo/donnees/membres.js';
 import { MOT_DE_PASSE_DEMO } from '../src/db/demo/identifiants.js';
 import { media, utilisateur } from '../src/db/schema/index.js';
@@ -65,6 +69,15 @@ const TABLES = [
   'mouvement_reputation',
   'media',
   'notification',
+  'recherche_document',
+  'guide',
+  'guide_contenu',
+  'guide_etape',
+  'guide_etape_source',
+  'guide_piege',
+  'guide_piege_source',
+  'demande_guide',
+  'soutien_demande',
 ] as const;
 
 /** Images du prototype attendues : résultats des créations et images jointes aux échanges. */
@@ -108,12 +121,12 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
 
   beforeAll(async () => {
     contexte = await demarrerApplication();
-    await vider(contexte.db, 'utilisateur');
+    await vider(contexte.db, 'utilisateur', 'guide', 'demande_guide');
     bilan = await charger('test');
   }, 180_000);
 
   afterAll(async () => {
-    await vider(contexte.db, 'utilisateur');
+    await vider(contexte.db, 'utilisateur', 'guide', 'demande_guide');
     await contexte.app.close();
   });
 
@@ -154,8 +167,11 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
         messages: 39,
         cas: 8,
         enregistrements: 8,
-        // RG-31 : 17 sujets et 8 cas validés.
-        documents: 25,
+        // RG-31 : 45 créations publiées, 17 sujets et 8 cas validés.
+        documents: CREATIONS.filter((c) => c.publication).length + 25,
+        // DEC-01 : guides et demandes d'Explorer.
+        guides: GUIDES.length,
+        demandes: DEMANDES.length,
       });
       expect(bilan.reproductions).toBeGreaterThan(250);
       expect(bilan.votes).toBeGreaterThan(1500);
@@ -583,6 +599,73 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
       expect(reponse).toMatchObject({ correcte: true, enregistree: false, date: null });
       expect(reponse.correction.reponses).toBe(trouve?.reponses);
       expect(reponse.correction.options.reduce((total, o) => total + o.part, 0)).toBe(100);
+    });
+  });
+
+  describe('Explorer (DEC-01)', () => {
+    const lire = (adresse: string) =>
+      request(contexte.app.getHttpServer())
+        .get(adresse)
+        .set('X-Forwarded-For', ipDeTest())
+        .expect(200);
+
+    it('présente les guides du prototype, leurs chiffres calculés et les demandes', async () => {
+      const index = (await lire('/api/v1/guides')).body as GuidesApi;
+      expect(index.elements.map((g) => g.slug).toSorted()).toEqual(
+        GUIDES.map((g) => g.cle).toSorted(),
+      );
+      const rdv = index.elements.find((g) => g.slug === 'rendez-vous');
+      expect(rdv).toMatchObject({
+        titreCourt: 'Prise de rendez-vous en ligne',
+        domaine: {
+          slug: 'application-web',
+          icone: 'browser',
+          description: expect.stringMatching(/^Réservations, formulaires/),
+        },
+        parcours: 4,
+        pieges: 4,
+        piegePrincipal: { titre: 'Deux personnes réservent le même créneau', signale: 3 },
+      });
+      // Prototype : chaque étape est suivie par 4, 4, 3, 2 et 2 parcours sur 4.
+      expect(rdv?.etapes.map((e) => e.suivie)).toEqual([4, 4, 3, 2, 2]);
+      expect(rdv?.reproductions).toBeGreaterThan(0);
+      expect(rdv?.vignettes).toHaveLength(3);
+      expect(index.totaux.parcours).toBe(36);
+      expect(index.demandes.map((d) => [d.libelle, d.soutiens, d.soutenue])).toEqual(
+        DEMANDES.map((d) => [d.libelle, d.soutiens, false]),
+      );
+      expect(index.souventCherches).toHaveLength(6);
+    });
+
+    it('détaille un guide : méthode, pièges, modèles, parcours, cas et questions', async () => {
+      const g = (await lire('/api/v1/guides/rendez-vous')).body as GuideApi;
+      expect(g.methode[0]?.citation?.texte).toMatch(/^Les séances durent 30 ou 45 minutes/);
+      expect(g.parcours[0]).toMatchObject({
+        titre: 'Prise de rendez-vous pour un salon de coiffure',
+        auteur: { pseudo: 'aissatou-ndiaye' },
+        outils: [{ outil: { nom: 'Claude' }, modele: 'Sonnet 4.5' }],
+      });
+      expect(g.pieges[0]).toMatchObject({
+        titre: 'Deux personnes réservent le même créneau',
+        sujet: { slug: expect.any(String) },
+        casId: g.cas[0]?.id,
+      });
+      expect(g.modeles[0]?.reproduit.length).toBeGreaterThan(0);
+      expect([g.cas.length, g.sujets.length, g.voisins.length, g.autres.length]).toEqual([
+        1, 2, 3, 11,
+      ]);
+      expect(g.moi).toBeNull();
+    });
+
+    it('trouve les parcours par la recherche plein texte, avec leur guide (RG-31)', async () => {
+      const resultats = (await lire('/api/v1/recherche/creations?q=réservation'))
+        .body as RechercheCreationsApi;
+      expect(resultats.elements).toContainEqual(
+        expect.objectContaining({
+          titre: 'Prise de rendez-vous pour un salon de coiffure',
+          guide: { slug: 'rendez-vous', titreCourt: 'Prise de rendez-vous en ligne' },
+        }),
+      );
     });
   });
 

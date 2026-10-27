@@ -201,6 +201,45 @@ export interface DefiDemo {
   statut: 'PUBLIE' | 'CLOTURE';
 }
 
+/** Guide d'Explorer (prototype : objectives). Créations, sujets et cas sont désignés par leur clé. */
+export interface GuideDemo {
+  cle: string;
+  /** Libellé de la catégorie (domaine). */
+  domaine: string;
+  titre: string;
+  titreCourt: string;
+  motsCles: string[];
+  etapes: {
+    titre: string;
+    conseil: string;
+    sources: string[];
+    /** Création citée et son prompt, en texte exact. */
+    citation?: string;
+    citationTexte?: string;
+  }[];
+  pieges: {
+    titre: string;
+    solution: string;
+    sources: string[];
+    /** Rang de l'étape où le piège se présente. */
+    etape?: number;
+    sujet?: string;
+    cas?: string;
+  }[];
+  lacunes: string[];
+  parcours: string[];
+  sujets: string[];
+  cas: string[];
+}
+
+/** « Ce que la communauté cherche encore » (prototype : requests). */
+export interface DemandeGuideDemo {
+  libelle: string;
+  domaine: string;
+  /** Membres qui le cherchent ce mois-ci. */
+  soutiens: number;
+}
+
 export interface EnregistrementDemo {
   membre: string;
   contenu: { creation: string } | { sujet: string } | { cas: string };

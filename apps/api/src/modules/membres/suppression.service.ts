@@ -27,10 +27,13 @@ import {
   doubleAuthentification,
   enregistrement,
   jeton,
+  listeControle,
   media,
   notification,
   preferenceNotification,
+  propositionPiege,
   session,
+  soutienDemande,
   tentativeConnexion,
   utilisateur,
 } from '../../db/schema/index.js';
@@ -218,8 +221,13 @@ export class SuppressionService {
   }
 
   /** Ce qui ne concerne que le membre : sessions, liens, préférences, notifications, acceptations,
-      contenus enregistrés, comptes liés, tentatives de connexion, autres demandes. */
+      contenus enregistrés, comptes liés, tentatives de connexion, autres demandes, et dans Explorer
+      ses listes de contrôle, ses pièges signalés (un piège retenu a été réécrit dans le guide par
+      l'équipe) et les objectifs qu'il cherchait. */
   private async effacerDonneesPersonnelles(tx: Executeur, id: number): Promise<void> {
+    await tx.delete(listeControle).where(eq(listeControle.utilisateurId, id));
+    await tx.delete(propositionPiege).where(eq(propositionPiege.auteurId, id));
+    await tx.delete(soutienDemande).where(eq(soutienDemande.utilisateurId, id));
     await tx.delete(session).where(eq(session.utilisateurId, id));
     await tx.delete(jeton).where(eq(jeton.utilisateurId, id));
     await tx.delete(compteExterne).where(eq(compteExterne.utilisateurId, id));

@@ -5,5 +5,6 @@ export * from './comptes.js';
 export * from './contenus.js';
 export * from './creations.js';
 export * from './forum.js';
+export * from './guides.js';
 export * from './moderation.js';
 export * from './technique.js';

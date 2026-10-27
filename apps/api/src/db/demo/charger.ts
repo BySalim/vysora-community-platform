@@ -13,6 +13,7 @@ import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { indexerCas } from '../../modules/apprentissage/contenu-cas.js';
 import { DocumentsLegauxService } from '../../modules/auth/documents-legaux.service.js';
 import { hacherMotDePasse } from '../../modules/auth/mots-de-passe.service.js';
+import { indexer as indexerCreation } from '../../modules/creations/contenu-creation.js';
 import { indexerSujet } from '../../modules/forum/contenu-sujet.js';
 import { enregistrerImage } from '../../modules/medias/medias.service.js';
 import { ecrireDeclinaisons, type Stockage } from '../../modules/medias/stockage.js';
@@ -33,10 +34,17 @@ import {
   contenuEtiquette,
   creation,
   defi,
+  demandeGuide,
   echange,
   enregistrement,
   etape,
   etiquette,
+  guide,
+  guideContenu,
+  guideEtape,
+  guideEtapeSource,
+  guidePiege,
+  guidePiegeSource,
   licence,
   lienExterne,
   media,
@@ -51,6 +59,7 @@ import {
   rechercheDocument,
   reproduction,
   signalementObsolescence,
+  soutienDemande,
   sujet,
   utilisateur,
   vote,
@@ -59,9 +68,17 @@ import { CAS } from './donnees/bon-reflexe.js';
 import { CREATIONS, RETOURS_REPRODUCTION } from './donnees/creations.js';
 import { DEFIS } from './donnees/defis.js';
 import { SUJETS } from './donnees/forum.js';
+import { DEMANDES, GUIDES } from './donnees/guides.js';
 import { ENREGISTREMENTS, MEMBRES } from './donnees/membres.js';
 import { MOT_DE_PASSE_DEMO } from './identifiants.js';
-import type { CasDemo, ConfigurationDemo, CreationDemo, ImageDemo, SujetDemo } from './types.js';
+import type {
+  CasDemo,
+  ConfigurationDemo,
+  CreationDemo,
+  GuideDemo,
+  ImageDemo,
+  SujetDemo,
+} from './types.js';
 
 /* DEMO-01 : données de démonstration tirées du prototype, pour le développement et la préproduction.
    - Jamais en production : refus si NODE_ENV vaut production.
@@ -78,7 +95,9 @@ import type { CasDemo, ConfigurationDemo, CreationDemo, ImageDemo, SujetDemo } f
      que les envois des membres (MEDIA-01). Elles sont ajoutées aux membres et aux créations qui n'en ont aucune,
      y compris dans une base chargée avant leur arrivée.
    - DEMO-03 : les résultats que le prototype dessinait en HTML (réservation, tableau de bord, schéma, logo,
-     affiches typographiques…) sont des captures de ses fiches (db/demo/captures), chargées de la même façon. */
+     affiches typographiques…) sont des captures de ses fiches (db/demo/captures), chargées de la même façon.
+   - DEC-01 : les guides d'Explorer et ce que la communauté cherche encore (explorer-data.js) ; les créations
+     publiées reçoivent leur document de recherche, y compris dans une base chargée avant leur arrivée. */
 
 /** « Maintenant » du prototype (forum-data.js, classements-data.js). */
 export const MAINTENANT_PROTOTYPE = new Date('2026-10-13T16:20:00Z');
@@ -126,8 +145,12 @@ export interface BilanDemo {
   completes: number;
   /** Notifications tirées des données chargées (NOTIF-01). */
   notifications: number;
-  /** Documents de recherche des sujets (RG-31), ajoutés aussi à une base chargée avant FORUM-01. */
+  /** Documents de recherche des créations, sujets et cas (RG-31), ajoutés aussi à une base chargée
+      avant leur arrivée. */
   documents: number;
+  /** Guides d'Explorer et demandes de la communauté (DEC-01). */
+  guides: number;
+  demandes: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -150,6 +173,8 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     await completerFidelite(ctx);
     await chargerCommentaires(ctx);
     await completerRecherche(ctx);
+    for (const g of GUIDES) await chargerGuide(ctx, g);
+    await chargerDemandes(ctx);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
@@ -178,6 +203,8 @@ export function decrireBilan(bilan: BilanDemo): string {
     [bilan.completes, 'élément complété', 'éléments complétés'],
     [bilan.notifications, 'notification', 'notifications'],
     [bilan.documents, 'document de recherche', 'documents de recherche'],
+    [bilan.guides, 'guide d’Explorer', 'guides d’Explorer'],
+    [bilan.demandes, 'demande de guide', 'demandes de guide'],
   ];
   const ajoutes = parties.filter(([nombre]) => nombre > 0);
   if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
@@ -291,6 +318,8 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
       completes: 0,
       notifications: 0,
       documents: 0,
+      guides: 0,
+      demandes: 0,
     },
   };
 }
@@ -1045,11 +1074,27 @@ async function chargerSujet(ctx: Contexte, s: SujetDemo): Promise<void> {
     voter(ctx, cible, 'TESTE_OK', nombreDeVotes(s.testes), periode);
 }
 
-/** RG-31 : document de recherche des sujets et des cas validés de démonstration, visibles, qui n'en
-    ont pas (le forum et la liste des cas les trouvent ; celui des créations viendra avec DEC-01). */
+/** RG-31 : document de recherche des créations publiées, des sujets et des cas validés de
+    démonstration, visibles, qui n'en ont pas (Explorer, le forum et la liste des cas les trouvent). */
 async function completerRecherche(ctx: Contexte): Promise<void> {
+  const creations = [...ctx.creations.values()];
   const sujets = [...ctx.sujets.values()];
   const cas = [...ctx.cas.values()];
+  const creationsSansDocument = creations.length
+    ? await ctx.tx
+        .select({ id: creation.id })
+        .from(creation)
+        .innerJoin(contenu, eq(contenu.id, creation.id))
+        .leftJoin(rechercheDocument, eq(rechercheDocument.contenuId, creation.id))
+        .where(
+          and(
+            inArray(creation.id, creations),
+            eq(contenu.statut, 'VISIBLE'),
+            eq(creation.statutPublication, 'PUBLIEE'),
+            isNull(rechercheDocument.contenuId),
+          ),
+        )
+    : [];
   const sujetsSansDocument = sujets.length
     ? await ctx.tx
         .select({ id: sujet.id })
@@ -1079,9 +1124,126 @@ async function completerRecherche(ctx: Contexte): Promise<void> {
           ),
         )
     : [];
+  for (const { id } of creationsSansDocument) await indexerCreation(ctx.tx, id);
   for (const { id } of sujetsSansDocument) await indexerSujet(ctx.tx, id);
   for (const { id } of casSansDocument) await indexerCas(ctx.tx, id);
-  ctx.bilan.documents += sujetsSansDocument.length + casSansDocument.length;
+  ctx.bilan.documents +=
+    creationsSansDocument.length + sujetsSansDocument.length + casSansDocument.length;
+}
+
+/* Explorer ------------------------------------------------------------------ */
+
+function cleConnue(carte: Map<string, number>, cle: string, nature: string): number {
+  const id = carte.get(cle);
+  if (id === undefined) throw new Error(`${nature} de démonstration inconnu(e) : ${cle}`);
+  return id;
+}
+
+/** DEC-01 : guide d'Explorer, repéré par son adresse ; un guide déjà en base n'est pas modifié. */
+async function chargerGuide(ctx: Contexte, g: GuideDemo): Promise<void> {
+  const [existant] = await ctx.tx.select({ id: guide.id }).from(guide).where(eq(guide.slug, g.cle));
+  if (existant) return;
+  const categorieId = ctx.categories.get(g.domaine);
+  if (categorieId === undefined) throw new Error(`Catégorie inconnue : ${g.domaine}`);
+  const creationDe = (cle: string) => cleConnue(ctx.creations, cle, 'Création');
+  const [ligne] = await ctx.tx
+    .insert(guide)
+    .values({
+      slug: g.cle,
+      titre: g.titre,
+      titreCourt: g.titreCourt,
+      categorieId,
+      motsCles: g.motsCles,
+      lacunes: g.lacunes,
+      datePublication: ctx.maintenant,
+      dateCreation: ctx.maintenant,
+    })
+    .returning({ id: guide.id });
+  if (!ligne) throw new Error('Guide non créé');
+  const guideId = ligne.id;
+
+  const contenus = [
+    ...g.parcours.map(creationDe),
+    ...g.sujets.map((cle) => cleConnue(ctx.sujets, cle, 'Sujet')),
+    ...g.cas.map((cle) => cleConnue(ctx.cas, cle, 'Cas')),
+  ];
+  await ctx.tx
+    .insert(guideContenu)
+    .values(contenus.map((contenuId, ordre) => ({ guideId, contenuId, ordre })));
+
+  const etapes: number[] = [];
+  for (const [ordre, e] of g.etapes.entries()) {
+    const [etapeGuide] = await ctx.tx
+      .insert(guideEtape)
+      .values({
+        guideId,
+        ordre,
+        titre: e.titre,
+        conseil: e.conseil,
+        citationCreationId: e.citation ? creationDe(e.citation) : null,
+        citationTexte: e.citation ? (e.citationTexte ?? null) : null,
+      })
+      .returning({ id: guideEtape.id });
+    if (!etapeGuide) throw new Error('Étape de guide non créée');
+    etapes.push(etapeGuide.id);
+    if (e.sources.length)
+      await ctx.tx
+        .insert(guideEtapeSource)
+        .values(e.sources.map((cle) => ({ etapeId: etapeGuide.id, creationId: creationDe(cle) })));
+  }
+  for (const [ordre, p] of g.pieges.entries()) {
+    const [piege] = await ctx.tx
+      .insert(guidePiege)
+      .values({
+        guideId,
+        ordre,
+        titre: p.titre,
+        solution: p.solution,
+        etapeId: p.etape === undefined ? null : (etapes[p.etape] ?? null),
+        sujetId: p.sujet ? cleConnue(ctx.sujets, p.sujet, 'Sujet') : null,
+        casId: p.cas ? cleConnue(ctx.cas, p.cas, 'Cas') : null,
+      })
+      .returning({ id: guidePiege.id });
+    if (!piege) throw new Error('Piège de guide non créé');
+    if (p.sources.length)
+      await ctx.tx
+        .insert(guidePiegeSource)
+        .values(p.sources.map((cle) => ({ piegeId: piege.id, creationId: creationDe(cle) })));
+  }
+  ctx.bilan.guides += 1;
+}
+
+/** « Ce que la communauté cherche encore » : chaque demande ajoutée est cherchée par autant de
+    membres de démonstration que dans le prototype. Les soutiens datent des 14 derniers jours : ils
+    restent comptés (30 jours) deux semaines après le chargement. */
+async function chargerDemandes(ctx: Contexte): Promise<void> {
+  const debut = new Date(ctx.maintenant.getTime() - 14 * JOUR);
+  for (const d of DEMANDES) {
+    const [ajoutee] = await ctx.tx
+      .insert(demandeGuide)
+      .values({
+        libelle: d.libelle,
+        categorieId: ctx.categories.get(d.domaine) ?? null,
+        dateCreation: debut,
+      })
+      .onConflictDoNothing({ target: demandeGuide.libelle })
+      .returning({ id: demandeGuide.id });
+    if (!ajoutee) continue;
+    const soutiens = choisirMembres(
+      ctx,
+      repartirDates(debut, ctx.maintenant, d.soutiens),
+      `demande:${d.libelle}`,
+    );
+    if (soutiens.length)
+      await ctx.tx.insert(soutienDemande).values(
+        soutiens.map(({ membre: m, date }) => ({
+          demandeId: ajoutee.id,
+          utilisateurId: m.id,
+          date,
+        })),
+      );
+    ctx.bilan.demandes += 1;
+  }
 }
 
 /* Bon réflexe --------------------------------------------------------------- */

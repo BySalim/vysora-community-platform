@@ -9,17 +9,19 @@ import type {
 /* Valeurs initiales des référentiels, reprises du prototype (data.js, nouvelle-creation-data.js,
    profil-data.js, auth-data.js) et des règles RG-20, RG-84 à RG-86. Elles sont ensuite administrées (F-95). */
 
-export const CATEGORIES: { libelle: string; icone: string }[] = [
-  { libelle: 'Application web', icone: 'browser' },
-  { libelle: 'Image et illustration', icone: 'image' },
-  { libelle: 'Texte et rédaction', icone: 'pen' },
-  { libelle: 'Code et scripts', icone: 'code' },
-  { libelle: 'Automatisation', icone: 'flow' },
-  { libelle: 'Analyse de données', icone: 'chart' },
-  { libelle: 'Vidéo', icone: 'film' },
-  { libelle: 'Musique et son', icone: 'music' },
-  { libelle: 'Éducation', icone: 'school' },
-  { libelle: 'Identité visuelle', icone: 'shapes' },
+/** Domaines d'Explorer (explorer-data.js : domains), avec leur présentation. */
+// prettier-ignore
+export const CATEGORIES: { libelle: string; icone: string; description: string }[] = [
+  { libelle: 'Application web', icone: 'browser', description: 'Réservations, formulaires, sites vitrines : les parcours pour construire une application qui fonctionne vraiment, sécurité comprise.' },
+  { libelle: 'Image et illustration', icone: 'image', description: 'Illustrations, photos réalistes, séries cohérentes : les méthodes pour obtenir l’image voulue, puis la garder d’une image à l’autre.' },
+  { libelle: 'Texte et rédaction', icone: 'pen', description: 'Lettres, réponses aux clients, traductions : des textes précis, au bon ton, sans formules toutes faites.' },
+  { libelle: 'Code et scripts', icone: 'code', description: 'Scripts, extensions, requêtes : faire écrire du code qui fait ce que l’on attend, et rien de plus.' },
+  { libelle: 'Automatisation', icone: 'flow', description: 'E-mails, factures, résumés : automatiser les tâches répétitives en gardant la main sur ce qui part.' },
+  { libelle: 'Analyse de données', icone: 'chart', description: 'Nettoyage, calculs, graphiques : des chiffres justes et des comparaisons honnêtes.' },
+  { libelle: 'Vidéo', icone: 'film', description: 'Teasers, animations, montages courts : rythme, cadrage et cohérence d’un plan à l’autre.' },
+  { libelle: 'Musique et son', icone: 'music', description: 'Génériques, voix off, ambiances : une durée, un rythme et un ton maîtrisés.' },
+  { libelle: 'Éducation', icone: 'school', description: 'Fiches, quiz, supports de révision : des contenus fidèles au cours, avec leurs sources.' },
+  { libelle: 'Identité visuelle', icone: 'shapes', description: 'Logos, palettes, typographies : une identité lisible partout, de l’emballage à l’écran.' },
 ];
 
 // prettier-ignore

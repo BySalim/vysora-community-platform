@@ -17,5 +17,7 @@ import { ReponsesCasService } from './reponses-cas.service.js';
   imports: [AuthModule, ProgressionModule, NotificationsModule],
   controllers: [ApprentissageController],
   providers: [ListeCasService, CasService, EcritureCasService, ReponsesCasService],
+  // Les guides d'Explorer (DEC-01) présentent leurs cas comme la page d'un cas.
+  exports: [CasService],
 })
 export class ApprentissageModule {}

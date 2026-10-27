@@ -17,19 +17,26 @@ import {
   contenu,
   creation,
   demandeDroit,
+  demandeGuide,
   documentLegal,
   echange,
   enregistrement,
   etape,
+  guide,
+  guideEtape,
+  guidePiege,
   licence,
+  listeControle,
   message,
   modele,
   mouvementReputation,
   obtentionBadge,
   optionReponse,
   outil,
+  propositionPiege,
   reproduction,
   session,
+  soutienDemande,
   sujet,
   utilisateur,
   vote,
@@ -203,6 +210,11 @@ export class ExportService implements OnModuleInit {
       this.db.$count(obtentionBadge, eq(obtentionBadge.utilisateurId, id)),
       this.db.$count(mouvementReputation, eq(mouvementReputation.beneficiaireId, id)),
     ]);
+    const [listes, pieges, demandes] = await Promise.all([
+      this.db.$count(listeControle, eq(listeControle.utilisateurId, id)),
+      this.db.$count(propositionPiege, eq(propositionPiege.auteurId, id)),
+      this.db.$count(soutienDemande, eq(soutienDemande.utilisateurId, id)),
+    ]);
     return {
       documents,
       creations,
@@ -213,12 +225,14 @@ export class ExportService implements OnModuleInit {
       enregistrements,
       badges,
       mouvements,
+      explorer: listes + pieges + demandes,
     };
   }
 
   /** F-07 : données du compte, acceptations des documents légaux, contributions (créations, sujets,
-      réponses, commentaires, essais, cas), votes émis, enregistrements, badges et mouvements de
-      réputation. Les contenus supprimés figurent avec leur statut : ils restent en base (RG-19). */
+      réponses, commentaires, essais, cas), votes émis, enregistrements, badges, mouvements de
+      réputation et ce que le membre a laissé dans Explorer (listes de contrôle, pièges signalés,
+      objectifs cherchés). Les contenus supprimés figurent avec leur statut : ils restent en base (RG-19). */
   async composer(id: number): Promise<Record<string, unknown>> {
     const [compte] = await this.db.select().from(utilisateur).where(eq(utilisateur.id, id));
     if (!compte) throw introuvable();
@@ -334,6 +348,76 @@ export class ExportService implements OnModuleInit {
         date: iso(m.date),
         contenu: m.contenu,
       })),
+      explorer: await this.explorer(id),
+    };
+  }
+
+  /** DEC-01 : listes de contrôle (titres cochés), pièges signalés et objectifs cherchés. */
+  private async explorer(id: number) {
+    const [listes, pieges, demandes] = await Promise.all([
+      this.db
+        .select({
+          guideId: listeControle.guideId,
+          guide: guide.slug,
+          etapes: listeControle.etapes,
+          pieges: listeControle.pieges,
+          date: listeControle.dateModification,
+        })
+        .from(listeControle)
+        .innerJoin(guide, eq(guide.id, listeControle.guideId))
+        .where(eq(listeControle.utilisateurId, id))
+        .orderBy(asc(guide.slug)),
+      this.db
+        .select({
+          guide: guide.slug,
+          titre: propositionPiege.titre,
+          solution: propositionPiege.solution,
+          outil: propositionPiege.outil,
+          date: propositionPiege.date,
+          statut: propositionPiege.statut,
+        })
+        .from(propositionPiege)
+        .innerJoin(guide, eq(guide.id, propositionPiege.guideId))
+        .where(eq(propositionPiege.auteurId, id))
+        .orderBy(asc(propositionPiege.date)),
+      this.db
+        .select({ objectif: demandeGuide.libelle, date: soutienDemande.date })
+        .from(soutienDemande)
+        .innerJoin(demandeGuide, eq(demandeGuide.id, soutienDemande.demandeId))
+        .where(eq(soutienDemande.utilisateurId, id))
+        .orderBy(asc(soutienDemande.date)),
+    ]);
+    const guides = listes.map((l) => l.guideId);
+    const [etapes, piegesGuides] = guides.length
+      ? await Promise.all([
+          this.db
+            .select({ id: guideEtape.id, titre: guideEtape.titre })
+            .from(guideEtape)
+            .where(inArray(guideEtape.guideId, guides)),
+          this.db
+            .select({ id: guidePiege.id, titre: guidePiege.titre })
+            .from(guidePiege)
+            .where(inArray(guidePiege.guideId, guides)),
+        ])
+      : [[], []];
+    const titres = (ids: number[], elements: { id: number; titre: string }[]) =>
+      elements.filter((e) => ids.includes(e.id)).map((e) => e.titre);
+    return {
+      listes_de_controle: listes.map((l) => ({
+        guide: l.guide,
+        etapes_cochees: titres(l.etapes, etapes),
+        pieges_evites: titres(l.pieges, piegesGuides),
+        modifiee_le: iso(l.date),
+      })),
+      pieges_signales: pieges.map((p) => ({
+        guide: p.guide,
+        piege: p.titre,
+        ce_qui_a_fonctionne: p.solution,
+        outil: p.outil,
+        statut: p.statut,
+        date: iso(p.date),
+      })),
+      objectifs_cherches: demandes.map((d) => ({ objectif: d.objectif, date: iso(d.date) })),
     };
   }
 
