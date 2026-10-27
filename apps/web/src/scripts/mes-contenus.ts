@@ -24,6 +24,7 @@ import { ROUTES } from '../lib/navigation';
 import { enPhrase, normaliser } from '../lib/texte';
 import { exiger } from './commun/acces';
 import { api } from './commun/api';
+import { etats } from './commun/etats';
 import {
   $,
   $$,
@@ -715,6 +716,17 @@ function demarrer(depart: Donnees): void {
       ];
     return [
       ['lien', 'eye', 'Voir la fiche', adresseCreation(c.api)],
+      // Prototype : « Voir sur mon profil », qui ouvre l'aperçu de la création sur le profil.
+      ...(etats.moi()
+        ? [
+            [
+              'lien',
+              'user',
+              'Voir sur mon profil',
+              `${ROUTES.profil(etats.moi()?.pseudo ?? '')}?creation=${c.id}`,
+            ] as Entree,
+          ]
+        : []),
       ['lien', 'pen', 'Modifier', editeur(c)],
       ['action', 'eye-off', 'Repasser en brouillon', 'depublier'],
       ['sep'],

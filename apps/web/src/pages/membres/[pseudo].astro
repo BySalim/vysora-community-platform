@@ -1,0 +1,407 @@
+---
+/* Profil public (PROF-01, EC-14, F-05, F-73, F-74), porté de prototype/profil.html : même balisage
+   et même feuille (profil.css), réglages du panneau Tweaks à leur valeur par défaut (en-tête aligné,
+   statistiques en bande, créations en mosaïque, progression en premier). Le prototype construisait
+   tout dans le navigateur ; ici le serveur rend la page avec les fonctions de lib/profil, que le
+   script reprend pour les filtres, la courbe, l'aperçu d'une création et la modification du profil.
+   Le propriétaire voit sa progression (RG-88) ; « ?vue=public » lui montre son profil comme les
+   autres membres le voient. */
+import { LONGUEURS, type ProfilApi } from '@vysora/shared';
+import Base from '../../layouts/Base.astro';
+import { appelerApi, ErreurApi } from '../../lib/api';
+import type { Icone } from '../../lib/icones';
+import { ROUTES } from '../../lib/navigation';
+import type { ContexteProfil } from '../../lib/profil/elements';
+import type { DonneesProfil } from '../../lib/profil/donnees';
+import { progressionHTML } from '../../lib/profil/progression';
+import {
+  aproposHTML,
+  apercuHTML,
+  badgesSectionHTML,
+  chiffresHTML,
+  contributionsHTML,
+  creationsHTML,
+  heroHTML,
+  navHTML,
+} from '../../lib/profil/sections';
+import { typo } from '../../lib/texte';
+import '../../styles/profil.css';
+
+const pseudo = Astro.params.pseudo ?? '';
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+let profil: ProfilApi | null = null;
+try {
+  profil = await appelerApi<ProfilApi>(`/api/v1/membres/${encodeURIComponent(pseudo)}`, {
+    requete: Astro.request,
+    adresseClient,
+  });
+} catch (erreur) {
+  if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+}
+if (!profil) Astro.response.status = 404;
+// Une adresse dont la casse diffère mène à l'adresse du pseudo.
+if (profil && profil.membre.pseudo !== pseudo)
+  return Astro.redirect(`${ROUTES.profil(profil.membre.pseudo)}${Astro.url.search}`, 301);
+
+const proprietaire = Boolean(profil?.prive);
+const apercu = proprietaire && Astro.url.searchParams.get('vue') === 'public';
+const maintenant = new Date();
+const contexte: ContexteProfil = { prive: proprietaire && !apercu, apercu, maintenant };
+const nav = profil ? navHTML(profil, contexte) : null;
+
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+const donnees: DonneesProfil | null = profil && {
+  profil,
+  prive: contexte.prive,
+  apercu,
+  maintenant: maintenant.toISOString(),
+};
+const json = JSON.stringify(donnees).replaceAll('<', '\\u003c');
+
+const titre = !profil ? 'Profil introuvable' : contexte.prive ? 'Mon profil' : profil.membre.nom;
+const description = profil
+  ? `Créations, contributions et badges de ${profil.membre.nom} sur Vysora.`
+  : 'Ce profil est introuvable.';
+
+/** Le prototype dessine l'icône « upload » autrement que le registre commun. */
+const remplacementsIcones: Record<string, Icone> = {
+  upload: {
+    viewBox: '0 0 24 24',
+    corps:
+      '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
+  },
+};
+const icones = [
+  'arrow',
+  'arrow-up-right',
+  'search',
+  'plus',
+  'menu',
+  'close',
+  'check',
+  'check-circle',
+  'half-circle',
+  'x-circle',
+  'user',
+  'lock',
+  'eye',
+  'pen',
+  'camera',
+  'upload',
+  'share',
+  'flag',
+  'link',
+  'calendar',
+  'copy',
+  'utile',
+  'repeat',
+  'moment',
+  'layers',
+  'bulb',
+  'message',
+  'reply',
+  'award',
+  'trophy',
+  'route',
+  'history',
+  'shield',
+  'trend-up',
+  'image',
+  'code',
+  'browser',
+  'chart',
+  'flow',
+  'film',
+  'music',
+  'school',
+  'shapes',
+  'chevron-down',
+  'mail',
+  'folder',
+  'bell',
+  'settings',
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+];
+---
+
+<Base
+  titre={titre}
+  description={description}
+  classeCorps="pf"
+  reglages={{
+    entete: 'aligne',
+    chiffres: 'bande',
+    galerie: 'mosaique',
+    prive: 'haut',
+    eyebrow: 'icon',
+    ...(contexte.prive ? { 'pf-proprio': '' } : {}),
+  }}
+  icones={icones}
+  remplacementsIcones={remplacementsIcones}
+  nonIndexee={!profil || proprietaire}
+  canonique={profil ? ROUTES.profil(profil.membre.pseudo) : undefined}
+  image={profil?.membre.avatar ?? undefined}
+>
+  <div
+    class="pf-apercu"
+    data-pf-apercu-bandeau
+    hidden={!apercu}
+    set:html={apercu ? apercuHTML() : ''}
+  />
+  {profil && nav ? (
+    <>
+      <section
+        class="pf-hero"
+        aria-labelledby="pf-nom"
+        data-pf-hero
+        set:html={heroHTML(profil, contexte)}
+      />
+      <section
+        class="pf-chiffres"
+        aria-label="Statistiques publiques"
+        data-pf-chiffres
+        set:html={chiffresHTML(profil)}
+      />
+      <nav class="pf-nav" aria-label="Sections du profil" data-pf-nav>
+        <div class="container pf-nav-in">
+          <a
+            class="pf-nav-qui"
+            href="#contenu"
+            data-pf-mini
+            tabindex="-1"
+            aria-hidden="true"
+            set:html={nav.mini}
+          />
+          <div class="pf-ancres" data-pf-ancres set:html={nav.ancres} />
+          <div class="pf-nav-actions" data-pf-nav-actions set:html={nav.actions} />
+        </div>
+      </nav>
+      <div class="container pf-corps" data-pf-corps>
+        {contexte.prive && profil.prive && (
+          <section
+            id="progression"
+            class="pf-section pf-reveal"
+            aria-labelledby="pf-t-progression"
+            data-pf-progression
+            set:html={progressionHTML(profil, profil.prive)}
+          />
+        )}
+        <section
+          id="creations"
+          class="pf-section pf-reveal"
+          aria-labelledby="pf-t-creations"
+          data-pf-creations
+          set:html={creationsHTML(profil, contexte, {
+            type: 'toutes',
+            tri: 'recentes',
+            completes: false,
+          })}
+        />
+        <div class="pf-duo">
+          <section
+            id="contributions"
+            class="pf-section pf-reveal"
+            aria-labelledby="pf-t-contributions"
+            data-pf-contributions
+            set:html={contributionsHTML(profil, contexte, 'tout', false)}
+          />
+          <aside
+            class="pf-apropos pf-reveal"
+            aria-labelledby="pf-t-apropos"
+            data-pf-apropos
+            set:html={aproposHTML(profil, contexte)}
+          />
+        </div>
+        <section
+          id="badges"
+          class="pf-section pf-reveal"
+          aria-labelledby="pf-t-badges"
+          data-pf-badges
+          set:html={badgesSectionHTML(profil, contexte)}
+        />
+      </div>
+    </>
+  ) : (
+    <section
+      class="container pf-introuvable"
+      aria-labelledby="pf-t-introuvable"
+      data-pf-introuvable
+    >
+      <span class="pf-introuvable-icone" aria-hidden="true">
+        <svg class="icon">
+          <use href="#i-user" />
+        </svg>
+      </span>
+      <h1 id="pf-t-introuvable">Ce profil est introuvable</h1>
+      <p>
+        Le membre a peut-être changé de pseudo ou fermé son compte. Vérifiez l’adresse, ou retrouvez
+        les membres actifs dans les classements.
+      </p>
+      <div class="pf-introuvable-actions">
+        <a class="btn btn-primary" href={ROUTES.classements}>
+          Voir les classements
+        </a>
+        <a class="btn btn-secondary" href={ROUTES.explorer}>
+          Explorer les créations
+        </a>
+      </div>
+    </section>
+  )}
+
+  <Fragment slot="fin">
+    {contexte.prive && profil && (
+      <dialog class="pf-tiroir" aria-labelledby="pf-edit-titre" data-pf-tiroir>
+        <form class="pf-form" novalidate data-pf-form>
+          <div class="pf-tiroir-tete">
+            <h2 id="pf-edit-titre">Modifier le profil</h2>
+            <button
+              class="icon-btn"
+              type="button"
+              data-pf-annuler
+              aria-label="Fermer sans enregistrer"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-close" />
+              </svg>
+            </button>
+          </div>
+          <div class="pf-tiroir-corps">
+            <fieldset class="pf-champ">
+              <legend class="pf-label">Photo de profil</legend>
+              <div class="pf-photo-edit">
+                <span class="pf-photo-apercu" data-pf-photo-apercu />
+                <div class="pf-photo-cote">
+                  <div class="pf-photo-btns">
+                    <label class="btn btn-secondary btn-sm pf-fichier" for="pf-photo-fichier">
+                      <svg class="icon icon-sm" aria-hidden="true">
+                        <use href="#i-upload" />
+                      </svg>
+                      <span data-pf-fichier-libelle>Importer une photo</span>
+                    </label>
+                    <input
+                      class="sr-only"
+                      type="file"
+                      id="pf-photo-fichier"
+                      accept="image/jpeg,image/png,image/webp"
+                      aria-describedby="pf-photo-aide pf-photo-erreur"
+                      data-pf-fichier
+                    />
+                    <button class="btn btn-quiet btn-sm" type="button" data-pf-retirer>
+                      Retirer
+                    </button>
+                  </div>
+                  <p class="pf-aide" id="pf-photo-aide">
+                    {typo('JPG, PNG ou WebP, 5 Mo au maximum. La photo est recadrée en carré.')}
+                  </p>
+                  <p
+                    class="pf-erreur"
+                    id="pf-photo-erreur"
+                    role="alert"
+                    data-pf-erreur-photo
+                    hidden
+                  />
+                </div>
+              </div>
+            </fieldset>
+            <div class="pf-champ">
+              <div class="pf-label-ligne">
+                <label class="pf-label" for="pf-bio">
+                  Biographie
+                </label>
+                <span class="pf-facultatif">Facultatif</span>
+              </div>
+              <textarea
+                id="pf-bio"
+                name="bio"
+                rows="5"
+                maxlength={LONGUEURS.biographie.max}
+                aria-describedby="pf-bio-aide pf-bio-compte"
+                data-pf-bio
+              />
+              <div class="pf-sous-champ">
+                <p class="pf-aide" id="pf-bio-aide">
+                  Ce que vous créez avec l’IA, et ce que vous aimez partager.
+                </p>
+                <p class="pf-compte" id="pf-bio-compte" aria-live="polite" data-pf-compte>
+                  {`0 sur ${LONGUEURS.biographie.max}`}
+                </p>
+              </div>
+              <p class="pf-erreur" id="pf-bio-erreur" data-pf-erreur-bio hidden />
+            </div>
+            <div class="pf-champ">
+              <div class="pf-label-ligne">
+                <label class="pf-label" for="pf-lien">
+                  Lien personnel
+                </label>
+                <span class="pf-facultatif">Facultatif</span>
+              </div>
+              <input
+                id="pf-lien"
+                name="lien"
+                type="url"
+                inputmode="url"
+                autocomplete="url"
+                spellcheck="false"
+                placeholder="https://"
+                aria-describedby="pf-lien-aide pf-lien-erreur"
+                data-pf-lien
+              />
+              <p class="pf-aide" id="pf-lien-aide">
+                Portfolio, site ou dépôt de code, à une adresse en https.
+              </p>
+              <p class="pf-erreur" id="pf-lien-erreur" data-pf-erreur-lien hidden />
+            </div>
+            <div class="pf-champ pf-champ-fixe">
+              <p class="pf-label">Pseudo</p>
+              <p class="pf-fixe">
+                <span data-pf-pseudo-fixe>{`@${profil.membre.pseudo}`}</span>
+                <a href={ROUTES.parametres}>Modifier dans les paramètres</a>
+              </p>
+            </div>
+          </div>
+          <div class="pf-tiroir-pied">
+            <div
+              class="pf-abandon"
+              role="alertdialog"
+              aria-labelledby="pf-abandon-titre"
+              data-pf-abandon
+              hidden
+            >
+              <p id="pf-abandon-titre">{typo('Abandonner vos modifications ?')}</p>
+              <div>
+                <button class="btn btn-quiet btn-sm" type="button" data-pf-continuer>
+                  Continuer la modification
+                </button>
+                <button class="btn btn-secondary btn-sm" type="button" data-pf-abandonner>
+                  Abandonner
+                </button>
+              </div>
+            </div>
+            <div class="pf-pied-actions" data-pf-pied-actions>
+              <button class="btn btn-quiet" type="button" data-pf-annuler>
+                Annuler
+              </button>
+              <button class="btn btn-primary" type="submit">
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </form>
+      </dialog>
+    )}
+    <dialog class="pf-vue" aria-labelledby="pf-vue-titre" data-pf-vue />
+    <script type="application/json" id="pf-donnees" set:html={json} />
+  </Fragment>
+</Base>
+
+<script>
+  import '../../scripts/profil';
+</script>
