@@ -48,6 +48,7 @@
 
 - Une page = un fichier dans `src/pages/`, qui utilise `layouts/Base.astro` et importe ses feuilles de style du prototype.
 - Données : appelées côté serveur dans la page (`appelerApi`) pour un rendu complet et indexable ; côté navigateur seulement pour les interactions (`fetch('/api/v1/…')`).
+- Une page dont le script reconstruit des parties (recherche pendant la saisie, changement de vue) les rend côté serveur avec les **mêmes fonctions** que le script : fonctions pures qui produisent le HTML, rangées dans `src/lib/<page>/` et testées (exemple : Explorer, `lib/explorer/`).
 - Scripts de page dans `src/scripts/<page>.ts`, importés par `<script>` dans la page ; outils communs dans `src/scripts/commun/` (`$`, `icon`, `toast`, `etats`…).
 - Styles : les fichiers du prototype restent identiques à l'original dans `src/styles/` ; les ajouts vont dans `socle.css` ou dans un fichier nouveau, jamais en modifiant un fichier repris sans le noter.
 - Icônes : `src/lib/icones.ts` et le composant `Sprite` (la page déclare ses icônes).

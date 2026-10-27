@@ -93,6 +93,25 @@
 | `signalement` | SIGNALEMENT (EMETTRE, VISER, RESOUDRE) | un signalement OUVERT par membre et par contenu (CI-21) ; OUVERT si et seulement si non résolu (CI-20) ; précision obligatoire pour AUTRE |
 | `decision_moderation` | DECISION_MODERATION (PRENDRE, PORTER_SUR, SANCTIONNER, JUSTIFIER) | cible obligatoire selon l'action (CI-19) ; suspension de 1 à 90 jours ; `badge_id` pour RETIRER_BADGE ; **immuable**. « Avertir » et « suspendre » prises sur un contenu gardent aussi `contenu_id` : la décision clôt ainsi les signalements du contenu (CI-20). Les annulations de points d’un masquage portent la date de la décision (`mouvement_reputation.date`) : « rétablir » retrouve par elle ce qu’il faut générer de nouveau (RG-82), `decision_id` restant réservé aux ajustements (CI-24) |
 
+### Guides d'Explorer (extension du prototype, DEC-01)
+
+Le prototype présente Explorer comme un index de **guides par objectif**. Le MCD n'en a pas : ces tables sont une extension (migration `0007_guides`). Le contenu d'un guide est rédigé par l'équipe ; ses chiffres (parcours visibles, reproductions, réussite, activité, modèles) se calculent à la lecture.
+
+| Table | Rôle | Clés et contraintes notables |
+|---|---|---|
+| `guide` | Objectif (« Mettre en place la prise de rendez-vous en ligne »), nom court, domaine, mots-clés, lacunes (« Ce que ce guide ne couvre pas encore ») | `slug` unique (adresse `/explorer?guide=…`) ; `categorie_id` (domaine) ; `date_publication` null tant que le guide est en préparation |
+| `guide_contenu` | Parcours (créations), questions (sujets) et cas Bon réflexe du guide, dans son ordre | clé `(guide_id, contenu_id)` ; cascade depuis le guide et le contenu ; seuls les contenus publiés et visibles sont présentés (RG-30) ; une création publiée y est ajoutée par rapprochement (`rattachement.ts`) |
+| `guide_etape` | « La méthode qui ressort » : titre, conseil, prompt cité | unique `(guide_id, ordre)` ; `citation_creation_id` (`set null`) et `citation_texte` : pas de création citée sans texte |
+| `guide_etape_source` | Parcours qui suivent une étape | clé `(etape_id, creation_id)`, cascades |
+| `guide_piege` | « Les pièges à anticiper » : titre, ce qui a fonctionné, étape, discussion, cas | unique `(guide_id, ordre)` ; `etape_id`, `sujet_id`, `cas_id` en `set null` |
+| `guide_piege_source` | Parcours où le piège a été rencontré | clé `(piege_id, creation_id)`, cascades |
+| `demande_guide` | « Ce que la communauté cherche encore » | `libelle` unique ; `date_cloture` quand un guide couvre l'objectif |
+| `soutien_demande` | « Je le cherche aussi » | clé `(demande_id, utilisateur_id)` ; compté sur 30 jours, date renouvelée à chaque clic |
+| `proposition_piege` | « Signaler un piège » : relu par l'équipe | `statut` EN_RELECTURE/RETENUE/ECARTEE ; `date_relecture` présente si et seulement si relu ; `etape_id` en `set null` |
+| `liste_controle` | « Ma liste de contrôle » d'un membre | clé `(utilisateur_id, guide_id)` ; étapes et pièges cochés (`bigint[]`, réduits à la lecture à ceux qui existent encore) |
+
+Les tables d'un membre (`soutien_demande`, `proposition_piege`, `liste_controle`) figurent dans l'export F-07 et sont effacées à la suppression du compte (F-08).
+
 ### Données techniques (hors MCD)
 
 | Table | Rôle |
@@ -103,7 +122,7 @@
 | `tentative_connexion` | Échecs et réussites, pour temporiser après 5 échecs consécutifs (F-03). Désignées par l'empreinte salée de l'adresse saisie (`empreinte_identifiant`), qu'elle corresponde à un compte ou non : la temporisation ne révèle pas les comptes existants (migration `0002`). Conservées un an (politique de confidentialité), puis supprimées (EMAIL-01). |
 | `journal_audit` | Changements de rôle et actions d'administration (ENF-09). |
 | `vue_contenu` | Une vue par visiteur et par jour (F-23) ; empreinte anonyme, purge rapide. |
-| `recherche_document` | Index plein texte des contenus publiés (RG-31). |
+| `recherche_document` | Index plein texte des contenus publiés (RG-31) : créations publiées, sujets visibles, cas validés. La recherche des parcours d'Explorer écarte les mots vides et ajoute les synonymes du prototype (`@vysora/shared`, `recherche.ts`). |
 | `message_contact` | Messages de la page Contact, y compris les signalements sans compte. |
 | schéma `pgboss` | File des tâches différées (EMAIL-01), créé et mis à jour par pg-boss au démarrage de l'API, hors des migrations Drizzle : files, tâches (les e-mails y attendent chiffrés), planifications. |
 
