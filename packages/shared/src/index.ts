@@ -36,3 +36,4 @@ export * from './contrats/forum';
 export * from './contrats/bon-reflexe';
 export * from './contrats/parametres';
 export * from './contrats/guides';
+export * from './contrats/accueil';
