@@ -121,7 +121,7 @@ Les tables d'un membre (`soutien_demande`, `proposition_piege`, `liste_controle`
 | `double_authentification` | Secret TOTP chiffré, codes de secours hachés (ENF-05). |
 | `tentative_connexion` | Échecs et réussites, pour temporiser après 5 échecs consécutifs (F-03). Désignées par l'empreinte salée de l'adresse saisie (`empreinte_identifiant`), qu'elle corresponde à un compte ou non : la temporisation ne révèle pas les comptes existants (migration `0002`). Conservées un an (politique de confidentialité), puis supprimées (EMAIL-01). |
 | `journal_audit` | Changements de rôle et actions d'administration (ENF-09). |
-| `vue_contenu` | Une vue par visiteur et par jour (F-23) ; empreinte anonyme, purge rapide. |
+| `vue_contenu` | Une vue par visiteur et par jour (F-23) ; empreinte salée du jour (membre, ou adresse IP et navigateur), effacée après 2 jours par `conservation.appliquer` (INT-04). |
 | `recherche_document` | Index plein texte des contenus publiés (RG-31) : créations publiées, sujets visibles, cas validés. La recherche des parcours d'Explorer écarte les mots vides et ajoute les synonymes du prototype (`@vysora/shared`, `recherche.ts`). |
 | `message_contact` | Messages de la page Contact, y compris les signalements sans compte. |
 | schéma `pgboss` | File des tâches différées (EMAIL-01), créé et mis à jour par pg-boss au démarrage de l'API, hors des migrations Drizzle : files, tâches (les e-mails y attendent chiffrés), planifications. |
