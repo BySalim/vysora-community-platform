@@ -1,0 +1,25 @@
+/* Forum : la pagination du prototype était faite de boutons ; ce sont des liens, pour que chaque
+   page ait son adresse. Mêmes mesures que .qa-pager button (forum.css). */
+.qa-pager a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--text);
+  font: 600 0.8125rem/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  transition: border-color var(--d-quick) var(--ease);
+}
+.qa-pager a:hover { border-color: var(--text); }
+.qa-pager a[aria-current="page"] { border-color: var(--accent); background: var(--accent); color: var(--white); }
+.qa-pager a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* « Tout effacer » est un lien vers la liste sans filtre. */
+.qa-active a.link-btn { text-decoration: none; }
+.qa-active a.link-btn:hover { text-decoration: underline; }

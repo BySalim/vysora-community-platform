@@ -1,0 +1,168 @@
+---
+/* Forum, liste des sujets (FORUM-02, F-50 à F-53), portée de prototype/forum.html (vue « questions ») :
+   menu, recherche, onglets, filtres, pagination et colonne. Chaque filtre est dans l'adresse : le
+   serveur rend la liste, le script ne fait que changer d'adresse (et remplir « Vos outils suivis »).
+   Réglages retenus : résumé complet, compteurs en colonne, menu à gauche, solution en différences. */
+import type { ListeSujetsApi, MesEnregistrementsApi, ReferentielsApi } from '@vysora/shared';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { lireAdresse, requeteApi } from '../../lib/forum/donnees';
+import { colonneHTML, listeHTML, menuHTML, titreListe } from '../../lib/forum/liste';
+import { icone } from '../../lib/explorer/elements';
+import '../../styles/explorer.css';
+import '../../styles/forum.css';
+import '../../styles/forum-complements.css';
+
+const ICONES = [
+  'arrow',
+  'arrow-down',
+  'search',
+  'plus',
+  'close',
+  'check',
+  'copy',
+  'utile',
+  'repeat',
+  'bulb',
+  'message',
+  'award',
+  'flag',
+  'alert',
+  'route',
+  'lock',
+  'replay',
+  'clock',
+  'user',
+  'external',
+  'scan',
+  'trend-up',
+  'users',
+  'help',
+  'bookmark',
+  'filter',
+  'history',
+  'tag',
+  'wrench',
+  'link',
+  'reply',
+  'quote',
+  'vote',
+  'accept',
+  'hash',
+];
+
+const options = { requete: Astro.request };
+const etat = lireAdresse(Astro.url.searchParams);
+const moi = Astro.locals.membre;
+
+const [liste, referentiels, mesSujets, enregistrements] = await Promise.all([
+  appelerApi<ListeSujetsApi>(`/api/v1/sujets?${requeteApi(etat)}`, options).catch(() => null),
+  appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null),
+  moi
+    ? appelerApi<ListeSujetsApi>(`/api/v1/sujets?membre=${encodeURIComponent(moi.pseudo)}`, options)
+        .then((l) => l.total)
+        .catch(() => 0)
+    : Promise.resolve(0),
+  moi
+    ? appelerApi<MesEnregistrementsApi>('/api/v1/moi/enregistrements', options)
+        .then((e) => e.elements.filter((x) => x.genre === 'SUJET').length)
+        .catch(() => 0)
+    : Promise.resolve(0),
+]);
+
+const outils = (referentiels?.outils ?? []).map((o) => ({
+  id: o.id,
+  nom: o.nom,
+  slug: o.slug,
+  logo: o.logo,
+  logoMonochrome: o.logoMonochrome,
+  famille: o.famille,
+}));
+// Noms affichés du membre et de l'outil filtrés : l'outil vient du référentiel, le membre de la liste.
+const membreFiltre = etat.membre.toLowerCase();
+const membreTrouve = liste?.elements
+  .flatMap((s) => [s.auteur, s.derniereActivite.membre, ...(s.solution ? [s.solution.auteur] : [])])
+  .find((m) => m.pseudo.toLowerCase() === membreFiltre);
+const noms = {
+  outil: outils.find((o) => o.slug === etat.outil)?.nom,
+  membre: membreTrouve?.nom,
+};
+const contexte = {
+  etat,
+  liste,
+  maintenant: new Date(),
+  moi: moi ? { id: moi.id, pseudo: moi.pseudo } : null,
+  noms,
+  pourVous: moi ? { mesSujets, enregistres: enregistrements } : null,
+};
+const titre = titreListe(etat, noms);
+// Une page filtrée ou au-delà de la première reste consultable sans être indexée en double.
+const filtree =
+  Astro.url.search.length > 0 &&
+  !(Astro.url.searchParams.size === 1 && Astro.url.searchParams.has('onglet'));
+const donnees = JSON.stringify({ etat, outils });
+---
+
+<Base
+  titre={`${titre} · Forum`}
+  description="Le forum de Vysora : questions, cliniques du prompt, astuces et retours d’expérience sur la création avec l’IA."
+  classeCorps="ex qa"
+  reglages={{ resume: 'complet', compteurs: 'colonne', menu: 'gauche', solution: 'diff' }}
+  icones={ICONES}
+  nonIndexee={filtree}
+>
+  <div class="container qa-shell">
+    <nav class="qa-menu" aria-label="Forum" data-qa-menu set:html={menuHTML(contexte)} />
+    <div class="qa-page" data-qa-page>
+      <Fragment set:html={listeHTML(contexte)} />
+      <aside class="qa-side" aria-label="Autour des questions" set:html={colonneHTML()} />
+    </div>
+  </div>
+
+  <dialog
+    class="ex-dialog ex-tools"
+    aria-labelledby="ex-tools-title"
+    aria-describedby="ex-tools-desc"
+    data-tools-dialog
+  >
+    <form method="dialog" class="ex-tools-form">
+      <div class="ex-dialog-head">
+        <div>
+          <h2 id="ex-tools-title">Mes outils</h2>
+          <p id="ex-tools-desc">
+            Sélectionnez les outils que vous utilisez. Le forum les suit comme des étiquettes et
+            vous signale les questions qui les concernent.
+          </p>
+        </div>
+        <button class="icon-btn" type="button" aria-label="Fermer" data-close-tools>
+          <Fragment set:html={icone('close', '')} />
+        </button>
+      </div>
+      <label class="ex-tools-search">
+        <Fragment set:html={icone('search')} />
+        <span class="sr-only">Rechercher un outil</span>
+        <input
+          type="search"
+          placeholder="Rechercher un outil"
+          autocomplete="off"
+          data-tools-filter
+        />
+      </label>
+      <div class="ex-tools-list" data-tools-list></div>
+      <div class="ex-dialog-foot">
+        <button class="link-btn" type="button" data-tools-reset>
+          Effacer la sélection
+        </button>
+        <button class="btn btn-primary" type="submit" value="save" data-tools-save>
+          Enregistrer
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="application/json" id="qa-donnees" set:html={donnees} />
+</Base>
+
+<script>
+  import '../../scripts/forum';
+</script>
