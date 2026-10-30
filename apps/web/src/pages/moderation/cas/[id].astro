@@ -1,0 +1,340 @@
+---
+/* Examen d'un cas Bon réflexe (MOD-03, EC-20, F-61, RG-71). Écran sans maquette dans le prototype,
+   conçu dans le style du dossier de modération (MOD-02) : tête du cas, sections à filets (situation,
+   échange avec l'IA, question, options et leur explication), panneau clair de la décision. Rendu par
+   le serveur depuis GET /api/v1/cas/:id, qui donne la correction à la modération ; la décision part
+   de scripts/moderation-cas.ts (PUT /api/v1/cas/:id/examen). */
+import {
+  BAREME_REPUTATION,
+  LIBELLES_DIFFICULTE,
+  LONGUEURS,
+  raisonRefus,
+  type CasApi,
+} from '@vysora/shared';
+import AccesBloc from '../../../components/AccesBloc.astro';
+import AvatarMembre from '../../../components/AvatarMembre.astro';
+import Base from '../../../layouts/Base.astro';
+import { appelerApi, ErreurApi } from '../../../lib/api';
+import { ROUTES } from '../../../lib/navigation';
+import { dateCourte, dateLongue, fmt, typo } from '../../../lib/texte';
+import '../../../styles/moderation.css';
+import '../../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const { etat } = Astro.locals;
+const raison = raisonRefus('moderer', etat);
+const id = /^\d{1,15}$/.test(Astro.params.id ?? '') ? Number(Astro.params.id) : null;
+
+const INTROUVABLE = {
+  titre: 'Ce cas est introuvable',
+  texte: 'L’adresse ne correspond à aucun cas : il a pu être supprimé par son auteur.',
+};
+let cas: CasApi | null = null;
+let refus: { titre: string; texte: string } | null = null;
+if (raison === 'role') Astro.response.status = 403;
+else if (!raison && id === null) {
+  Astro.response.status = 404;
+  refus = INTROUVABLE;
+} else if (!raison) {
+  try {
+    cas = await appelerApi<CasApi>(`/api/v1/cas/${id}`, { requete: Astro.request, adresseClient });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+    Astro.response.status = 404;
+    refus = INTROUVABLE;
+  }
+}
+
+const correction = cas?.correction ?? null;
+const explicationDe = (optionId: number) =>
+  correction?.options.find((o) => o.id === optionId)?.explication ?? '';
+/** Pourquoi le cas ne s'examine pas (RG-71) : déjà validé, refusé en attente de l'auteur, le sien… */
+const nonExaminable = !cas
+  ? null
+  : cas.moi?.peutExaminer
+    ? null
+    : cas.moi?.auteur
+      ? 'C’est votre cas : un autre membre de l’équipe de modération l’examinera.'
+      : cas.masquee
+        ? 'Ce cas est masqué par la modération : rétablissez-le avant de l’examiner.'
+        : cas.statut === 'VALIDE'
+          ? 'Ce cas est validé et publié dans Bon réflexe.'
+          : cas.statut === 'REFUSE'
+            ? 'Ce cas a été refusé. Il reviendra dans la liste si son auteur le modifie.'
+            : 'Ce cas ne peut pas être examiné.';
+const STATUTS = { PROPOSE: 'Proposé', VALIDE: 'Validé', REFUSE: 'Refusé' } as const;
+const outil = cas
+  ? [cas.outil?.nom, cas.modele?.nomCourt ?? cas.modeleNonReference].filter(Boolean).join(' · ')
+  : '';
+const titre = cas ? typo(cas.titre) : 'Examen d’un cas';
+---
+
+<Base
+  titre={cas ? `Examen : ${titre}` : titre}
+  description="Examen d’un cas Bon réflexe proposé : situation, échange avec l’IA, options et explications."
+  classeCorps="md"
+  icones={[
+    'bulb',
+    'pen',
+    'info',
+    'clock',
+    'layers',
+    'tag',
+    'check',
+    'check-circle',
+    'x-circle',
+    'arrow-up-right',
+  ]}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <nav class="md-ariane" aria-label="Fil d’Ariane">
+      <ol>
+        <li>
+          <a href={ROUTES.casAValider}>Cas à valider</a>
+        </li>
+        <li>
+          <span aria-current="page">{id !== null ? `Cas n° ${id}` : 'Cas'}</span>
+        </li>
+      </ol>
+    </nav>
+    {cas ? (
+      <>
+        <p class="md-rubrique">
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-bulb" />
+          </svg>
+          Cas Bon réflexe
+          <span class="md-sep" aria-hidden="true">
+            ·
+          </span>
+          <span class="md-etat">{cas.masquee ? 'Masqué' : STATUTS[cas.statut]}</span>
+        </p>
+        <h1 class="md-titre-dossier">{titre}</h1>
+        <div class="md-meta">
+          <div class="md-auteur">
+            <AvatarMembre membre={cas.auteur} taille={44} />
+            <div>
+              <strong>{cas.auteur.nom}</strong>
+              <span>
+                {`@${cas.auteur.pseudo} · ${cas.auteur.niveau.libelle} · proposé le ${dateCourte(cas.dateCreation)}`}
+              </span>
+            </div>
+          </div>
+          <div class="md-meta-actions">
+            {cas.statut === 'VALIDE' && !cas.masquee && (
+              <a class="btn btn-secondary btn-sm" href={ROUTES.casBonReflexe(cas.id, cas.slug)}>
+                Voir le cas
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-arrow-up-right" />
+                </svg>
+              </a>
+            )}
+            {cas.moi?.peutExaminer && (
+              <a class="btn btn-primary btn-sm md-aller" href="#md-decision">
+                Examiner le cas
+              </a>
+            )}
+          </div>
+        </div>
+        <ul class="md-cas-faits">
+          <li>
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-layers" />
+            </svg>
+            {cas.domaine?.libelle ?? 'Domaine non précisé'}
+          </li>
+          <li>{LIBELLES_DIFFICULTE[cas.difficulte]}</li>
+          {cas.dureeMinutes && (
+            <li>
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-clock" />
+              </svg>
+              {`${fmt(cas.dureeMinutes)} min`}
+            </li>
+          )}
+          {outil && <li>{outil}</li>}
+        </ul>
+        {cas.etiquettes.length > 0 && (
+          <ul class="md-cas-etiquettes" aria-label="Étiquettes">
+            {cas.etiquettes.map((e) => (
+              <li>{e.libelle}</li>
+            ))}
+          </ul>
+        )}
+        {cas.examen && cas.statut === 'PROPOSE' && cas.dateModification && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-pen" />
+            </svg>
+            <span>
+              <b>Nouvelle soumission.</b>
+              {typo(
+                ` L’auteur a modifié ce cas le ${dateLongue(cas.dateModification)}, après l’examen du ${dateLongue(cas.examen.date)}${cas.examen.motif ? ` : « ${cas.examen.motif} »` : '.'}`,
+              )}
+            </span>
+          </p>
+        )}
+      </>
+    ) : (
+      <h1>Examen d’un cas</h1>
+    )}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="moderer" quoi="examiner les cas proposés" />
+    </div>
+  ) : refus || !cas ? (
+    <div class="container md-file">
+      <div class="md-vide">
+        <span class="md-vide-icone" aria-hidden="true">
+          <svg class="icon">
+            <use href="#i-bulb" />
+          </svg>
+        </span>
+        <h2>{refus?.titre ?? INTROUVABLE.titre}</h2>
+        <p>{typo(refus?.texte ?? INTROUVABLE.texte)}</p>
+        <a class="btn btn-secondary" href={ROUTES.casAValider}>
+          Revenir aux cas à valider
+        </a>
+      </div>
+    </div>
+  ) : (
+    <div class="container md-dossier">
+      <div class="md-principal">
+        <section class="md-section" aria-labelledby="md-situation-titre">
+          <h2 id="md-situation-titre">Situation</h2>
+          <p class="md-texte">{typo(cas.contexte)}</p>
+        </section>
+
+        <section class="md-section" aria-labelledby="md-echange-titre">
+          <h2 id="md-echange-titre">Échange avec l’IA</h2>
+          <div class="md-cas-echange">
+            <h3>Demande</h3>
+            <p class="md-texte">{cas.demandeIa}</p>
+            <h3>Réponse de l’IA</h3>
+            <p class="md-texte">{cas.reponseIa}</p>
+          </div>
+        </section>
+
+        <section class="md-section" aria-labelledby="md-question-titre">
+          <h2 id="md-question-titre">Question et options</h2>
+          <p class="md-cas-question">{typo(cas.question)}</p>
+          <ol class="md-options">
+            {cas.options.map((option) => {
+              const correcte = correction?.optionCorrecteId === option.id;
+              return (
+                <li class:list={['md-option', { 'is-correcte': correcte }]}>
+                  <div class="md-option-corps">
+                    <p class="md-option-texte">{typo(option.libelle)}</p>
+                    {correcte && (
+                      <span class="md-option-bonne">
+                        <svg class="icon icon-xs" aria-hidden="true">
+                          <use href="#i-check" />
+                        </svg>
+                        Bonne réponse
+                      </span>
+                    )}
+                    {explicationDe(option.id) && (
+                      <p class="md-option-pourquoi">{typo(explicationDe(option.id))}</p>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+
+        {correction?.explication && (
+          <section class="md-section" aria-labelledby="md-explication-titre">
+            <h2 id="md-explication-titre">Explication générale</h2>
+            <p class="md-texte">{typo(correction.explication)}</p>
+          </section>
+        )}
+      </div>
+
+      <aside class="md-decision" id="md-decision" aria-labelledby="md-decision-titre">
+        <h2 id="md-decision-titre">Examen</h2>
+        {cas.moi?.peutExaminer ? (
+          <form class="md-form" novalidate autocomplete="off" data-md-cas-form data-cas={cas.id}>
+            <ul class="md-cas-regles">
+              <li>{typo('La situation est réaliste et l’échange avec l’IA, exact.')}</li>
+              <li>{typo('Une seule option est juste, et chaque explication dit pourquoi.')}</li>
+              <li>
+                {typo(
+                  'Le cas ne contient ni donnée personnelle ni contenu interdit par la charte.',
+                )}
+              </li>
+            </ul>
+            <fieldset class="md-actions">
+              <legend class="sr-only">Décision</legend>
+              <label class="md-choix">
+                <input type="radio" name="decision" value="VALIDE" required />
+                <span>
+                  <b>Valider</b>
+                  <span>
+                    {typo(
+                      `Le cas est publié dans Bon réflexe ; son auteur reçoit ${BAREME_REPUTATION.casValide} points à la première validation.`,
+                    )}
+                  </span>
+                </span>
+              </label>
+              <label class="md-choix">
+                <input type="radio" name="decision" value="REFUSE" required />
+                <span>
+                  <b>Refuser</b>
+                  <span>
+                    {typo(
+                      'Le cas reste visible de son seul auteur, qui reçoit le motif et peut le corriger.',
+                    )}
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+            <p class="md-erreur" data-md-erreur="decision" hidden />
+
+            <div class="md-champ" data-md-motif hidden>
+              <label for="md-motif">Motif communiqué à l’auteur</label>
+              <textarea
+                id="md-motif"
+                name="motif"
+                rows="5"
+                maxlength={LONGUEURS.motifRefusCas.max}
+                aria-describedby="md-motif-aide md-motif-erreur"
+              />
+              <p class="md-aide" id="md-motif-aide">
+                <span>
+                  {typo(
+                    'Dites ce qu’il faut corriger : l’auteur pourra soumettre de nouveau son cas.',
+                  )}
+                </span>
+                <span class="md-compteur" data-md-compteur>
+                  {`0 / ${fmt(LONGUEURS.motifRefusCas.max)}`}
+                </span>
+              </p>
+              <p class="md-erreur" id="md-motif-erreur" data-md-erreur="motif" hidden />
+            </div>
+
+            <p class="md-erreur" data-md-erreur="general" role="alert" hidden />
+            <button class="btn btn-primary md-envoyer" type="submit">
+              Enregistrer l’examen
+            </button>
+          </form>
+        ) : (
+          <p class="md-rien">{typo(nonExaminable ?? '')}</p>
+        )}
+      </aside>
+    </div>
+  )}
+</Base>
+
+<script>
+  import '../../../scripts/moderation-cas';
+</script>

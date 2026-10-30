@@ -12,6 +12,7 @@ import {
 } from '@vysora/shared';
 import AccesBloc from '../../../components/AccesBloc.astro';
 import AvatarMembre from '../../../components/AvatarMembre.astro';
+import OngletsModeration from '../../../components/OngletsModeration.astro';
 import Base from '../../../layouts/Base.astro';
 import { appelerApi, ErreurApi } from '../../../lib/api';
 import {
@@ -23,6 +24,7 @@ import {
 import { ROUTES } from '../../../lib/navigation';
 import { dateCourte, fmt, pluriel, typo } from '../../../lib/texte';
 import '../../../styles/moderation.css';
+import '../../../styles/moderation-complements.css';
 
 let adresseClient: string | undefined;
 try {
@@ -97,6 +99,7 @@ const icones = [
         )}
       </p>
     )}
+    {!raison && <OngletsModeration actif="signalements" nombres={{ signalements: file?.total }} />}
   </div>
 
   {raison ? (

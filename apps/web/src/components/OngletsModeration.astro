@@ -1,0 +1,28 @@
+---
+/* Onglets des écrans de modération : file des signalements (MOD-02) et cas à valider (MOD-03). */
+import { ROUTES } from '../lib/navigation';
+import { fmt } from '../lib/texte';
+
+interface Props {
+  actif: 'signalements' | 'cas';
+  /** Nombre affiché à côté de l'onglet, s'il est connu. */
+  nombres?: { signalements?: number; cas?: number };
+}
+
+const { actif, nombres = {} } = Astro.props;
+const ONGLETS = [
+  { cle: 'signalements', libelle: 'Signalements', href: ROUTES.moderation },
+  { cle: 'cas', libelle: 'Cas à valider', href: ROUTES.casAValider },
+] as const;
+---
+
+<nav class="md-onglets" aria-label="Écrans de modération">
+  {ONGLETS.map((onglet) => (
+    <a href={onglet.href} aria-current={onglet.cle === actif ? 'page' : undefined}>
+      {onglet.libelle}
+      {nombres[onglet.cle] !== undefined && (
+        <span class="md-onglet-nb">{fmt(nombres[onglet.cle] ?? 0)}</span>
+      )}
+    </a>
+  ))}
+</nav>

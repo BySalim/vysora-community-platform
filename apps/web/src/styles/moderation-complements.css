@@ -1,0 +1,39 @@
+/* Compléments de moderation.css : onglets des écrans de modération et examen d'un cas Bon réflexe
+   (MOD-03, EC-20), écrans sans maquette dessinés dans le style de la file et du dossier (MOD-02). */
+
+.md-onglets { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 22px 0 0; border-bottom: 1px solid var(--border); }
+.md-onglets a {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: -1px; padding: 10px 0 12px; border-bottom: 2px solid transparent;
+  color: var(--text-muted); font: 600 0.9375rem/1.2 var(--font-body); text-decoration: none;
+  transition: color var(--d-quick) var(--ease), border-color var(--d-quick) var(--ease);
+}
+.md-onglets a:hover { color: var(--text); }
+.md-onglets a[aria-current="page"] { border-color: var(--text); color: var(--text); }
+.md-onglets a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.md-onglet-nb { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: var(--panel); color: var(--text-body); font: 600 0.75rem/1.3 var(--font-body); text-align: center; font-variant-numeric: tabular-nums; }
+
+.md-cas-niveau { color: var(--text-body); font-weight: 600; }
+
+.md-cas-faits { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 0; padding: 0; list-style: none; color: var(--text-body); font: 500 0.875rem/1.4 var(--font-body); }
+.md-cas-faits li { display: inline-flex; align-items: center; gap: 6px; }
+.md-cas-faits .icon { color: var(--text-muted); }
+.md-cas-etiquettes { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.md-cas-etiquettes li { padding: 3px 10px; border-radius: 999px; background: var(--panel); color: var(--text-body); font: 600 0.75rem/1.4 var(--font-body); }
+
+.md-cas-echange { display: grid; gap: 12px; }
+.md-cas-echange h3 { margin: 0; color: var(--text-muted); font: 600 0.75rem/1.3 var(--font-body); letter-spacing: 0.02em; text-transform: uppercase; }
+.md-cas-echange .md-texte { font-family: var(--font-code); font-size: 0.875rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.md-cas-question { margin: 0 0 14px; color: var(--text); font: 600 1rem/1.5 var(--font-body); }
+
+.md-options { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: md-option; }
+.md-option { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 6px 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-card); counter-increment: md-option; }
+.md-option::before { content: counter(md-option, upper-alpha); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--panel); color: var(--text-body); font: 700 0.8125rem/1 var(--font-body); }
+.md-option.is-correcte { border-color: var(--green-700); background: color-mix(in oklab, var(--green-700) 5%, var(--white)); }
+.md-option.is-correcte::before { background: var(--green-700); color: var(--white); }
+.md-option-corps { display: grid; gap: 6px; min-width: 0; }
+.md-option-texte { margin: 0; color: var(--text); font: 600 0.9375rem/1.5 var(--font-body); overflow-wrap: anywhere; }
+.md-option-bonne { display: inline-flex; align-items: center; gap: 6px; color: var(--green-700); font: 700 0.75rem/1.3 var(--font-body); }
+.md-option-pourquoi { margin: 0; color: var(--text-body); font: 500 0.875rem/1.6 var(--font-body); overflow-wrap: anywhere; }
+
+.md-decision .md-cas-regles { margin: 0; padding: 0 0 0 18px; color: var(--text-body); font: 500 0.8125rem/1.6 var(--font-body); }
+.md-decision .md-cas-regles li + li { margin-top: 4px; }

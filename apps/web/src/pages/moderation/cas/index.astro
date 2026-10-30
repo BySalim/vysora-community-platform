@@ -1,0 +1,175 @@
+---
+/* Cas Bon réflexe à valider (MOD-03, EC-20, F-61). Écran sans maquette dans le prototype, conçu
+   dans le style de la file des signalements (MOD-02) : liste à filets, du plus ancien au plus
+   récent, dont chaque ligne ouvre l'examen du cas. Rendue par le serveur depuis
+   GET /api/v1/moderation/cas ; qui n'est pas de la modération lit la raison du refus (AccesBloc). */
+import { LIBELLES_DIFFICULTE, raisonRefus, type ListeCasAValiderApi } from '@vysora/shared';
+import AccesBloc from '../../../components/AccesBloc.astro';
+import AvatarMembre from '../../../components/AvatarMembre.astro';
+import OngletsModeration from '../../../components/OngletsModeration.astro';
+import Base from '../../../layouts/Base.astro';
+import { appelerApi, ErreurApi } from '../../../lib/api';
+import { anciennete } from '../../../lib/moderation';
+import { ROUTES } from '../../../lib/navigation';
+import { pluriel, typo } from '../../../lib/texte';
+import '../../../styles/moderation.css';
+import '../../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const { etat } = Astro.locals;
+const raison = raisonRefus('moderer', etat);
+if (raison === 'role') Astro.response.status = 403;
+
+const apres = Astro.url.searchParams.get('apres');
+let liste: ListeCasAValiderApi | null = null;
+if (!raison) {
+  try {
+    liste = await appelerApi<ListeCasAValiderApi>(
+      `/api/v1/moderation/cas${apres ? `?apres=${encodeURIComponent(apres)}` : ''}`,
+      { requete: Astro.request, adresseClient },
+    );
+  } catch (erreur) {
+    // Page qui n'existe pas (adresse modifiée à la main) : retour au début.
+    if (apres && erreur instanceof ErreurApi && erreur.probleme.status === 400)
+      return Astro.redirect(ROUTES.casAValider, 302);
+    throw erreur;
+  }
+}
+const maintenant = new Date();
+---
+
+<Base
+  titre="Cas à valider"
+  description="Cas Bon réflexe proposés par les membres, à valider ou à refuser par l’équipe de modération de Vysora."
+  classeCorps="md"
+  icones={['arrow', 'chevron-right', 'check-circle', 'pen', 'eye-off', 'user', 'bulb']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Modération
+    </p>
+    <h1>Cas à valider</h1>
+    {liste && liste.total > 0 && (
+      <p class="md-statut">
+        <span class="is-fort">{`${pluriel(liste.total, 'cas proposé', 'cas proposés')}`}</span>
+      </p>
+    )}
+    {!raison && <OngletsModeration actif="cas" nombres={{ cas: liste?.total }} />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="moderer" quoi="examiner les cas proposés" />
+    </div>
+  ) : liste && liste.elements.length ? (
+    <div class="container md-file">
+      <p class="md-regle">
+        {typo(
+          'Du plus ancien au plus récent. Un cas validé est publié dans Bon réflexe ; un refus est toujours motivé.',
+        )}
+      </p>
+      <ol class="md-liste">
+        {liste.elements.map((cas) => (
+          <li class="md-item">
+            <a class="md-ouvrir" href={ROUTES.examenCas(cas.id)}>
+              <AvatarMembre membre={cas.auteur} taille={40} classe="md-visuel" />
+              <span class="md-item-corps">
+                <span class="md-item-haut">
+                  <span class="md-genre">
+                    <svg class="icon icon-xs" aria-hidden="true">
+                      <use href="#i-bulb" />
+                    </svg>
+                    {`Cas · ${LIBELLES_DIFFICULTE[cas.difficulte]}`}
+                  </span>
+                  <span class="md-sep" aria-hidden="true">
+                    ·
+                  </span>
+                  <span class="md-qui">{cas.auteur.nom}</span>
+                </span>
+                <span class="md-item-titre">{typo(cas.titre)}</span>
+                {(cas.nouvelleSoumission || cas.mien || cas.masquee) && (
+                  <span class="md-item-marques">
+                    {cas.nouvelleSoumission && (
+                      <span class="md-marque is-accent">
+                        <svg class="icon icon-xs" aria-hidden="true">
+                          <use href="#i-pen" />
+                        </svg>
+                        {typo('Modifié par l’auteur : nouvelle soumission')}
+                      </span>
+                    )}
+                    {cas.mien && (
+                      <span class="md-marque">
+                        <svg class="icon icon-xs" aria-hidden="true">
+                          <use href="#i-user" />
+                        </svg>
+                        {typo('Votre cas : un autre membre de l’équipe l’examine')}
+                      </span>
+                    )}
+                    {cas.masquee && (
+                      <span class="md-marque">
+                        <svg class="icon icon-xs" aria-hidden="true">
+                          <use href="#i-eye-off" />
+                        </svg>
+                        Masqué
+                      </span>
+                    )}
+                  </span>
+                )}
+              </span>
+              <span class="md-item-attente">
+                <time datetime={cas.dateSoumission}>
+                  {anciennete(cas.dateSoumission, maintenant)}
+                </time>
+                <span>d’attente</span>
+              </span>
+              <svg class="icon icon-sm md-fleche" aria-hidden="true">
+                <use href="#i-chevron-right" />
+              </svg>
+            </a>
+          </li>
+        ))}
+      </ol>
+      {liste.suivant && (
+        <nav class="md-pages" aria-label="Pages des cas à valider">
+          <a class="btn btn-secondary" href={`?apres=${encodeURIComponent(liste.suivant)}`}>
+            Cas suivants
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </a>
+        </nav>
+      )}
+    </div>
+  ) : (
+    <div class="container md-file">
+      <div class="md-vide">
+        <span class="md-vide-icone" aria-hidden="true">
+          <svg class="icon">
+            <use href="#i-check-circle" />
+          </svg>
+        </span>
+        <h2>{apres ? 'Plus aucun cas à examiner' : 'Aucun cas à valider'}</h2>
+        <p>
+          {typo(
+            'Les cas proposés par les membres, et ceux que leur auteur a modifiés, s’affichent ici du plus ancien au plus récent.',
+          )}
+        </p>
+        {apres && (
+          <a class="btn btn-secondary" href={ROUTES.casAValider}>
+            Revenir au début de la liste
+          </a>
+        )}
+      </div>
+    </div>
+  )}
+</Base>
