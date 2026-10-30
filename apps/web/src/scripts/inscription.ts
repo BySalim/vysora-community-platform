@@ -60,6 +60,8 @@ if (conteneur && carte) {
   const mdp = $<HTMLInputElement>('#in-mdp')!;
   const confirmation = $<HTMLInputElement>('#in-mdp-confirmation')!;
   const pseudoInput = $<HTMLInputElement>('#in-pseudo')!;
+  const champCode = $<HTMLInputElement>('#in-code')!;
+  const blocCode = $('[data-champ-code]');
   const versConnexion = $<HTMLAnchorElement>('[data-auth-lien="connexion"]')?.href ?? '/connexion';
 
   /** Compte créé pendant cette visite : son pseudo tiré et son adresse. */
@@ -262,12 +264,39 @@ if (conteneur && carte) {
   surveillerEmail(email, () => alerte($('[data-alerte]', form)));
   const jaugeMdp = jauge(mdp, () => ({ email: email.value }));
 
+  /* Code d'invitation de la bêta fermée (INV-01, prototype : codeValide) : saisi, ou repris du lien. */
+  let codeDuLien = $('[data-invitation]')?.dataset.code ?? '';
+  const codeInvitation = () => codeDuLien || (blocCode && !blocCode.hidden ? champCode.value : '');
+  champCode.addEventListener('input', () => {
+    const brut = champCode.value
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 9);
+    champCode.value = [brut.slice(0, 3), brut.slice(3, 7), brut.slice(7)].filter(Boolean).join('-');
+    erreur(champCode);
+  });
+  function codeValide(): boolean {
+    if (!blocCode || blocCode.hidden) return true;
+    const ok = /^VYS-[A-Z0-9]{4}-[A-Z0-9]{2}$/.test(champCode.value);
+    erreur(
+      champCode,
+      !champCode.value
+        ? 'Saisissez votre code d’invitation.'
+        : ok
+          ? ''
+          : 'Ce code est incomplet. Format : VYS-K7M2-Q9.',
+    );
+    if (!ok) champCode.focus();
+    return ok;
+  }
+
   form.addEventListener('submit', async (evenement) => {
     evenement.preventDefault();
     const bouton = $<HTMLButtonElement>('.action-principale', form)!;
     const alerteEl = $('[data-alerte]', form);
     if (bouton.disabled) return;
     alerte(alerteEl);
+    if (!codeValide()) return;
     erreur(email, messageEmail(email.value));
     if (premierInvalide(form)) return;
     occupe(bouton, true, 'Vérification…');
@@ -335,11 +364,22 @@ if (conteneur && carte) {
       email: email.value.trim(),
       motDePasse: mdp.value,
       accepteConditions: true,
+      ...(codeInvitation() ? { codeInvitation: codeInvitation() } : {}),
     });
     occupe(bouton, false);
     if (!reponse.ok) {
       const { probleme } = reponse;
-      if (probleme.erreurs?.email) {
+      if (probleme.erreurs?.codeInvitation) {
+        await vues.afficher('compte', { focus: false });
+        if (blocCode?.hidden) {
+          // Code du lien déjà utilisé : le champ apparaît pour en saisir un autre.
+          codeDuLien = '';
+          blocCode.hidden = false;
+          $('[data-invitation]')?.setAttribute('hidden', '');
+        }
+        erreur(champCode, probleme.erreurs.codeInvitation);
+        champCode.focus();
+      } else if (probleme.erreurs?.email) {
         await vues.afficher('compte', { focus: false });
         erreur(email, probleme.erreurs.email);
         alerte($('[data-alerte]', form), dejaInscrit(), 'info');

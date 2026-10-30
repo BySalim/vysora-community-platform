@@ -24,6 +24,9 @@ import {
   type LienEnvoye,
   type ModificationMembre,
   type SessionApi,
+  MOTIF_CODE_INVITATION,
+  type ConditionsInscriptionApi,
+  type InvitationApi,
 } from '@vysora/shared';
 import type { Response } from 'express';
 import { CONFIG } from '../../config/configuration.module.js';
@@ -34,6 +37,7 @@ import { ChangementEmailService } from './changement-email.service.js';
 import { ComptesService } from './comptes.service.js';
 import { Exige, SessionCourante } from './droits.js';
 import { EtatCompteService } from './etat-compte.service.js';
+import { InvitationsService } from './invitations.service.js';
 import { contexteDe, type RequeteVysora, type SessionOuverte } from './requete.js';
 import { SessionsService } from './sessions.service.js';
 import { VerificationEmailService } from './verification-email.service.js';
@@ -47,6 +51,7 @@ export class ComptesController {
     private readonly etatCompte: EtatCompteService,
     private readonly verification: VerificationEmailService,
     private readonly changementEmail: ChangementEmailService,
+    private readonly invitations: InvitationsService,
     @Inject(CONFIG) private readonly config: Configuration,
   ) {}
 
@@ -64,6 +69,21 @@ export class ComptesController {
     if (typeof precedent === 'string' && precedent) await this.sessions.fermer(precedent);
     poserCookieSession(reponse, this.config, cree.jeton, cree.expiration);
     return this.etatCompte.calculer((await this.sessions.retrouver(cree.jeton)) ?? undefined);
+  }
+
+  /** GET /api/v1/inscription : l'inscription exige-t-elle un code d'invitation ? (INV-01) */
+  @Get('inscription')
+  conditionsInscription(): ConditionsInscriptionApi {
+    return { surInvitation: this.config.INSCRIPTION_SUR_INVITATION };
+  }
+
+  /** GET /api/v1/invitations/:code : lien d'invitation, et qui invite (INV-01). */
+  @Get('invitations/:code')
+  @Throttle({ default: { limit: 30, ttl: 15 * 60_000 } })
+  invitation(@Param('code') code: string): Promise<InvitationApi> {
+    if (!MOTIF_CODE_INVITATION.test(code.toUpperCase()))
+      return Promise.resolve({ valable: false, par: null });
+    return this.invitations.lire(code);
   }
 
   /** POST /api/v1/comptes/disponibilite : l'adresse est-elle libre ? (première étape de l'inscription) */

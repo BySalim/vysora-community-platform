@@ -2,8 +2,16 @@
 /* Page Inscription, portée de prototype/inscription.html (inscription.js, auth.js, auth.css) :
    adresse e-mail, mot de passe, pseudo proposé, confirmation de l'adresse, session déjà ouverte.
    Le lien de vérification reçu par e-mail (?verifier=…) est lu ici par le serveur.
-   Restent à brancher : le code d'invitation de la bêta (INV-01) et Google et GitHub (S-10). */
-import type { DocumentLegalApi } from '@vysora/shared';
+   Bêta fermée (INV-01) : le code d'invitation est demandé (champ), ou repris d'un lien
+   d'invitation (?invitation=…, « Claire Dubois vous invite »). Reste à brancher : Google et GitHub (S-10). */
+import {
+  MOTIF_CODE_INVITATION,
+  type ConditionsInscriptionApi,
+  type DocumentLegalApi,
+  type InvitationApi,
+} from '@vysora/shared';
+import { avatar } from '../lib/explorer/elements';
+import { t } from '../lib/texte';
 import DocumentsDialogue from '../components/DocumentsDialogue.astro';
 import MembreConnecte from '../components/MembreConnecte.astro';
 import Base from '../layouts/Base.astro';
@@ -46,6 +54,24 @@ if (verifier) {
     else console.error('Lien de vérification non lu :', erreur);
   }
 }
+
+/* Phase de l'inscription (prototype : publique, invitation, bêta). */
+const conditions = await appelerApi<ConditionsInscriptionApi>('/api/v1/inscription', {
+  adresseClient,
+}).catch(() => ({ surInvitation: false }));
+const codeLien = (Astro.url.searchParams.get('invitation') ?? '').trim().toUpperCase();
+const invitation: InvitationApi | null = MOTIF_CODE_INVITATION.test(codeLien)
+  ? await appelerApi<InvitationApi>(`/api/v1/invitations/${codeLien}`, { adresseClient }).catch(
+      () => null,
+    )
+  : null;
+const phase = invitation?.valable ? 'invitation' : conditions.surInvitation ? 'beta' : 'publique';
+const bandeauInvitation =
+  phase === 'invitation' && invitation?.par
+    ? `${avatar({ avatar: invitation.par.avatar }, 28)}<span><b>${t(invitation.par.nom)}</b>${t(' vous invite à rejoindre la bêta.')}</span>`
+    : phase === 'invitation'
+      ? `<span>${t('Vous êtes invité à rejoindre la bêta.')}</span>`
+      : '';
 
 const versConnexion = `${ROUTES.connexion}${contexte.requete ? `?${contexte.requete}` : ''}`;
 const continuer = contexte.actif ? 'Reprendre où vous en étiez' : 'Continuer';
@@ -113,14 +139,20 @@ const visible = (nom: string) => nom === ecran;
             </>
           )}
         </p>
-        <p class="invitation" data-invitation hidden></p>
+        <p
+          class="invitation"
+          data-invitation
+          data-code={phase === 'invitation' ? codeLien : undefined}
+          hidden={phase !== 'invitation'}
+          set:html={bandeauInvitation}
+        />
         <h1 id="t-compte" tabindex="-1">
           Créer un compte
         </h1>
-        <p class="auth-intro" data-intro-beta hidden>
+        <p class="auth-intro" data-intro-beta hidden={phase !== 'beta'}>
           Pendant la bêta, l’inscription se fait sur invitation.
         </p>
-        <div class="champ auth-bloc" data-champ-code hidden>
+        <div class="champ auth-bloc" data-champ-code hidden={phase !== 'beta'}>
           <label for="in-code">Code d’invitation</label>
           <div class="saisie">
             <input

@@ -12,10 +12,13 @@ import {
 } from '@vysora/shared';
 import { and, eq, ne, sql } from 'drizzle-orm';
 import { conflit, erreurValidation, estViolationUnicite } from '../../commun/erreurs.js';
+import { CONFIG } from '../../config/configuration.module.js';
+import type { Configuration } from '../../config/env.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
 import { utilisateur } from '../../db/schema/index.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
+import { CODE_INVALIDE, InvitationsService } from './invitations.service.js';
 import { MotsDePasseService } from './mots-de-passe.service.js';
 import type { ContexteConnexion } from './requete.js';
 import { SessionsService } from './sessions.service.js';
@@ -37,6 +40,8 @@ export class ComptesService {
     private readonly sessions: SessionsService,
     private readonly documents: DocumentsLegauxService,
     private readonly verification: VerificationEmailService,
+    private readonly invitations: InvitationsService,
+    @Inject(CONFIG) private readonly config: Configuration,
   ) {}
 
   /** Compte ACTIF, e-mail non vérifié (lecture seule, RG-02), rôle MEMBRE ; acceptations datées (RG-03) ;
@@ -50,6 +55,14 @@ export class ComptesService {
     // RG-04 : le contrôle local a eu lieu dans le schéma ; la base des fuites connues complète.
     if (await this.motsDePasse.estDansUneFuite(saisie.motDePasse))
       throw erreurValidation({ motDePasse: MESSAGES_MOT_DE_PASSE.compromis });
+
+    // INV-01 : pendant la bêta fermée, un code d'invitation libre est exigé ; il est consommé avec la
+    // création du compte, dans la même transaction.
+    const code = saisie.codeInvitation ?? null;
+    if (this.config.INSCRIPTION_SUR_INVITATION && !code)
+      throw erreurValidation({ codeInvitation: 'Saisissez votre code d’invitation.' });
+    if (code && !(await this.invitations.estLibre(code)))
+      throw erreurValidation({ codeInvitation: CODE_INVALIDE });
 
     const erreurs: Record<string, string> = {};
     if (await this.emailPris(saisie.email)) erreurs.email = MESSAGES_COMPTE.emailPris;
@@ -73,6 +86,8 @@ export class ComptesService {
             .returning({ id: utilisateur.id });
           if (!nouveau) throw new Error('Compte non créé');
           await this.documents.accepterEnVigueur(nouveau.id, tx);
+          if (code && !(await this.invitations.utiliser(tx, code, nouveau.id)))
+            throw erreurValidation({ codeInvitation: CODE_INVALIDE });
           const session = await this.sessions.ouvrir(nouveau.id, contexte, tx);
           return { utilisateurId: nouveau.id, ...session };
         });

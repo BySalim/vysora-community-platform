@@ -10,6 +10,7 @@ import { DocumentsLegauxController } from './documents-legaux.controller.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
 import { DroitsGuard } from './droits.js';
 import { EtatCompteService } from './etat-compte.service.js';
+import { InvitationsService } from './invitations.service.js';
 import { JetonsService } from './jetons.service.js';
 import { MotDePasseController } from './mot-de-passe.controller.js';
 import { MotsDePasseService } from './mots-de-passe.service.js';
@@ -42,6 +43,7 @@ import { VerificationEmailService } from './verification-email.service.js';
     AnnonceDocumentsService,
     ChangementEmailService,
     ChangementMotDePasseService,
+    InvitationsService,
     DroitsGuard,
   ],
   exports: [

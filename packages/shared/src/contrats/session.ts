@@ -69,3 +69,16 @@ export interface DocumentLegalApi {
   /** RG-03 : vrai si le membre connecté doit encore accepter cette version (faux sans session). */
   aAccepter: boolean;
 }
+
+/** GET /api/v1/inscription : conditions de l'inscription (INV-01). */
+export interface ConditionsInscriptionApi {
+  /** Bêta fermée : un code d'invitation est exigé. */
+  surInvitation: boolean;
+}
+
+/** GET /api/v1/invitations/:code : lien d'invitation reçu (« Claire Dubois vous invite »). */
+export interface InvitationApi {
+  valable: boolean;
+  /** Membre qui a créé l'invitation, s'il existe encore. */
+  par: { nom: string; avatar: string | null } | null;
+}

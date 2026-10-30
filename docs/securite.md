@@ -81,3 +81,5 @@
 ## 3. Signaler une faille
 
 Avant l'ouverture publique : ajouter `/.well-known/security.txt` (contact et politique de divulgation).
+
+- INV-01 : code d'invitation à usage unique, consommé dans la transaction de création du compte ; lecture d'un lien limitée à 30 par quart d'heure et par IP (`InvitationsService`).

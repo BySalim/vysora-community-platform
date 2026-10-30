@@ -7,12 +7,22 @@ import { champEmail, champMotDePasse, champNomAffiche, champPseudo } from './com
 /* Comptes et sessions (F-01, F-03) : inscription, connexion, disponibilité, modification du pseudo. */
 
 /** F-01, RG-01 à RG-04. L'API vérifie en plus l'unicité et la base des fuites connues. */
+/** INV-01 : format d'un code d'invitation (prototype : VYS-XXXX-XX). */
+export const MOTIF_CODE_INVITATION = /^VYS-[A-Z0-9]{4}-[A-Z0-9]{2}$/;
+
 export const schemaInscription = z
   .object({
     email: champEmail,
     motDePasse: champMotDePasse,
     /** Facultatif : sans pseudo, l'API en tire un que le membre peut ensuite modifier. */
     pseudo: champPseudo.optional(),
+    /** INV-01 : code d'invitation de la bêta fermée (« VYS-K7M2-Q9 »), exigé par l'API pendant la bêta. */
+    codeInvitation: z
+      .string({ error: 'Saisissez votre code d’invitation.' })
+      .trim()
+      .toUpperCase()
+      .regex(MOTIF_CODE_INVITATION, { error: 'Ce code est incomplet. Format : VYS-K7M2-Q9.' })
+      .optional(),
     /** RG-03 : « En continuant, vous acceptez les conditions d'utilisation et la charte communautaire. » */
     accepteConditions: z.literal(true, {
       error: 'Acceptez les conditions d’utilisation et la charte communautaire pour continuer.',

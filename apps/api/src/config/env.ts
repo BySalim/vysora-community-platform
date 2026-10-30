@@ -33,6 +33,8 @@ const schemaEnvironnement = z
     STOCKAGE_DOSSIER: z.string().default('./stockage'),
     /** RG-04 : refus des mots de passe présents dans des fuites connues (Have I Been Pwned, k-anonymat). */
     VERIFIER_FUITES: z.stringbool().default(true),
+    /** INV-01 : pendant la bêta fermée, l'inscription exige un code d'invitation à usage unique. */
+    INSCRIPTION_SUR_INVITATION: z.stringbool().default(false),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
