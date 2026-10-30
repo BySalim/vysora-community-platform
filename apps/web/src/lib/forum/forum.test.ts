@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { attente, ilYA } from './dates';
 import { ecrireAdresse, filtresActifs, lireAdresse, requeteApi, sansFiltre } from './donnees';
 import { nomComplet, premierePhrase, texteSimple, titreListe } from './liste';
+import { champDeLErreur } from './nouveau';
+import { differencesHTML, trierReponses } from './sujet';
 
 const adresse = (requete: string) => lireAdresse(new URLSearchParams(requete));
 
@@ -92,5 +94,38 @@ describe('présentation des sujets', () => {
     expect(nomComplet('Claude', 'Sonnet 4.5')).toBe('Claude Sonnet 4.5');
     expect(nomComplet('ChatGPT', 'GPT-5')).toBe('GPT-5');
     expect(nomComplet('Cursor', null)).toBe('Cursor');
+  });
+});
+
+describe('page d’un sujet et nouveau sujet', () => {
+  it('compare deux prompts mot à mot, sans tenir compte de la casse ni des accents', () => {
+    // La typographie française met une espace insécable avant les deux-points.
+    expect(differencesHTML('Portrait d’un homme', 'Même personnage : portrait d’un homme')).toMatch(
+      /^<ins><span class="sr-only">Ajouté : <\/span>Même personnage\s:<\/ins> portrait d’un homme$/,
+    );
+    expect(
+      differencesHTML('un chat noir', 'un chien noir', { ajouts: false, retraits: true }),
+    ).toBe('un <del><span class="sr-only">Retiré : </span>chat</del> noir');
+    expect(differencesHTML('Café', 'cafe')).toBe('cafe');
+  });
+
+  it('met la réponse acceptée en tête, puis les plus utiles', () => {
+    const r = (id: number, utiles: number, acceptee: string | null, date: string) =>
+      ({ id, utiles, acceptee, date }) as Parameters<typeof trierReponses>[0][number];
+    const reponses = [
+      r(1, 9, null, '2026-10-01'),
+      r(2, 3, '2026-10-05', '2026-10-02'),
+      r(3, 12, null, '2026-10-03'),
+    ];
+    expect(trierReponses(reponses, 'utiles').map((x) => x.id)).toEqual([2, 3, 1]);
+    expect(trierReponses(reponses, 'recentes').map((x) => x.id)).toEqual([3, 2, 1]);
+  });
+
+  it('place chaque erreur de l’API sous son champ', () => {
+    expect(champDeLErreur('clinique.prompt', 'CLINIQUE')).toBe('qa-n-prompt');
+    expect(champDeLErreur('corps', 'ASTUCE')).toBe('qa-n-presentation');
+    expect(champDeLErreur('corps', 'QUESTION')).toBe('qa-n-body');
+    expect(champDeLErreur('etiquettes.2', 'QUESTION')).toBe('qa-n-tags');
+    expect(champDeLErreur('inconnu', 'QUESTION')).toBeNull();
   });
 });

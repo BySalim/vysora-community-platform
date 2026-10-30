@@ -1,0 +1,138 @@
+---
+/* Sujet du forum (FORUM-02, F-50 à F-53), porté de prototype/forum.html (vue « question ») :
+   question, clinique ou astuce, réponses, votes, réponse acceptée, fermeture et formulaire de
+   réponse, rendus par le serveur à partir de GET /api/v1/sujets/:id. L'adresse /forum/[id]-[slug]
+   redirige vers la bonne si le titre a changé ; un sujet que la personne ne peut pas voir (RG-30)
+   répond 404. */
+import { raisonRefus, type ListeSujetsApi, type SujetApi } from '@vysora/shared';
+import Base from '../../layouts/Base.astro';
+import { contexteServeur, invitationHtml } from '../../lib/acces';
+import { ErreurApi, appelerApi } from '../../lib/api';
+import { identifiantDeLAdresse } from '../../lib/creations';
+import { etatVide } from '../../lib/forum/donnees';
+import { menuHTML, premierePhrase } from '../../lib/forum/liste';
+import { colonneSujetHTML, sujetHTML } from '../../lib/forum/sujet';
+import { ROUTES } from '../../lib/navigation';
+import '../../styles/explorer.css';
+import '../../styles/forum.css';
+import '../../styles/forum-complements.css';
+
+const ICONES = [
+  'arrow',
+  'search',
+  'plus',
+  'close',
+  'check',
+  'x',
+  'copy',
+  'repeat',
+  'bulb',
+  'message',
+  'route',
+  'lock',
+  'clock',
+  'user',
+  'scan',
+  'users',
+  'help',
+  'bookmark',
+  'layers',
+  'vote',
+  'accept',
+  'quote',
+  'bold',
+  'code',
+  'chevron-down',
+  'alert',
+];
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const id = identifiantDeLAdresse(Astro.params.ref);
+let sujet: SujetApi | null = null;
+if (id !== null) {
+  try {
+    sujet = await appelerApi<SujetApi>(`/api/v1/sujets/${id}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+  }
+}
+if (sujet && Astro.url.pathname !== ROUTES.sujet(sujet.id, sujet.slug))
+  return Astro.redirect(`${ROUTES.sujet(sujet.id, sujet.slug)}${Astro.url.search}`, 301);
+if (!sujet) Astro.response.status = 404;
+
+const { etat, membre } = Astro.locals;
+const raison = raisonRefus('contribuer', etat);
+const contexte = sujet
+  ? {
+      sujet,
+      maintenant: new Date(),
+      moi: membre ? { id: membre.id } : null,
+      invitationRepondre: raison
+        ? invitationHtml(raison, 'répondre', contexteServeur(Astro.locals, Astro.url, Astro.site))
+        : '',
+    }
+  : null;
+const donnees = sujet
+  ? JSON.stringify({
+      id: sujet.id,
+      auteur: Boolean(sujet.moi?.auteur),
+      prompt: sujet.clinique?.prompt ?? null,
+      ferme: sujet.etat === 'FERME',
+    })
+  : 'null';
+const colonne = sujet ? colonneSujetHTML(sujet) : '';
+// Menu du forum, avec le nombre de sujets en attente (« Sans réponse »).
+const enAttente = await appelerApi<ListeSujetsApi>('/api/v1/sujets?enAttente=true', {
+  requete: Astro.request,
+}).catch(() => null);
+const menu = menuHTML({ etat: etatVide(), liste: enAttente, pourVous: null, moi: null });
+---
+
+<Base
+  titre={sujet ? `${sujet.titre} · Forum` : 'Sujet introuvable · Forum'}
+  description={
+    sujet
+      ? premierePhrase(sujet.corps || sujet.clinique?.obtenu || sujet.titre)
+      : 'Ce sujet du forum de Vysora n’est plus disponible.'
+  }
+  classeCorps="ex qa"
+  reglages={{ resume: 'complet', compteurs: 'colonne', menu: 'gauche', solution: 'diff' }}
+  icones={ICONES}
+  nonIndexee={!sujet || sujet.masquee}
+>
+  <div class="container qa-shell">
+    <nav class="qa-menu" aria-label="Forum" set:html={menu} />
+    <div class="qa-page" data-qa-page>
+      {contexte ? (
+        <>
+          <Fragment set:html={sujetHTML(contexte)} />
+          <aside class="qa-side" aria-label="Autour de ce sujet" set:html={colonne} />
+        </>
+      ) : (
+        <div class="qa-main">
+          <h1 id="qa-title" tabindex="-1">
+            Ce sujet n’est plus disponible
+          </h1>
+          <p class="qa-lead">Il a peut-être été retiré par son auteur.</p>
+          <a class="btn btn-primary" href={ROUTES.forum}>
+            Voir tous les sujets
+          </a>
+        </div>
+      )}
+    </div>
+  </div>
+  <script type="application/json" id="qa-sujet" set:html={donnees} />
+</Base>
+
+<script>
+  import '../../scripts/forum-sujet';
+</script>

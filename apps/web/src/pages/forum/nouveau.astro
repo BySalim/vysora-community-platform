@@ -1,0 +1,125 @@
+---
+/* Nouveau sujet du forum (FORUM-02, F-50, RG-60 à RG-62, RG-66), porté de prototype/forum.html
+   (vue « poser ») : type, titre et sujets semblables, outil et modèle, rubriques d'une clinique,
+   exemples d'une astuce, étiquettes, création liée, aide du champ actif et brouillon. Une personne
+   qui ne peut pas contribuer voit pourquoi (bloc d'accès). Envoi : POST /api/v1/sujets. */
+import {
+  raisonRefus,
+  type MesCreationsApi,
+  type ReferentielsApi,
+  type TypeSujet,
+} from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { etatVide, ORDRE_TYPES, TYPES } from '../../lib/forum/donnees';
+import { menuHTML } from '../../lib/forum/liste';
+import { aideHTML, formulaireHTML } from '../../lib/forum/nouveau';
+import '../../styles/explorer.css';
+import '../../styles/forum.css';
+import '../../styles/forum-complements.css';
+
+const ICONES = [
+  'arrow',
+  'search',
+  'plus',
+  'close',
+  'check',
+  'bulb',
+  'message',
+  'route',
+  'clock',
+  'scan',
+  'users',
+  'help',
+  'chevron-down',
+  'alert',
+];
+
+const options = { requete: Astro.request };
+const parametres = Astro.url.searchParams;
+const type: TypeSujet =
+  ORDRE_TYPES.find((t) => TYPES[t].cle === (parametres.get('type') ?? parametres.get('nouveau'))) ??
+  'QUESTION';
+const titreDemande = (parametres.get('titre') ?? '').trim().slice(0, 150);
+const permis = raisonRefus('contribuer', Astro.locals.etat) === null;
+
+const [referentiels, mesCreations, enAttente] = await Promise.all([
+  permis
+    ? appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null)
+    : Promise.resolve(null),
+  permis
+    ? appelerApi<MesCreationsApi>('/api/v1/moi/creations', options).catch(() => null)
+    : Promise.resolve(null),
+  appelerApi<{ enAttente: number; total: number; elements: [] }>(
+    '/api/v1/sujets?enAttente=true',
+    options,
+  ).catch(() => null),
+]);
+
+const outils = (referentiels?.outils ?? []).map((o) => ({
+  id: o.id,
+  nom: o.nom,
+  slug: o.slug,
+  famille: o.famille,
+  modeles: o.modeles,
+}));
+const creations = (mesCreations?.elements ?? [])
+  .filter((c) => c.statut === 'PUBLIEE' && c.titre)
+  .map((c) => ({ id: c.id, titre: c.titre ?? '' }))
+  .toSorted((a, b) => a.titre.localeCompare(b.titre, 'fr'));
+const creationDemandee = Number(parametres.get('creation')) || null;
+const formulaire = formulaireHTML({
+  type,
+  titre: titreDemande ? titreDemande.charAt(0).toUpperCase() + titreDemande.slice(1) : '',
+  outil: (parametres.get('outil') ?? '').trim(),
+  outils,
+  creations,
+  creation: creations.some((c) => c.id === creationDemandee) ? creationDemandee : null,
+});
+const menu = menuHTML({
+  etat: etatVide(),
+  liste: enAttente as never,
+  pourVous: null,
+  moi: null,
+});
+const donnees = JSON.stringify({
+  outils: outils.map((o) => ({
+    id: o.id,
+    slug: o.slug,
+    modeles: o.modeles.map((m) => ({ id: m.id, nom: m.nom, nomCourt: m.nomCourt })),
+  })),
+  outilDemande: Boolean(parametres.get('outil')),
+});
+---
+
+<Base
+  titre="Poser une question · Forum"
+  description="Posez votre question à la communauté de Vysora : prompt exact, résultat obtenu et résultat attendu."
+  classeCorps="ex qa"
+  reglages={{ resume: 'complet', compteurs: 'colonne', menu: 'gauche', solution: 'diff' }}
+  icones={ICONES}
+  nonIndexee
+>
+  <div class="container qa-shell">
+    <nav class="qa-menu" aria-label="Forum" set:html={menu} />
+    <div class="qa-page" data-qa-page>
+      <AccesBloc quoi="publier une question" titre="h1">
+        <Fragment set:html={formulaire} />
+        <aside class="qa-side" aria-label="Aide à la rédaction">
+          <section
+            class="qa-box qa-help"
+            aria-live="polite"
+            data-help
+            set:html={aideHTML('qa-n-title')}
+          />
+        </aside>
+        <script type="application/json" id="qa-nouveau" set:html={donnees} />
+      </AccesBloc>
+    </div>
+  </div>
+</Base>
+
+<script>
+  import '../../scripts/forum-nouveau';
+</script>
