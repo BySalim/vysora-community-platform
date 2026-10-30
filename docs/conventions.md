@@ -73,7 +73,7 @@
 
 ## Git
 
-- Branche `main` toujours fonctionnelle ; travail sur des branches courtes (`<type>/<sujet>`).
+- Branche `main` toujours fonctionnelle ; travail sur des branches courtes (`<type>/<sujet>`), fusionnées dans `main` puis supprimées à la fin de la tâche (règle du porteur du projet, 2026-10-30).
 - Messages de commit en français, au format `type(portée): résumé` : `feat(contact): envoi du formulaire à l'API`, `fix(api): …`, `docs(registre): …`, `chore`, `refactor`, `test`.
 - Un commit = un changement cohérent qui passe `pnpm verifier`.
 - Jamais de secret dans le dépôt (`.env` est ignoré ; `.env.example` ne contient que des valeurs de développement).

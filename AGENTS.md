@@ -18,7 +18,7 @@ On privilégie la **vitesse** pour rendre le produit utilisable au plus tôt, en
 
 ## Commencer une session
 
-1. Lire [`docs/registre.md`](docs/registre.md) : prochaines tâches, journal, points à trancher.
+1. Lire [`docs/registre.md`](docs/registre.md) : prochaines tâches, journal, points à trancher. Vérifier aussi qu'aucune branche distante n'est en avance sur `main` (`git fetch` puis `git branch -r`) : un travail non fusionné ne se refait pas.
 2. Lire ce qui concerne la tâche : [`docs/architecture.md`](docs/architecture.md), [`docs/conventions.md`](docs/conventions.md), [`docs/mld.md`](docs/mld.md), [`docs/portage-prototype.md`](docs/portage-prototype.md), [`docs/securite.md`](docs/securite.md), et dans `docs/produit/` les fonctionnalités (F-xx), règles (RG-xx) et écrans (EC-xx) en jeu.
 3. Ouvrir la page du prototype concernée (`pnpm prototype`, http://localhost:5173) et lire son code.
 4. Dire au porteur du projet, en quelques lignes, ce que la session va livrer et dans quel ordre.
@@ -39,8 +39,9 @@ On privilégie la **vitesse** pour rendre le produit utilisable au plus tôt, en
 1. `pnpm verifier` passe (lint, types, tests unitaires et de bout en bout). Sinon, dire précisément ce qui échoue.
 2. Le registre est à jour : statuts, tâches découvertes, écarts au prototype, entrée de journal, prochaines tâches.
 3. La documentation suit le code (architecture, MLD, conventions, sécurité) si quelque chose a changé.
-4. Commits clairs au format `type(portée): résumé` (voir les conventions), sur une branche si le travail est long.
-5. Proposer la suite au porteur du projet.
+4. Commits clairs au format `type(portée): résumé` (voir les conventions), sur une branche.
+5. La branche est fusionnée dans `main` (après `pnpm verifier`) puis supprimée : aucune branche ne reste en attente avant de passer à la suite. Une session qui ne peut pas supprimer une branche distante le dit au porteur du projet et l'inscrit au journal.
+6. Proposer la suite au porteur du projet.
 
 ## Commandes
 
