@@ -19,7 +19,7 @@ import { etiquettesDes } from '../forum/contenu-sujet.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
 import { CAS_PUBLIC } from './cas.service.js';
-import { corriger, optionsDes } from './contenu-cas.js';
+import { corriger, domainesDes, optionsDes } from './contenu-cas.js';
 
 const PAR_PAGE = 20;
 
@@ -213,7 +213,7 @@ export class ListeCasService {
 
   private async presenter(lignes: LigneCas[], lecteurId: number | null): Promise<CasResumeApi[]> {
     const ids = lignes.map((l) => Number(l.id));
-    const [cas, etiquettes, options, reponses] = await Promise.all([
+    const [cas, etiquettes, options, domaines, reponses] = await Promise.all([
       this.db
         .select({
           id: casBonReflexe.id,
@@ -239,6 +239,7 @@ export class ListeCasService {
         .where(inArray(casBonReflexe.id, ids)),
       etiquettesDes(this.db, ids),
       optionsDes(this.db, ids),
+      domainesDes(this.db, ids),
       lecteurId === null
         ? []
         : this.db
@@ -269,6 +270,8 @@ export class ListeCasService {
         titre: c.titre,
         contexte: c.contexte,
         difficulte: l.difficulte,
+        domaine: domaines.get(id)?.domaine ?? null,
+        dureeMinutes: domaines.get(id)?.dureeMinutes ?? null,
         outil: c.outil,
         modele: c.outil ? (c.modele ?? c.modeleNonReference) : null,
         etiquettes: etiquettes.get(id) ?? [],

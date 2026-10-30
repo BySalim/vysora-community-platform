@@ -83,6 +83,19 @@ export const schemaCas = z
       `L’explication générale compte ${nombre(casExplication.max)} caractères au plus.`,
     ),
     difficulte: z.enum(DIFFICULTES_CAS, { error: 'Choisissez la difficulté du cas.' }),
+    /** Domaine du cas (une catégorie) et durée estimée par l'auteur, facultatifs (décision du 2026-10-30). */
+    categorieId: facultatif(identifiant),
+    dureeMinutes: facultatif(
+      z
+        .number({ error: 'Indiquez une durée en minutes.' })
+        .int({ error: 'Indiquez une durée en minutes.' })
+        .min(LIMITES.dureeCasMinutes.min, {
+          error: `La durée compte de ${LIMITES.dureeCasMinutes.min} à ${LIMITES.dureeCasMinutes.max} minutes.`,
+        })
+        .max(LIMITES.dureeCasMinutes.max, {
+          error: `La durée compte de ${LIMITES.dureeCasMinutes.min} à ${LIMITES.dureeCasMinutes.max} minutes.`,
+        }),
+    ),
     /** Outil et modèle qui ont donné la réponse étudiée (facultatifs, comme pour un sujet). */
     outilId: facultatif(identifiant),
     modeleId: facultatif(identifiant),

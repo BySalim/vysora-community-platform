@@ -18,6 +18,9 @@ export interface CasResumeApi {
   /** Situation de départ (le prototype l'affiche sous le titre). */
   contexte: string;
   difficulte: DifficulteCas;
+  /** Domaine (catégorie) et durée estimée (« Code et scripts · 5 min »), si l'auteur les a indiqués. */
+  domaine: { libelle: string; slug: string } | null;
+  dureeMinutes: number | null;
   /** Outil et modèle qui ont donné la réponse étudiée. */
   outil: OutilResumeApi | null;
   modele: string | null;
@@ -83,6 +86,8 @@ export interface CasApi {
   reponseIa: string;
   question: string;
   difficulte: DifficulteCas;
+  domaine: { libelle: string; slug: string } | null;
+  dureeMinutes: number | null;
   outil: OutilResumeApi | null;
   modele: ModeleResumeApi | null;
   modeleNonReference: string | null;

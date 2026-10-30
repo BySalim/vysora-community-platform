@@ -1248,6 +1248,13 @@ async function chargerDemandes(ctx: Contexte): Promise<void> {
 
 /* Bon réflexe --------------------------------------------------------------- */
 
+/** Catégorie d'un cas, désignée par son libellé. */
+function categorieDuCas(ctx: { categories: Map<string, number> }, libelle: string): number {
+  const id = ctx.categories.get(libelle);
+  if (id === undefined) throw new Error(`Catégorie inconnue : ${libelle}`);
+  return id;
+}
+
 async function chargerCas(ctx: Contexte, c: CasDemo): Promise<void> {
   const auteur = membre(ctx, c.auteur);
   const slug = slugifier(c.titre);
@@ -1275,6 +1282,8 @@ async function chargerCas(ctx: Contexte, c: CasDemo): Promise<void> {
     question: c.question,
     explication: c.explication,
     difficulte: c.difficulte,
+    categorieId: categorieDuCas(ctx, c.domaine),
+    dureeMinutes: c.duree,
     ...outilEtModele(ctx, c.outil, c.modele),
     statutValidation: 'VALIDE',
     examinateurId: examinateur.id,

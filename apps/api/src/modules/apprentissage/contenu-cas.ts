@@ -8,7 +8,7 @@ import {
 import { asc, count, eq, inArray, sql } from 'drizzle-orm';
 import { erreurValidation } from '../../commun/erreurs.js';
 import type { Executeur, Transaction } from '../../db/client.js';
-import { choixOption, optionReponse } from '../../db/schema/index.js';
+import { casBonReflexe, categorie, choixOption, optionReponse } from '../../db/schema/index.js';
 
 /* Contenu d'un cas Bon réflexe (APP-01) : options et leurs réponses, correction (F-62), écriture des
    options (RG-70, CI-16, RG-72), document de recherche (RG-31). */
@@ -20,6 +20,38 @@ export interface OptionComptee {
   explication: string;
   correcte: boolean;
   reponses: number;
+}
+
+export interface DomaineDuCas {
+  domaine: { libelle: string; slug: string } | null;
+  dureeMinutes: number | null;
+}
+
+/** Domaine (catégorie) et durée estimée de plusieurs cas (« Code et scripts · 5 min »). */
+export async function domainesDes(
+  db: Executeur,
+  ids: number[],
+): Promise<Map<number, DomaineDuCas>> {
+  if (!ids.length) return new Map();
+  const lignes = await db
+    .select({
+      id: casBonReflexe.id,
+      libelle: categorie.libelle,
+      slug: categorie.slug,
+      dureeMinutes: casBonReflexe.dureeMinutes,
+    })
+    .from(casBonReflexe)
+    .leftJoin(categorie, eq(categorie.id, casBonReflexe.categorieId))
+    .where(inArray(casBonReflexe.id, ids));
+  return new Map(
+    lignes.map((l) => [
+      l.id,
+      {
+        domaine: l.libelle && l.slug ? { libelle: l.libelle, slug: l.slug } : null,
+        dureeMinutes: l.dureeMinutes,
+      },
+    ]),
+  );
 }
 
 /** Options de plusieurs cas, dans l'ordre d'affichage, avec leurs réponses. */
@@ -80,6 +112,8 @@ export function colonnesCas(saisie: SaisieCas) {
     question: saisie.question,
     explication: saisie.explication,
     difficulte: saisie.difficulte,
+    categorieId: saisie.categorieId,
+    dureeMinutes: saisie.dureeMinutes,
     outilId: saisie.outilId,
     modeleId: saisie.modeleId,
     modeleNonReference: saisie.modeleNonReference,

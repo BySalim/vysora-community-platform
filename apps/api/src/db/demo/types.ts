@@ -179,6 +179,9 @@ export interface CasDemo {
   question: string;
   explication: string;
   difficulte: DifficulteCas;
+  /** Domaine (libellé d'une catégorie) et durée estimée, en minutes (prototype : explorer-data.js). */
+  domaine: string;
+  duree: number;
   /** Outil et modèle qui ont donné la réponse étudiée. */
   outil?: string;
   modele?: string;

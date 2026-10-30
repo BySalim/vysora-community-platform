@@ -15,6 +15,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Le gain est de 30 commandes, mais la hausse est de 25 %. On rapporte la différence à la valeur de départ : (150 − 120) ÷ 120 × 100 = 25 %. Une formulation assurée ne garantit pas un calcul juste.',
     difficulte: 'DEBUTANT',
+    domaine: 'Analyse de données',
+    duree: 3,
     outil: 'ChatGPT',
     modele: 'GPT-5',
     options: [
@@ -56,6 +58,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Une référence précise peut être inventée. Retrouvez la publication originale, vérifiez son auteur, sa méthode et la portée du chiffre. Si vous ne la retrouvez pas, ne présentez pas cette affirmation comme établie.',
     difficulte: 'DEBUTANT',
+    domaine: 'Texte et rédaction',
+    duree: 4,
     outil: 'Gemini',
     modele: '2.5 Pro',
     options: [
@@ -96,6 +100,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Deux fichiers qui portent le même nom peuvent avoir des contenus différents. Vérifiez le critère de doublon, demandez un aperçu sans suppression et testez sur une copie avant toute opération sur les originaux.',
     difficulte: 'INTERMEDIAIRE',
+    domaine: 'Code et scripts',
+    duree: 5,
     outil: 'Claude',
     modele: 'Sonnet 4.5',
     options: [
@@ -136,6 +142,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Une suppression récursive du dossier courant efface aussi le travail non sauvegardé. Refusez, vérifiez la portée exacte de la commande et assurez-vous qu’une sauvegarde récupérable existe avant toute suppression.',
     difficulte: 'AVANCE',
+    domaine: 'Code et scripts',
+    duree: 6,
     outil: 'Cursor',
     options: [
       {
@@ -175,6 +183,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Les droits dépendent des conditions d’utilisation de l’outil, de votre abonnement et du contenu de l’image : une marque ou un personnage reconnaissable reste protégé. Une affirmation du modèle ne remplace pas cette vérification.',
     difficulte: 'INTERMEDIAIRE',
+    domaine: 'Image et illustration',
+    duree: 4,
     outil: 'ChatGPT',
     modele: 'GPT-5',
     options: [
@@ -215,6 +225,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Une case cochée côté navigateur se contourne facilement. Vérifiez que le serveur contrôle effectivement chaque envoi : limitation du nombre de requêtes, jeton de vérification ou service anti-robots.',
     difficulte: 'INTERMEDIAIRE',
+    domaine: 'Application web',
+    duree: 5,
     outil: 'Lovable',
     options: [
       {
@@ -252,6 +264,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Un résumé doit distinguer ce que dit le document de ce que le modèle en déduit. Demandez le passage source de chaque affirmation et retirez celles qui n’en ont pas.',
     difficulte: 'DEBUTANT',
+    domaine: 'Texte et rédaction',
+    duree: 3,
     outil: 'Claude',
     modele: 'Sonnet 4.5',
     options: [
@@ -290,6 +304,8 @@ export const CAS: CasDemo[] = [
     explication:
       'Sans outil d’exécution, le modèle n’a rien pu lancer : il décrit un test qui n’a pas eu lieu. Écrivez vos propres tests, avec les arrondis, les montants nuls et les montants négatifs.',
     difficulte: 'AVANCE',
+    domaine: 'Code et scripts',
+    duree: 5,
     outil: 'ChatGPT',
     modele: 'GPT-5',
     options: [

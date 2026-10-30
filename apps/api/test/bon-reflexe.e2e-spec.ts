@@ -10,7 +10,7 @@ import type {
 } from '@vysora/shared';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import request from 'supertest';
-import { choixOption, mouvementReputation, outil } from '../src/db/schema/index.js';
+import { categorie, choixOption, mouvementReputation, outil } from '../src/db/schema/index.js';
 import {
   MOT_DE_PASSE,
   ORIGINE_SITE,
@@ -166,6 +166,25 @@ describe('Bon réflexe (APP-01)', () => {
   });
 
   describe('proposer un cas (F-60)', () => {
+    it('enregistre le domaine et la durée d’un cas, présentés par la liste et le cas (décision du 2026-10-30)', async () => {
+      const [domaine] = await contexte.db
+        .select({ id: categorie.id })
+        .from(categorie)
+        .where(eq(categorie.libelle, 'Analyse de données'));
+      const cas = await casValide({ categorieId: domaine!.id, dureeMinutes: 3 });
+      expect(cas).toMatchObject({
+        domaine: { libelle: 'Analyse de données', slug: 'analyse-de-donnees' },
+        dureeMinutes: 3,
+      });
+      const liste = await lister();
+      expect(liste.elements.find((c) => c.id === cas.id)).toMatchObject({
+        domaine: { slug: 'analyse-de-donnees' },
+        dureeMinutes: 3,
+      });
+      const tropLong = await proposer(await lea(), nouveauCas({ dureeMinutes: 90 })).expect(400);
+      expect(tropLong.body.erreurs.dureeMinutes).toBe('La durée compte de 1 à 60 minutes.');
+    });
+
     it('un membre de niveau Expert propose un cas, visible de lui et de la modération (RG-70, RG-30)', async () => {
       const auteur = await lea();
       const propose = (await proposer(auteur).expect(201)).body as CasApi;

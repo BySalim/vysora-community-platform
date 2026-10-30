@@ -18,7 +18,7 @@ import { horodatage, identifiant, reference, valeursPermises } from './_outils.j
 import { utilisateur } from './comptes.js';
 import { colonnesSousType, contraintesSousType } from './contenus.js';
 import { creation } from './creations.js';
-import { modele, outil } from './referentiels.js';
+import { categorie, modele, outil } from './referentiels.js';
 
 /* Forum et Bon réflexe (MCD, section 4.4). L'état d'un sujet (ouvert, résolu, fermé) se déduit
    de la fermeture et de la réponse acceptée (CV-03). */
@@ -130,6 +130,10 @@ export const casBonReflexe = pgTable(
     /** EXAMINER (CI-18) : présent si et seulement si le cas est validé ou refusé. */
     examinateurId: reference().references(() => utilisateur.id, { onDelete: 'set null' }),
     dateExamen: horodatage(),
+    /** Décision du 2026-10-30 (registre, « Domaine et durée d'un cas ») : domaine du cas, pris dans
+        les catégories (qui reprennent les domaines d'Explorer), et durée estimée par l'auteur. */
+    categorieId: reference().references(() => categorie.id),
+    dureeMinutes: smallint(),
     /** Outil et modèle qui ont donné la réponse étudiée. */
     ...colonnesOutilModele(),
   },
@@ -138,6 +142,10 @@ export const casBonReflexe = pgTable(
     index('cas_bon_reflexe_statut_idx').on(t.statutValidation),
     valeursPermises('cas_bon_reflexe_difficulte_check', t.difficulte, DIFFICULTES_CAS),
     valeursPermises('cas_bon_reflexe_statut_check', t.statutValidation, STATUTS_VALIDATION_CAS),
+    check(
+      'cas_bon_reflexe_duree_check',
+      sql`${t.dureeMinutes} is null or ${t.dureeMinutes} between 1 and 60`,
+    ),
     check(
       'cas_bon_reflexe_examen_check',
       sql`(${t.statutValidation} = 'PROPOSE') = (${t.dateExamen} is null)`,

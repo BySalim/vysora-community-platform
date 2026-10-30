@@ -26,7 +26,7 @@ import { etiquettesDes } from '../forum/contenu-sujet.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
 import { lireMasquages } from '../moderation/masquages.js';
-import { corriger, optionsDes } from './contenu-cas.js';
+import { corriger, domainesDes, optionsDes } from './contenu-cas.js';
 
 const iso = (date: Date | null): string | null => date?.toISOString() ?? null;
 
@@ -75,18 +75,22 @@ export class CasService {
       throw introuvable('Ce cas est introuvable.');
 
     const masquee = ligne.statut === 'MASQUE';
-    const [options, etiquettes, utiles, moi, masquages, position, membres] = await Promise.all([
-      optionsDes(this.db, [id]).then((parCas) => parCas.get(id) ?? []),
-      etiquettesDes(this.db, [id]),
-      this.db.$count(vote, and(eq(vote.contenuId, id), eq(vote.typeVoteCode, 'UTILE'))),
-      lecteur ? this.relation(lecteur.id, id) : null,
-      lireMasquages(this.db, masquee ? [id] : [], moderation),
-      visible ? this.position(id) : null,
-      resumerMembres(this.db, this.stockage, [
-        ligne.auteurId,
-        ...(moderation && ligne.cas.examinateurId ? [ligne.cas.examinateurId] : []),
-      ]),
-    ]);
+    const [domaines, [options, etiquettes, utiles, moi, masquages, position, membres]] =
+      await Promise.all([
+        domainesDes(this.db, [id]),
+        Promise.all([
+          optionsDes(this.db, [id]).then((parCas) => parCas.get(id) ?? []),
+          etiquettesDes(this.db, [id]),
+          this.db.$count(vote, and(eq(vote.contenuId, id), eq(vote.typeVoteCode, 'UTILE'))),
+          lecteur ? this.relation(lecteur.id, id) : null,
+          lireMasquages(this.db, masquee ? [id] : [], moderation),
+          visible ? this.position(id) : null,
+          resumerMembres(this.db, this.stockage, [
+            ligne.auteurId,
+            ...(moderation && ligne.cas.examinateurId ? [ligne.cas.examinateurId] : []),
+          ]),
+        ]),
+      ]);
     const membre = (membreId: number): MembreResumeApi => {
       const resume = membres.get(membreId);
       if (!resume) throw new Error(`Membre introuvable : ${membreId}`);
@@ -104,6 +108,8 @@ export class CasService {
       reponseIa: cas.reponseIa,
       question: cas.question,
       difficulte: cas.difficulte,
+      domaine: domaines.get(id)?.domaine ?? null,
+      dureeMinutes: domaines.get(id)?.dureeMinutes ?? null,
       outil: ligne.outil,
       modele: ligne.modele,
       modeleNonReference: cas.modeleNonReference,

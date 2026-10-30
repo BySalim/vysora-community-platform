@@ -77,6 +77,8 @@ export const LIMITES = {
   pointsAAdapter: 5, // liste « À adapter » d'une création
   etiquettesParContenu: 5, // RG-10, RG-60, RG-70
   optionsParCas: { min: 2, max: 5 }, // RG-70
+  /** Durée estimée d'un cas Bon réflexe, en minutes (décision du 2026-10-30). */
+  dureeCasMinutes: { min: 1, max: 60 },
   // Garde-fous d'une création (aucune règle ne les fixe) : protègent l'API d'un parcours démesuré.
   etapesParCreation: 30,
   configurationsParEtape: 10,
