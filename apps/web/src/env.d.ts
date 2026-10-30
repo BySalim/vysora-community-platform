@@ -12,5 +12,7 @@ declare namespace App {
     suspensionJusqua: string | null;
     /** Date d'effet des documents légaux à accepter (AAAA-MM-JJ), pour le bandeau du compte. */
     conditionsDepuis: string | null;
+    /** SEC-02 : compte de modération ou d'administration dont la session reste à vérifier. */
+    deuxFacteurs: import('@vysora/shared').SessionApi['deuxFacteurs'] | null;
   }
 }

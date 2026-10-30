@@ -6,6 +6,8 @@ import { ChargementSession } from './chargement-session.middleware.js';
 import { ComptesController } from './comptes.controller.js';
 import { ComptesService } from './comptes.service.js';
 import { ConnexionService } from './connexion.service.js';
+import { DeuxFacteursController } from './deux-facteurs.controller.js';
+import { DeuxFacteursService } from './deux-facteurs.service.js';
 import { DocumentsLegauxController } from './documents-legaux.controller.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
 import { DroitsGuard } from './droits.js';
@@ -28,6 +30,7 @@ import { VerificationEmailService } from './verification-email.service.js';
     ComptesController,
     MotDePasseController,
     DocumentsLegauxController,
+    DeuxFacteursController,
   ],
   providers: [
     SessionsService,
@@ -44,6 +47,7 @@ import { VerificationEmailService } from './verification-email.service.js';
     ChangementEmailService,
     ChangementMotDePasseService,
     InvitationsService,
+    DeuxFacteursService,
     DroitsGuard,
   ],
   exports: [

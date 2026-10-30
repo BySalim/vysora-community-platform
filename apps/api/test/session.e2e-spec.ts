@@ -15,6 +15,7 @@ import {
   MOT_DE_PASSE,
   ORIGINE_SITE,
   cookieRecu,
+  confirmerIdentite,
   creerMembre,
   demarrerApplication,
   ipDeTest,
@@ -91,6 +92,12 @@ describe('Session (F-03, ADR-0005)', () => {
       ]);
 
       const agent = await agentConnecte();
+      // SEC-02 : le rôle d'administration ne compte qu'une fois l'identité confirmée.
+      expect((await agent.get('/api/v1/session').expect(200)).body).toMatchObject({
+        etat: { role: 'membre' },
+        deuxFacteurs: { etape: 'configurer', role: 'admin' },
+      });
+      await confirmerIdentite(contexte, 'awa.sarr@example.com');
       const reponse = await agent.get('/api/v1/session').expect(200);
       expect(reponse.body).toMatchObject({
         // RG-84 : 60 points, au-delà du seuil d'Apprenti (50).

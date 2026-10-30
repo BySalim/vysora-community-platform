@@ -95,3 +95,24 @@ export const schemaModificationMembre = z.object({
 });
 
 export type ModificationMembre = z.output<typeof schemaModificationMembre>;
+
+/** SEC-02 : code à six chiffres de l'application, ou code de secours (« ABCD-EFGH »). */
+export const schemaCodeDeuxFacteurs = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, { error: 'Saisissez les six chiffres du code.' })
+      .optional(),
+    codeSecours: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/, { error: 'Saisissez un code au format ABCD-EFGH.' })
+      .optional(),
+  })
+  .refine((valeur) => Boolean(valeur.code || valeur.codeSecours), {
+    error: 'Saisissez les six chiffres du code.',
+    path: ['code'],
+  });
+export type CodeDeuxFacteurs = z.output<typeof schemaCodeDeuxFacteurs>;

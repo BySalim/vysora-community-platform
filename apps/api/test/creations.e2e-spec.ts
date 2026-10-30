@@ -21,6 +21,7 @@ import { cleFichier, nouvelIdentifiantFichier } from '../src/modules/medias/stoc
 import {
   MOT_DE_PASSE,
   ORIGINE_SITE,
+  confirmerIdentite,
   creerMembre,
   demarrerApplication,
   ipDeTest,
@@ -44,6 +45,7 @@ describe('Lecture d’une création (CREA-01, F-23, RG-30)', () => {
       .set('X-Forwarded-For', ip)
       .send({ email, motDePasse: MOT_DE_PASSE })
       .expect(200);
+    await confirmerIdentite(contexte, email);
     return agent;
   }
 

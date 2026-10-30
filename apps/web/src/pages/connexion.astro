@@ -2,7 +2,9 @@
 /* Page Connexion, portée de prototype/connexion.html (connexion.js, auth.js, auth.css) : identifiants,
    nouvelles conditions, mot de passe oublié, lien envoyé, nouveau mot de passe, lien expiré, réussite,
    session déjà ouverte. Le serveur choisit l'écran de départ (lien de réinitialisation lu ici).
-   Restent à brancher : la vérification en deux étapes (SEC-02) et Google et GitHub (S-10). */
+   Comptes de modération et d'administration (SEC-02, ENF-05) : code de l'application ou code de
+   secours, ou, la première fois, activation (clé, code QR) et codes de secours.
+   Reste à brancher : Google et GitHub (S-10). */
 import type { DocumentLegalApi, LienReinitialisation } from '@vysora/shared';
 import DocumentsDialogue from '../components/DocumentsDialogue.astro';
 import MembreConnecte from '../components/MembreConnecte.astro';
@@ -13,9 +15,10 @@ import { ROUTES } from '../lib/navigation';
 import { contexteArrivee } from '../lib/retour';
 import { dateLongue, masquerEmail, typo } from '../lib/texte';
 import '../styles/auth.css';
+import '../styles/auth-complements.css';
 
 const contexte = contexteArrivee(Astro.url.searchParams);
-const { etat } = Astro.locals;
+const { etat, deuxFacteurs } = Astro.locals;
 const jeton = Astro.url.searchParams.get('jeton');
 
 let adresseClient: string | undefined;
@@ -34,7 +37,17 @@ try {
 
 /** Lien de réinitialisation (F-03) : valable, l'écran du nouveau mot de passe ; sinon « Lien expiré ». */
 let lien: LienReinitialisation | null = null;
-let ecran = etat.session === 'membre' ? 'deja' : 'identifiants';
+let ecran =
+  etat.session !== 'membre'
+    ? 'identifiants'
+    : deuxFacteurs?.etape === 'verifier'
+      ? 'deux-facteurs'
+      : deuxFacteurs
+        ? 'deux-facteurs-config'
+        : 'deja';
+const libelleRole =
+  deuxFacteurs?.role === 'admin' ? 'Compte d’administration' : 'Compte de modération';
+const accesRole = deuxFacteurs?.role === 'admin' ? 'à l’administration' : 'à la modération';
 if (jeton) {
   try {
     lien = await appelerApi<LienReinitialisation>('/api/v1/mot-de-passe/lien', {
@@ -102,6 +115,10 @@ const visible = (nom: string) => nom === ecran;
     'utile',
     'info',
     'external',
+    'shield',
+    'copy',
+    'download',
+    'key',
   ]}
   nonIndexee={Boolean(jeton)}
 >
@@ -215,12 +232,17 @@ const visible = (nom: string) => nom === ecran;
         </div>
       </section>
 
-      <section class="auth-vue" data-vue="deux-facteurs" aria-labelledby="t-code" hidden>
+      <section
+        class="auth-vue"
+        data-vue="deux-facteurs"
+        aria-labelledby="t-code"
+        hidden={!visible('deux-facteurs')}
+      >
         <p class="auth-repere">
           <svg class="icon" aria-hidden="true">
             <use href="#i-shield"></use>
           </svg>
-          <span data-role-libelle>Compte de modération</span>
+          <span data-role-libelle>{libelleRole}</span>
         </p>
         <h1 id="t-code" tabindex="-1">
           Vérification en deux étapes
@@ -277,10 +299,143 @@ const visible = (nom: string) => nom === ecran;
           <button class="lien" type="button" data-basculer-code>
             Utiliser un code de secours
           </button>
-          <button class="lien" type="button" data-aller="identifiants">
+          <button class="lien" type="button" data-autre-compte>
             Changer de compte
           </button>
         </p>
+      </section>
+
+      <section
+        class="auth-vue"
+        data-vue="deux-facteurs-config"
+        aria-labelledby="t-config"
+        hidden={!visible('deux-facteurs-config')}
+      >
+        <p class="auth-repere">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-shield"></use>
+          </svg>
+          <span data-role-libelle>{libelleRole}</span>
+        </p>
+        <h1 id="t-config" tabindex="-1">
+          Activez la vérification en deux étapes
+        </h1>
+        <p class="auth-intro" data-config-intro>
+          {typo(
+            `Votre compte donne accès ${accesRole}. À chaque connexion, un code de votre application d’authentification vous sera demandé.`,
+          )}
+        </p>
+        <ol class="df-etapes">
+          <li>
+            <b>Ajoutez Vysora à votre application</b>
+            <span>
+              {typo(
+                'Scannez ce code avec Google Authenticator, Microsoft Authenticator, 1Password ou une application équivalente.',
+              )}
+            </span>
+            <div class="df-qr" role="img" aria-label="Code QR de la clé" data-qr></div>
+            <details class="df-cle">
+              <summary>
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-key"></use>
+                </svg>
+                Saisir la clé à la main
+              </summary>
+              <p>
+                <code data-cle></code>
+                <button class="lien" type="button" data-copier-cle>
+                  Copier la clé
+                </button>
+              </p>
+            </details>
+          </li>
+          <li>
+            <b>Saisissez le code affiché</b>
+            <form class="auth-bloc" id="form-activation" novalidate>
+              <div class="champ">
+                <label for="cx-activation">Code à six chiffres</label>
+                <div class="otp" data-otp>
+                  <input
+                    id="cx-activation"
+                    name="code"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="6"
+                    spellcheck="false"
+                    aria-describedby="cx-activation-erreur"
+                  />
+                  <div class="otp-cases" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+                <p class="message is-erreur" id="cx-activation-erreur" hidden></p>
+              </div>
+              <div class="alerte" role="alert" data-alerte hidden></div>
+              <button class="action action-principale" type="submit">
+                <span class="action-libelle">Activer</span>
+              </button>
+            </form>
+          </li>
+        </ol>
+        <p class="liens">
+          <button class="lien" type="button" data-autre-compte>
+            Changer de compte
+          </button>
+        </p>
+      </section>
+
+      <section class="auth-vue" data-vue="deux-facteurs-secours" aria-labelledby="t-secours" hidden>
+        <p class="auth-repere is-ok">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-shield"></use>
+          </svg>
+          <span>Vérification en deux étapes activée</span>
+        </p>
+        <h1 id="t-secours" tabindex="-1">
+          Gardez vos codes de secours
+        </h1>
+        <p class="auth-intro">
+          {typo(
+            'Sans votre application, chaque code permet une connexion, une seule fois. Ils ne seront plus affichés : copiez-les ou téléchargez-les maintenant.',
+          )}
+        </p>
+        <ul class="df-codes" data-codes></ul>
+        <p class="df-outils">
+          <button class="action action-secondaire" type="button" data-copier-codes>
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-copy"></use>
+            </svg>
+            <span class="action-libelle">Copier</span>
+          </button>
+          <button class="action action-secondaire" type="button" data-telecharger-codes>
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-download"></use>
+            </svg>
+            <span class="action-libelle">Télécharger</span>
+          </button>
+        </p>
+        <form class="auth-bloc" id="form-codes" novalidate>
+          <div class="case-champ">
+            <div class="case">
+              <input
+                type="checkbox"
+                id="cx-codes-gardes"
+                name="gardes"
+                aria-describedby="cx-codes-gardes-erreur"
+              />
+              <label for="cx-codes-gardes">J’ai mis ces codes en lieu sûr.</label>
+            </div>
+            <p class="message is-erreur" id="cx-codes-gardes-erreur" hidden></p>
+          </div>
+          <button class="action action-principale" type="submit">
+            <span class="action-libelle">Continuer</span>
+          </button>
+        </form>
       </section>
 
       <section class="auth-vue" data-vue="documents" aria-labelledby="t-documents" hidden>

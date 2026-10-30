@@ -14,6 +14,7 @@ const PAGES: [prefixe: string, libelle: string][] = [
   ['/bon-reflexe', 'Retour à Bon réflexe'],
   ['/classements', 'Retour aux classements'],
   ['/defis', 'Retour aux défis'],
+  ['/moderation', 'Retour à la modération'],
 ];
 const RETOUR_ACCUEIL = 'Retour à l’accueil';
 const RETOUR_AUTRE = 'Retour à la page précédente';

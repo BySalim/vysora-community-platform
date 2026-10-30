@@ -14,6 +14,7 @@ import { categorie, choixOption, mouvementReputation, outil } from '../src/db/sc
 import {
   MOT_DE_PASSE,
   ORIGINE_SITE,
+  confirmerIdentite,
   creerMembre,
   demarrerApplication,
   ipDeTest,
@@ -40,6 +41,7 @@ describe('Bon réflexe (APP-01)', () => {
       .set('X-Forwarded-For', ip)
       .send({ email, motDePasse: MOT_DE_PASSE })
       .expect(200);
+    await confirmerIdentite(contexte, email);
     // Limites de débit par adresse : chaque test a la sienne.
     return agent.set('X-Forwarded-For', ip);
   }

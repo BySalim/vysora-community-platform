@@ -25,6 +25,11 @@ export interface SessionApi {
   suspensionJusqua: string | null;
   /** Date d'effet (AAAA-MM-JJ) des documents légaux qui restent à accepter. */
   conditionsDepuis: string | null;
+  /** ENF-05, SEC-02 : compte de modération ou d'administration dont la session n'a pas encore
+      confirmé l'identité. « verifier » : saisir un code ; « configurer » : activer la double
+      authentification. Tant que ce n'est pas fait, la session agit comme celle d'un membre ;
+      `role` est celui que la vérification donnera. */
+  deuxFacteurs?: { etape: 'verifier' | 'configurer'; role: 'moderateur' | 'admin' };
 }
 
 /** Réponse de POST /api/v1/session. */
@@ -81,4 +86,18 @@ export interface InvitationApi {
   valable: boolean;
   /** Membre qui a créé l'invitation, s'il existe encore. */
   par: { nom: string; avatar: string | null } | null;
+}
+
+/** POST /api/v1/session/deux-facteurs/configuration : clé à saisir dans l'application. */
+export interface ConfigurationDeuxFacteursApi {
+  /** Clé en base32, à saisir à la main si le QR code ne peut pas être lu. */
+  cle: string;
+  /** Adresse otpauth://, contenue dans le QR code. */
+  adresse: string;
+}
+
+/** PUT /api/v1/session/deux-facteurs/configuration : codes de secours, montrés une seule fois. */
+export interface ActivationDeuxFacteursApi {
+  codesSecours: string[];
+  session: SessionApi;
 }

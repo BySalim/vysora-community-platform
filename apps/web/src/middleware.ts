@@ -1,5 +1,6 @@
 import type { APIContext } from 'astro';
 import { defineMiddleware } from 'astro:middleware';
+import { ROUTES } from './lib/navigation';
 import { chargerSession } from './lib/session';
 
 /* Pour chaque page : personne qui consulte (Astro.locals) et en-têtes de sécurité.
@@ -14,6 +15,16 @@ export const onRequest = defineMiddleware(async (contexte, suite) => {
   contexte.locals.membre = session.membre;
   contexte.locals.suspensionJusqua = session.suspensionJusqua;
   contexte.locals.conditionsDepuis = session.conditionsDepuis;
+  contexte.locals.deuxFacteurs = session.deuxFacteurs ?? null;
+
+  // SEC-02 : la modération et l'administration attendent la vérification en deux étapes.
+  const reservee = /^\/(moderation|administration)(\/|$)/.test(contexte.url.pathname);
+  if (reservee && session.deuxFacteurs) {
+    const retour = encodeURIComponent(contexte.url.pathname + contexte.url.search);
+    const redirection = contexte.redirect(`${ROUTES.connexion}?retour=${retour}`, 302);
+    for (const cookie of session.cookies) redirection.headers.append('Set-Cookie', cookie);
+    return redirection;
+  }
 
   const reponse = await suite();
   const entetes = reponse.headers;

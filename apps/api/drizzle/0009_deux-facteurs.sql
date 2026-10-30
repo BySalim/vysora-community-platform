@@ -1,0 +1,1 @@
+ALTER TABLE "double_authentification" ADD COLUMN "dernier_pas" bigint;

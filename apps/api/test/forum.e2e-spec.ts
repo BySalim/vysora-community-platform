@@ -20,6 +20,7 @@ import {
   MOT_DE_PASSE,
   ORIGINE_SITE,
   creerCreation,
+  confirmerIdentite,
   creerMembre,
   demarrerApplication,
   ipDeTest,
@@ -51,6 +52,7 @@ describe('Forum (FORUM-01)', () => {
       .set('X-Forwarded-For', ip)
       .send({ email, motDePasse: MOT_DE_PASSE })
       .expect(200);
+    await confirmerIdentite(contexte, email);
     // Limites de débit par adresse : chaque test a la sienne.
     return agent.set('X-Forwarded-For', ip);
   }

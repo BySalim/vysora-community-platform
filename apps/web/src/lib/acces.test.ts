@@ -111,6 +111,7 @@ describe('contexteServeur', () => {
       nonLues: 0,
       suspensionJusqua: null,
       conditionsDepuis: null,
+      deuxFacteurs: null,
     } satisfies App.Locals;
     const c = contexteServeur(
       locals,

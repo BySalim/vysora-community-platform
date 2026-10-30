@@ -83,6 +83,8 @@ export const doubleAuthentification = pgTable('double_authentification', {
     .$type<string[]>()
     .notNull()
     .default(sql`'[]'::jsonb`),
+  /** Dernier pas de 30 secondes accepté : un code déjà utilisé est refusé (rejeu). */
+  dernierPas: bigint({ mode: 'number' }),
 });
 
 /** F-03 : tentatives de connexion, pour temporiser après 5 échecs consécutifs. */

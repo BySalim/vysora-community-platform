@@ -257,6 +257,61 @@ export function retablir(bouton: HTMLButtonElement | null): void {
   if (bouton.dataset.libelle) libelle(bouton, bouton.dataset.libelle);
 }
 
+/** Code à six chiffres (vérification en deux étapes) : un seul champ, six cases affichées. */
+export function codeSixChiffres(
+  zone: HTMLElement,
+  surComplet?: () => void,
+): { vider(): void; rendre(): void } {
+  const input = $<HTMLInputElement>('input', zone)!;
+  const cases = $$('.otp-cases > span', zone);
+  let avant = '';
+  function rendre(): void {
+    const valeur = input.value;
+    const actif = document.activeElement === input;
+    cases.forEach((c, i) => {
+      c.textContent = valeur[i] ?? '';
+      c.classList.toggle('is-rempli', Boolean(valeur[i]));
+      c.classList.toggle('is-actif', actif && i === Math.min(valeur.length, 5));
+      if (valeur[i] && !avant[i] && animations.completes())
+        c.animate(
+          [
+            { transform: 'scale(0.82)', opacity: 0.4 },
+            { transform: 'none', opacity: 1 },
+          ],
+          { duration: 220, easing: EASE_EMPH },
+        );
+    });
+    avant = valeur;
+  }
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/g, '').slice(0, 6);
+    erreur(input);
+    rendre();
+    if (input.value.length === 6) surComplet?.();
+  });
+  const auBout = () =>
+    requestAnimationFrame(() => {
+      const n = input.value.length;
+      try {
+        input.setSelectionRange(n, n);
+      } catch {
+        // Champ non textuel.
+      }
+      rendre();
+    });
+  input.addEventListener('focus', auBout);
+  input.addEventListener('click', auBout);
+  input.addEventListener('keyup', rendre);
+  input.addEventListener('blur', rendre);
+  return {
+    vider() {
+      input.value = '';
+      rendre();
+    },
+    rendre,
+  };
+}
+
 /* Adresse e-mail : format (même règle que l'API) et faute de frappe dans le domaine. */
 
 export function messageEmail(valeur: string): string {

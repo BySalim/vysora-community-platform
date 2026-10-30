@@ -118,7 +118,7 @@ Les tables d'un membre (`soutien_demande`, `proposition_piege`, `liste_controle`
 |---|---|
 | `session` | Session ouverte sur un appareil ; identifiant = empreinte SHA-256 du jeton du cookie ; appareil, lieu approximatif, empreinte d'IP, double authentification validée. Supprimée chaque jour une fois expirée (EMAIL-01). |
 | `jeton` | Liens à usage unique envoyés par e-mail (vérification, réinitialisation, changement d'e-mail, confirmation de suppression) ; seule l'empreinte est stockée. |
-| `double_authentification` | Secret TOTP chiffré, codes de secours hachés (ENF-05). |
+| `double_authentification` | Secret TOTP chiffré, codes de secours hachés (ENF-05) ; `date_activation` nulle tant que le premier code n'est pas confirmé ; `dernier_pas` : dernier pas de 30 secondes accepté, un code déjà servi est refusé (migration `0009`, SEC-02). |
 | `tentative_connexion` | Échecs et réussites, pour temporiser après 5 échecs consécutifs (F-03). Désignées par l'empreinte salée de l'adresse saisie (`empreinte_identifiant`), qu'elle corresponde à un compte ou non : la temporisation ne révèle pas les comptes existants (migration `0002`). Conservées un an (politique de confidentialité), puis supprimées (EMAIL-01). |
 | `journal_audit` | Changements de rôle et actions d'administration (ENF-09). |
 | `vue_contenu` | Une vue par visiteur et par jour (F-23) ; empreinte salée du jour (membre, ou adresse IP et navigateur), effacée après 2 jours par `conservation.appliquer` (INT-04). |

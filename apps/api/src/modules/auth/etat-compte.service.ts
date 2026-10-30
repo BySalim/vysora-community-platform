@@ -17,6 +17,7 @@ import {
   notification,
 } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
+import { DeuxFacteursService } from './deux-facteurs.service.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
 import type { RequeteVysora, SessionOuverte } from './requete.js';
 
@@ -37,6 +38,7 @@ export class EtatCompteService {
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly documents: DocumentsLegauxService,
     private readonly stockage: Stockage,
+    private readonly deuxFacteurs: DeuxFacteursService,
   ) {}
 
   /** Calculé au plus une fois par requête (garde des droits, puis contrôleur). */
@@ -73,6 +75,18 @@ export class EtatCompteService {
       this.db.select().from(niveau),
     ]);
 
+    // ENF-05, SEC-02 : tant que la session n'a pas confirmé l'identité, un compte de modération ou
+    // d'administration agit comme celui d'un membre (l'API refuse donc moderer et administrer).
+    const aVerifier = membre.role !== 'MEMBRE' && !ouverte.deuxFacteursValide;
+    const deuxFacteurs = aVerifier
+      ? {
+          etape:
+            (await this.deuxFacteurs.statut(membre.id)) === 'active'
+              ? ('verifier' as const)
+              : ('configurer' as const),
+          role: membre.role === 'ADMINISTRATEUR' ? ('admin' as const) : ('moderateur' as const),
+        }
+      : null;
     const points = Math.max(0, reputation?.points ?? 0);
     const finSuspension = suspension?.fin ?? null;
     const conditionsDepuis =
@@ -84,7 +98,7 @@ export class EtatCompteService {
     return {
       etat: {
         session: 'membre',
-        role: ROLE_AFFICHE[membre.role],
+        role: aVerifier ? 'membre' : ROLE_AFFICHE[membre.role],
         niveau: niveauPourReputation(
           points,
           niveaux.map((n) => ({ ...n, code: n.code as CodeNiveau })),
@@ -107,6 +121,7 @@ export class EtatCompteService {
       nonLues,
       suspensionJusqua: finSuspension?.toISOString() ?? null,
       conditionsDepuis,
+      ...(deuxFacteurs ? { deuxFacteurs } : {}),
     };
   }
 }

@@ -23,6 +23,7 @@ import {
   MOT_DE_PASSE,
   ORIGINE_SITE,
   creerCreation,
+  confirmerIdentite,
   creerMembre,
   demarrerApplication,
   ipDeTest,
@@ -48,6 +49,7 @@ describe('Signalements et décisions (MOD-01)', () => {
       .set('X-Forwarded-For', ip)
       .send({ email, motDePasse: MOT_DE_PASSE })
       .expect(200);
+    await confirmerIdentite(contexte, email);
     return agent;
   }
   const awa = () => agentConnecte('awa.sarr@example.com');

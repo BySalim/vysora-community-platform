@@ -1,12 +1,12 @@
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { AppModule } from '../src/app.module.js';
 import { configurerApplication } from '../src/application.js';
 import { BASE } from '../src/db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../src/db/client.js';
-import { contenu, creation, licence, utilisateur } from '../src/db/schema/index.js';
+import { contenu, creation, licence, session, utilisateur } from '../src/db/schema/index.js';
 import { DocumentsLegauxService } from '../src/modules/auth/documents-legaux.service.js';
 import { MotsDePasseService } from '../src/modules/auth/mots-de-passe.service.js';
 import type { EmailAEnvoyer } from '../src/modules/email/email.service.js';
@@ -88,6 +88,20 @@ export async function creerMembre(
   if (documentsAcceptes)
     await contexte.app.get(DocumentsLegauxService).accepterEnVigueur(membre.id);
   return membre;
+}
+
+/** SEC-02 : sessions du membre tenues pour vérifiées par la double authentification, comme après
+    la saisie d'un code (la modération et l'administration en dépendent). */
+export async function confirmerIdentite(contexte: ApplicationDeTest, email: string): Promise<void> {
+  const [membre] = await contexte.db
+    .select({ id: utilisateur.id })
+    .from(utilisateur)
+    .where(eq(utilisateur.email, email));
+  if (membre)
+    await contexte.db
+      .update(session)
+      .set({ deuxFacteursValide: true })
+      .where(eq(session.utilisateurId, membre.id));
 }
 
 /** Valeur d'un cookie posé par la réponse (en-têtes Set-Cookie), ou undefined. */

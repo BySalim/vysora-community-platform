@@ -1,16 +1,24 @@
 /* Connexion (portée de prototype/connexion.js) : adresse e-mail et mot de passe sur un seul écran,
-   nouvelles conditions, mot de passe oublié, nouveau mot de passe, puis retour à la page d'origine.
+   vérification en deux étapes des comptes de modération et d'administration (SEC-02), nouvelles
+   conditions, mot de passe oublié, nouveau mot de passe, puis retour à la page d'origine.
    Chaque action appelle l'API ; un même message d'erreur, que l'adresse possède un compte ou non. */
 
-import type { ConnexionReussie, SessionApi } from '@vysora/shared';
+import type {
+  ActivationDeuxFacteursApi,
+  ConfigurationDeuxFacteursApi,
+  ConnexionReussie,
+  SessionApi,
+} from '@vysora/shared';
+import creerQr from 'qrcode-generator';
 import { dateLongue } from '../lib/texte';
 import { api } from './commun/api';
-import { $, corrigerTypographie, icon, t, toast, typo } from './commun/outils';
+import { $, $$, corrigerTypographie, icon, t, toast, typo } from './commun/outils';
 import {
   aide,
   alerte,
   boutonMessagerie,
   cacherMotsDePasse,
+  codeSixChiffres,
   compte,
   delaiDepart,
   demarrer,
@@ -36,6 +44,8 @@ import { fond as creerFond } from './auth/fond';
 const ORDRE = [
   'identifiants',
   'deux-facteurs',
+  'deux-facteurs-config',
+  'deux-facteurs-secours',
   'documents',
   'succes',
   'deja',
@@ -130,6 +140,13 @@ if (conteneur && carte) {
 
     if (reponse.ok) {
       session = reponse.donnees;
+      if (session.deuxFacteurs) {
+        retablir(bouton);
+        mdp.value = '';
+        cacherMotsDePasse(conteneur!);
+        deuxFacteurs(session.deuxFacteurs);
+        return;
+      }
       terminer(bouton);
       return;
     }
@@ -256,6 +273,249 @@ if (conteneur && carte) {
     void vues.afficher('succes');
     if (cas !== 'suspendu') fond.reussir();
   }
+
+  /* Vérification en deux étapes (ENF-05, SEC-02) ---------------------------------- */
+
+  const formCode = $<HTMLFormElement>('#form-code')!;
+  const champCode = $<HTMLInputElement>('#cx-code')!;
+  const secours = $<HTMLInputElement>('#cx-secours')!;
+  const otp = codeSixChiffres($('[data-otp]', formCode)!, () => formCode.requestSubmit());
+  let modeCode: 'appli' | 'secours' = 'appli';
+
+  /** Écran demandé par l'API : saisir un code, ou activer la double authentification. */
+  function deuxFacteurs(etat: NonNullable<SessionApi['deuxFacteurs']>): void {
+    const libelleRole = etat.role === 'admin' ? 'Compte d’administration' : 'Compte de modération';
+    for (const el of $$('[data-role-libelle]')) el.textContent = typo(libelleRole);
+    if (etat.etape === 'verifier') {
+      preparerCode();
+      void vues.afficher('deux-facteurs', { focus: 'champ' });
+      return;
+    }
+    $('[data-config-intro]')!.textContent = typo(
+      `Votre compte donne accès ${etat.role === 'admin' ? 'à l’administration' : 'à la modération'}. À chaque connexion, un code de votre application d’authentification vous sera demandé.`,
+    );
+    void vues.afficher('deux-facteurs-config', { focus: 'titre' });
+    void preparerConfiguration();
+  }
+
+  function preparerCode(): void {
+    choisirModeCode('appli');
+    otp.vider();
+    secours.value = '';
+    erreur(champCode);
+    erreur(secours);
+  }
+  function choisirModeCode(mode: 'appli' | 'secours'): void {
+    modeCode = mode;
+    for (const champ of $$<HTMLElement>('[data-mode-code]', formCode))
+      champ.hidden = champ.dataset.modeCode !== mode;
+    $('[data-basculer-code]')!.textContent = typo(
+      mode === 'appli' ? 'Utiliser un code de secours' : 'Utiliser l’application',
+    );
+    $('[data-code-intro]')!.textContent = typo(
+      mode === 'appli'
+        ? 'Saisissez le code affiché par votre application d’authentification.'
+        : 'Saisissez l’un de vos codes de secours.',
+    );
+  }
+  $('[data-basculer-code]')?.addEventListener('click', () => {
+    choisirModeCode(modeCode === 'appli' ? 'secours' : 'appli');
+    (modeCode === 'appli' ? champCode : secours).focus();
+  });
+  secours.addEventListener('input', () => {
+    const brut = secours.value
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 8);
+    secours.value = brut.length > 4 ? `${brut.slice(0, 4)}-${brut.slice(4)}` : brut;
+    erreur(secours);
+  });
+
+  /** Session vérifiée : la suite habituelle (conditions, compte, départ). */
+  function identiteConfirmee(nouvelle: SessionApi, action: HTMLButtonElement | null): void {
+    session = { ...nouvelle, suppressionAnnulee: session?.suppressionAnnulee ?? null };
+    terminer(action);
+  }
+
+  formCode.addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    const action = $<HTMLButtonElement>('.action-principale', formCode);
+    if (action?.disabled) return;
+    if (modeCode === 'appli')
+      erreur(champCode, champCode.value.length === 6 ? '' : 'Saisissez les six chiffres du code.');
+    else
+      erreur(
+        secours,
+        /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(secours.value)
+          ? ''
+          : 'Saisissez un code au format ABCD-EFGH.',
+      );
+    if (premierInvalide(formCode)) return;
+    occupe(action, true, 'Vérification…');
+    const reponse = await api<SessionApi>(
+      'POST',
+      '/api/v1/session/deux-facteurs',
+      modeCode === 'appli' ? { code: champCode.value } : { codeSecours: secours.value },
+    );
+    occupe(action, false);
+    if (reponse.ok) {
+      identiteConfirmee(reponse.donnees, action);
+      return;
+    }
+    const { probleme } = reponse;
+    if (probleme.code === 'VALIDATION' && probleme.erreurs) {
+      if (modeCode === 'appli') {
+        erreur(champCode, probleme.erreurs.code ?? 'Saisissez les six chiffres du code.');
+        otp.vider();
+      } else {
+        erreur(secours, probleme.erreurs.codeSecours ?? 'Saisissez un code au format ABCD-EFGH.');
+        secours.select();
+      }
+      premierInvalide(formCode);
+      return;
+    }
+    if (probleme.code === 'TROP_DE_REQUETES') {
+      toast('Trop de tentatives. Réessayez dans quelques minutes.', 'alert');
+      return;
+    }
+    if (probleme.status === 401) {
+      toast('Votre session a expiré. Connectez-vous de nouveau.', 'alert');
+      passerEnVisiteur();
+      void vues.afficher('identifiants', { focus: 'champ' });
+      return;
+    }
+    toast('La vérification est momentanément indisponible. Réessayez dans un instant.', 'alert');
+  });
+
+  /* Activation : clé (code QR ou saisie à la main), premier code, codes de secours. */
+
+  const formActivation = $<HTMLFormElement>('#form-activation')!;
+  const champActivation = $<HTMLInputElement>('#cx-activation')!;
+  const alerteActivation = $('[data-alerte]', formActivation);
+  const otpActivation = codeSixChiffres($('[data-otp]', formActivation)!, () =>
+    formActivation.requestSubmit(),
+  );
+  let cle = '';
+  let codesSecours: string[] = [];
+
+  /** Code QR dessiné en SVG (un tracé par module sombre), sans style en ligne (CSP). */
+  function codeQr(adresse: string): string {
+    const qr = creerQr(0, 'M');
+    qr.addData(adresse);
+    qr.make();
+    const n = qr.getModuleCount();
+    let trace = '';
+    for (let ligne = 0; ligne < n; ligne += 1)
+      for (let colonne = 0; colonne < n; colonne += 1)
+        if (qr.isDark(ligne, colonne)) trace += `M${colonne} ${ligne}h1v1h-1z`;
+    return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" aria-hidden="true"><path d="${trace}"/></svg>`;
+  }
+
+  async function preparerConfiguration(): Promise<void> {
+    otpActivation.vider();
+    erreur(champActivation);
+    alerte(alerteActivation);
+    $('[data-qr]')!.innerHTML = '';
+    $('[data-cle]')!.textContent = '';
+    const reponse = await api<ConfigurationDeuxFacteursApi>(
+      'POST',
+      '/api/v1/session/deux-facteurs/configuration',
+      {},
+    );
+    if (!reponse.ok) {
+      alerte(
+        alerteActivation,
+        reponse.probleme.code === 'TROP_DE_REQUETES'
+          ? `<p><b>${t('Trop de demandes.')}</b> ${t('Réessayez dans quelques minutes.')}</p>`
+          : indisponible('La clé n’a pas pu être créée.'),
+      );
+      return;
+    }
+    cle = reponse.donnees.cle;
+    $('[data-qr]')!.innerHTML = codeQr(reponse.donnees.adresse);
+    $('[data-cle]')!.textContent = cle.replace(/(.{4})(?=.)/g, '$1 ');
+  }
+
+  async function copier(texte: string, message: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(texte);
+      toast(message, 'check');
+    } catch {
+      toast('La copie n’a pas abouti. Sélectionnez le texte pour le copier.', 'alert');
+    }
+  }
+  $('[data-copier-cle]')?.addEventListener('click', () => void copier(cle, 'Clé copiée.'));
+
+  formActivation.addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    const action = $<HTMLButtonElement>('.action-principale', formActivation);
+    if (action?.disabled) return;
+    erreur(
+      champActivation,
+      champActivation.value.length === 6 ? '' : 'Saisissez les six chiffres du code.',
+    );
+    if (premierInvalide(formActivation)) return;
+    alerte(alerteActivation);
+    occupe(action, true, 'Activation…');
+    const reponse = await api<ActivationDeuxFacteursApi>(
+      'PUT',
+      '/api/v1/session/deux-facteurs/configuration',
+      { code: champActivation.value },
+    );
+    occupe(action, false);
+    if (reponse.ok) {
+      codesSecours = reponse.donnees.codesSecours;
+      session = {
+        ...reponse.donnees.session,
+        suppressionAnnulee: session?.suppressionAnnulee ?? null,
+      };
+      $('[data-codes]')!.innerHTML = codesSecours.map((code) => `<li>${t(code)}</li>`).join('');
+      void vues.afficher('deux-facteurs-secours');
+      return;
+    }
+    const { probleme } = reponse;
+    if (probleme.code === 'VALIDATION' && probleme.erreurs?.code) {
+      erreur(champActivation, probleme.erreurs.code);
+      otpActivation.vider();
+      premierInvalide(formActivation);
+      return;
+    }
+    alerte(
+      alerteActivation,
+      probleme.code === 'TROP_DE_REQUETES'
+        ? `<p><b>${t('Trop de tentatives.')}</b> ${t('Réessayez dans quelques minutes.')}</p>`
+        : indisponible('L’activation est momentanément indisponible.'),
+    );
+  });
+
+  const texteCodes = () =>
+    `Codes de secours Vysora\n\nChaque code permet une connexion, une seule fois.\n\n${codesSecours.join('\n')}\n`;
+  $('[data-copier-codes]')?.addEventListener(
+    'click',
+    () => void copier(codesSecours.join('\n'), 'Codes copiés.'),
+  );
+  $('[data-telecharger-codes]')?.addEventListener('click', () => {
+    const lien = document.createElement('a');
+    lien.href = URL.createObjectURL(new Blob([texteCodes()], { type: 'text/plain;charset=utf-8' }));
+    lien.download = 'vysora-codes-de-secours.txt';
+    lien.click();
+    setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+  });
+
+  const formCodes = $<HTMLFormElement>('#form-codes')!;
+  const gardes = $<HTMLInputElement>('#cx-codes-gardes')!;
+  gardes.addEventListener('change', () => erreur(gardes));
+  formCodes.addEventListener('submit', (evenement) => {
+    evenement.preventDefault();
+    if (!gardes.checked) {
+      erreur(gardes, 'Cochez la case une fois les codes mis en lieu sûr.');
+      premierInvalide(formCodes);
+      return;
+    }
+    codesSecours = [];
+    $('[data-codes]')!.innerHTML = '';
+    terminer($<HTMLButtonElement>('.action-principale', formCodes));
+  });
 
   /* Nouvelles conditions (F-04, WF-03) -------------------------------------------- */
 
@@ -409,16 +669,19 @@ if (conteneur && carte) {
   });
 
   /* Session déjà ouverte : « Changer de compte » ferme la session de cet appareil. */
-  $('[data-autre-compte]')?.addEventListener('click', async () => {
+  async function changerDeCompte(): Promise<void> {
     const reponse = await api('DELETE', '/api/v1/session');
     if (!reponse.ok && reponse.probleme.status !== 401) {
       toast('La déconnexion n’a pas abouti. Réessayez dans un instant.', 'alert');
       return;
     }
     passerEnVisiteur();
+    session = null;
     toast('Session fermée sur cet appareil.');
     void vues.afficher('identifiants', { focus: 'champ' });
-  });
+  }
+  for (const lien of $$('[data-autre-compte]'))
+    lien.addEventListener('click', () => void changerDeCompte());
 
   /* Aide ------------------------------------------------------------------------ */
 
@@ -459,6 +722,8 @@ if (conteneur && carte) {
     history.replaceState(null, '', adresse.pathname + adresse.search + adresse.hash);
   }
   if (location.hash === '#oubli' && vues.actuelle() === 'identifiants') aller('oubli');
+  // Session ouverte dont l'identité reste à confirmer (écran choisi par le serveur).
+  if (vues.actuelle() === 'deux-facteurs-config') void preparerConfiguration();
   corrigerTypographie(document.body);
   demarrer();
 }
