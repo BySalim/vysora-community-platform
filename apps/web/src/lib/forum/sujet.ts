@@ -192,10 +192,11 @@ export function trierReponses(
   reponses: MessageApi[],
   tri: 'utiles' | 'recentes' | 'anciennes',
 ): MessageApi[] {
-  const copie = [...reponses];
-  if (tri === 'recentes') return copie.sort((a, b) => b.date.localeCompare(a.date));
-  if (tri === 'anciennes') return copie.sort((a, b) => a.date.localeCompare(b.date));
-  return copie.sort((a, b) => (b.acceptee ? 1 : 0) - (a.acceptee ? 1 : 0) || b.utiles - a.utiles);
+  if (tri === 'recentes') return reponses.toSorted((a, b) => b.date.localeCompare(a.date));
+  if (tri === 'anciennes') return reponses.toSorted((a, b) => a.date.localeCompare(b.date));
+  return reponses.toSorted(
+    (a, b) => (b.acceptee ? 1 : 0) - (a.acceptee ? 1 : 0) || b.utiles - a.utiles,
+  );
 }
 
 function reponseHTML(r: MessageApi, c: ContexteSujet): string {

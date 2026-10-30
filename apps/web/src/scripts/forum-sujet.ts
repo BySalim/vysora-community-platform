@@ -156,9 +156,8 @@ if (sujet) {
     const tri = (evenement.target as HTMLSelectElement).value;
     const liste = $('[data-answer-list]');
     if (!liste) return;
-    const reponses = $$<HTMLElement>('[data-reponse]', liste);
     const date = (r: HTMLElement) => r.dataset.date ?? '';
-    reponses.sort((a, b) => {
+    const reponses = $$<HTMLElement>('[data-reponse]', liste).toSorted((a, b) => {
       if (tri === 'recentes') return date(b).localeCompare(date(a));
       if (tri === 'anciennes') return date(a).localeCompare(date(b));
       return (
