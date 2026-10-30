@@ -1,0 +1,39 @@
+---
+/* Cas Bon réflexe (APP-02, F-62) : la page d'Apprendre ouverte sur le cas. L'adresse
+   /bon-reflexe/[id]-[slug] redirige vers la bonne si le titre a changé ; un cas que la personne ne
+   peut pas voir (RG-30), ou qui n'est pas encore validé, répond 404. */
+import type { CasApi } from '@vysora/shared';
+import ApprendreApp from '../../components/ApprendreApp.astro';
+import Base from '../../layouts/Base.astro';
+import { ErreurApi, appelerApi } from '../../lib/api';
+import { ICONES_APPRENDRE } from '../../lib/apprendre/icones';
+import { identifiantDeLAdresse } from '../../lib/creations';
+import { ROUTES } from '../../lib/navigation';
+import '../../styles/explorer.css';
+import '../../styles/apprendre.css';
+
+const id = identifiantDeLAdresse(Astro.params.ref);
+let cas: CasApi | null = null;
+if (id !== null) {
+  try {
+    cas = await appelerApi<CasApi>(`/api/v1/cas/${id}`, { requete: Astro.request });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+  }
+}
+// Un cas proposé ou refusé se consulte depuis « Mes contenus » ou la modération (MOD-03).
+if (cas && cas.statut !== 'VALIDE') cas = null;
+if (cas && Astro.url.pathname !== ROUTES.casBonReflexe(cas.id, cas.slug))
+  return Astro.redirect(ROUTES.casBonReflexe(cas.id, cas.slug), 301);
+if (!cas) return Astro.rewrite('/404');
+---
+
+<Base
+  titre={`${cas.titre} · Bon réflexe`}
+  description={cas.contexte}
+  classeCorps="ex ap"
+  reglages={{ bases: 'frise', resumes: 'oui', bande: 'sombre', avantapres: 'cote' }}
+  icones={ICONES_APPRENDRE}
+>
+  <ApprendreApp casOuvert={cas.id} />
+</Base>

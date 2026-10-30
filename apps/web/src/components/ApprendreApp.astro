@@ -1,0 +1,165 @@
+---
+/* Apprendre (APP-02), porté de prototype/apprendre.html : barre locale des rubriques, recherche,
+   lien « Ma progression » et zone des vues, que le script rend (scripts/apprendre.ts) à partir des
+   contenus éditoriaux et des cas Bon réflexe de l'API, posés ici en JSON (#ap-donnees). */
+import type {
+  CasResumeApi,
+  GuidesApi,
+  ListeCasApi,
+  ListeSujetsApi,
+  ReferentielsApi,
+} from '@vysora/shared';
+import { appelerApi } from '../lib/api';
+import type { DonneesPageApprendre } from '../lib/apprendre/types';
+import { icone } from '../lib/explorer/elements';
+import { ROUTES } from '../lib/navigation';
+
+interface Props {
+  /** Cas demandé par l'adresse /bon-reflexe/[id]-[slug]. */
+  casOuvert?: number | null;
+}
+
+const { casOuvert = null } = Astro.props;
+const options = { requete: Astro.request };
+
+/** Cas validés, vingt par page : les premières pages suffisent à la bêta (au plus cent cas). */
+async function tousLesCas(): Promise<CasResumeApi[]> {
+  const premiere = await appelerApi<ListeCasApi>('/api/v1/cas', options).catch(() => null);
+  if (!premiere) return [];
+  const suite = await Promise.all(
+    Array.from({ length: Math.min(premiere.pages, 5) - 1 }, (_, i) =>
+      appelerApi<ListeCasApi>(`/api/v1/cas?page=${i + 2}`, options).catch(() => null),
+    ),
+  );
+  return [premiere, ...suite].flatMap((page) => page?.elements ?? []);
+}
+
+const [cas, referentiels, guides, sujets] = await Promise.all([
+  tousLesCas(),
+  appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null),
+  appelerApi<GuidesApi>('/api/v1/guides', options).catch(() => null),
+  appelerApi<ListeSujetsApi>('/api/v1/sujets', options).catch(() => null),
+]);
+
+const donnees: DonneesPageApprendre = {
+  cas,
+  outils: (referentiels?.outils ?? []).map((o) => ({
+    id: o.id,
+    nom: o.nom,
+    slug: o.slug,
+    logo: o.logo,
+    logoMonochrome: o.logoMonochrome,
+    famille: o.famille,
+  })),
+  guides: (guides?.elements ?? []).map((g) => ({
+    slug: g.slug,
+    titre: g.titre,
+    titreCourt: g.titreCourt,
+  })),
+  domaines: (referentiels?.categories ?? []).map((c) => ({
+    libelle: c.libelle,
+    slug: c.slug,
+    icone: c.icone,
+  })),
+  casOuvert,
+  aujourdhui: new Date().toISOString().slice(0, 10),
+  chiffres: { sujets: sujets?.total ?? 0, outils: referentiels?.outils.length ?? 0 },
+};
+---
+
+<nav class="ap-local" aria-label="Rubriques d’Apprendre" data-ap-local>
+  <div class="container ap-local-bar">
+    <a class="ap-local-title" href={ROUTES.apprendre} data-ap-nav>
+      Apprendre
+    </a>
+    <ul class="ap-local-tabs" data-ap-tabs></ul>
+    <div class="ap-local-tools">
+      <button
+        class="ap-search-btn"
+        type="button"
+        aria-expanded="false"
+        aria-controls="ap-search"
+        data-ap-search-open
+      >
+        <Fragment set:html={icone('search')} />
+        <span>Rechercher</span>
+        <kbd aria-hidden="true">/</kbd>
+      </button>
+      <a
+        class="ap-progress-link"
+        href={`${ROUTES.apprendre}?vue=progression`}
+        data-ap-nav
+        data-ap-progress-link
+      ></a>
+    </div>
+  </div>
+  <div class="ap-search" id="ap-search" hidden data-ap-search>
+    <div class="container">
+      <div class="ap-search-box">
+        <label class="ap-search-field">
+          <Fragment set:html={icone('search', '')} />
+          <span class="sr-only">Rechercher une base, une notion, une règle ou une astuce</span>
+          <input
+            type="search"
+            placeholder="Une notion, une règle, un outil…"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="ap-search-status"
+            data-ap-search-input
+          />
+          <button
+            class="icon-btn"
+            type="button"
+            aria-label="Fermer la recherche"
+            data-ap-search-close
+          >
+            <Fragment set:html={icone('close', '')} />
+          </button>
+        </label>
+        <p class="sr-only" id="ap-search-status" aria-live="polite" data-ap-search-status></p>
+        <ul class="ap-search-results" data-ap-search-results></ul>
+      </div>
+    </div>
+  </div>
+</nav>
+<div class="ap-view" data-ap-view></div>
+
+<dialog
+  class="ex-dialog ex-tools"
+  aria-labelledby="ex-tools-title"
+  aria-describedby="ex-tools-desc"
+  data-tools-dialog
+>
+  <form method="dialog" class="ex-tools-form">
+    <div class="ex-dialog-head">
+      <div>
+        <h2 id="ex-tools-title">Mes outils</h2>
+        <p id="ex-tools-desc">
+          Sélectionnez les outils que vous utilisez. Les astuces de vos outils passent en premier.
+        </p>
+      </div>
+      <button class="icon-btn" type="button" aria-label="Fermer" data-close-tools>
+        <Fragment set:html={icone('close', '')} />
+      </button>
+    </div>
+    <label class="ex-tools-search">
+      <Fragment set:html={icone('search')} />
+      <span class="sr-only">Rechercher un outil</span>
+      <input type="search" placeholder="Rechercher un outil" autocomplete="off" data-tools-filter />
+    </label>
+    <div class="ex-tools-list" data-tools-list></div>
+    <div class="ex-dialog-foot">
+      <button class="link-btn" type="button" data-tools-reset>
+        Effacer la sélection
+      </button>
+      <button class="btn btn-primary" type="submit" value="save" data-tools-save>
+        Enregistrer
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script type="application/json" id="ap-donnees" set:html={JSON.stringify(donnees)} />
+<script>
+  import '../scripts/apprendre';
+</script>
