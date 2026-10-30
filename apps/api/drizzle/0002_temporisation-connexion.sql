@@ -1,0 +1,2 @@
+ALTER TABLE "tentative_connexion" ADD COLUMN "empreinte_identifiant" varchar(64) NOT NULL;--> statement-breakpoint
+CREATE INDEX "tentative_connexion_identifiant_idx" ON "tentative_connexion" USING btree ("empreinte_identifiant","date");

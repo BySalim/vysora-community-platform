@@ -45,12 +45,12 @@
 
 | ID | Tâche | Prio | Statut | Périmètre de base · références |
 |---|---|---|---|---|
-| AUTH-01 | Sessions et comptes | P0 | ⬜ | Argon2id, inscription par e-mail (pseudo RG-01, e-mail RG-02, mot de passe RG-04 avec liste de mots de passe compromis), connexion, déconnexion, cookie de session (ADR-0005), temporisation après 5 échecs, `GET /api/v1/session` → `EtatVisiteur` ; `chargerSession` du site branché ; menu du compte et déconnexion dans l'en-tête. F-01, F-03 |
+| AUTH-01 | Sessions et comptes | P0 | ✅ 2026-10-30 | Argon2id, inscription par e-mail (pseudo RG-01, e-mail RG-02, mot de passe RG-04 avec liste de mots de passe compromis), connexion, déconnexion, cookie de session (ADR-0005), temporisation après 5 échecs, `GET /api/v1/session` → `EtatVisiteur` ; `chargerSession` du site branché ; menu du compte et déconnexion dans l'en-tête. F-01, F-03 |
 | AUTH-02 | Vérification de l'e-mail | P0 | ⬜ | Jeton 24 h, renvoi du lien, compte en lecture seule tant que non vérifié (bandeau déjà prêt). F-01, RG-02 |
 | AUTH-03 | Mot de passe oublié et réinitialisation | P0 | ⬜ | Lien 1 h, message identique que l'e-mail existe ou non, sessions fermées après changement. F-03 |
 | AUTH-04 | Pages Connexion et Inscription portées | P0 | ⬜ | proto `connexion.html`, `inscription.html`, `auth.css`, `auth.js`, `auth-data.js` ; retour à la page d'origine (`?retour=`, `?pour=`) ; pseudos réservés ; boutons GitHub et Google présents mais branchés par AUTH-08 |
 | AUTH-05 | Acceptation versionnée des documents légaux | P0 | ⬜ | À l'inscription et à chaque nouvelle version (`/accepter-documents`, bandeau « conditions ») ; confidentialité informative (voir Points à trancher). F-04, RG-03, RG-112 |
-| AUTH-06 | Garde des droits côté API | P0 | ⬜ | Décorateur ou garde `@Exige('contribuer' | 'moderer' | 'administrer' | 'proposer-cas')` fondé sur `raisonRefus` + état du compte (e-mail, conditions, suspension) ; tests de refus |
+| AUTH-06 | Garde des droits côté API | P0 | ✅ 2026-10-30 (base) | Décorateur ou garde `@Exige('contribuer' | 'moderer' | 'administrer' | 'proposer-cas')` fondé sur `raisonRefus` + état du compte (e-mail, conditions, suspension) ; tests de refus. Fait : `SessionGuard` global et `@Exige`, refus avec `raison` ; les refus « email », « conditions », « suspendu » seront testés sur la première route `contribuer` (CREA-01) |
 | AUTH-07 | Dialogue d'accès côté site | P0 | ⬜ | Porter `exiger`, `accesBloc`, `invitation` et les gardes de liens de `commun.js` (`data-exige`) |
 | LEG-01 | Pages légales portées | P0 | ⬜ | `cgu`, `confidentialite`, `charte-communautaire`, `cookies`, `mentions-legales` + `documents-legaux.js` ; version et date affichées depuis `document_legal` |
 | INV-01 | Bêta fermée sur invitation | P1 | ⬜ | Code d'invitation à l'inscription (proto : `auth-data.js`, `invitation`), table `invitation`, création des codes par l'administration ; badge PIONNIER |

@@ -1,4 +1,4 @@
-import type { CodeErreur } from '@vysora/shared';
+import type { CodeErreur, ComplementsProbleme } from '@vysora/shared';
 
 /* Erreurs applicatives : un service lève une ErreurApplication ; le filtre HTTP la traduit
    en réponse « problem details » (RFC 9457) avec le statut correspondant. */
@@ -6,6 +6,7 @@ import type { CodeErreur } from '@vysora/shared';
 export const STATUT_HTTP: Record<CodeErreur, number> = {
   VALIDATION: 400,
   NON_AUTHENTIFIE: 401,
+  IDENTIFIANTS_INCORRECTS: 401,
   INTERDIT: 403,
   ORIGINE_REFUSEE: 403,
   INTROUVABLE: 404,
@@ -19,6 +20,8 @@ export const STATUT_HTTP: Record<CodeErreur, number> = {
 export const TITRE_ERREUR: Record<CodeErreur, string> = {
   VALIDATION: 'Certaines informations sont à corriger.',
   NON_AUTHENTIFIE: 'Connectez-vous pour continuer.',
+  // F-03 : le même message, que l'adresse corresponde à un compte ou non.
+  IDENTIFIANTS_INCORRECTS: 'Adresse e-mail ou mot de passe incorrect.',
   INTERDIT: 'Cette action ne vous est pas permise.',
   ORIGINE_REFUSEE: 'Cette requête a été refusée.',
   INTROUVABLE: 'Ce contenu est introuvable.',
@@ -33,6 +36,7 @@ export class ErreurApplication extends Error {
     readonly code: CodeErreur,
     readonly detail?: string,
     readonly erreurs?: Record<string, string>,
+    readonly complements?: ComplementsProbleme,
   ) {
     super(detail ?? TITRE_ERREUR[code]);
     this.name = 'ErreurApplication';

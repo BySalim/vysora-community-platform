@@ -192,7 +192,7 @@ if (zone) {
     if (motif) f.motif.value = motif;
     if (prerempli.contenu) f.contenu.value = prerempli.contenu;
     const moi = etats.moi();
-    if (moi && !f.nom.value) f.nom.value = moi.nom;
+    if (moi && !f.nom.value) f.nom.value = moi.pseudo;
     adapter(form);
     form.addEventListener('change', (evenement) => {
       const cible = evenement.target as HTMLInputElement;

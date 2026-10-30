@@ -82,7 +82,13 @@ export const DELAIS = {
   suspensionJours: { min: 1, max: 90 }, // F-91
   defiJours: { min: 1, max: 30 }, // RG-73
   traitementSignalementHeures: 72, // RG-105
-  sessionJours: 30,
+  sessionJours: 30, // ADR-0005 : expiration glissante
+  /** F-03 : au-delà de 5 échecs consécutifs, chaque tentative attend ce délai (prototype : « Réessayer dans 0:30 »). */
+  temporisationConnexionSecondes: 30,
+  /** F-03 : seuls les échecs de cette période comptent ; au-delà, le compteur repart de zéro. */
+  fenetreEchecsConnexionMinutes: 15,
+  /** Délai avant de pouvoir renvoyer un lien par e-mail (prototype : « Renvoyer le lien (30 s) »). */
+  renvoiLienSecondes: 30,
 } as const;
 
 export const CODES_NIVEAU = ['curieux', 'apprenti', 'artisan', 'expert', 'maitre'] as const;

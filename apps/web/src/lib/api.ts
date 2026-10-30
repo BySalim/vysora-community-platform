@@ -21,6 +21,14 @@ export interface OptionsAppel extends Omit<RequestInit, 'body'> {
 }
 
 export async function appelerApi<T>(chemin: string, options: OptionsAppel = {}): Promise<T> {
+  return (await appelerApiAvecEntetes<T>(chemin, options)).donnees;
+}
+
+/** Comme appelerApi, avec les en-têtes de la réponse (cookie de session prolongé à transmettre). */
+export async function appelerApiAvecEntetes<T>(
+  chemin: string,
+  options: OptionsAppel = {},
+): Promise<{ donnees: T; entetes: Headers }> {
   const { requete, adresseClient, corps, headers, ...init } = options;
   const entetes = new Headers(headers);
   entetes.set('Accept', 'application/json');
@@ -54,5 +62,5 @@ export async function appelerApi<T>(chemin: string, options: OptionsAppel = {}):
           },
     );
   }
-  return donnees as T;
+  return { donnees: donnees as T, entetes: reponse.headers };
 }

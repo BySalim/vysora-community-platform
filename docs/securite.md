@@ -20,16 +20,23 @@
 | Intégrité en base (contraintes CHECK, unicités, décisions de modération immuables) | migrations |
 | Champ piège anti-robot sur le formulaire public | page Contact |
 | Requêtes SQL paramétrées uniquement | Drizzle |
+| Mots de passe : Argon2id (19 Mio, 2 passes), 12 à 128 caractères, refus des mots de passe compromis (Have I Been Pwned par k-anonymat, liste intégrée en repli) et de ceux qui contiennent le pseudo ou l'adresse — RG-04 | `MotsDePasseService`, `problemeMotDePasse` |
+| Session : jeton de 32 octets dans un cookie `HttpOnly`, `SameSite=Lax`, `Secure` et `__Host-` en production ; empreinte SHA-256 seule en base ; expiration glissante de 30 jours ; nouveau jeton à chaque connexion ; session d'un compte banni ou supprimé ignorée | `SessionsService` (ADR-0005) |
+| Connexion : même message et même durée de calcul que l'adresse existe ou non ; temporisation de 30 s après 5 échecs consécutifs par adresse (empreinte salée), 10 essais par minute et par IP | `ConnexionService` |
+| Droits vérifiés par l'API sur chaque route réservée (`@Exige`, mêmes règles que l'interface), avec la raison du refus | `SessionGuard` |
+| Pages rendues pour un membre : `Cache-Control: private, no-store`, sans l'adresse e-mail dans le HTML | `middleware.ts`, `Base.astro` |
 
 ## 2. À mettre en place (par ordre d'arrivée)
 
 **Authentification et sessions (AUTH-01)**
-- [ ] Mots de passe : Argon2id (`@node-rs/argon2`), 12 caractères minimum, 128 maximum, refus des mots de passe compromis (Have I Been Pwned, k-anonymat) — RG-04.
-- [ ] Session : jeton aléatoire de 32 octets dans un cookie `HttpOnly`, `Secure`, `SameSite=Lax`, préfixe `__Host-` en production ; seule l'empreinte SHA-256 est en base ; expiration glissante (30 jours) ; renouvellement du jeton à la connexion ; révocation par appareil.
-- [ ] Temporisation après 5 échecs consécutifs (F-03), message identique que le compte existe ou non (énumération).
+- [x] Mots de passe : Argon2id (`@node-rs/argon2`), 12 caractères minimum, 128 maximum, refus des mots de passe compromis (Have I Been Pwned, k-anonymat) — RG-04.
+- [x] Session : jeton aléatoire de 32 octets dans un cookie `HttpOnly`, `Secure`, `SameSite=Lax`, préfixe `__Host-` en production ; seule l'empreinte SHA-256 est en base ; expiration glissante (30 jours) ; renouvellement du jeton à la connexion ; fermeture de la session de l'appareil. La liste des appareils et leur révocation à distance viennent avec PARAM-01.
+- [x] Temporisation après 5 échecs consécutifs (F-03), message identique que le compte existe ou non (énumération).
+- [ ] Purge des tentatives de connexion et des sessions expirées (tâche planifiée, EMAIL-01).
+- Choix assumé (F-01) : l'inscription indique qu'une adresse est déjà associée à un compte ; la limite de débit (20 vérifications par minute et par IP) en freine l'exploitation.
 - [ ] Liens par e-mail à usage unique, durée limitée (24 h vérification, 1 h réinitialisation), empreinte seule en base ; toutes les sessions fermées après un changement de mot de passe.
 - [ ] Double authentification TOTP obligatoire pour modérateurs et administrateurs (ENF-05), secret chiffré (AES-256-GCM, `CLE_CHIFFREMENT`), codes de secours hachés.
-- [ ] Contrôle des droits côté API sur chaque route réservée (rôle, état du compte, propriété du contenu) ; tests de refus.
+- [x] Contrôle des droits côté API sur chaque route réservée (rôle, état du compte) ; tests de refus. La propriété d'un contenu se vérifie dans chaque service concerné.
 
 **Contenus des membres**
 - [ ] Markdown rendu côté serveur sans HTML brut, assaini (liste blanche), liens `rel="ugc nofollow noopener"` (ENF-06) ; code affiché comme texte, jamais exécuté.

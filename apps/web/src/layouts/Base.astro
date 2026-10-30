@@ -8,6 +8,7 @@ import SiteHeader from '../components/SiteHeader.astro';
 import Sprite from '../components/Sprite.astro';
 import type { Icone } from '../lib/icones';
 import { attributsEtat } from '../lib/session';
+import type { EtatPage } from '../scripts/commun/etats';
 import '../styles/styles.css';
 import '../styles/commun.css';
 import '../styles/etats.css';
@@ -62,11 +63,17 @@ const attributsCorps = Object.fromEntries(
   Object.entries(donneesCorps).map(([nom, valeur]) => [`data-${nom}`, valeur]),
 );
 const canonique = new URL(Astro.url.pathname, Astro.site).href;
+const { membre } = Astro.locals;
 const etatClient = JSON.stringify({
   etat: Astro.locals.etat,
-  membre: Astro.locals.membre,
+  membre: membre && {
+    id: membre.id,
+    pseudo: membre.pseudo,
+    points: membre.points,
+    avatar: membre.avatar,
+  },
   nonLues: Astro.locals.nonLues,
-});
+} satisfies EtatPage);
 ---
 
 <!doctype html>

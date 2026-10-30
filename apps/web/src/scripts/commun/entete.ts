@@ -1,9 +1,11 @@
 /* En-tête : progression et masquage au défilement, menu mobile, menu du compte
    (prototype/commun.js : initHeader et monterCompte). Chargé par toutes les pages. */
 
-import { $, icon } from './outils';
+import { $, icon, toast } from './outils';
 
 const racine = document.documentElement;
+/** Message à montrer après le rechargement de la page (déconnexion). */
+const CLE_MESSAGE = 'vysora-message';
 
 function initialiserEntete(): void {
   const entete = $('[data-header]');
@@ -85,8 +87,41 @@ function initialiserCompte(): void {
   document.addEventListener('click', (evenement) => {
     if (!zone.contains(evenement.target as Node)) regler(false);
   });
-  // La déconnexion arrive avec l'authentification (registre : AUTH-01).
+
+  // F-03 : la session de cet appareil est fermée, puis la page se recharge pour une visiteuse.
+  const sortir = $<HTMLButtonElement>('[data-deconnexion]', menu);
+  sortir?.addEventListener('click', async () => {
+    sortir.disabled = true;
+    try {
+      const reponse = await fetch('/api/v1/session', {
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+      });
+      if (!reponse.ok) throw new Error(`statut ${reponse.status}`);
+      try {
+        sessionStorage.setItem(CLE_MESSAGE, 'Vous êtes déconnecté.');
+      } catch {
+        // Stockage indisponible : la page se recharge sans message.
+      }
+      location.reload();
+    } catch {
+      sortir.disabled = false;
+      toast('La déconnexion n’a pas abouti. Réessayez dans un instant.', 'alert');
+    }
+  });
+}
+
+function afficherMessageEnAttente(): void {
+  try {
+    const message = sessionStorage.getItem(CLE_MESSAGE);
+    if (!message) return;
+    sessionStorage.removeItem(CLE_MESSAGE);
+    toast(message);
+  } catch {
+    // Stockage indisponible : rien à afficher.
+  }
 }
 
 initialiserEntete();
 initialiserCompte();
+afficherMessageEnAttente();

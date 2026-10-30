@@ -39,3 +39,15 @@ export async function vider(db: BaseDeDonnees, ...tables: string[]): Promise<voi
     sql.raw(`truncate table ${tables.map((t) => `"${t}"`).join(', ')} restart identity cascade`),
   );
 }
+
+/** Nom du cookie de session hors production (ADR-0005). */
+export const COOKIE_SESSION = 'vysora_session';
+
+/** Jeton du cookie de session posé par une réponse, ou undefined. */
+export function jetonSession(reponse: { headers: Record<string, unknown> }): string | undefined {
+  const cookies = reponse.headers['set-cookie'];
+  const liste = Array.isArray(cookies) ? (cookies as string[]) : [];
+  const cookie = liste.find((c) => c.startsWith(`${COOKIE_SESSION}=`));
+  const valeur = cookie?.split(';')[0]?.slice(COOKIE_SESSION.length + 1);
+  return valeur || undefined;
+}

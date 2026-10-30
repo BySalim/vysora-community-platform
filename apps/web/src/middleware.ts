@@ -14,6 +14,10 @@ export const onRequest = defineMiddleware(async (contexte, suite) => {
 
   const reponse = await suite();
   const entetes = reponse.headers;
+  // Session prolongée (ou effacée) par l'API : le navigateur reçoit le cookie à jour.
+  for (const cookie of session.cookies) entetes.append('Set-Cookie', cookie);
+  // Une page rendue pour un membre est personnelle : aucun cache partagé ne doit la garder.
+  if (session.membre) entetes.set('Cache-Control', 'private, no-store');
   entetes.set('X-Content-Type-Options', 'nosniff');
   entetes.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   entetes.set('X-Frame-Options', 'DENY');

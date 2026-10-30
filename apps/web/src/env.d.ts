@@ -6,7 +6,7 @@ declare namespace App {
     etat: import('@vysora/shared').EtatVisiteur;
     /** Notifications non lues (pastille de l'en-tête). */
     nonLues: number;
-    /** Membre connecté : pseudo et nom affichés dans le menu du compte. */
-    membre: { pseudo: string; nom: string; points: number; avatar: string | null } | null;
+    /** Membre connecté : pseudo, points et avatar affichés dans le menu du compte. */
+    membre: import('@vysora/shared').MembreConnecte | null;
   }
 }

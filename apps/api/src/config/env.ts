@@ -31,6 +31,8 @@ const schemaEnvironnement = z
       error: 'CLE_CHIFFREMENT doit encoder 32 octets en base64url',
     }),
     STOCKAGE_DOSSIER: z.string().default('./stockage'),
+    /** RG-04 : « hibp » interroge Have I Been Pwned (k-anonymat), « locale » s'en tient à la liste intégrée. */
+    VERIFICATION_FUITES: z.enum(['hibp', 'locale']).default('hibp'),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;

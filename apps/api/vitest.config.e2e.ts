@@ -17,6 +17,8 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
+      // Aucun appel extérieur pendant les tests : la liste intégrée suffit.
+      VERIFICATION_FUITES: 'locale',
       DATABASE_URL:
         process.env.DATABASE_URL_TEST ?? 'postgres://vysora:vysora@localhost:5432/vysora_test',
     },

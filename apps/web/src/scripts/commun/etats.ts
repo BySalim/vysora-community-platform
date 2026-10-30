@@ -8,9 +8,10 @@ import {
   type RaisonRefus,
 } from '@vysora/shared';
 
-interface EtatPage {
+/** Ce que la page transmet aux scripts : jamais l'adresse e-mail du membre. */
+export interface EtatPage {
   etat: EtatVisiteur;
-  membre: { pseudo: string; nom: string; points: number; avatar: string | null } | null;
+  membre: { id: number; pseudo: string; points: number; avatar: string | null } | null;
   nonLues: number;
 }
 
@@ -33,7 +34,7 @@ const page = lire();
 export const etats = {
   get: (): EtatVisiteur => page.etat,
   membre: (): boolean => page.etat.session === 'membre',
-  /** Pseudo et nom du membre connecté (MOI dans le prototype). */
+  /** Membre connecté : pseudo, points, avatar (MOI dans le prototype). */
   moi: () => page.membre,
   nonLues: (): number => page.nonLues,
   raison: (action: ActionReservee = 'contribuer'): RaisonRefus | null =>

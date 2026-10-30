@@ -127,7 +127,7 @@ const estMembre = etat.session === 'membre' && membre;
                 </span>
               )}
               <p>
-                <b>{membre.nom}</b>
+                <b>{membre.pseudo}</b>
                 <span>{`${niveau?.libelle} · ${fmt(membre.points)} points`}</span>
                 {etat.role !== 'membre' && <em>{ROLES[etat.role]}</em>}
               </p>

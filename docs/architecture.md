@@ -44,7 +44,9 @@ Versions installées au démarrage du projet (octobre 2026) ; les mises à jour 
 | Qualité | oxlint, Prettier, `astro check`, `tsc` | Rapide ; `pnpm verifier` enchaîne tout. |
 | Infra de développement | Docker Compose : PostgreSQL, Mailpit | Démarrage en une commande. |
 
-Prévus mais non installés (ajoutés quand une tâche en a besoin) : `sharp` (images), `@node-rs/argon2` (mots de passe), `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), un moteur de rendu Markdown assaini, Playwright (tests de navigateur).
+Installés depuis : `@node-rs/argon2` (mots de passe, AUTH-01).
+
+Prévus mais non installés (ajoutés quand une tâche en a besoin) : `sharp` (images), `arctic` (GitHub/Google), un générateur TOTP (double authentification), `pg-boss` (file de tâches sur PostgreSQL), un moteur de rendu Markdown assaini, Playwright (tests de navigateur).
 
 ## 3. Arborescence
 
@@ -92,7 +94,7 @@ Un module par domaine du MCD. Chaque module expose un contrôleur (routes, valid
 | `referentiels` | Référentiels publics (outils, catégories, licences, niveaux, badges) | Fait (lecture) |
 | `contact` | Messages à l'équipe, signalement sans compte | Fait |
 | `email` | Envoi SMTP, gabarit | Fait (envoi direct, file d'attente à venir) |
-| `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes | À faire |
+| `auth` | Inscription, vérification, connexion, sessions, mot de passe, documents légaux, double authentification, comptes externes | En cours : comptes, sessions, connexion, droits (`@Exige`) faits (AUTH-01) |
 | `membres` | Profil public, paramètres, export, suppression | À faire |
 | `creations` | Éditeur (brouillon, publication), fiche, variantes, médias, liens | À faire |
 | `decouverte` | Recherche, filtres, accueil, catégories, étiquettes | À faire |

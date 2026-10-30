@@ -26,6 +26,15 @@ export const typo = (valeur: unknown): string =>
 export const t = (valeur: unknown): string => esc(typo(valeur));
 
 const formatNombre = new Intl.NumberFormat('fr-FR');
+const formatDateLongue = new Intl.DateTimeFormat('fr-FR', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+/** Date en toutes lettres, avec l'ordinal du premier jour du mois : « 1er septembre 2026 ». */
+export const dateLongue = (valeur: Date | string): string =>
+  formatDateLongue.format(new Date(valeur)).replace(/^1 /, '1er ');
 export const fmt = (valeur: number): string => formatNombre.format(valeur);
 export const pluriel = (nombre: number, un: string, plusieurs: string): string =>
   `${fmt(nombre)} ${nombre > 1 ? plusieurs : un}`;
