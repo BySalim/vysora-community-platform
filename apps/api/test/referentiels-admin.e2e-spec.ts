@@ -53,6 +53,9 @@ describe('Référentiel des outils et modèles (ADM-02, F-95, RG-110)', () => {
     ).body as OutilAdministreApi;
     expect(outil).toMatchObject({
       slug: 'outil-test-studio',
+      editeur: 'Éditeur Test',
+      type: 'GENERATEUR_IMAGE',
+      famille: 'IMAGE',
       statut: 'ACTIF',
       utilisations: 0,
       modeles: [],

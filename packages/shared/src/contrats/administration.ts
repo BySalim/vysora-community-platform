@@ -1,4 +1,4 @@
-import type { Role } from '../enums';
+import type { FamilleOutil, Role, TypeOutil } from '../enums';
 import type { MembreResumeApi } from './creations';
 import type { DecisionApi } from './moderation';
 
@@ -70,7 +70,8 @@ export interface OutilAdministreApi {
   nom: string;
   slug: string;
   editeur: string;
-  famille: string;
+  type: TypeOutil;
+  famille: FamilleOutil;
   logo: string | null;
   logoMonochrome: boolean;
   statut: 'ACTIF' | 'ARCHIVE';

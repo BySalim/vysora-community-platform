@@ -25,14 +25,15 @@ export class ReferentielsAdminService {
       nom: string;
       slug: string;
       editeur: string;
-      famille: string;
+      type: OutilAdministreApi['type'];
+      famille: OutilAdministreApi['famille'];
       logo: string | null;
       logo_monochrome: boolean;
       statut: OutilAdministreApi['statut'];
       utilisations: number;
       modeles: OutilAdministreApi['modeles'] | null;
     }>(sql`
-      select o.id, o.nom, o.slug, e.nom as editeur, o.famille, o.logo, o.logo_monochrome, o.statut,
+      select o.id, o.nom, o.slug, e.nom as editeur, o.type, o.famille, o.logo, o.logo_monochrome, o.statut,
         ((select count(*) from configuration_ia c where c.outil_id = o.id)
           + (select count(*) from sujet s where s.outil_id = o.id)
           + (select count(*) from cas_bon_reflexe cb where cb.outil_id = o.id)
@@ -48,6 +49,7 @@ export class ReferentielsAdminService {
       nom: r.nom,
       slug: r.slug,
       editeur: r.editeur,
+      type: r.type,
       famille: r.famille,
       logo: r.logo,
       logoMonochrome: r.logo_monochrome,
