@@ -305,3 +305,12 @@ export const schemaPublicationCreation = z.object({
   confirmationDonnees: z.boolean().default(false),
 });
 export type PublicationCreation = z.output<typeof schemaPublicationCreation>;
+
+/** PUT /api/v1/defis/:id/participation (F-64, RG-74) : la création inscrite au défi. */
+export const schemaParticipationDefi = z.object({
+  creationId: z.coerce
+    .number({ error: 'Choisissez une création.' })
+    .int({ error: 'Choisissez une création.' })
+    .positive({ error: 'Choisissez une création.' }),
+});
+export type ParticipationDefi = z.output<typeof schemaParticipationDefi>;

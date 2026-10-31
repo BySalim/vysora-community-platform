@@ -1,0 +1,18 @@
+---
+/* Défis (S-07, EC-12), portés de prototype/defis.html : voir components/DefisApp.astro. */
+import DefisApp from '../../components/DefisApp.astro';
+import Base from '../../layouts/Base.astro';
+import { ICONES_DEFIS } from '../../lib/defis';
+import '../../styles/explorer.css';
+import '../../styles/defis.css';
+import '../../styles/defis-complements.css';
+---
+
+<Base
+  titre="Défis"
+  description="Les défis de Vysora : un sujet à explorer, votre manière de le réaliser avec l’IA, et le chemin parcouru partagé avec la communauté."
+  classeCorps="ex df"
+  icones={ICONES_DEFIS}
+>
+  <DefisApp />
+</Base>

@@ -1,0 +1,486 @@
+---
+/* Défis (S-07, F-63 à F-65), portés de prototype/defis.html : le défi (en cours, à venir ou
+   clôturé), « Comment participer ? », les participations (filtre par outil, recherche, tri, vote
+   « Utile ») et les défis terminés avec leur podium. Rendu par le serveur depuis GET /api/v1/defis ;
+   scripts/defis.ts filtre, vote, inscrit une participation (RG-74) et ouvre les résultats. */
+import type { DefisApi, EtatDefi, ParticipationDefiApi } from '@vysora/shared';
+import { appelerApi } from '../lib/api';
+import { carteParticipation } from '../lib/defis';
+import { avatar, logo } from '../lib/explorer/elements';
+import { ROUTES } from '../lib/navigation';
+import { dateCourte, dateLongue, fmt, pluriel, typo } from '../lib/texte';
+
+interface Props {
+  defiId?: number | null;
+}
+
+const { defiId = null } = Astro.props;
+const donnees = await appelerApi<DefisApi>(`/api/v1/defis${defiId ? `?defi=${defiId}` : ''}`, {
+  requete: Astro.request,
+});
+const { defi, participations, termines, moi } = donnees;
+const ouvert = defi?.etat === 'EN_COURS';
+const STATUTS: Record<EtatDefi, string> = {
+  A_VENIR: 'Bientôt ouvert',
+  EN_COURS: 'Ouvert aux participations',
+  TERMINE: 'Participations fermées',
+  CLOTURE: 'Clôturé',
+  ANNULE: 'Annulé',
+};
+const periode = (debut: string, fin: string) => `${dateCourte(debut)} — ${dateLongue(fin)}`;
+const outilPrincipal = (p: ParticipationDefiApi) => p.creation.outils[0];
+const outils = [
+  ...new Map(
+    participations.flatMap((p) => {
+      const o = outilPrincipal(p);
+      return o ? [[o.outil.slug, o.outil] as const] : [];
+    }),
+  ).values(),
+];
+const libelleParticiper = !moi
+  ? 'Participer au défi'
+  : moi.participation
+    ? 'Voir ma participation'
+    : 'Participer au défi';
+const MOIS_COURTS = [
+  'janv.',
+  'févr.',
+  'mars',
+  'avr.',
+  'mai',
+  'juin',
+  'juil.',
+  'août',
+  'sept.',
+  'oct.',
+  'nov.',
+  'déc.',
+];
+const ICONES_REGLES = ['type-iteration', 'check-circle', 'globe'];
+---
+
+<section class="container df-intro">
+  <div>
+    <p class="df-eyebrow">La communauté en pratique</p>
+    <h1>
+      Défis<span>.</span>
+    </h1>
+  </div>
+  <p>
+    Un sujet à explorer.
+    <br />
+    Votre manière de le réaliser.
+  </p>
+</section>
+<nav class="df-nav" aria-label="Sur cette page">
+  <div class="container df-nav-inner">
+    <div class="df-anchors">
+      <a href="#defi" aria-current="location">
+        {defi?.etat === 'EN_COURS' ? 'Défi en cours' : 'Le défi'}
+      </a>
+      <a href="#participations">
+        Participations <span>{defi ? fmt(participations.length) : ''}</span>
+      </a>
+      <a href="#termines">Défis terminés</a>
+    </div>
+    {ouvert && (
+      <button class="btn btn-primary btn-sm" type="button" data-participer>
+        {libelleParticiper}
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-arrow" />
+        </svg>
+      </button>
+    )}
+  </div>
+</nav>
+<div class="container">
+  <section id="defi" class="df-section" aria-label="Le défi">
+    {defi ? (
+      <>
+        {defi.etat === 'ANNULE' && (
+          <p class="df-notice">{typo('Ce défi a été annulé. Les participations sont fermées.')}</p>
+        )}
+        {moi?.participation && ouvert && (
+          <div class="df-notice">
+            {typo(
+              'Vous avez déjà participé. Vous pouvez encore explorer les méthodes et voter pour les autres créations.',
+            )}
+          </div>
+        )}
+        <div class="df-brief">
+          <div class="df-challenge">
+            <div class="df-challenge-top">
+              <p class="kicker">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-trophy" />
+                </svg>
+                {defi.etat === 'EN_COURS' ? 'Défi en cours' : 'Défi'}
+              </p>
+              <span class="df-status">{STATUTS[defi.etat]}</span>
+            </div>
+            <h2>{typo(defi.titre)}</h2>
+            <p>{typo(defi.enonce)}</p>
+            <div class="df-cta">
+              {ouvert ? (
+                <>
+                  <button class="btn btn-primary" type="button" data-participer>
+                    {libelleParticiper}
+                    <svg class="icon icon-sm" aria-hidden="true">
+                      <use href="#i-arrow" />
+                    </svg>
+                  </button>
+                  <a class="df-hero-link" href="#participations">
+                    Voir les créations
+                    <svg class="icon icon-sm" aria-hidden="true">
+                      <use href="#i-arrow-down" />
+                    </svg>
+                  </a>
+                </>
+              ) : (
+                participations.length > 0 && (
+                  <a class="btn btn-primary" href="#participations">
+                    Voir les participations
+                  </a>
+                )
+              )}
+            </div>
+            <div class="df-challenge-foot">
+              <span>
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-calendar" />
+                </svg>
+                {periode(defi.dateDebut, defi.dateFin)}
+              </span>
+              <span>
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-users" />
+                </svg>
+                {pluriel(defi.participations, 'participation', 'participations')}
+              </span>
+            </div>
+          </div>
+          <aside class="df-rules">
+            <div class="df-rules-heading">
+              <span>Le brief</span>
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-type-iteration" />
+              </svg>
+            </div>
+            <h3>Les contraintes</h3>
+            <ul>
+              {defi.regles.map((regle, i) => (
+                <li>
+                  <svg class="icon" aria-hidden="true">
+                    <use href={`#i-${ICONES_REGLES[i % 3]}`} />
+                  </svg>
+                  <div>
+                    <b>{typo(regle)}</b>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p>
+              Une création par personne.
+              <br />
+              Tous les outils sont acceptés.
+            </p>
+            <div class="df-deadline">
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-clock" />
+              </svg>
+              <div>
+                <strong>
+                  {defi.etat === 'CLOTURE'
+                    ? 'Défi terminé'
+                    : defi.etat === 'A_VENIR'
+                      ? `Ouverture le ${dateLongue(defi.dateDebut)}`
+                      : `Clôture le ${dateLongue(defi.dateFin)}`}
+                </strong>
+                <span>
+                  {defi.etat === 'CLOTURE'
+                    ? 'Le classement est définitif.'
+                    : `À ${new Date(defi.dateFin).toISOString().slice(11, 16).replace(':', ' h ')}, heure UTC`}
+                </span>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </>
+    ) : (
+      <div class="df-empty">
+        <h3>Aucun défi pour le moment</h3>
+        <p>
+          {typo(
+            'Le prochain défi sera annoncé ici. Retrouvez les défis terminés et leurs méthodes plus bas.',
+          )}
+        </p>
+      </div>
+    )}
+  </section>
+  {ouvert && (
+    <details class="df-how">
+      <summary>
+        Comment participer ?
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-plus" />
+        </svg>
+      </summary>
+      <div class="df-steps">
+        <p>
+          <strong>Créez dans votre outil.</strong> Respectez les contraintes du défi.
+        </p>
+        <p>
+          <strong>Partagez votre méthode.</strong>{' '}
+          {typo(
+            'Publiez le résultat et les prompts utilisés pendant le défi, puis inscrivez votre création.',
+          )}
+        </p>
+        <p>
+          <strong>Échangez avec la communauté.</strong> Votez pour les créations qui vous sont
+          utiles.
+        </p>
+      </div>
+    </details>
+  )}
+  {defi && (
+    <section
+      id="participations"
+      class="df-section df-reveal"
+      aria-labelledby="df-entries-title"
+      data-df-participations
+    >
+      <div class="df-section-head">
+        <div>
+          <p class="kicker">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-grid" />
+            </svg>
+            Les créations
+          </p>
+          <h2 id="df-entries-title">Participations</h2>
+          <p class="df-sub" data-selection data-total={participations.length}>
+            {participations.length
+              ? `${pluriel(participations.length, 'création affichée', 'créations affichées')} sur ${pluriel(participations.length, 'participation', 'participations')}`
+              : typo('Les premières créations restent à imaginer.')}
+          </p>
+        </div>
+        {participations.length > 1 && (
+          <label class="df-sort">
+            Trier par
+            <select id="df-sort" data-sort>
+              <option value="utiles">Les plus utiles</option>
+              <option value="recentes">Les plus récentes</option>
+            </select>
+          </label>
+        )}
+      </div>
+      {participations.length > 1 && (
+        <div class="df-toolbar">
+          <div class="df-filters" role="group" aria-label="Filtrer par outil">
+            <button type="button" data-tool="" aria-pressed="true">
+              Tous
+            </button>
+            {outils.map((o) => (
+              <button type="button" data-tool={o.slug} aria-pressed="false">
+                <Fragment set:html={logo(o, 16)} />
+                {o.nom}
+              </button>
+            ))}
+          </div>
+          <label class="df-search">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-search" />
+            </svg>
+            <span class="sr-only">Rechercher une participation</span>
+            <input
+              type="search"
+              id="df-search"
+              placeholder="Rechercher une création…"
+              data-search
+            />
+          </label>
+        </div>
+      )}
+      <div
+        class="df-grid"
+        data-entries
+        set:html={participations.map((p) => carteParticipation(p, ouvert)).join('')}
+      />
+      <div class="df-empty" data-aucune hidden>
+        <h3>Aucune participation trouvée</h3>
+        <p>{typo('Essayez un autre outil ou élargissez votre recherche.')}</p>
+        <button class="btn btn-secondary" type="button" data-clear>
+          Réinitialiser les filtres
+        </button>
+      </div>
+      {participations.length === 0 && ouvert && (
+        <div class="df-empty">
+          <h3>{typo('La première participation sera peut-être la vôtre')}</h3>
+          <p>{typo('Créez votre réalisation et partagez votre méthode.')}</p>
+        </div>
+      )}
+      <p class="sr-only" aria-live="polite" data-results-status></p>
+      {participations.length > 0 && (
+        <div class="df-list-foot">
+          <p>
+            {defi.etat === 'CLOTURE'
+              ? 'Le classement de ce défi est figé.'
+              : typo('Le classement évolue jusqu’à la clôture du défi.')}
+          </p>
+          <a href={`${ROUTES.classements}#regles`} class="link-arrow">
+            Comprendre les points
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-arrow" />
+            </svg>
+          </a>
+        </div>
+      )}
+    </section>
+  )}
+  <section id="termines" class="df-section df-reveal" aria-labelledby="df-archives-title">
+    <div class="df-section-head">
+      <div>
+        <p class="kicker">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-history" />
+          </svg>
+          Les éditions précédentes
+        </p>
+        <h2 id="df-archives-title">Les défis terminés</h2>
+        <p class="df-sub">Les participations restent accessibles pour explorer les méthodes.</p>
+      </div>
+    </div>
+    <div class="df-archive-layout">
+      <div>
+        {termines.length ? (
+          termines.map((d) => {
+            const debut = new Date(d.dateDebut);
+            const premier = d.podium[0];
+            return (
+              <article class="df-archive">
+                <div class="df-archive-visual" aria-hidden="true">
+                  <span>{MOIS_COURTS[debut.getUTCMonth()]}</span>
+                  <b>{String(debut.getUTCDate()).padStart(2, '0')}</b>
+                </div>
+                <div>
+                  <h3>{typo(d.titre)}</h3>
+                  <p>{`Du ${dateCourte(d.dateDebut)} au ${dateLongue(d.dateFin)} · ${pluriel(d.participations, 'participation', 'participations')}`}</p>
+                  {premier && (
+                    <div class="df-person">
+                      <svg class="icon" aria-hidden="true">
+                        <use href="#i-trophy" />
+                      </svg>
+                      <Fragment set:html={avatar(premier.auteur, 24)} />
+                      <span>{`1re place · ${premier.auteur.nom}`}</span>
+                    </div>
+                  )}
+                  <a class="df-text-btn" href={ROUTES.defi(d.id, d.slug)}>
+                    Voir les résultats
+                    <svg class="icon icon-sm" aria-hidden="true">
+                      <use href="#i-arrow" />
+                    </svg>
+                  </a>
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <p class="df-sub">{typo('Les défis clôturés et leur classement apparaîtront ici.')}</p>
+        )}
+      </div>
+      <aside class="df-ranking">
+        <svg class="icon" aria-hidden="true">
+          <use href="#i-trophy" />
+        </svg>
+        <h3>Comment fonctionne le classement ?</h3>
+        <p>{typo('Les votes « Utile » reçus pendant le défi déterminent le classement.')}</p>
+        <p>{typo('En cas d’égalité, la création publiée la première passe devant.')}</p>
+        <p>Les rangs sont figés à la clôture.</p>
+        <a href={`${ROUTES.classements}#regles`}>
+          Comprendre les points et les badges
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-arrow-up-right" />
+          </svg>
+        </a>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<dialog class="df-dialog" aria-labelledby="df-dialog-title" data-df-dialogue>
+  <div class="df-dialog-bar">
+    <span>
+      <svg class="icon" aria-hidden="true">
+        <use href="#i-type-iteration" />
+      </svg>
+      <span>Votre participation</span>
+    </span>
+    <button class="icon-btn df-close" type="button" data-close aria-label="Fermer">
+      <svg class="icon" aria-hidden="true">
+        <use href="#i-close" />
+      </svg>
+    </button>
+  </div>
+  <div class="df-participer">
+    {moi?.eligibles.length ? (
+      <form data-df-form>
+        <h2 id="df-dialog-title">Inscrire une création au défi</h2>
+        <p>
+          {typo(
+            'Choisissez l’une de vos créations publiées pendant le défi. Une seule création par personne ; vous pourrez la retirer tant que le défi est en cours.',
+          )}
+        </p>
+        <fieldset>
+          <legend class="sr-only">Vos créations</legend>
+          {moi.eligibles.map((c, i) => (
+            <label class="df-choix">
+              <input type="radio" name="creation" value={c.id} checked={i === 0} />
+              <span>{typo(c.titre)}</span>
+            </label>
+          ))}
+        </fieldset>
+        <p class="df-erreur" role="alert" data-df-erreur hidden />
+        <div class="df-dialog-actions">
+          <a class="btn btn-secondary" href={ROUTES.publier}>
+            Publier une nouvelle création
+          </a>
+          <button class="btn btn-primary" type="submit">
+            Inscrire au défi
+          </button>
+        </div>
+      </form>
+    ) : (
+      <div>
+        <h2 id="df-dialog-title">Publiez d’abord votre création</h2>
+        <p>
+          {typo(
+            'Créez votre réalisation en respectant les contraintes, publiez-la avec les prompts utilisés, puis revenez ici pour l’inscrire au défi.',
+          )}
+        </p>
+        <div class="df-dialog-actions">
+          <a class="btn btn-primary" href={ROUTES.publier}>
+            Publier une création
+          </a>
+        </div>
+      </div>
+    )}
+  </div>
+</dialog>
+
+<script
+  type="application/json"
+  id="df-donnees"
+  set:html={JSON.stringify({
+    defi: defi?.id ?? null,
+    connecte: Boolean(moi),
+    participation: moi?.participation
+      ? ROUTES.creation(
+          moi.participation.id,
+          participations.find((p) => p.creation.id === moi.participation?.id)?.creation.slug,
+        )
+      : null,
+  })}
+/>
+<script>
+  import '../scripts/defis';
+</script>

@@ -1,0 +1,29 @@
+---
+/* Un défi (S-07) : /defis/[id]-[slug], même page que /defis centrée sur ce défi. Une adresse
+   dont le slug a changé est redirigée ; un défi introuvable donne la page 404. */
+import type { DefisApi } from '@vysora/shared';
+import DefisApp from '../../components/DefisApp.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { ICONES_DEFIS } from '../../lib/defis';
+import { ROUTES } from '../../lib/navigation';
+import '../../styles/explorer.css';
+import '../../styles/defis.css';
+import '../../styles/defis-complements.css';
+
+const correspondance = /^(\d{1,15})(?:-([a-z0-9-]*))?$/.exec(Astro.params.ref ?? '');
+if (!correspondance) return Astro.rewrite('/404');
+const id = Number(correspondance[1]);
+const { defi } = await appelerApi<DefisApi>(`/api/v1/defis?defi=${id}`, { requete: Astro.request });
+if (!defi || defi.id !== id) return Astro.rewrite('/404');
+if (correspondance[2] !== defi.slug) return Astro.redirect(ROUTES.defi(defi.id, defi.slug), 301);
+---
+
+<Base
+  titre={`${defi.titre} · Défis`}
+  description={defi.enonce}
+  classeCorps="ex df"
+  icones={ICONES_DEFIS}
+>
+  <DefisApp defiId={id} />
+</Base>

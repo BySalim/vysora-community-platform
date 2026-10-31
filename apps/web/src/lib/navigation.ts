@@ -16,6 +16,7 @@ export const ROUTES = {
   bonReflexe: '/apprendre?rubrique=bon-reflexe',
   classements: '/classements',
   defis: '/defis',
+  defi: (id: number, slug?: string | null) => `/defis/${id}${slug ? `-${slug}` : ''}`,
   publier: '/creations/nouvelle',
   /** Fiche d'une création : l'identifiant fait foi, le texte se lit (/creations/12-cite-imaginaire). */
   creation: (id: number, slug?: string | null) => `/creations/${id}${slug ? `-${slug}` : ''}`,
