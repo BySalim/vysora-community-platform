@@ -3,6 +3,7 @@ import {
   LIMITES,
   LONGUEURS,
   MESSAGES_PARTICIPATION,
+  slugifier,
   type CategorieApi,
   type ContenuCreationSaisi,
   type CreationAControler,
@@ -434,8 +435,9 @@ export const agentActif = (d: Brouillon, outils: Map<number, OutilEditeur>): boo
 /** Catégorie proposée d'après le résultat et les outils, tant que l'auteur n'en a pas choisi. */
 export function categorieProposee(d: Brouillon, refs: Referentiels): CategorieApi | null {
   const outils = indexOutils(refs);
+  // Par l'adresse du domaine, fixée à sa création : l'administration peut modifier le libellé (ADM-02).
   const parLibelle = (libelle: string) =>
-    refs.categories.find((c) => c.libelle === libelle) ?? null;
+    refs.categories.find((c) => c.slug === slugifier(libelle)) ?? null;
   if (d.resultats.some((r) => r.kind === 'code')) return parLibelle('Code et scripts');
   const premier = prompts(d)
     .map((p) => (p.outilId === null ? undefined : outils.get(p.outilId)))

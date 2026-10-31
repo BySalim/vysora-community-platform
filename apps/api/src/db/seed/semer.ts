@@ -29,8 +29,9 @@ import {
 const propose = (colonne: string) => sql.raw(`excluded.${colonne}`);
 
 /* Charge les référentiels. Idempotent : un élément absent est ajouté d'après sa clé naturelle ;
-   un élément existant garde les valeurs réglées par l'administration (seuils, libellés, textes).
-   Seuls les attributs de présentation repris du prototype (logos, icônes, familles) sont remis à jour. */
+   un élément existant garde les valeurs réglées par l'administration (seuils, libellés, textes,
+   icônes des catégories). Seuls les attributs de présentation repris du prototype (logos, familles
+   des outils, icônes des badges) sont remis à jour. */
 export async function semer(db: BaseDeDonnees): Promise<void> {
   await db.transaction(async (tx) => {
     await tx
@@ -54,10 +55,11 @@ export async function semer(db: BaseDeDonnees): Promise<void> {
         CATEGORIES.map((c, ordre) => ({ ...c, slug: slugifier(c.libelle), ordreAffichage: ordre })),
       )
       .onConflictDoUpdate({
-        target: categorie.libelle,
+        // L'adresse ne change jamais ; le libellé, si l'administration le modifie (ADM-02).
+        target: categorie.slug,
         // La présentation d'un domaine (DEC-01) n'est remplie que si l'administration ne l'a pas écrite.
         set: {
-          icone: propose('icone'),
+          icone: sql`coalesce(${categorie.icone}, ${propose('icone')})`,
           description: sql`coalesce(${categorie.description}, ${propose('description')})`,
         },
       });

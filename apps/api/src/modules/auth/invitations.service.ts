@@ -64,7 +64,8 @@ export class InvitationsService {
     if (!pris.length) return false;
     await tx.execute(sql`
       insert into ${obtentionBadge} (utilisateur_id, badge_id)
-      select ${utilisateurId}, ${badge.id} from ${badge} where ${badge.code} = 'PIONNIER'
+      select ${utilisateurId}, ${badge.id} from ${badge}
+      where ${badge.code} = 'PIONNIER' and ${badge.estActif}
       on conflict do nothing`);
     return true;
   }

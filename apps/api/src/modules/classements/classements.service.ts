@@ -412,7 +412,7 @@ export class ClassementsService {
       from obtention_badge ob
       join badge b on b.id = ob.badge_id
       join utilisateur u on u.id = ob.utilisateur_id
-      where ob.date_obtention >= ${debut} and ob.date_obtention < ${fin} and b.est_actif
+      where ob.date_obtention >= ${debut} and ob.date_obtention < ${fin}
         and ${membreClasse(maintenant)}
       order by ob.date_obtention desc, b.id desc
       limit ${BADGES}`);

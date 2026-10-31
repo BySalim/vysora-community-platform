@@ -51,9 +51,9 @@ const refs: Referentiels = {
     outil(3, 'Cursor', { famille: 'CODE', estAgent: true }),
   ],
   categories: [
-    { id: 1, libelle: 'Texte et rédaction', slug: 'texte', icone: 'pen' },
-    { id: 2, libelle: 'Image et illustration', slug: 'image', icone: 'image' },
-    { id: 3, libelle: 'Code et scripts', slug: 'code', icone: 'code' },
+    { id: 1, libelle: 'Texte et rédaction', slug: 'texte-et-redaction', icone: 'pen' },
+    { id: 2, libelle: 'Image et illustration', slug: 'image-et-illustration', icone: 'image' },
+    { id: 3, libelle: 'Code et scripts', slug: 'code-et-scripts', icone: 'code' },
   ],
   licences: [
     {

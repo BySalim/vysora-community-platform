@@ -346,7 +346,7 @@ export class ProfilService {
     });
   }
 
-  /** F-74 : badges obtenus, du plus récent au plus ancien. */
+  /** F-74 : badges obtenus, du plus récent au plus ancien ; un badge arrêté (ADM-02) reste affiché. */
   private async badges(id: number): Promise<BadgeObtenuApi[]> {
     const { rows } = await this.db.execute<{
       code: string;
@@ -358,7 +358,7 @@ export class ProfilService {
     }>(sql`
       select b.code, b.libelle, b.critere, b.icone, b.ton, ob.date_obtention as date
       from obtention_badge ob join badge b on b.id = ob.badge_id
-      where ob.utilisateur_id = ${id} and b.est_actif
+      where ob.utilisateur_id = ${id}
       order by ob.date_obtention desc, b.id desc`);
     return rows.map((r) => ({ ...r, date: new Date(r.date).toISOString() }));
   }
