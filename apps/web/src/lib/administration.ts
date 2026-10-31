@@ -28,7 +28,7 @@ export function parFamille(outils: OutilAdministreApi[]): FamilleAdministree[] {
   return FAMILLES.map(({ id, label }) => {
     const liste = outils
       .filter((o) => o.famille === id)
-      .sort((a, b) => ordre(a) - ordre(b) || a.nom.localeCompare(b.nom, 'fr'));
+      .toSorted((a, b) => ordre(a) - ordre(b) || a.nom.localeCompare(b.nom, 'fr'));
     return {
       id,
       libelle: label,
@@ -40,4 +40,4 @@ export function parFamille(outils: OutilAdministreApi[]): FamilleAdministree[] {
 
 /** Éditeurs connus, proposés à la saisie d'un nouvel outil (un éditeur inconnu est créé). */
 export const editeurs = (outils: OutilAdministreApi[]): string[] =>
-  [...new Set(outils.map((o) => o.editeur))].sort((a, b) => a.localeCompare(b, 'fr'));
+  [...new Set(outils.map((o) => o.editeur))].toSorted((a, b) => a.localeCompare(b, 'fr'));
