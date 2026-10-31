@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   Param,
   Post,
@@ -17,6 +18,7 @@ import {
   schemaRechercheCreations,
   type GuideApi,
   type GuidesApi,
+  type IndexRechercheApi,
   type ListeControleApi,
   type ListeControleSaisie,
   type PropositionPiegeApi,
@@ -31,6 +33,7 @@ import { Exige, SessionCourante } from '../auth/droits.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { ContributionsGuidesService } from './contributions-guides.service.js';
 import { GuidesService } from './guides.service.js';
+import { IndexRechercheService } from './index-recherche.service.js';
 import { RechercheService } from './recherche.service.js';
 
 /* Explorer (DEC-01, F-22) : guides, ce que la communauté cherche encore, recherche des parcours. */
@@ -40,6 +43,7 @@ export class DecouverteController {
     private readonly guides: GuidesService,
     private readonly contributions: ContributionsGuidesService,
     private readonly recherche: RechercheService,
+    private readonly indexDuSite: IndexRechercheService,
   ) {}
 
   /** GET /api/v1/guides : guides publiés, domaines, demandes (index d'Explorer). */
@@ -107,5 +111,13 @@ export class DecouverteController {
     @Query(new ValidationZod(schemaRechercheCreations)) parametres: RechercheCreations,
   ): Promise<RechercheCreationsApi> {
     return this.recherche.creations(parametres.q);
+  }
+
+  /** GET /api/v1/recherche/index : ce que la recherche de tout le site parcourt (S-11). */
+  @Get('recherche/index')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Header('Cache-Control', 'public, max-age=60')
+  indexRecherche(): Promise<IndexRechercheApi> {
+    return this.indexDuSite.index();
   }
 }

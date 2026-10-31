@@ -1,5 +1,5 @@
-/* En-tête : progression et masquage au défilement, menu mobile, menu du compte
-   (prototype/commun.js : initHeader et monterCompte). Chargé par toutes les pages. */
+/* En-tête : progression et masquage au défilement, menu mobile, menu du compte, recherche
+   (prototype/commun.js : initHeader, monterCompte et monterRecherche). Chargé par toutes les pages. */
 
 import { estProblemeApi } from '@vysora/shared';
 import { $, icon, lireMessageEnAttente, messageApresChargement, toast } from './outils';
@@ -114,6 +114,48 @@ function afficherMessageEnAttente(): void {
   $<HTMLElement>('.header-login')?.focus();
 }
 
+/* Recherche sur tout le site : la loupe ([data-recherche-ouvrir]) et Ctrl K (⌘ K) l'ouvrent. Son
+   script et sa feuille de style (recherche.ts) se chargent au premier survol de la loupe ou après
+   le chargement de la page, puis servent aux ouvertures suivantes. */
+let recherche: Promise<typeof import('./recherche')> | null = null;
+const chargerRecherche = () => (recherche ??= import('./recherche'));
+
+function initialiserRecherche(): void {
+  const ouvrir = (declencheur: Element | null) =>
+    void chargerRecherche().then((r) => r.ouvrir(declencheur));
+  document.addEventListener('click', (evenement) => {
+    const declencheur = (evenement.target as Element).closest('[data-recherche-ouvrir]');
+    if (!declencheur) return;
+    evenement.preventDefault();
+    ouvrir(declencheur);
+  });
+  const intention = (evenement: Event) => {
+    if ((evenement.target as Element).closest?.('[data-recherche-ouvrir]'))
+      void chargerRecherche().then((r) => r.prechauffer());
+  };
+  for (const type of ['pointerover', 'focusin', 'touchstart'])
+    document.addEventListener(type, intention, { passive: true });
+  document.addEventListener('keydown', (evenement) => {
+    if (
+      evenement.key.toLowerCase() !== 'k' ||
+      !(evenement.ctrlKey || evenement.metaKey) ||
+      evenement.altKey ||
+      evenement.shiftKey
+    )
+      return;
+    evenement.preventDefault();
+    ouvrir($('.site-header [data-recherche-ouvrir]') ?? $('[data-recherche-ouvrir]'));
+  });
+  const plusTard = (fn: () => void) =>
+    typeof window.requestIdleCallback === 'function'
+      ? window.requestIdleCallback(fn, { timeout: 4000 })
+      : setTimeout(fn, 1500);
+  const precharger = () => plusTard(() => void chargerRecherche());
+  if (document.readyState === 'complete') precharger();
+  else window.addEventListener('load', precharger, { once: true });
+}
+
 initialiserEntete();
 initialiserCompte();
+initialiserRecherche();
 afficherMessageEnAttente();

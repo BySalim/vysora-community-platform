@@ -1,6 +1,7 @@
 import type {
   GuideApi,
   GuidesApi,
+  IndexRechercheApi,
   ListeControleApi,
   PropositionPiegeApi,
   RechercheCreationsApi,
@@ -415,6 +416,35 @@ describe('Guides d’Explorer (DEC-01)', () => {
         salon,
       ]);
       expect(await chercher('je veux')).toEqual([]);
+    });
+
+    it('donne à la recherche du site les seuls contenus publiés et visibles (S-11)', async () => {
+      const { salon, terrain, brouillon, masquee } = await guideComplet();
+      const index = (await visiteur().get('/api/v1/recherche/index').expect(200))
+        .body as IndexRechercheApi;
+      expect(index.creations.map((c) => c.id).toSorted()).toEqual([salon, terrain].toSorted());
+      expect(index.creations.map((c) => c.id)).not.toContain(brouillon);
+      expect(index.creations.map((c) => c.id)).not.toContain(masquee);
+      expect(index.creations.find((c) => c.id === salon)).toMatchObject({
+        titre: 'Prise de rendez-vous pour un salon de coiffure',
+        domaine: 'Application web',
+        outils: [{ nom: 'Claude', modeles: [expect.any(String)] }],
+        auteur: { pseudo: expect.any(String) },
+        utiles: 3,
+        // Création masquée exclue des chiffres : 4 reproductions, 3 réussies (RG-43).
+        reproductions: 4,
+        tauxReussite: 75,
+      });
+      // Le guide en préparation n'y figure pas ; ses mots-clés alimentent les recherches fréquentes.
+      expect(index.guides.map((g) => g.slug)).toEqual(['rendez-vous']);
+      expect(index.guides[0]?.etapes).toEqual([
+        'Décrire les prestations et les horaires',
+        'Refuser un créneau déjà pris',
+      ]);
+      expect(index.frequentes).toContain('réservation');
+      expect(index.domaines.find((d) => d.slug === 'application-web')?.creations).toBe(2);
+      expect(index.membres.map((m) => m.pseudo)).toContain('awa-sarr');
+      expect(index.outils.find((o) => o.nom === 'Claude')?.creations).toBe(1);
     });
 
     it('relie la fiche d’une création à son guide publié (fil d’Ariane, retour)', async () => {

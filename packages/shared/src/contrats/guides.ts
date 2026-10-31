@@ -1,4 +1,11 @@
-import type { StatutPropositionPiege, TypeCreation, TypeMomentCle, TypeSujet } from '../enums';
+import type {
+  DifficulteCas,
+  FamilleOutil,
+  StatutPropositionPiege,
+  TypeCreation,
+  TypeMomentCle,
+  TypeSujet,
+} from '../enums';
 import type { EtatSujet } from '../forum';
 import type { CasApi } from './bon-reflexe';
 import type { MembreResumeApi, OutilResumeApi } from './creations';
@@ -249,4 +256,109 @@ export interface RechercheCreationsApi {
     titre: string;
     guide: { slug: string; titreCourt: string } | null;
   }[];
+}
+
+/** Membre tel que la recherche le présente (vignette et aperçu). */
+export interface MembreIndexApi {
+  pseudo: string;
+  nom: string;
+  avatar: string | null;
+}
+
+/** GET /api/v1/recherche/index : ce que la recherche de tout le site (S-11, prototype recherche.js)
+    parcourt dans le navigateur. Seuls les contenus publiés et visibles de tous y figurent (RG-30) ;
+    les savoirs d'Apprendre et les pages du site viennent du site lui-même. */
+export interface IndexRechercheApi {
+  /** Les plus récentes d'abord, 500 au plus. */
+  creations: {
+    id: number;
+    slug: string;
+    type: TypeCreation;
+    titre: string;
+    objectif: string;
+    domaine: string | null;
+    etiquettes: string[];
+    /** Outils du parcours (nom du référentiel) et modèles employés. */
+    outils: { nom: string; modeles: string[] }[];
+    auteur: MembreIndexApi;
+    /** Couverture, comme sur les cartes ; à défaut aucune. */
+    image: MediaApi | null;
+    utiles: number;
+    /** Un projet se lit, il ne se reproduit pas : 0 et null. */
+    reproductions: number;
+    tauxReussite: number | null;
+  }[];
+  /** Guides publiés : objectif, nom court, domaine, mots-clés et étapes de la méthode. */
+  guides: {
+    slug: string;
+    titre: string;
+    titreCourt: string;
+    domaine: string;
+    motsCles: string[];
+    etapes: string[];
+  }[];
+  /** Domaines actifs avec leur nombre de créations publiées. */
+  domaines: {
+    slug: string;
+    libelle: string;
+    icone: string | null;
+    description: string | null;
+    creations: number;
+  }[];
+  /** Sujets du forum, les plus récents d'abord, 300 au plus. */
+  sujets: {
+    id: number;
+    slug: string;
+    type: TypeSujet;
+    titre: string;
+    /** Début du corps, en texte brut. */
+    extrait: string;
+    etat: EtatSujet;
+    reponses: number;
+    utiles: number;
+    outil: string | null;
+    modele: string | null;
+    auteur: MembreIndexApi;
+    etiquettes: string[];
+  }[];
+  /** Cas Bon réflexe validés. */
+  cas: {
+    id: number;
+    slug: string;
+    titre: string;
+    contexte: string;
+    difficulte: DifficulteCas;
+    domaine: string | null;
+    dureeMinutes: number | null;
+    reponses: number;
+  }[];
+  /** Membres actifs ayant au moins une contribution visible, par réputation, 200 au plus. */
+  membres: (MembreIndexApi & {
+    niveau: string;
+    reputation: number;
+    depuis: string;
+    /** Outils de leurs créations, du plus employé au moins employé (trois au plus). */
+    outils: string[];
+  })[];
+  /** Outils actifs du référentiel, avec le nombre de créations qui les emploient. */
+  outils: {
+    nom: string;
+    slug: string;
+    famille: FamilleOutil;
+    logo: string | null;
+    logoMonochrome: boolean;
+    alias: string[];
+    creations: number;
+    modeles: string[];
+  }[];
+  /** « Recherches fréquentes » : premier mot-clé des guides qui rassemblent le plus de parcours. */
+  frequentes: string[];
+  /** Défi en cours, pour l'accès rapide ; à défaut aucun. */
+  defi: {
+    id: number;
+    slug: string;
+    titre: string;
+    participations: number;
+    image: MediaApi | null;
+  } | null;
 }
