@@ -1,0 +1,200 @@
+---
+/* Gestion des défis (S-07, EC-24, F-63, F-65). Écran sans maquette dans le prototype, conçu dans le
+   style des écrans d'administration : nouveau défi en brouillon (dates en UTC), puis la liste des
+   défis avec les actions possibles dans leur état (publier, annuler, clôturer). La clôture fige le
+   classement, crédite les points et prévient les participants. Envois : scripts/administration.ts. */
+import { raisonRefus, type DefiAdministreApi } from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { ROUTES } from '../../lib/navigation';
+import { dateCourte, fmt, pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const defis = raison
+  ? null
+  : await appelerApi<DefiAdministreApi[]>('/api/v1/admin/defis', { requete: Astro.request });
+const STATUTS = { BROUILLON: 'Brouillon', PUBLIE: 'Publié', CLOTURE: 'Clôturé', ANNULE: 'Annulé' };
+const ACTIONS = { publier: 'Publier', annuler: 'Annuler', cloturer: 'Clôturer' } as const;
+const heure = (iso: string) => `${dateCourte(iso)}, ${iso.slice(11, 16)} UTC`;
+const lundi = new Date();
+lundi.setUTCDate(lundi.getUTCDate() + ((8 - lundi.getUTCDay()) % 7 || 7));
+const debutParDefaut = `${lundi.toISOString().slice(0, 10)}T00:00`;
+const finParDefaut = `${new Date(lundi.getTime() + 6 * 86_400_000).toISOString().slice(0, 10)}T23:59`;
+---
+
+<Base
+  titre="Défis · Administration"
+  description="Création, publication et clôture des défis de Vysora."
+  classeCorps="md"
+  icones={['plus', 'trophy', 'arrow-up-right']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Défis</h1>
+    {defis && (
+      <p class="md-statut">
+        <span class="is-fort">{pluriel(defis.length, 'défi', 'défis')}</span>
+        <span>
+          {typo('Un défi dure de 1 à 30 jours. Les dates sont en temps universel (UTC).')}
+        </span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="defis" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="gérer les défis" />
+    </div>
+  ) : (
+    defis && (
+      <div class="container md-file">
+        <form class="ad-defi" novalidate data-ad-defi-form>
+          <h2>Nouveau défi</h2>
+          <div class="ad-champ is-large">
+            <label for="ad-defi-titre">Titre</label>
+            <input id="ad-defi-titre" name="titre" maxlength="150" required />
+            <p class="md-erreur" data-ad-erreur="titre" hidden />
+          </div>
+          <div class="ad-champ is-large">
+            <label for="ad-defi-enonce">Énoncé</label>
+            <textarea id="ad-defi-enonce" name="enonce" rows="3" maxlength="2000" required />
+            <p class="md-erreur" data-ad-erreur="enonce" hidden />
+          </div>
+          <div class="ad-champ is-large">
+            <label for="ad-defi-contraintes">Contraintes, une par ligne</label>
+            <textarea id="ad-defi-contraintes" name="contraintes" rows="3" maxlength="2000" />
+            <p class="md-erreur" data-ad-erreur="contraintes" hidden />
+          </div>
+          <div class="ad-outils">
+            <div class="ad-champ">
+              <label for="ad-defi-debut">Début (UTC)</label>
+              <input
+                id="ad-defi-debut"
+                name="dateDebut"
+                type="datetime-local"
+                value={debutParDefaut}
+                required
+              />
+              <p class="md-erreur" data-ad-erreur="dateDebut" hidden />
+            </div>
+            <div class="ad-champ">
+              <label for="ad-defi-fin">Fin (UTC)</label>
+              <input
+                id="ad-defi-fin"
+                name="dateFin"
+                type="datetime-local"
+                value={finParDefaut}
+                required
+              />
+              <p class="md-erreur" data-ad-erreur="dateFin" hidden />
+            </div>
+            <button class="btn btn-primary" type="submit">
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-plus" />
+              </svg>
+              Créer le brouillon
+            </button>
+          </div>
+          <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+        </form>
+        {defis.length ? (
+          <table class="ad-table">
+            <thead>
+              <tr>
+                <th scope="col">Défi</th>
+                <th scope="col">Période</th>
+                <th scope="col">État</th>
+                <th scope="col">Participations</th>
+                <th scope="col">
+                  <span class="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {defis.map((d) => (
+                <tr>
+                  <td>
+                    {d.statut === 'BROUILLON' ? (
+                      <b>{typo(d.titre)}</b>
+                    ) : (
+                      <a href={ROUTES.defi(d.id, d.slug)}>{typo(d.titre)}</a>
+                    )}
+                  </td>
+                  <td>{`${heure(d.dateDebut)} — ${heure(d.dateFin)}`}</td>
+                  <td>
+                    <span class:list={['ad-etat', { 'is-libre': d.statut === 'PUBLIE' }]}>
+                      {STATUTS[d.statut]}
+                    </span>
+                  </td>
+                  <td>{fmt(d.participations)}</td>
+                  <td>
+                    <div class="ad-actions-defi">
+                      {d.actions.map((a) => (
+                        <button
+                          class:list={[
+                            'btn btn-sm',
+                            a === 'cloturer' ? 'btn-primary' : 'btn-secondary',
+                          ]}
+                          type="button"
+                          data-ad-defi-action={a}
+                          data-ad-defi={d.id}
+                          data-titre={d.titre}
+                        >
+                          {ACTIONS[a]}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p class="md-rien ad-vide">
+            {typo('Aucun défi pour l’instant : créez le premier ci-dessus.')}
+          </p>
+        )}
+      </div>
+    )
+  )}
+
+  <Fragment slot="fin">
+    {defis && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="ad-dialogue-titre"
+        aria-describedby="ad-dialogue-texte"
+        data-ad-dialogue
+      >
+        <form method="dialog">
+          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Revenir
+            </button>
+            <button class="btn btn-primary" type="button" data-ad-confirmer>
+              Confirmer
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../../scripts/administration';
+</script>

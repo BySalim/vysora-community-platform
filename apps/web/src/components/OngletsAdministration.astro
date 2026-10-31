@@ -4,13 +4,14 @@
 import { ROUTES } from '../lib/navigation';
 
 interface Props {
-  actif: 'roles' | 'invitations' | 'decisions';
+  actif: 'roles' | 'invitations' | 'defis' | 'decisions';
 }
 
 const { actif } = Astro.props;
 const ONGLETS = [
   { cle: 'roles', libelle: 'Rôles', href: ROUTES.administration },
   { cle: 'invitations', libelle: 'Invitations', href: ROUTES.invitationsAdmin },
+  { cle: 'defis', libelle: 'Défis', href: ROUTES.defisAdmin },
   { cle: 'decisions', libelle: 'Journal des décisions', href: ROUTES.journalDecisions },
 ] as const;
 ---

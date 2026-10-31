@@ -48,3 +48,18 @@ export interface JournalDecisionsApi {
   page: number;
   pages: number;
 }
+
+/** Défi tel que l'administration le gère (EC-24). */
+export interface DefiAdministreApi {
+  id: number;
+  slug: string;
+  titre: string;
+  enonce: string;
+  contraintes: string | null;
+  dateDebut: string;
+  dateFin: string;
+  statut: 'BROUILLON' | 'PUBLIE' | 'CLOTURE' | 'ANNULE';
+  participations: number;
+  /** Actions possibles dans l'état du défi (RG-73). */
+  actions: ('publier' | 'annuler' | 'cloturer')[];
+}
