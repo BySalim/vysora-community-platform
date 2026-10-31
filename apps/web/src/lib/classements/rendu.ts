@@ -1,7 +1,8 @@
-/* Classements (S-08), portés de prototype/classements.js : en-tête (semaines, dates, chiffres,
-   lauréats), palmarès par contribution, classement des membres et règles. Rendus par le serveur à
-   partir de GET /api/v1/classements ; scripts/classements.ts ne fait qu'alterner les classements,
-   filtrer par niveau et afficher les cinquante premiers. */
+/* Classements (S-08), portés de prototype/classements.js : en-tête (semaines, dates, choix de
+   l'outil, chiffres, lauréats), palmarès par contribution, défi de la semaine, « Ils progressent »,
+   classement des membres et règles. Rendus par le serveur à partir de GET /api/v1/classements ;
+   scripts/classements.ts ouvre le choix de l'outil, alterne les classements, filtre par niveau et
+   affiche les cinquante premiers. */
 
 import {
   BAREME_REPUTATION,
@@ -28,8 +29,9 @@ import {
   pluriel,
   t,
 } from '../explorer/elements';
+import { embleme } from '../accueil/elements';
 import { ROUTES } from '../navigation';
-import { typo } from '../texte';
+import { jourEtHeure, typo } from '../texte';
 
 export type CleCategorie = 'reussites' | 'entraide' | 'utiles' | 'astuces';
 export const ORDRE: CleCategorie[] = ['reussites', 'entraide', 'utiles', 'astuces'];
@@ -247,6 +249,19 @@ function suivants(cle: CleCategorie, liste: Entree[], moiId: number | null): str
     .join('')}</ol>`;
 }
 
+/** Palmarès vide ; limité à un outil, il propose de revenir à tous (prototype : emptyCat). */
+function videHTML(cle: CleCategorie, donnees: ClassementsApi): string {
+  const outil = donnees.outil?.nom;
+  if (!outil) return `<div class="cl-empty"><p>${t(VIDES[cle])}</p></div>`;
+  const message = {
+    reussites: `Aucune reproduction réussie sur une création ${outil} cette semaine.`,
+    entraide: `Aucune réponse acceptée sur une question ${outil} cette semaine.`,
+    utiles: `Aucune création ${outil} n’a reçu de vote « Utile » cette semaine.`,
+    astuces: `Aucune astuce vérifiée avec ${outil} cette semaine.`,
+  }[cle];
+  return `<div class="cl-empty"><p>${t(message)}</p>${tousLesOutils(donnees)}</div>`;
+}
+
 const VIDES: Record<CleCategorie, string> = {
   reussites: 'Aucune reproduction réussie déclarée cette semaine.',
   entraide: 'Aucune réponse acceptée cette semaine.',
@@ -268,7 +283,7 @@ export function categorieHTML(
         <h2 class="cl-cat-title" id="cl-${cle}-title"><span class="cl-cat-icon">${icone(cat.icon, '')}</span>${t(cat.title)}</h2>
         <p class="cl-cat-rule">${t(cat.rule)}</p>
       </header>
-      ${tete ? `<div class="cl-cat-body">${premier(cle, tete, moiId, maintenant)}${suivants(cle, reste, moiId)}</div>` : `<div class="cl-empty"><p>${t(VIDES[cle])}</p></div>`}
+      ${tete ? `<div class="cl-cat-body">${premier(cle, tete, moiId, maintenant)}${suivants(cle, reste, moiId)}</div>` : videHTML(cle, donnees)}
       <p class="cl-cat-foot"><a class="link-arrow" href="${esc(cat.cta[0])}">${t(cat.cta[1])}${icone('arrow')}</a></p>
     </section>`;
 }
@@ -279,7 +294,7 @@ export function semainesHTML(donnees: ClassementsApi): string {
   return donnees.semaines
     .map((s, i) => {
       const actuelle = s.debut === donnees.semaine.debut;
-      const href = i === 0 ? ROUTES.classements : `${ROUTES.classements}?semaine=${s.debut}`;
+      const href = adresseClassements(i === 0 ? null : s.debut, donnees.outil?.slug ?? null);
       return `<a class="cl-week" href="${esc(href)}" aria-pressed="${actuelle}"${actuelle ? ' aria-current="page"' : ''}><b>${t(s.statut === 'provisoire' ? 'Cette semaine' : periodeCourte(s))}</b><small>${t(s.statut === 'provisoire' ? periodeCourte(s) : 'Arrêtée')}</small></a>`;
     })
     .join('');
@@ -314,13 +329,54 @@ export function chiffresHTML(c: ClassementsApi['chiffres']): string {
 }
 
 export function laureatsHTML(donnees: ClassementsApi): string {
-  return ORDRE.map((cle, i) => {
+  const premiers: {
+    cle: string;
+    label: string;
+    icon: string;
+    membre?: MembreResumeApi;
+    texte: string;
+  }[] = ORDRE.map((cle) => {
     const e = donnees.palmares[cle][0] as Entree | undefined;
-    const cat = CATEGORIES[cle];
-    if (!e)
-      return `<li class="cl-laureate is-empty" data-cat="${cle}" style="--i:${i}"><span class="cl-laureate-cat">${icone(cat.icon, 'icon-xs')}${t(cat.label)}</span><span class="cl-laureate-none">${t('Pas encore de lauréat')}</span></li>`;
-    return `<li class="cl-laureate" data-cat="${cle}" style="--i:${i}"><a href="#${cle}" class="cl-laureate-link"><span class="cl-laureate-cat">${icone(cat.icon, 'icon-xs')}${t(cat.label)}</span><span class="cl-laureate-face">${avatar(e.membre, 64)}</span><b>${t(e.membre.nom)}</b><small>${t(faits(cle, e).replace(/<[^>]+>/g, ''))}</small></a></li>`;
-  }).join('');
+    const { label, icon } = CATEGORIES[cle];
+    return {
+      cle,
+      label,
+      icon,
+      membre: e?.membre,
+      texte: e ? faits(cle, e).replace(/<[^>]+>/g, '') : '',
+    };
+  });
+  const tete = donnees.defi?.participations[0];
+  premiers.push({
+    cle: 'defi',
+    label: 'Défi de la semaine',
+    icon: 'podium',
+    membre: tete?.auteur,
+    texte: tete
+      ? `${donnees.defi?.defi.etat === 'CLOTURE' ? '1er' : 'En tête'} · ${pluriel(tete.utiles, 'vote', 'votes')} « Utile »`
+      : '',
+  });
+  const passage = donnees.progression.niveaux[0];
+  premiers.push({
+    cle: 'progres',
+    label: 'Progression',
+    icon: 'trend-up',
+    membre: passage?.membre,
+    texte: passage ? `Passe ${libelleNiveau(passage.vers)}` : '',
+  });
+  const aucun = (cle: string) =>
+    cle === 'defi' && !donnees.defi
+      ? 'Pas de défi cette semaine'
+      : donnees.outil && cle !== 'progres'
+        ? `Aucun lauréat avec ${donnees.outil.nom}`
+        : 'Pas encore de lauréat';
+  return premiers
+    .map(({ cle, label, icon, membre, texte }, i) =>
+      membre
+        ? `<li class="cl-laureate" data-cat="${cle}" style="--i:${i}"><a href="#${cle}" class="cl-laureate-link"><span class="cl-laureate-cat">${icone(icon, 'icon-xs')}${t(label)}</span><span class="cl-laureate-face">${avatar(membre, 64)}</span><b>${t(membre.nom)}</b><small>${t(texte)}</small></a></li>`
+        : `<li class="cl-laureate is-empty" data-cat="${cle}" style="--i:${i}"><span class="cl-laureate-cat">${icone(icon, 'icon-xs')}${t(label)}</span><span class="cl-laureate-none">${t(aucun(cle))}</span></li>`,
+    )
+    .join('');
 }
 
 /* Classement des membres ------------------------------------------------------- */
@@ -337,16 +393,20 @@ function evolutionHTML(evolution: RangClassementApi['evolution']): string {
 
 /** Places de la semaine dans les palmarès (prototype : recognized). */
 function reconnu(donnees: ClassementsApi, membreId: number): string {
-  const places = ORDRE.flatMap((cle) => {
+  const places: { cle: CleCategorie | 'defi'; rang: number }[] = ORDRE.flatMap((cle) => {
     const i = (donnees.palmares[cle] as Entree[]).findIndex((e) => e.membre.id === membreId);
     return i < 0 ? [] : [{ cle, rang: i + 1 }];
-  })
-    .toSorted((a, b) => a.rang - b.rang)
-    .slice(0, 3);
+  });
+  const auDefi = donnees.defi?.participations.findIndex((p) => p.auteur.id === membreId) ?? -1;
+  if (auDefi >= 0)
+    places.push({ cle: 'defi', rang: donnees.defi?.participations[auDefi]?.rang ?? auDefi + 1 });
   return places
-    .map(
-      (p) =>
-        `<span class="cl-rec" data-cat="${p.cle}">${icone(CATEGORIES[p.cle].icon, 'icon-xs')}<span>${ordinal(p.rang)} en ${t(CATEGORIES[p.cle].label.toLowerCase())}</span></span>`,
+    .toSorted((a, b) => a.rang - b.rang)
+    .slice(0, 3)
+    .map((p) =>
+      p.cle === 'defi'
+        ? `<span class="cl-rec" data-cat="defi">${icone('podium', 'icon-xs')}<span>${ordinal(p.rang)} au défi</span></span>`
+        : `<span class="cl-rec" data-cat="${p.cle}">${icone(CATEGORIES[p.cle].icon, 'icon-xs')}<span>${ordinal(p.rang)} en ${t(CATEGORIES[p.cle].label.toLowerCase())}</span></span>`,
     )
     .join('');
 }
@@ -491,6 +551,197 @@ export function reglesHTML(): string {
             <div class="cl-levels-scale" aria-label="Niveaux de réputation">${NIVEAUX.map((n, i) => `<span style="--i:${i}"><b>${t(n.libelle)}</b><small>${t(n.seuilPoints ? `${fmt(n.seuilPoints)} points` : 'dès l’inscription')}</small></span>`).join('')}</div>
           </div>
         </div>
+      </div>
+    </section>`;
+}
+
+/* Choix de l'outil ------------------------------------------------------------ */
+
+/** Adresse de la page pour une semaine et un outil (la semaine en cours et tous les outils sont
+    l'adresse nue). */
+export function adresseClassements(semaine: string | null, outil: string | null): string {
+  const p = new URLSearchParams();
+  if (semaine) p.set('semaine', semaine);
+  if (outil) p.set('outil', outil);
+  const requete = p.toString();
+  return requete ? `${ROUTES.classements}?${requete}` : ROUTES.classements;
+}
+const semaineDemandee = (donnees: ClassementsApi) =>
+  donnees.semaine.debut === donnees.semaines[0]?.debut ? null : donnees.semaine.debut;
+const tousLesOutils = (donnees: ClassementsApi) =>
+  `<a class="link-btn" href="${esc(adresseClassements(semaineDemandee(donnees), null))}">Voir tous les outils</a>`;
+
+/** Titre de la page, avec l'outil choisi (prototype : renderHero). */
+export const titreHTML = (donnees: ClassementsApi) =>
+  donnees.outil
+    ? `Palmarès de la semaine <span class="cl-title-tool">${logo(donnees.outil, 40)}${t(donnees.outil.nom)}</span>`
+    : 'Palmarès de la semaine';
+
+/** Choix de l'outil (prototype : renderToolPicker) : tous les outils, puis ceux des contributions
+    de la semaine, du plus cité au moins cité. Chaque option mène à l'adresse du palmarès limité. */
+export function choixOutilHTML(donnees: ClassementsApi): string {
+  const choisi = donnees.outil;
+  const outils = [...donnees.outils];
+  if (choisi && !outils.some((o) => o.id === choisi.id))
+    outils.unshift({ ...choisi, contributions: 0 });
+  const semaine = semaineDemandee(donnees);
+  const options = [
+    `<li role="option" id="cl-tool-opt-0" data-cl-tool-href="${esc(adresseClassements(semaine, null))}" aria-selected="${!choisi}"><span>Tous les outils</span>${choisi ? '' : icone('check', 'icon-sm')}</li>`,
+    ...outils.map((o, i) => {
+      const actif = o.id === choisi?.id;
+      const nombre = o.contributions
+        ? pluriel(o.contributions, 'contribution', 'contributions')
+        : 'Aucune contribution';
+      return `<li role="option" id="cl-tool-opt-${i + 1}" data-cl-tool-href="${esc(adresseClassements(semaine, o.slug))}" aria-selected="${actif}">${logo(o, 18)}<span>${t(o.nom)}</span><small>${t(nombre)}</small>${actif ? icone('check', 'icon-sm') : ''}</li>`;
+    }),
+  ];
+  return `<div class="cl-tool" data-cl-tool-picker>
+      <span class="cl-tool-label" id="cl-tool-label">Outil</span>
+      <button class="cl-tool-btn${choisi ? ' is-set' : ''}" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="cl-tool-label cl-tool-value" data-cl-tool-btn><span id="cl-tool-value">${choisi ? `${logo(choisi, 16)}${t(choisi.nom)}` : 'Tous les outils'}</span>${icone('chevron-down', 'icon-sm')}</button>
+      <ul class="cl-tool-list" role="listbox" aria-labelledby="cl-tool-label" tabindex="-1" hidden data-cl-tool-list>${options.join('')}</ul>
+    </div>`;
+}
+
+/* Défi de la semaine (S-07) ------------------------------------------------------ */
+
+type ParticipationDefi = NonNullable<ClassementsApi['defi']>['participations'][number];
+
+/** Points d'une participation : votes « Utile » reçus, puis participation et podium à la clôture. */
+function pointsParticipation(p: ParticipationDefi, i: number, cloture: boolean): number {
+  const b = BAREME_REPUTATION;
+  const rang = p.rang ?? i + 1;
+  const cloturee = cloture ? (b.podiumDefi[rang - 1] ?? 0) + b.participationDefi : 0;
+  return p.utiles * b.voteUtileSurCreation + cloturee;
+}
+const metriqueDefi = (p: ParticipationDefi, i: number, cloture: boolean) =>
+  metrique(
+    typo(`${pluriel(p.utiles, 'vote', 'votes')} « Utile »`),
+    `+${fmt(pointsParticipation(p, i, cloture))} points`,
+  );
+const outilsParticipation = (p: ParticipationDefi) =>
+  p.creation.outils.length ? outilsCreation(p.creation) : etiquetteType(p.creation.type);
+const iconeType = (type: CreationPalmaresApi['type']) =>
+  `type-${{ UN_PROMPT: 'prompt', ITERATION: 'iteration', PROJET: 'projet' }[type]}`;
+
+export function defiHTML(donnees: ClassementsApi, moiId: number | null): string {
+  if (!donnees.defi) return '';
+  const { defi, participations } = donnees.defi;
+  const cloture = defi.etat === 'CLOTURE';
+  const lien = ROUTES.defi(defi.id, defi.slug);
+  const echeance =
+    defi.etat === 'A_VENIR'
+      ? `Ouvre le ${jourEtHeure(defi.dateDebut)}, heure UTC`
+      : `${cloture || defi.etat === 'TERMINE' ? 'Clos le' : 'Jusqu’au'} ${jourEtHeure(defi.dateFin)}, heure UTC`;
+  const kicker = cloture
+    ? 'Défi de la semaine · Classement final'
+    : defi.etat === 'A_VENIR'
+      ? 'Défi de la semaine · À venir'
+      : 'Défi de la semaine · Classement provisoire';
+  const rang = (p: ParticipationDefi, i: number) => p.rang ?? i + 1;
+  const podium = participations
+    .slice(0, 3)
+    .map((p, i) => {
+      const href = esc(ROUTES.creation(p.creation.id, p.creation.slug));
+      const visuel = p.creation.couverture
+        ? `<div class="cl-poster">${image(p.creation.couverture, '(min-width: 1100px) 360px, 92vw', false)}</div>`
+        : `<div class="cl-pod-vide">${icone(iconeType(p.creation.type), '')}</div>`;
+      return `<li class="cl-pod" data-place="${i + 1}" style="--i:${i}">
+        <a class="cl-pod-visual" href="${href}" tabindex="-1" aria-hidden="true">${visuel}</a>
+        <div class="cl-pod-base">
+          <span class="cl-pod-rank" aria-label="${esc(rang(p, i) === 1 ? 'Premier' : `${rang(p, i)}e`)}">${rang(p, i)}</span>
+          <div class="cl-pod-copy"><p class="cl-pod-title"><a href="${href}">${t(p.creation.titre)}</a></p>${membreHTML(p.auteur, 28, moiId)}<p class="cl-pod-meta">${outilsParticipation(p)}<span class="cl-pod-votes">${metriqueDefi(p, i, cloture)}</span></p></div>
+        </div>
+      </li>`;
+    })
+    .join('');
+  const reste = participations.slice(3);
+  const suite = reste.length
+    ? `<ol class="cl-defi-rest">${reste
+        .map(
+          (p, i) =>
+            `<li><span class="cl-rank">${rang(p, i + 3)}</span>${membreHTML(p.auteur, 28, moiId)}<span class="cl-row-proof"><a class="cl-proof" href="${esc(ROUTES.creation(p.creation.id, p.creation.slug))}">${icone(iconeType(p.creation.type))}<span>${t(p.creation.titre)}</span></a></span><span class="cl-row-metric">${metriqueDefi(p, i + 3, cloture)}</span></li>`,
+        )
+        .join('')}</ol>`
+    : '';
+  const vide = donnees.outil
+    ? `<div class="cl-empty"><p>${t(`Aucune participation avec ${donnees.outil.nom} dans ce défi.`)}</p>${tousLesOutils(donnees)}</div>`
+    : `<div class="cl-empty"><p>${t(defi.etat === 'A_VENIR' ? 'Les participations ouvrent avec le défi.' : 'Aucune participation pour l’instant.')}</p></div>`;
+  const b = BAREME_REPUTATION;
+  const podiumPoints = b.podiumDefi.join(', ').replace(/, (\d+)$/, ' et $1');
+  const pied = cloture
+    ? `Rangs figés à la clôture, selon les votes « Utile » reçus pendant le défi. Le podium a reçu ${podiumPoints} points, chaque participation ${b.participationDefi} points.`
+    : `Participations classées par votes « Utile » reçus depuis l’ouverture. Les rangs seront figés à la clôture : ${podiumPoints} points pour le podium, ${b.participationDefi} points par participation.`;
+  const action =
+    defi.etat === 'EN_COURS'
+      ? `<a class="btn btn-sm cl-defi-cta" href="${esc(`${ROUTES.publier}?defi=${defi.id}`)}">Participer au défi${icone('arrow')}</a>`
+      : `<a class="btn btn-sm cl-defi-cta" href="${esc(lien)}">Voir le défi${icone('arrow')}</a>`;
+  return `<section class="cl-defi cl-reveal" id="defi" aria-labelledby="cl-defi-title">
+      <div class="container">
+        <div class="cl-defi-head">
+          <div class="cl-defi-copy">
+            <p class="cl-defi-kicker">${icone('podium')}${kicker}</p>
+            <h2 id="cl-defi-title">${t(defi.titre)}</h2>
+            <p class="cl-defi-meta"><span>${t(defi.enonce)}</span><span>${t(echeance)}</span><span>${pluriel(defi.participations, 'participation', 'participations')}</span></p>
+          </div>
+          ${defi.regles.length ? `<ul class="cl-defi-rules" aria-label="Contraintes du défi">${defi.regles.map((r) => `<li>${icone('check')}${t(r)}</li>`).join('')}</ul>` : ''}
+        </div>
+        ${participations.length ? `<ol class="cl-podium">${podium}</ol>${suite}` : vide}
+        <div class="cl-defi-foot">
+          <p>${t(pied)}</p>
+          ${action}
+        </div>
+      </div>
+    </section>`;
+}
+
+/* Ils progressent (S-09) ------------------------------------------------------- */
+
+const jourMois = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getUTCDate() === 1 ? '1er' : d.getUTCDate()} ${MOIS[d.getUTCMonth()]}`;
+};
+
+export function progressionHTML(donnees: ClassementsApi): string {
+  const { niveaux, badges, badgesObtenus } = donnees.progression;
+  const echelle = NIVEAUX.slice(1)
+    .map((n) => {
+      const passes = niveaux.filter((p) => p.vers === n.code);
+      const gens = passes.length
+        ? passes
+            .map(
+              (p) =>
+                `<div class="cl-up"><a class="cl-up-btn" href="${esc(ROUTES.profil(p.membre.pseudo))}">${avatar(p.membre, 40)}<span>${t(p.membre.nom)}</span></a><small>${t(`depuis ${libelleNiveau(p.de)}`)}</small></div>`,
+            )
+            .join('')
+        : '<p class="cl-step-none">Personne cette semaine</p>';
+      return `<div class="cl-step${passes.length ? ' has-up' : ''}" role="listitem">
+            <div class="cl-step-people">${gens}</div>
+            <div class="cl-step-node"><span aria-hidden="true"></span><b>${t(n.libelle)}</b><small>${t(`${fmt(n.seuilPoints)} points`)}</small></div>
+          </div>`;
+    })
+    .join('');
+  const id = donnees.semaine.debut;
+  const liste = badges.length
+    ? `<ul class="cl-badges" aria-label="Badges obtenus">${badges
+        .map(
+          (b, i) =>
+            `<li class="cl-badge" style="--i:${i}"><span class="cl-badge-name" tabindex="0" aria-describedby="cl-rule-${id}-${i}">${embleme(b.badge)}<b>${t(b.badge.libelle)}</b><span class="cl-badge-rule" role="tooltip" id="cl-rule-${id}-${i}">${t(b.badge.critere)}</span></span><span class="cl-badge-copy"><a class="cl-badge-who" href="${esc(ROUTES.profil(b.membre.pseudo))}">${avatar(b.membre, 24)}${t(b.membre.nom)}</a><small>${t(jourMois(b.date))}</small></span></li>`,
+        )
+        .join('')}</ul>`
+    : `<div class="cl-empty"><p>${t('Aucun badge obtenu cette semaine pour l’instant.')}</p></div>`;
+  const autres = badgesObtenus - badges.length;
+  const suite =
+    autres > 0
+      ? `<p class="cl-badges-suite">${t(`et ${pluriel(autres, 'autre badge obtenu', 'autres badges obtenus')} cette semaine`)}</p>`
+      : '';
+  return `<section class="cl-cat cl-progress cl-reveal" id="progres" data-cat="progres" aria-labelledby="cl-progres-title">
+      <header class="cl-cat-head">
+        <h2 class="cl-cat-title" id="cl-progres-title"><span class="cl-cat-icon">${icone('trend-up', '')}</span>Ils progressent</h2>
+        <p class="cl-cat-rule">${t('Les passages de niveau et les badges obtenus pendant la semaine. Les cas Bon réflexe réussis et les reproductions déclarées restent visibles de leur seul auteur.')}</p>
+      </header>
+      <div class="cl-progress-body">
+        <div class="cl-ladder" role="list" aria-label="Passages de niveau">${echelle}</div>
+        <div>${liste}${suite}</div>
       </div>
     </section>`;
 }

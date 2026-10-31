@@ -1,6 +1,17 @@
 import type { ClassementsApi } from '@vysora/shared';
 import request from 'supertest';
-import { mouvementReputation, utilisateur, vote } from '../src/db/schema/index.js';
+import {
+  badge,
+  configurationIa,
+  creation,
+  defi,
+  etape,
+  mouvementReputation,
+  obtentionBadge,
+  outil,
+  utilisateur,
+  vote,
+} from '../src/db/schema/index.js';
 import { lundiUtc } from '../src/modules/accueil/periodes.js';
 import { eq } from 'drizzle-orm';
 import {
@@ -24,10 +35,10 @@ describe('Classements (S-08, F-75, RG-87)', () => {
     contexte = await demarrerApplication();
   });
   beforeEach(async () => {
-    await vider(contexte.db, 'utilisateur', 'contenu', 'mouvement_reputation');
+    await vider(contexte.db, 'utilisateur', 'contenu', 'mouvement_reputation', 'defi');
   });
   afterAll(async () => {
-    await vider(contexte.db, 'utilisateur', 'contenu', 'mouvement_reputation');
+    await vider(contexte.db, 'utilisateur', 'contenu', 'mouvement_reputation', 'defi');
     await contexte.app.close();
   });
 
@@ -122,5 +133,83 @@ describe('Classements (S-08, F-75, RG-87)', () => {
       .set({ statutCompte: 'BANNI' })
       .where(eq(utilisateur.id, auteur.id));
     expect((await lire()).palmares.utiles).toEqual([]);
+  });
+
+  it('limite le palmarès à un outil, présente le défi de la semaine et ceux qui progressent', async () => {
+    const lundi = lundiUtc(new Date());
+    const pendant = new Date(Math.min(Date.now(), lundi.getTime() + 3_600_000));
+    const avant = new Date(lundi.getTime() - 86_400_000);
+    const awa = await creerMembre(contexte);
+    const lea = await creerMembre(contexte, { pseudo: 'lea-martin', email: 'lea@example.com' });
+    const [midjourney] = await contexte.db.select().from(outil).where(eq(outil.slug, 'midjourney'));
+    const [claude] = await contexte.db.select().from(outil).where(eq(outil.slug, 'claude'));
+    const image = await creerCreation(contexte, awa.id);
+    const texte = await creerCreation(contexte, awa.id);
+    for (const [creationId, outilId] of [
+      [image, midjourney!.id],
+      [texte, claude!.id],
+    ] as const) {
+      const [e] = await contexte.db
+        .insert(etape)
+        .values({ creationId, ordre: 1 })
+        .returning({ id: etape.id });
+      await contexte.db.insert(configurationIa).values({ etapeId: e!.id, outilId });
+    }
+    await contexte.db.insert(vote).values([
+      { votantId: lea.id, contenuId: image, typeVoteCode: 'UTILE', dateVote: pendant },
+      { votantId: lea.id, contenuId: texte, typeVoteCode: 'UTILE', dateVote: pendant },
+    ]);
+    // Défi en cours pendant la semaine : la création de Midjourney y participe.
+    const [d] = await contexte.db
+      .insert(defi)
+      .values({
+        organisateurId: awa.id,
+        titre: 'Une affiche touristique',
+        slug: 'une-affiche-touristique',
+        enonce: 'Créez l’affiche d’un lieu que vous aimez.',
+        dateDebut: new Date(Date.now() - 2 * 86_400_000),
+        dateFin: new Date(Date.now() + 3 * 86_400_000),
+        statut: 'PUBLIE',
+      })
+      .returning({ id: defi.id });
+    await contexte.db.update(creation).set({ defiId: d!.id }).where(eq(creation.id, image));
+    // Awa passe Apprentie pendant la semaine (50 points, RG-84) et obtient un badge.
+    await contexte.db.insert(mouvementReputation).values([
+      { beneficiaireId: awa.id, points: 40, motif: 'VOTE_UTILE_RECU', date: avant },
+      { beneficiaireId: awa.id, points: 20, motif: 'VOTE_UTILE_RECU', date: pendant },
+    ]);
+    const [b] = await contexte.db.select().from(badge).where(eq(badge.estActif, true)).limit(1);
+    await contexte.db
+      .insert(obtentionBadge)
+      .values({ utilisateurId: awa.id, badgeId: b!.id, dateObtention: pendant });
+
+    const tous = await lire();
+    expect(tous.outil).toBeNull();
+    expect(tous.outils.map((o) => [o.slug, o.contributions])).toEqual([
+      ['midjourney', 2],
+      ['claude', 1],
+    ]);
+    expect(tous.palmares.utiles.map((e) => e.creation.id).toSorted()).toEqual(
+      [image, texte].toSorted(),
+    );
+    expect(tous.defi?.defi).toMatchObject({ titre: 'Une affiche touristique', etat: 'EN_COURS' });
+    expect(tous.defi?.participations.map((p) => p.creation.id)).toEqual([image]);
+    expect(tous.progression.niveaux.map((p) => [p.membre.pseudo, p.de, p.vers])).toEqual([
+      ['awa-sarr', 'curieux', 'apprenti'],
+    ]);
+    expect(tous.progression.badges.map((x) => [x.membre.pseudo, x.badge.code])).toEqual([
+      ['awa-sarr', b!.code],
+    ]);
+    expect(tous.progression.badgesObtenus).toBe(1);
+
+    const avecClaude = await lire(undefined, '?outil=claude');
+    expect(avecClaude.outil?.nom).toBe('Claude');
+    expect(avecClaude.palmares.utiles.map((e) => e.creation.id)).toEqual([texte]);
+    expect(avecClaude.defi?.participations).toEqual([]);
+    // Le choix de l'outil ne touche ni les chiffres de la semaine ni la progression.
+    expect(avecClaude.chiffres).toEqual(tous.chiffres);
+    expect(avecClaude.progression).toEqual(tous.progression);
+    // Un outil inconnu laisse le palmarès de tous.
+    expect((await lire(undefined, '?outil=outil-inconnu')).outil).toBeNull();
   });
 });

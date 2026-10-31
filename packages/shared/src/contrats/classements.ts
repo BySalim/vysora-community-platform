@@ -1,8 +1,10 @@
 import type { TypeCreation } from '../enums';
 import type { CodeNiveau } from '../regles';
 import type { MembreResumeApi, OutilResumeApi } from './creations';
+import type { DefiApi, ParticipationDefiApi } from './defis';
 import type { MediaApi } from './medias';
 import type { OutilEtModelesApi } from './mes-contenus';
+import type { BadgeObtenuApi } from './profil';
 
 /** Semaine du palmarès (RG-87) : du lundi 00:00 au dimanche 23:59 (UTC). */
 export interface SemaineClassementApi {
@@ -81,6 +83,27 @@ export interface RangClassementApi {
 }
 
 /** GET /api/v1/classements?semaine=AAAA-MM-JJ (F-75, RG-87). */
+/** Outil proposé par le choix de l'outil : contributions de la semaine qui le citent (créations
+    reproduites ou jugées utiles, réponses acceptées, astuces vérifiées, participations au défi). */
+export interface OutilPalmaresApi extends OutilResumeApi {
+  contributions: number;
+}
+
+/** Passage de niveau pendant la semaine (RG-84), d'après la réputation au début et à la fin. */
+export interface PassageNiveauApi {
+  membre: MembreResumeApi;
+  de: CodeNiveau;
+  vers: CodeNiveau;
+  reputation: number;
+}
+
+/** Badge obtenu pendant la semaine (RG-86). */
+export interface BadgeSemaineApi {
+  membre: MembreResumeApi;
+  badge: Omit<BadgeObtenuApi, 'date'>;
+  date: string;
+}
+
 export interface ClassementsApi {
   /** La semaine en cours et les deux précédentes, de la plus récente à la plus ancienne. */
   semaines: SemaineClassementApi[];
@@ -93,6 +116,10 @@ export interface ClassementsApi {
     /** Somme des quatre : interactions d'apprentissage de la semaine. */
     interactions: number;
   };
+  /** Outils des contributions de la semaine, du plus cité au moins cité (choix de l'outil). */
+  outils: OutilPalmaresApi[];
+  /** Outil choisi (?outil=) : palmarès et défi limités à ses contributions ; null pour tous. */
+  outil: OutilResumeApi | null;
   /** Cinq premiers de chaque palmarès. */
   palmares: {
     reussites: EntreeCreationApi[];
@@ -108,6 +135,12 @@ export interface ClassementsApi {
     classesSemaine: number;
     classesGeneral: number;
   };
+  /** Défi de la semaine (S-07) : le plus récent des défis publiés ou clôturés dont la période
+      touche la semaine, et ses participations classées (RG-75) ; null s'il n'y en a pas. */
+  defi: { defi: DefiApi; participations: ParticipationDefiApi[] } | null;
+  /** Ils progressent : passages de niveau et badges obtenus pendant la semaine (membres classés) ;
+      les huit badges les plus récents, et le nombre de badges de la semaine. */
+  progression: { niveaux: PassageNiveauApi[]; badges: BadgeSemaineApi[]; badgesObtenus: number };
   /** La personne connectée : sa semaine et sa place ; null pour un visiteur. */
   moi: {
     points: number;

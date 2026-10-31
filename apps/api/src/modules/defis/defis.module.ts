@@ -12,5 +12,7 @@ import { DefisService } from './defis.service.js';
   imports: [ProgressionModule, NotificationsModule],
   controllers: [DefisController, AdministrationDefisController],
   providers: [DefisService, AdministrationDefisService],
+  // Le défi de la semaine des classements (S-08).
+  exports: [DefisService],
 })
 export class DefisModule {}

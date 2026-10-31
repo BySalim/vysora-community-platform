@@ -1,9 +1,10 @@
 ---
 /* Classements (S-08, EC-13, F-75, RG-87), portés de prototype/classements.html : palmarès de la
-   semaine (semaines, chiffres, lauréats, quatre palmarès), classement des membres de la semaine et
-   général (cinquante premiers, filtre par niveau, votre place) et règles. Rendus par le serveur
-   depuis GET /api/v1/classements ; scripts/classements.ts alterne les classements et les filtres.
-   Reportés (registre, S-08) : choix de l'outil, fiche d'un membre, défi et progression. */
+   semaine (semaines, choix de l'outil, chiffres, six lauréats, quatre palmarès), défi de la semaine
+   (S-07), « Ils progressent » (niveaux et badges), classement des membres de la semaine et général
+   (cinquante premiers, filtre par niveau, votre place) et règles. Rendus par le serveur depuis
+   GET /api/v1/classements?semaine=&outil= ; scripts/classements.ts ouvre le choix de l'outil et
+   alterne les classements et les filtres. Reportée (registre, S-08) : la fiche d'un membre. */
 import type { ClassementsApi } from '@vysora/shared';
 import Base from '../layouts/Base.astro';
 import { appelerApi } from '../lib/api';
@@ -12,13 +13,17 @@ import {
   ORDRE,
   categorieHTML,
   chiffresHTML,
+  choixOutilHTML,
   datesHTML,
+  defiHTML,
   laureatsHTML,
   lignesHTML,
   panneauMoiHTML,
   periodeCourte,
+  progressionHTML,
   reglesHTML,
   semainesHTML,
+  titreHTML,
 } from '../lib/classements/rendu';
 import { fmt, typo } from '../lib/texte';
 import '../styles/explorer.css';
@@ -26,8 +31,12 @@ import '../styles/classements.css';
 import '../styles/classements-complements.css';
 
 const semaine = Astro.url.searchParams.get('semaine') ?? '';
+const outil = Astro.url.searchParams.get('outil') ?? '';
+const parametres = new URLSearchParams();
+if (/^\d{4}-\d{2}-\d{2}$/.test(semaine)) parametres.set('semaine', semaine);
+if (/^[a-z0-9-]{1,100}$/.test(outil)) parametres.set('outil', outil);
 const donnees = await appelerApi<ClassementsApi>(
-  `/api/v1/classements${/^\d{4}-\d{2}-\d{2}$/.test(semaine) ? `?semaine=${semaine}` : ''}`,
+  `/api/v1/classements${parametres.size ? `?${parametres}` : ''}`,
   { requete: Astro.request },
 );
 const maintenant = new Date();
@@ -68,6 +77,10 @@ const ICONES = [
   'type-prompt',
   'type-iteration',
   'type-projet',
+  'check',
+  'trend-up',
+  // Emblèmes des badges de la semaine (« Ils progressent »).
+  ...new Set(donnees.progression.badges.map((b) => b.badge.icone)),
 ];
 ---
 
@@ -97,9 +110,7 @@ const ICONES = [
       </div>
       <div class="cl-hero-main">
         <div class="cl-hero-copy">
-          <h1 id="cl-title" class="cl-title" tabindex="-1">
-            Palmarès de la semaine
-          </h1>
+          <h1 id="cl-title" class="cl-title" tabindex="-1" set:html={titreHTML(donnees)} />
           <p class="cl-dates" set:html={datesHTML(donnees.semaine, maintenant)} />
           <p class="cl-lead">
             {typo(
@@ -107,6 +118,7 @@ const ICONES = [
             )}
           </p>
         </div>
+        <div class="cl-hero-tools" set:html={choixOutilHTML(donnees)} />
       </div>
       <dl class="cl-figures" set:html={chiffresHTML(donnees.chiffres)} />
       <ol
@@ -118,6 +130,8 @@ const ICONES = [
   </section>
   <div class="cl-view">
     <div class="container cl-cats" set:html={vues} />
+    <Fragment set:html={defiHTML(donnees, moiId)} />
+    <div class="container" set:html={progressionHTML(donnees)} />
     <section
       class="cl-members cl-reveal"
       id="membres"

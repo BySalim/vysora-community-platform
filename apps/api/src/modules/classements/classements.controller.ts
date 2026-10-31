@@ -7,13 +7,18 @@ import { ClassementsService } from './classements.service.js';
 export class ClassementsController {
   constructor(private readonly classements: ClassementsService) {}
 
-  /** GET /api/v1/classements?semaine=AAAA-MM-JJ (lundi) : palmarès et classements (F-75, RG-87).
-      Une semaine inconnue donne la semaine en cours. */
+  /** GET /api/v1/classements?semaine=AAAA-MM-JJ (lundi)&outil=slug : palmarès et classements
+      (F-75, RG-87). Une semaine inconnue donne la semaine en cours ; un outil inconnu, tous. */
   @Get()
-  lire(@Req() requete: RequeteVysora, @Query('semaine') semaine?: string): Promise<ClassementsApi> {
+  lire(
+    @Req() requete: RequeteVysora,
+    @Query('semaine') semaine?: string,
+    @Query('outil') outil?: string,
+  ): Promise<ClassementsApi> {
     return this.classements.classements(
       requete.sessionOuverte?.utilisateur.id ?? null,
       typeof semaine === 'string' ? semaine : undefined,
+      typeof outil === 'string' && /^[a-z0-9-]{1,100}$/.test(outil) ? outil : undefined,
     );
   }
 }

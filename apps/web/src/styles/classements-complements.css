@@ -1,6 +1,6 @@
 /* Compléments de classements.css (gardée identique au prototype) : les membres sont des liens vers
    leur profil, et non des boutons qui ouvrent une fiche (reportée) ; la personne connectée est
-   repérée dans les palmarès. */
+   repérée dans les palmarès ; le choix de l'outil et « Voir tous les outils » sont des liens. */
 
 a.cl-who { text-decoration: none; }
 a.cl-who:hover b { text-decoration: underline; text-underline-offset: 3px; }
@@ -8,9 +8,12 @@ a.cl-who:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .cl-stack a { display: block; border-radius: 50%; }
 .cl-weeks a.cl-week { text-decoration: none; }
 
-/* Quatre palmarès tant que le défi (S-07) et la progression ne sont pas portés. */
-.cl-laureates { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-@media (max-width: 640px) {
-  .cl-laureates { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 22px; }
-  .cl-laureate:nth-child(3) { border-left: 0; }
-}
+/* Défi de la semaine : une participation sans image garde la place du visuel, avec l'icône de son
+   type (le prototype n'a que des affiches, des logos et des maquettes). */
+.cl-pod-vide { position: absolute; inset: 0; display: grid; place-items: center; color: var(--d-muted); }
+.cl-pod-vide .icon { width: 30%; height: 30%; stroke-width: 1.2; }
+.cl-defi-meta > span:first-child { flex-basis: 100%; color: var(--d-text); }
+
+a.cl-up-btn, a.cl-badge-who { text-decoration: none; }
+.cl-empty a.link-btn { display: inline-block; margin-top: 6px; }
+.cl-badges-suite { margin: 12px 0 0; color: var(--text-muted); font: 500 0.8125rem/1.45 var(--font-body); }

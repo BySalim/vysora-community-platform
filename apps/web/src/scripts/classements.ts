@@ -1,8 +1,83 @@
-/* Classements (portés de prototype/classements.js) : classement de la semaine ou général, filtre par
-   niveau, dix ou cinquante premiers, et apparition des sections au défilement. Les données sont
-   rendues par le serveur ; rien n'est recalculé ici. */
+/* Classements (portés de prototype/classements.js) : choix de l'outil, classement de la semaine ou
+   général, filtre par niveau, dix ou cinquante premiers, et apparition des sections au défilement.
+   Les données sont rendues par le serveur ; rien n'est recalculé ici. */
 
 import { $, $$, icon, typo } from './commun/outils';
+
+/* Choix de l'outil (prototype : openTools, moveTool, setTool) : une liste d'options au clavier comme
+   à la souris ; choisir un outil charge l'adresse du palmarès limité à cet outil. */
+const choix = $('[data-cl-tool-picker]');
+if (choix) {
+  const bouton = $<HTMLButtonElement>('[data-cl-tool-btn]', choix)!;
+  const liste = $<HTMLUListElement>('[data-cl-tool-list]', choix)!;
+  const options = $$<HTMLLIElement>('[role="option"]', liste);
+  let active = 0;
+
+  const deplacer = (pas: number) => {
+    active = Math.min(options.length - 1, Math.max(0, active + pas));
+    options.forEach((o, i) => o.classList.toggle('is-active', i === active));
+    const option = options[active];
+    if (!option) return;
+    liste.setAttribute('aria-activedescendant', option.id);
+    option.scrollIntoView({ block: 'nearest' });
+  };
+  const ouvrir = () => {
+    liste.hidden = false;
+    bouton.setAttribute('aria-expanded', 'true');
+    active = Math.max(
+      0,
+      options.findIndex((o) => o.getAttribute('aria-selected') === 'true'),
+    );
+    deplacer(0);
+    liste.focus();
+  };
+  const fermer = (rendreLeFocus = true) => {
+    if (liste.hidden) return;
+    liste.hidden = true;
+    bouton.setAttribute('aria-expanded', 'false');
+    if (rendreLeFocus) bouton.focus();
+  };
+  const choisir = (option: HTMLLIElement | undefined) => {
+    if (!option) return;
+    if (option.getAttribute('aria-selected') === 'true') return fermer();
+    window.location.assign(option.dataset.clToolHref ?? window.location.href);
+  };
+
+  bouton.addEventListener('click', () => (liste.hidden ? ouvrir() : fermer()));
+  bouton.addEventListener('keydown', (evenement) => {
+    if (evenement.key !== 'ArrowDown' && evenement.key !== 'ArrowUp') return;
+    evenement.preventDefault();
+    ouvrir();
+  });
+  liste.addEventListener('click', (evenement) => {
+    choisir((evenement.target as Element).closest<HTMLLIElement>('[role="option"]') ?? undefined);
+  });
+  liste.addEventListener('keydown', (evenement) => {
+    const { key } = evenement;
+    if (key === 'ArrowDown' || key === 'ArrowUp' || key === 'Home' || key === 'End') {
+      evenement.preventDefault();
+      deplacer({ ArrowDown: 1, ArrowUp: -1, Home: -options.length, End: options.length }[key]);
+    } else if (key === 'Enter' || key === ' ') {
+      evenement.preventDefault();
+      choisir(options[active]);
+    } else if (key === 'Escape' || key === 'Tab') {
+      if (key === 'Escape') evenement.preventDefault();
+      fermer(key === 'Escape');
+    } else if (key.length === 1) {
+      // Première lettre : l'outil suivant qui commence par elle.
+      const i = options.findIndex(
+        (o, n) => n > 0 && (o.textContent ?? '').trim().toLowerCase().startsWith(key.toLowerCase()),
+      );
+      if (i >= 0) {
+        active = i;
+        deplacer(0);
+      }
+    }
+  });
+  document.addEventListener('click', (evenement) => {
+    if (!(evenement.target as Element).closest('[data-cl-tool-picker]')) fermer(false);
+  });
+}
 
 const section = $('[data-cl-membres]');
 
