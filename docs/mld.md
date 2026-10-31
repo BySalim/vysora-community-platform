@@ -91,7 +91,7 @@
 | Table | Origine | Clés et contraintes notables |
 |---|---|---|
 | `signalement` | SIGNALEMENT (EMETTRE, VISER, RESOUDRE) | un signalement OUVERT par membre et par contenu (CI-21) ; OUVERT si et seulement si non résolu (CI-20) ; précision obligatoire pour AUTRE |
-| `decision_moderation` | DECISION_MODERATION (PRENDRE, PORTER_SUR, SANCTIONNER, JUSTIFIER) | cible obligatoire selon l'action (CI-19) ; suspension de 1 à 90 jours ; `badge_id` pour RETIRER_BADGE ; **immuable**. « Avertir » et « suspendre » prises sur un contenu gardent aussi `contenu_id` : la décision clôt ainsi les signalements du contenu (CI-20). Les annulations de points d’un masquage portent la date de la décision (`mouvement_reputation.date`) : « rétablir » retrouve par elle ce qu’il faut générer de nouveau (RG-82), `decision_id` restant réservé aux ajustements (CI-24) |
+| `decision_moderation` | DECISION_MODERATION (PRENDRE, PORTER_SUR, SANCTIONNER, JUSTIFIER) | cible obligatoire selon l'action (CI-19) ; suspension de 1 à 90 jours ; `badge_id` pour RETIRER_BADGE ; **immuable**. « Avertir » et « suspendre » prises sur un contenu gardent aussi `contenu_id` : la décision clôt ainsi les signalements du contenu (CI-20). Les annulations de points d’un masquage portent la date de la décision (`mouvement_reputation.date`) : « rétablir » retrouve par elle ce qu’il faut générer de nouveau (RG-82), `decision_id` restant réservé aux ajustements (CI-24). Les décisions des administrateurs sur un membre (bannir, ajuster la réputation, retirer un badge, ADM-02) n’ont pas de `contenu_id` ; un badge retiré n’est plus attribué à ce membre (la tâche des badges consulte ces décisions) |
 
 ### Guides d'Explorer (extension du prototype, DEC-01)
 
