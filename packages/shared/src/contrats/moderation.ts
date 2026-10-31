@@ -93,10 +93,14 @@ export interface DecisionApi {
   contenuId: number | null;
   /** Titre ou début du texte du contenu visé (historique de l'auteur). */
   intituleContenu: string | null;
-  /** Membre sanctionné (avertissement, suspension). */
+  /** Membre sanctionné (avertissement, suspension, décisions des administrateurs). */
   membreVise: MembreResumeApi | null;
   /** Signalements clos par la décision (CI-20). */
   signalementsClos: number;
+  /** Points ajoutés ou retirés par un ajustement de la réputation (CI-24) ; null sinon. */
+  points: number | null;
+  /** Badge retiré ; null pour une autre décision. */
+  badge: { code: string; libelle: string } | null;
 }
 
 /** Dossier d'un contenu : ce que la modération examine avant de décider (F-91). */

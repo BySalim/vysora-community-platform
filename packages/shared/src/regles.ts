@@ -90,6 +90,9 @@ export const LIMITES = {
   // Pièges proposés par un membre et pas encore relus (garde-fou de DEC-01, aucune règle ne les limite).
   propositionsPiegeEnRelecture: 20,
   prochainsBadges: 3, // PROF-02 : « Prochains badges » du profil (prototype)
+  // RG-102 : ajustement de la réputation par un administrateur (fraude avérée), en points, dans un
+  // sens ou dans l'autre ; garde-fou du seuil du plus haut niveau (aucune règle ne le borne).
+  ajustementReputation: 5000,
 } as const;
 
 /** RG-86 : objectif de chaque badge qui se gagne en avançant, et unité de son avancement, accordée

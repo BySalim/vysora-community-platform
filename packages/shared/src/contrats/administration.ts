@@ -1,19 +1,22 @@
 import type {
+  ActionDecisionAdministrateur,
   CategorieBadge,
   FamilleOutil,
   Role,
+  StatutCompte,
   TonBadge,
   TypeDocumentLegal,
   TypeOutil,
 } from '../enums';
 import type { MembreResumeApi } from './creations';
 import type { DecisionApi } from './moderation';
+import type { BadgeObtenuApi } from './profil';
 
 /** Membre tel que l'administration le présente pour gérer son rôle (EC-23, F-96). */
 export interface MembreAdministreApi {
   membre: MembreResumeApi;
   role: Role;
-  statutCompte: string;
+  statutCompte: StatutCompte;
   dateInscription: string;
   /** SEC-02 : double authentification activée, commencée (clé affichée, jamais confirmée) ou absente. */
   deuxFacteurs: 'active' | 'en-attente' | 'absente';
@@ -24,6 +27,24 @@ export interface ListeMembresAdministresApi {
   elements: MembreAdministreApi[];
   /** Administrateurs au compte actif (RG-111 : jamais moins d'un). */
   administrateursActifs: number;
+}
+
+/** GET /api/v1/admin/membres/:id : dossier d'un membre, avant une décision réservée aux
+    administrateurs (RG-102 : bannir, ajuster la réputation, retirer un badge). */
+export interface DossierMembreApi {
+  membre: MembreAdministreApi;
+  /** RG-83 : somme des mouvements de réputation, sans plancher (le site affiche au moins 0). */
+  pointsReputation: number;
+  badges: BadgeObtenuApi[];
+  /** Fin de la suspension en cours (RG-103). */
+  suspensionJusqua: string | null;
+  /** Décisions qui ont visé le membre ou ses contenus, des plus récentes aux plus anciennes
+      (cinquante au plus). */
+  decisions: DecisionApi[];
+  /** Décisions possibles (actionsAdministrateurPossibles) ; aucune sur son propre compte. */
+  actions: ActionDecisionAdministrateur[];
+  /** Le membre est l'administrateur qui consulte (RG-104). */
+  soi: boolean;
 }
 
 /** Code d'invitation de la bêta fermée (INV-01), tel que l'administration le suit. */

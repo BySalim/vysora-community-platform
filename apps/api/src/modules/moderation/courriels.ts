@@ -1,11 +1,16 @@
-import type { ActionDecisionModerateur, TypeContenu } from '@vysora/shared';
+import type {
+  ActionDecisionAdministrateur,
+  ActionDecisionModerateur,
+  TypeContenu,
+} from '@vysora/shared';
 import type { EmailAEnvoyer } from '../email/email.service.js';
 import { miseEnForme } from '../email/gabarit.js';
 
 /* F-92 : e-mail à l'auteur d'un contenu visé par une décision (WF-25 : toujours envoyé, quelles que
    soient les préférences). Il donne la mesure et sa durée, le motif, la référence de la décision et
    la façon de la contester (conditions d'utilisation, articles 6 et 7). Une décision « aucune » ne
-   change rien pour l'auteur : rien n'est envoyé. */
+   change rien pour l'auteur : rien n'est envoyé. Les décisions des administrateurs (bannir, ajuster
+   la réputation, retirer un badge) visent un membre et lui sont écrites de la même façon. */
 
 /** Espaces insécables de la typographie française (comme `typo` du site). */
 const typo = (texte: string): string =>
@@ -25,6 +30,11 @@ const DESIGNATIONS: Record<TypeContenu, { nom: string; feminin: boolean }> = {
 
 /** Référence d'une décision, à rappeler dans une contestation (« Décision n° 12 »). */
 export const referenceDecision = (id: number): string => `Décision n° ${id}`;
+
+const CONTESTATION =
+  'Cette décision a été prise par l’équipe de modération, sans outil automatisé. Vous pouvez la contester dans les 6 mois depuis le formulaire de contact de Vysora (« Contester une décision »), en indiquant sa référence.';
+
+const nombre = (n: number) => new Intl.NumberFormat('fr-FR').format(n);
 
 export interface DecisionACommuniquer {
   a: string;
@@ -124,14 +134,71 @@ export function emailDecision(d: DecisionACommuniquer): EmailAEnvoyer {
     sujet: typo(titre),
     ...miseEnForme({
       titre: typo(titre),
-      paragraphes: [
-        ...presentation,
-        'Cette décision a été prise par l’équipe de modération, sans outil automatisé. Vous pouvez la contester dans les 6 mois depuis le formulaire de contact de Vysora (« Contester une décision »), en indiquant sa référence.',
-      ].map(typo),
+      paragraphes: [...presentation, CONTESTATION].map(typo),
       details: [
         ['Motif', d.motif],
         ...(fin
           ? [['Fin de la suspension', typo(`${fin.jour} à ${fin.heure}`)] as [string, string]]
+          : []),
+        ['Référence', referenceDecision(d.id)],
+      ],
+      action,
+    }),
+  };
+}
+
+export interface DecisionSurMembre {
+  a: string;
+  id: number;
+  action: ActionDecisionAdministrateur;
+  motif: string;
+  /** Ajustement de la réputation : points ajoutés (positifs) ou retirés (négatifs). */
+  points: number | null;
+  /** Retrait de badge : son nom. */
+  badge: string | null;
+  contestation: string;
+}
+
+/** F-92, RG-102 : décision d'un administrateur qui vise le membre lui-même. */
+export function emailDecisionMembre(d: DecisionSurMembre): EmailAEnvoyer {
+  const points = d.points ?? 0;
+  const unite = Math.abs(points) > 1 ? 'points' : 'point';
+  const [titre, presentation]: [string, string] = (() => {
+    switch (d.action) {
+      case 'BANNIR':
+        return [
+          'Votre compte Vysora est fermé',
+          'L’équipe de modération a fermé votre compte : vous ne pouvez plus vous connecter à Vysora.',
+        ];
+      case 'AJUSTER_REPUTATION':
+        return [
+          'Votre réputation a été corrigée',
+          points > 0
+            ? `L’équipe de modération a ajouté ${nombre(points)} ${unite} à votre réputation.`
+            : `L’équipe de modération a retiré ${nombre(-points)} ${unite} de votre réputation.`,
+        ];
+      case 'RETIRER_BADGE':
+        return [
+          `Le badge « ${d.badge ?? ''} » vous a été retiré`,
+          `L’équipe de modération a retiré le badge « ${d.badge ?? ''} » de votre profil. Il ne vous sera plus attribué.`,
+        ];
+    }
+  })();
+  // Des points ajoutés ne se contestent pas : rien de plus à proposer.
+  const action =
+    d.action === 'AJUSTER_REPUTATION' && points > 0
+      ? undefined
+      : { libelle: 'Contester la décision', url: d.contestation };
+  return {
+    a: d.a,
+    sujet: typo(titre),
+    ...miseEnForme({
+      titre: typo(titre),
+      paragraphes: [presentation, CONTESTATION].map(typo),
+      details: [
+        ['Motif', d.motif],
+        ...(d.action === 'AJUSTER_REPUTATION'
+          ? [['Points', `${points > 0 ? '+' : '−'}${nombre(Math.abs(points))}`] as [string, string]]
           : []),
         ['Référence', referenceDecision(d.id)],
       ],

@@ -1,8 +1,10 @@
 import type {
   ActionDecision,
+  ActionDecisionAdministrateur,
   ActionDecisionModerateur,
   AvertissementAgent,
   MotifSignalement,
+  StatutCompte,
   StatutContenu,
   StatutSignalement,
   TypeContenu,
@@ -71,5 +73,30 @@ export function actionsPossibles(contenu: EtatContenuModere): ActionDecisionMode
       ? (['AJOUTER_AVERTISSEMENT_AGENT'] as const)
       : []),
     ...(creation && avertissement !== 'AUCUN' ? (['RETIRER_AVERTISSEMENT_AGENT'] as const) : []),
+  ];
+}
+
+/** Ce qui décide des mesures qu'un administrateur peut prendre sur un membre. */
+export interface EtatMembreSanctionne {
+  /** Le membre est l'administrateur lui-même (RG-104, CI-19). */
+  soi: boolean;
+  statutCompte: StatutCompte;
+  /** Badges que le membre a obtenus. */
+  badges: number;
+}
+
+/** RG-102, RG-103, RG-104 : décisions qu'un administrateur peut prendre sur un membre. Aucune sur son
+    propre compte, ni sur un compte banni ou supprimé ; le bannissement ferme un compte actif (un
+    compte en cours de suppression est fermé au trentième jour) ; un badge se retire s'il a été
+    obtenu. */
+export function actionsAdministrateurPossibles(
+  membre: EtatMembreSanctionne,
+): ActionDecisionAdministrateur[] {
+  if (membre.soi || membre.statutCompte === 'BANNI' || membre.statutCompte === 'SUPPRIME')
+    return [];
+  return [
+    ...(membre.statutCompte === 'ACTIF' ? (['BANNIR'] as const) : []),
+    'AJUSTER_REPUTATION',
+    ...(membre.badges > 0 ? (['RETIRER_BADGE'] as const) : []),
   ];
 }

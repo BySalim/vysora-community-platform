@@ -15,6 +15,7 @@ import {
 import {
   schemaChangementRole,
   schemaCreationInvitations,
+  schemaDecisionAdministrateur,
   schemaFiltresDecisions,
   schemaModele,
   schemaOutil,
@@ -22,6 +23,9 @@ import {
   schemaStatutOutil,
   type ChangementRole,
   type CreationInvitations,
+  type DecisionAdministrateur,
+  type DecisionApi,
+  type DossierMembreApi,
   type FiltresDecisions,
   type JournalDecisionsApi,
   type ListeInvitationsApi,
@@ -36,6 +40,7 @@ import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { Exige, SessionCourante } from '../auth/droits.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { AdministrationService, type Acteur } from './administration.service.js';
+import { DecisionsMembresService } from './decisions-membres.service.js';
 import { ReferentielsAdminService } from './referentiels-admin.service.js';
 
 const acteur = (session: SessionOuverte, requete: RequeteVysora): Acteur => ({
@@ -50,6 +55,7 @@ const acteur = (session: SessionOuverte, requete: RequeteVysora): Acteur => ({
 export class AdministrationController {
   constructor(
     private readonly administration: AdministrationService,
+    private readonly decisionsMembres: DecisionsMembresService,
     private readonly referentiels: ReferentielsAdminService,
   ) {}
 
@@ -57,6 +63,28 @@ export class AdministrationController {
   @Get('membres')
   membres(@Query('q') q?: string): Promise<ListeMembresAdministresApi> {
     return this.administration.membres(typeof q === 'string' ? q : undefined);
+  }
+
+  /** GET /api/v1/admin/membres/:id : dossier d'un membre (RG-102). */
+  @Get('membres/:id')
+  dossierMembre(
+    @Param('id', ParseIntPipe) id: number,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<DossierMembreApi> {
+    return this.decisionsMembres.dossier(session.utilisateur.id, id);
+  }
+
+  /** POST /api/v1/admin/membres/:id/decisions : bannir, ajuster la réputation, retirer un badge
+      (RG-102, réservées aux administrateurs). */
+  @Post('membres/:id/decisions')
+  @HttpCode(201)
+  deciderSurMembre(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationZod(schemaDecisionAdministrateur)) saisie: DecisionAdministrateur,
+    @SessionCourante() session: SessionOuverte,
+    @Req() requete: RequeteVysora,
+  ): Promise<DecisionApi> {
+    return this.decisionsMembres.decider(acteur(session, requete), id, saisie);
   }
 
   /** PUT /api/v1/admin/membres/:id/role (F-96, RG-111). */

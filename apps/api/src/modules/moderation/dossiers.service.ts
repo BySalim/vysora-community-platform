@@ -27,7 +27,13 @@ import {
 import { erreurValidation, interdit, introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
-import { contenu, decisionModeration, signalement } from '../../db/schema/index.js';
+import {
+  badge,
+  contenu,
+  decisionModeration,
+  mouvementReputation,
+  signalement,
+} from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
 import { detailsDuContenu, presenterContenus } from './contenus-moderes.js';
@@ -250,7 +256,9 @@ export class DossiersService {
   /** Décisions présentées dans l'ordre reçu. */
   async presenter(lignes: LigneDecision[]): Promise<DecisionApi[]> {
     if (!lignes.length) return [];
-    const [membres, clos, contenus] = await Promise.all([
+    const ids = lignes.map((d) => d.id);
+    const badgeIds = lignes.flatMap((d) => (d.badgeId === null ? [] : [d.badgeId]));
+    const [membres, clos, contenus, ajustements, badges] = await Promise.all([
       resumerMembres(
         this.db,
         this.stockage,
@@ -259,16 +267,27 @@ export class DossiersService {
       this.db
         .select({ decisionId: signalement.decisionId, n: count() })
         .from(signalement)
-        .where(
-          inArray(
-            signalement.decisionId,
-            lignes.map((d) => d.id),
-          ),
-        )
+        .where(inArray(signalement.decisionId, ids))
         .groupBy(signalement.decisionId),
       presenterContenus(this.db, this.stockage, [
         ...new Set(lignes.flatMap((d) => (d.contenuId === null ? [] : [d.contenuId]))),
       ]),
+      // CI-24 : le mouvement qu'un ajustement de la réputation justifie.
+      lignes.some((d) => d.action === 'AJUSTER_REPUTATION')
+        ? this.db
+            .select({
+              decisionId: mouvementReputation.decisionId,
+              points: mouvementReputation.points,
+            })
+            .from(mouvementReputation)
+            .where(inArray(mouvementReputation.decisionId, ids))
+        : Promise.resolve([]),
+      badgeIds.length
+        ? this.db
+            .select({ id: badge.id, code: badge.code, libelle: badge.libelle })
+            .from(badge)
+            .where(inArray(badge.id, badgeIds))
+        : Promise.resolve([]),
     ]);
     const membre = (id: number) => {
       const resume = membres.get(id);
@@ -276,6 +295,8 @@ export class DossiersService {
       return resume;
     };
     const closParDecision = new Map(clos.map((c) => [c.decisionId, c.n]));
+    const pointsParDecision = new Map(ajustements.map((a) => [a.decisionId, a.points]));
+    const badgeParId = new Map(badges.map((b) => [b.id, { code: b.code, libelle: b.libelle }]));
     return lignes.map((d) => ({
       id: d.id,
       action: d.action,
@@ -287,6 +308,8 @@ export class DossiersService {
       intituleContenu: d.contenuId === null ? null : (contenus.get(d.contenuId)?.intitule ?? null),
       membreVise: d.membreViseId === null ? null : membre(d.membreViseId),
       signalementsClos: closParDecision.get(d.id) ?? 0,
+      points: pointsParDecision.get(d.id) ?? null,
+      badge: d.badgeId === null ? null : (badgeParId.get(d.badgeId) ?? null),
     }));
   }
 

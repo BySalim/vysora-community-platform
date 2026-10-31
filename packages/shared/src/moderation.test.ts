@@ -8,11 +8,16 @@ import {
 import {
   LIBELLES_ACTION_DECISION,
   LIBELLES_MOTIF_SIGNALEMENT,
+  actionsAdministrateurPossibles,
   actionsPossibles,
   issueDesSignalements,
 } from './moderation';
 import { erreursParChamp } from './schemas/commun';
-import { schemaDecisionModeration, schemaSignalement } from './schemas/moderation';
+import {
+  schemaDecisionAdministrateur,
+  schemaDecisionModeration,
+  schemaSignalement,
+} from './schemas/moderation';
 
 const erreurs = (resultat: ReturnType<typeof schemaSignalement.safeParse>) =>
   resultat.success ? {} : erreursParChamp(resultat.error);
@@ -86,6 +91,72 @@ describe('schemaDecisionModeration (RG-102, F-91)', () => {
     );
     for (const action of ACTIONS_DECISION_ADMINISTRATEUR)
       expect(schemaDecisionModeration.safeParse({ action, motif: 'Fraude.' }).success).toBe(false);
+  });
+});
+
+describe('schemaDecisionAdministrateur (RG-102, CI-24)', () => {
+  const lire = (valeur: object) => {
+    const resultat = schemaDecisionAdministrateur.safeParse({ motif: 'Votes croisés.', ...valeur });
+    return resultat.success ? resultat.data : erreursParChamp(resultat.error);
+  };
+
+  it('bannit avec un motif seulement', () => {
+    expect(lire({ action: 'BANNIR' })).toEqual({
+      action: 'BANNIR',
+      motif: 'Votes croisés.',
+      points: null,
+      badge: null,
+    });
+    expect(lire({ action: 'BANNIR', motif: ' ' })).toEqual({
+      motif: 'Rédigez le motif communiqué à ce membre.',
+    });
+    expect(lire({ action: 'MASQUER' })).toEqual({ action: 'Choisissez la décision.' });
+  });
+
+  it('ajuste la réputation de −5 000 à 5 000 points, jamais de 0', () => {
+    const erreur = 'Indiquez un nombre de points de −5 000 à 5 000, autre que 0.';
+    expect(lire({ action: 'AJUSTER_REPUTATION' })).toEqual({ points: erreur });
+    expect(lire({ action: 'AJUSTER_REPUTATION', points: 0 })).toEqual({ points: erreur });
+    expect(lire({ action: 'AJUSTER_REPUTATION', points: -5001 })).toEqual({ points: erreur });
+    expect(lire({ action: 'AJUSTER_REPUTATION', points: 2.5 })).toEqual({ points: erreur });
+    expect(lire({ action: 'AJUSTER_REPUTATION', points: -120 })).toMatchObject({ points: -120 });
+    expect(lire({ action: 'BANNIR', points: 10 })).toEqual({
+      points: 'Des points ne s’indiquent que pour un ajustement de la réputation.',
+    });
+  });
+
+  it('retire un badge désigné par son code', () => {
+    expect(lire({ action: 'RETIRER_BADGE' })).toEqual({ badge: 'Choisissez le badge à retirer.' });
+    expect(lire({ action: 'RETIRER_BADGE', badge: 'PODIUM' })).toMatchObject({ badge: 'PODIUM' });
+    expect(lire({ action: 'AJUSTER_REPUTATION', points: 5, badge: 'PODIUM' })).toEqual({
+      badge: 'Un badge ne s’indique que pour un retrait de badge.',
+    });
+  });
+});
+
+describe('actionsAdministrateurPossibles (RG-102, RG-103, RG-104)', () => {
+  const membre = { soi: false, statutCompte: 'ACTIF', badges: 2 } as const;
+
+  it('bannit un compte actif, ajuste sa réputation, retire un badge obtenu', () => {
+    expect(actionsAdministrateurPossibles(membre)).toEqual([
+      'BANNIR',
+      'AJUSTER_REPUTATION',
+      'RETIRER_BADGE',
+    ]);
+    expect(actionsAdministrateurPossibles({ ...membre, badges: 0 })).toEqual([
+      'BANNIR',
+      'AJUSTER_REPUTATION',
+    ]);
+    expect(actionsAdministrateurPossibles({ ...membre, statutCompte: 'EN_SUPPRESSION' })).toEqual([
+      'AJUSTER_REPUTATION',
+      'RETIRER_BADGE',
+    ]);
+  });
+
+  it('ne décide rien sur son propre compte ni sur un compte fermé', () => {
+    expect(actionsAdministrateurPossibles({ ...membre, soi: true })).toEqual([]);
+    expect(actionsAdministrateurPossibles({ ...membre, statutCompte: 'BANNI' })).toEqual([]);
+    expect(actionsAdministrateurPossibles({ ...membre, statutCompte: 'SUPPRIME' })).toEqual([]);
   });
 });
 

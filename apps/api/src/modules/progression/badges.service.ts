@@ -17,6 +17,10 @@ export const TACHE_BADGES = 'badges.attribuer';
 /** Contenu visible de tous (RG-30). */
 const VISIBLE = sql.raw(`c.statut = 'VISIBLE'`);
 
+/** RG-102 : un badge retiré par un administrateur n'est plus attribué ni proposé à ce membre. */
+const retire = (membre: SQL) => sql`exists (select 1 from decision_moderation d
+  where d.action = 'RETIRER_BADGE' and d.membre_vise_id = ${membre} and d.badge_id = b.id)`;
+
 /** Réponses acceptées d'un membre dans le sujet d'un autre. */
 const REPONSES_ACCEPTEES = sql`select c.auteur_id as id, count(*) as valeur from sujet s
   join contenu sc on sc.id = s.id join contenu c on c.id = s.message_accepte_id
@@ -113,6 +117,7 @@ export class BadgesService implements OnModuleInit {
           join utilisateur u on u.id = m.id
           join badge b on b.code = ${code} and b.est_actif
           where m.valeur >= ${objectif} and u.statut_compte not in ('BANNI', 'SUPPRIME')
+            and not ${retire(sql`m.id`)}
           on conflict do nothing
           returning utilisateur_id`);
         for (const r of rows)
@@ -148,6 +153,7 @@ export class BadgesService implements OnModuleInit {
       join badge b on b.code = a.code and b.est_actif
       where not exists (select 1 from obtention_badge ob
         where ob.badge_id = b.id and ob.utilisateur_id = ${id})
+        and not ${retire(sql`${id}`)}
       order by b.id`);
     return prochainsBadges(
       rows.map((r) => {

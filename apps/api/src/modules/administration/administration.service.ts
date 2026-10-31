@@ -132,7 +132,7 @@ export class AdministrationService {
       await tx.update(utilisateur).set({ role }).where(eq(utilisateur.id, membreId));
       await this.auditer(tx, acteur, 'ROLE_MODIFIE', membreId, { avant: membre.role, apres: role });
     });
-    return this.un(membreId);
+    return this.membre(membreId);
   }
 
   /** SEC-02 : appareil perdu. La clé et les codes de secours sont effacés, les sessions du membre
@@ -151,7 +151,7 @@ export class AdministrationService {
         .where(eq(session.utilisateurId, membreId));
       await this.auditer(tx, acteur, 'DEUX_FACTEURS_REINITIALISEE', membreId);
     });
-    return this.un(membreId);
+    return this.membre(membreId);
   }
 
   /** Codes d'invitation, les plus récents d'abord (INV-01). */
@@ -263,7 +263,8 @@ export class AdministrationService {
     };
   }
 
-  private async un(membreId: number): Promise<MembreAdministreApi> {
+  /** Un membre tel que l'administration le présente (EC-23). */
+  async membre(membreId: number): Promise<MembreAdministreApi> {
     const [membre] = await this.presenter([membreId]);
     if (!membre) throw introuvable('Ce membre est introuvable.');
     return membre;

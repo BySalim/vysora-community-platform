@@ -179,8 +179,23 @@ export class ReputationService {
     if (annules.length) await tx.insert(mouvementReputation).values(annules);
   }
 
-  /** Mouvement positif ; le bénéficiaire qui passe un palier en est notifié (F-71). */
-  private async inscrire(tx: Transaction, mouvement: Mouvement, maintenant: Date) {
+  /** RG-102, CI-24 : ajustement de la réputation par un administrateur (fraude avérée), justifié
+      par sa décision : ni contenu d'origine, ni plafond. Un ajustement qui fait passer un palier
+      est notifié comme les autres points (F-71). */
+  async ajuster(
+    tx: Transaction,
+    ajustement: { beneficiaireId: number; acteurId: number; decisionId: number; points: number },
+    maintenant = new Date(),
+  ) {
+    await this.inscrire(tx, { ...ajustement, motif: 'AJUSTEMENT_MODERATION' }, maintenant);
+  }
+
+  /** Nouveau mouvement ; le bénéficiaire qui passe un palier en est notifié (F-71). */
+  private async inscrire(
+    tx: Transaction,
+    mouvement: Omit<typeof mouvementReputation.$inferInsert, 'id' | 'date'>,
+    maintenant: Date,
+  ) {
     const [avant] = await tx
       .select({ points: sql<number>`coalesce(sum(${mouvementReputation.points}), 0)::int` })
       .from(mouvementReputation)
