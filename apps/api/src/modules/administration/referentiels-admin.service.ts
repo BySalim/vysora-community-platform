@@ -157,7 +157,7 @@ export class ReferentielsAdminService {
     const [existant] = await tx
       .select({ id: editeur.id })
       .from(editeur)
-      .where(eq(sql`lower(${editeur.nom})`, nom.toLowerCase()));
+      .where(sql`lower(${editeur.nom}) = lower(${nom})`);
     if (existant) return existant.id;
     const [cree] = await tx.insert(editeur).values({ nom }).returning({ id: editeur.id });
     return cree!.id;

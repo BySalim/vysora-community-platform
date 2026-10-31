@@ -79,7 +79,7 @@ export class AdministrationService {
       ? or(
           ilike(utilisateur.pseudo, motif(q)),
           ilike(utilisateur.nomAffiche, motif(q)),
-          eq(sql`lower(${utilisateur.email})`, q.toLowerCase()),
+          sql`lower(${utilisateur.email}) = lower(${q})`,
         )
       : ne(utilisateur.role, 'MEMBRE');
     const [lignes, [admins]] = await Promise.all([

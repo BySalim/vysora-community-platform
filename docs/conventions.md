@@ -39,7 +39,7 @@
 
 - Un dossier par domaine dans `src/modules/` : `x.module.ts`, `x.controller.ts`, `x.service.ts`, éventuellement `x.repository.ts` si les requêtes deviennent nombreuses, et des tests `*.spec.ts` à côté.
 - Contrôleur mince : routes, validation, codes HTTP. Règles et transactions dans le service (`db.transaction(async (tx) => …)` dès que plusieurs écritures vont ensemble).
-- Accès à la base par le client Drizzle injecté (`@Inject(BASE)`), requêtes typées ; SQL brut seulement si nécessaire, toujours paramétré (`sql\`… ${valeur}\``).
+- Accès à la base par le client Drizzle injecté (`@Inject(BASE)`), requêtes typées ; SQL brut seulement si nécessaire, toujours paramétré (`sql\`… ${valeur}\``). Une comparaison sans casse se fait entièrement dans SQL (`lower(colonne) = lower(${valeur})`) : `toLowerCase()` de JavaScript et `lower()` de PostgreSQL ne traitent pas les lettres accentuées de la même façon dans une base en locale « C ».
 - Configuration par `@Inject(CONFIG)` (variables validées au démarrage) ; jamais `process.env` ailleurs que dans `config/env.ts`.
 - Imports relatifs avec l'extension `.js` (ESM, NestJS 12).
 - E-mails : toujours `EmailService.envoyer` (mise en file, jamais d'envoi SMTP dans une requête), après la validation de la transaction. Travail différé ou planifié : une tâche déclarée avec `FileTaches.declarer` dans `onModuleInit` (nom `domaine.action`, reprises, durée maximale, conservation, cron UTC s'il y a lieu), rejouable sans effet de bord ; les tâches planifiées sont listées dans `modules/taches/taches-planifiees.ts`.
