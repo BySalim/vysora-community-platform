@@ -1,0 +1,210 @@
+---
+/* Journal d'audit (ADM-02, ENF-09). Écran sans maquette dans le prototype, conçu comme le journal
+   des décisions : filtres (domaine, auteur, période) en tête, actions d'administration de la plus
+   récente à la plus ancienne, avec l'élément visé et ce qu'elles ont changé. Rendu par le serveur
+   depuis GET /api/v1/admin/journal. Les décisions de modération ont leur propre journal (EC-21). */
+import {
+  DOMAINES_AUDIT,
+  LIBELLES_DOMAINE_AUDIT,
+  raisonRefus,
+  type JournalAuditApi,
+} from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import AvatarMembre from '../../components/AvatarMembre.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { cibleAudit, libelleAudit, precisionAudit } from '../../lib/administration';
+import { appelerApi, ErreurApi } from '../../lib/api';
+import { ROUTES } from '../../lib/navigation';
+import { dateLongue, pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const parametres = Astro.url.searchParams;
+const date = (nom: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(parametres.get(nom) ?? '') ? (parametres.get(nom) ?? '') : '';
+const filtres = {
+  domaine: (DOMAINES_AUDIT as readonly string[]).includes(parametres.get('domaine') ?? '')
+    ? (parametres.get('domaine') ?? '')
+    : '',
+  acteur: (parametres.get('acteur') ?? '').trim().slice(0, 40),
+  du: date('du'),
+  au: date('au'),
+};
+const page = Math.max(1, Math.min(1000, Number(parametres.get('page')) || 1));
+const requete = (n: number) => {
+  const p = new URLSearchParams(Object.entries(filtres).filter(([, v]) => v));
+  if (n > 1) p.set('page', String(n));
+  return p.toString();
+};
+let journal: JournalAuditApi | null = null;
+if (!raison) {
+  try {
+    journal = await appelerApi<JournalAuditApi>(`/api/v1/admin/journal?${requete(page)}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 400) throw erreur;
+    return Astro.redirect(ROUTES.journalAudit, 302);
+  }
+}
+const filtre = Object.values(filtres).some(Boolean);
+/** « 31 octobre 2026 à 9 h 05 UTC » : les filtres de période se lisent aussi en temps universel. */
+const quand = (valeur: string) => {
+  const date = new Date(valeur);
+  return `${dateLongue(date)} à ${date.getUTCHours()} h ${String(date.getUTCMinutes()).padStart(2, '0')} UTC`;
+};
+---
+
+<Base
+  titre="Journal d’audit"
+  description="Actions d’administration de Vysora, filtrables par domaine, auteur et période."
+  classeCorps="md"
+  icones={['shield', 'history']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Journal d’audit</h1>
+    {journal && (
+      <p class="md-statut">
+        <span class="is-fort">
+          {journal.total ? pluriel(journal.total, 'action', 'actions') : 'Aucune action'}
+          {filtre ? ' pour ces filtres' : ''}
+        </span>
+        <span>
+          {typo(
+            'Rôles, invitations, référentiels, documents légaux et défis. Les décisions de modération ont leur propre journal.',
+          )}
+        </span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="audit" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="consulter le journal d’audit" />
+    </div>
+  ) : (
+    journal && (
+      <div class="container md-file">
+        <form class="ad-outils" method="get">
+          <div class="ad-champ">
+            <label for="ad-domaine">Domaine</label>
+            <select id="ad-domaine" name="domaine">
+              <option value="">Tous</option>
+              {DOMAINES_AUDIT.map((domaine) => (
+                <option value={domaine} selected={domaine === filtres.domaine}>
+                  {LIBELLES_DOMAINE_AUDIT[domaine]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div class="ad-champ">
+            <label for="ad-acteur">Auteur</label>
+            <input
+              id="ad-acteur"
+              name="acteur"
+              value={filtres.acteur}
+              placeholder="Pseudo"
+              maxlength="40"
+              autocomplete="off"
+            />
+          </div>
+          <div class="ad-champ">
+            <label for="ad-du">Du</label>
+            <input id="ad-du" name="du" type="date" value={filtres.du} />
+          </div>
+          <div class="ad-champ">
+            <label for="ad-au">Au</label>
+            <input id="ad-au" name="au" type="date" value={filtres.au} />
+          </div>
+          <button class="btn btn-primary" type="submit">
+            Filtrer
+          </button>
+          {filtre && (
+            <a class="btn btn-secondary" href={ROUTES.journalAudit}>
+              Effacer les filtres
+            </a>
+          )}
+        </form>
+        {journal.elements.length ? (
+          <ol class="md-fil">
+            {journal.elements.map((e) => {
+              const cible = cibleAudit(e);
+              const precision = precisionAudit(e);
+              return (
+                <li class="md-ligne">
+                  {e.acteur ? (
+                    <AvatarMembre membre={e.acteur} taille={32} />
+                  ) : (
+                    <span class="md-ligne-icone" aria-hidden="true">
+                      <svg class="icon icon-sm">
+                        <use href="#i-history" />
+                      </svg>
+                    </span>
+                  )}
+                  <div class="md-ligne-corps">
+                    <p class="md-ligne-haut">
+                      <b>{typo(libelleAudit(e.action))}</b>
+                      <span>
+                        {`Par ${e.acteur?.nom ?? 'un compte supprimé'}, le ${quand(e.date)}`}
+                      </span>
+                    </p>
+                    {e.cible?.membre ? (
+                      <p class="md-ligne-sur">
+                        {'Membre : '}
+                        <a href={ROUTES.dossierMembre(e.cible.membre.id)}>
+                          {`${e.cible.membre.nom} (@${e.cible.membre.pseudo})`}
+                        </a>
+                      </p>
+                    ) : (
+                      cible && <p class="md-ligne-sur">{typo(cible)}</p>
+                    )}
+                    {precision && <p class="md-ligne-texte">{typo(precision)}</p>}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p class="md-rien ad-vide">
+            {filtre
+              ? typo('Aucune action ne correspond à ces filtres.')
+              : typo('Aucune action d’administration pour l’instant.')}
+          </p>
+        )}
+        {journal.pages > 1 && (
+          <nav class="md-pages" aria-label="Pages du journal">
+            {page > 1 && (
+              <a class="btn btn-secondary" href={`?${requete(page - 1)}`}>
+                Actions plus récentes
+              </a>
+            )}
+            {page < journal.pages && (
+              <a class="btn btn-secondary" href={`?${requete(page + 1)}`}>
+                Actions plus anciennes
+              </a>
+            )}
+          </nav>
+        )}
+      </div>
+    )
+  )}
+</Base>

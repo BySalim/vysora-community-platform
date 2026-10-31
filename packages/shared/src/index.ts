@@ -27,6 +27,7 @@ export * from './forum';
 export * from './bon-reflexe';
 export * from './parametres';
 export * from './defis';
+export * from './audit';
 export * from './contrats/referentiels';
 export * from './contrats/session';
 export * from './contrats/medias';

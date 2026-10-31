@@ -1,3 +1,4 @@
+import type { ActionAudit } from '@vysora/shared';
 import type { Executeur } from '../../db/client.js';
 import { journalAudit } from '../../db/schema/index.js';
 
@@ -5,7 +6,7 @@ import { journalAudit } from '../../db/schema/index.js';
 export async function auditer(
   db: Executeur,
   acteurId: number,
-  action: string,
+  action: ActionAudit,
   cibleType: string,
   cibleId: number,
   details?: Record<string, unknown>,

@@ -1,4 +1,5 @@
 import type {
+  JournalAuditApi,
   JournalDecisionsApi,
   ListeInvitationsApi,
   ListeMembresAdministresApi,
@@ -8,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import type TestAgent from 'supertest/lib/agent.js';
 import {
+  badge,
   decisionModeration,
   doubleAuthentification,
   journalAudit,
@@ -248,5 +250,66 @@ describe('Administration (ADM-01, F-92, F-96, RG-111)', () => {
       .set({ statutCompte: 'BANNI' })
       .where(eq(utilisateur.id, awaId));
     expect(await journal('?membre=awa-sarr')).toHaveLength(2);
+  });
+
+  it('présente le journal d’audit, filtrable par domaine, auteur et période (ENF-09)', async () => {
+    const agent = await claire();
+    await agent.put(`/api/v1/admin/membres/${awaId}/role`).send({ role: 'MODERATEUR' }).expect(200);
+    await agent.post('/api/v1/admin/invitations').send({ nombre: 2, joursValidite: 7 }).expect(201);
+    const [podium] = await contexte.db
+      .select({ id: badge.id, libelle: badge.libelle })
+      .from(badge)
+      .where(eq(badge.code, 'PODIUM'));
+    await contexte.db.insert(journalAudit).values([
+      {
+        acteurId: thomasId,
+        action: 'BADGE_ARRETE',
+        cibleType: 'badge',
+        cibleId: podium!.id,
+        date: new Date('2026-10-01T10:00:00Z'),
+      },
+      {
+        acteurId: thomasId,
+        action: 'DOCUMENT_LEGAL_RETIRE',
+        cibleType: 'document_legal',
+        cibleId: 999999,
+        details: { type: 'CGU', version: '2026-11-15' },
+        date: new Date('2026-10-02T10:00:00Z'),
+      },
+    ]);
+    const journal = async (filtres = '') =>
+      (await agent.get(`/api/v1/admin/journal${filtres}`).expect(200)).body as JournalAuditApi;
+
+    const tout = await journal();
+    expect(tout.total).toBe(4);
+    expect(tout.elements.map((e) => e.action)).toEqual([
+      'INVITATIONS_CREEES',
+      'ROLE_MODIFIE',
+      'DOCUMENT_LEGAL_RETIRE',
+      'BADGE_ARRETE',
+    ]);
+    expect(tout.elements[1]).toMatchObject({
+      acteur: { pseudo: 'claire-dubois' },
+      cible: { type: 'utilisateur', id: awaId, membre: { pseudo: 'awa-sarr' } },
+      details: { avant: 'MEMBRE', apres: 'MODERATEUR' },
+    });
+    expect(tout.elements[0]).toMatchObject({
+      cible: null,
+      details: { nombre: 2, joursValidite: 7 },
+    });
+    // Un élément d'un référentiel est nommé ; une version retirée l'est par ses détails.
+    expect(tout.elements[3]?.cible).toMatchObject({ type: 'badge', nom: podium!.libelle });
+    expect(tout.elements[2]?.cible).toMatchObject({ type: 'document_legal', nom: null });
+
+    expect((await journal('?domaine=equipe')).elements.map((e) => e.action)).toEqual([
+      'ROLE_MODIFIE',
+    ]);
+    expect((await journal('?acteur=thomas-diallo')).total).toBe(2);
+    expect((await journal('?du=2026-10-02&au=2026-10-02')).elements.map((e) => e.action)).toEqual([
+      'DOCUMENT_LEGAL_RETIRE',
+    ]);
+    await agent.get('/api/v1/admin/journal?domaine=tout').expect(400);
+    const thomas = await agentConnecte('thomas@example.com');
+    await thomas.get('/api/v1/admin/journal').expect(403);
   });
 });

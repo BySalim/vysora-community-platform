@@ -1,19 +1,25 @@
 /* Administration : rôles, état d'un compte et de sa double authentification (ADM-01, EC-23) ;
    référentiels (ADM-02, EC-22, F-95, RG-110) : libellés des types d'outil et regroupement par
-   famille, dans l'ordre du catalogue du prototype ; icônes des catégories ; badges par catégorie. */
+   famille, dans l'ordre du catalogue du prototype ; icônes des catégories ; badges par catégorie ;
+   journal d'audit (ENF-09) : élément visé et changement en clair. */
 import {
   CATEGORIES_BADGE,
+  LIBELLES_ACTION_AUDIT,
   type BadgeAdministreApi,
   type CategorieBadge,
+  type EntreeAuditApi,
   type FamilleOutil,
   type IconeCategorie,
   type MembreAdministreApi,
   type OutilAdministreApi,
   type Role,
   type StatutCompte,
+  type TypeDocumentLegal,
   type TypeOutil,
 } from '@vysora/shared';
+import { CLE_DOCUMENT, RESUMES_DOCUMENTS } from './documents-legaux';
 import { FAMILLES } from './publier/donnees';
+import { dateLongue, pluriel } from './texte';
 
 export const LIBELLES_ROLE: Record<Role, string> = {
   MEMBRE: 'Membre',
@@ -123,3 +129,70 @@ export const badgesParCategorie = (
     libelle: LIBELLES_CATEGORIE_BADGE[categorie],
     badges: badges.filter((b) => b.categorie === categorie),
   })).filter((groupe) => groupe.badges.length > 0);
+
+/* Journal d'audit (ADM-02, ENF-09) ------------------------------------------------------------ */
+
+const texteDe = (valeur: unknown): string | null => (typeof valeur === 'string' ? valeur : null);
+const nombreDe = (valeur: unknown): number | null => (typeof valeur === 'number' ? valeur : null);
+
+/** Version d'un document légal nommée par les détails inscrits (elle peut avoir été retirée) :
+    « Conditions générales d’utilisation, version du 15 novembre 2026 ». */
+function documentAudit(details: Record<string, unknown> | null): string | null {
+  const type = texteDe(details?.type);
+  const version = texteDe(details?.version);
+  if (!type || !(type in CLE_DOCUMENT)) return null;
+  const titre = RESUMES_DOCUMENTS[CLE_DOCUMENT[type as TypeDocumentLegal]].titre;
+  return version && /^\d{4}-\d{2}-\d{2}$/.test(version)
+    ? `${titre}, version du ${dateLongue(version)}`
+    : titre;
+}
+
+/** Nom de l'élément visé par une action d'administration ; null pour des codes d'invitation ou un
+    membre (présenté à part, avec un lien vers son dossier). */
+export function cibleAudit(entree: EntreeAuditApi): string | null {
+  const { cible, details } = entree;
+  if (!cible || cible.type === 'utilisateur') return null;
+  if (cible.type === 'document_legal') return documentAudit(details);
+  // Un élément retiré depuis garde le nom inscrit à sa création, s'il l'a été.
+  return (
+    cible.nom ??
+    texteDe(details?.libelle) ??
+    texteDe(details?.nom) ??
+    texteDe(details?.code) ??
+    'Élément supprimé depuis'
+  );
+}
+
+/** Ce que l'action a changé, en clair (rôle avant et après, nombre de codes…), ou une chaîne vide. */
+export function precisionAudit(entree: EntreeAuditApi): string {
+  const d = entree.details;
+  switch (entree.action) {
+    case 'ROLE_MODIFIE': {
+      const avant = texteDe(d?.avant) as Role | null;
+      const apres = texteDe(d?.apres) as Role | null;
+      return avant && apres && avant in LIBELLES_ROLE && apres in LIBELLES_ROLE
+        ? `${LIBELLES_ROLE[avant]} → ${LIBELLES_ROLE[apres]}`
+        : '';
+    }
+    case 'INVITATIONS_CREEES': {
+      const nombre = nombreDe(d?.nombre) ?? 0;
+      const jours = nombreDe(d?.joursValidite);
+      const valable = nombre > 1 ? 'valables' : 'valable';
+      return `${pluriel(nombre, 'code', 'codes')}, ${jours ? `${valable} ${pluriel(jours, 'jour', 'jours')}` : 'sans limite de validité'}`;
+    }
+    case 'DEFI_CLOTURE': {
+      const participants = nombreDe(d?.participants);
+      return participants === null ? '' : pluriel(participants, 'participant', 'participants');
+    }
+    case 'LICENCE_PAR_DEFAUT': {
+      const avant = texteDe(d?.avant);
+      return avant ? `Auparavant : ${avant}` : '';
+    }
+    default:
+      return '';
+  }
+}
+
+/** Libellé d'une action inscrite au journal ; une action inconnue garde son code. */
+export const libelleAudit = (action: string): string =>
+  (LIBELLES_ACTION_AUDIT as Record<string, string>)[action] ?? action;

@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   BAREME_REPUTATION,
   slugifier,
+  type ActionAudit,
   type DefiAdministreApi,
   type SaisieDefi,
 } from '@vysora/shared';
@@ -146,7 +147,7 @@ export class AdministrationDefisService {
     id: number,
     action: 'publier' | 'annuler',
     statut: 'PUBLIE' | 'ANNULE',
-    trace: string,
+    trace: ActionAudit,
   ): Promise<DefiAdministreApi> {
     await this.db.transaction(async (tx) => {
       const ligne = await this.verrouiller(tx, id);
@@ -194,7 +195,7 @@ export class AdministrationDefisService {
   private async auditer(
     db: Pick<BaseDeDonnees, 'insert'>,
     acteurId: number,
-    action: string,
+    action: ActionAudit,
     cibleId: number,
     details?: Record<string, unknown>,
   ): Promise<void> {

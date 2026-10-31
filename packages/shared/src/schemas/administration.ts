@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DOMAINES_AUDIT } from '../audit';
 import {
   ACTIONS_DECISION,
   FAMILLES_OUTIL,
@@ -56,6 +57,19 @@ export const schemaFiltresDecisions = z.object({
   page: z.coerce.number().int().min(1).max(1000).optional().default(1),
 });
 export type FiltresDecisions = z.output<typeof schemaFiltresDecisions>;
+
+/** Filtres du journal d'audit (ENF-09) : domaine de l'administration, auteur et période. */
+export const schemaFiltresAudit = z.object({
+  domaine: z
+    .enum(DOMAINES_AUDIT)
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  acteur: pseudo,
+  du: date,
+  au: date,
+  page: z.coerce.number().int().min(1).max(1000).optional().default(1),
+});
+export type FiltresAudit = z.output<typeof schemaFiltresAudit>;
 
 const MS_JOUR = 86_400_000;
 const dateHeure = (message: string) =>

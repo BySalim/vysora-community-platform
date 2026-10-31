@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
+  ActionAudit,
   ChangementRole,
   CreationInvitations,
   FiltresDecisions,
@@ -308,7 +309,7 @@ export class AdministrationService {
   private async auditer(
     db: Executeur,
     acteur: Acteur,
-    action: string,
+    action: ActionAudit,
     cibleId: number | null,
     details?: Record<string, unknown>,
   ): Promise<void> {

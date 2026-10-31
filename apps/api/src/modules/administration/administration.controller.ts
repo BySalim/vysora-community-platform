@@ -16,6 +16,7 @@ import {
   schemaChangementRole,
   schemaCreationInvitations,
   schemaDecisionAdministrateur,
+  schemaFiltresAudit,
   schemaFiltresDecisions,
   schemaModele,
   schemaOutil,
@@ -26,7 +27,9 @@ import {
   type DecisionAdministrateur,
   type DecisionApi,
   type DossierMembreApi,
+  type FiltresAudit,
   type FiltresDecisions,
+  type JournalAuditApi,
   type JournalDecisionsApi,
   type ListeInvitationsApi,
   type ListeMembresAdministresApi,
@@ -41,6 +44,7 @@ import { Exige, SessionCourante } from '../auth/droits.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { AdministrationService, type Acteur } from './administration.service.js';
 import { DecisionsMembresService } from './decisions-membres.service.js';
+import { JournalAuditService } from './journal-audit.service.js';
 import { ReferentielsAdminService } from './referentiels-admin.service.js';
 
 const acteur = (session: SessionOuverte, requete: RequeteVysora): Acteur => ({
@@ -56,6 +60,7 @@ export class AdministrationController {
   constructor(
     private readonly administration: AdministrationService,
     private readonly decisionsMembres: DecisionsMembresService,
+    private readonly journalAudit: JournalAuditService,
     private readonly referentiels: ReferentielsAdminService,
   ) {}
 
@@ -134,6 +139,14 @@ export class AdministrationController {
     @Query(new ValidationZod(schemaFiltresDecisions)) filtres: FiltresDecisions,
   ): Promise<JournalDecisionsApi> {
     return this.administration.journal(filtres);
+  }
+
+  /** GET /api/v1/admin/journal?domaine=&acteur=&du=&au=&page= : journal d'audit (ENF-09). */
+  @Get('journal')
+  journal(
+    @Query(new ValidationZod(schemaFiltresAudit)) filtres: FiltresAudit,
+  ): Promise<JournalAuditApi> {
+    return this.journalAudit.journal(filtres);
   }
 
   /** GET /api/v1/admin/outils : outils et modèles, archivés et retirés compris (EC-22). */

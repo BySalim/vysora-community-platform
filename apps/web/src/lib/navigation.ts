@@ -40,6 +40,7 @@ export const ROUTES = {
   administration: '/admin/roles',
   invitationsAdmin: '/admin/invitations',
   journalDecisions: '/admin/decisions',
+  journalAudit: '/admin/journal-audit',
   defisAdmin: '/admin/defis',
   referentielsAdmin: '/admin/referentiels',
   categoriesAdmin: '/admin/referentiels/categories',

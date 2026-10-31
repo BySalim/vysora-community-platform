@@ -77,6 +77,33 @@ export interface JournalDecisionsApi {
   pages: number;
 }
 
+/** Action inscrite au journal d'audit (ENF-09). */
+export interface EntreeAuditApi {
+  id: number;
+  date: string;
+  /** Une action d'ACTIONS_AUDIT. */
+  action: string;
+  acteur: MembreResumeApi | null;
+  /** Élément visé : un membre (présenté), ou un élément d'un référentiel, un défi, une version d'un
+      document légal, avec son nom s'il existe encore ; null pour des codes d'invitation. */
+  cible: {
+    type: string;
+    id: number | null;
+    nom: string | null;
+    membre: MembreResumeApi | null;
+  } | null;
+  /** Ce que l'action a changé, tel qu'il a été inscrit (rôle avant et après, nombre de codes…). */
+  details: Record<string, unknown> | null;
+}
+
+/** GET /api/v1/admin/journal : de la plus récente à la plus ancienne, vingt par page. */
+export interface JournalAuditApi {
+  elements: EntreeAuditApi[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
 /** Défi tel que l'administration le gère (EC-24). */
 export interface DefiAdministreApi {
   id: number;

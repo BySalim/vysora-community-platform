@@ -1,10 +1,10 @@
 ---
 /* Onglets des écrans d'administration (ADM-01, ADM-02) : rôles de l'équipe, codes d'invitation,
-   défis, référentiels, documents légaux, journal des décisions de modération. */
+   défis, référentiels, documents légaux, journal des décisions de modération, journal d'audit. */
 import { ROUTES } from '../lib/navigation';
 
 interface Props {
-  actif: 'roles' | 'invitations' | 'defis' | 'referentiels' | 'documents' | 'decisions';
+  actif: 'roles' | 'invitations' | 'defis' | 'referentiels' | 'documents' | 'decisions' | 'audit';
 }
 
 const { actif } = Astro.props;
@@ -15,6 +15,7 @@ const ONGLETS = [
   { cle: 'referentiels', libelle: 'Référentiels', href: ROUTES.referentielsAdmin },
   { cle: 'documents', libelle: 'Documents légaux', href: ROUTES.documentsLegauxAdmin },
   { cle: 'decisions', libelle: 'Journal des décisions', href: ROUTES.journalDecisions },
+  { cle: 'audit', libelle: 'Journal d’audit', href: ROUTES.journalAudit },
 ] as const;
 ---
 
