@@ -399,6 +399,8 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - Faille évitée : `pnpm db:seed`, lancé avant chaque démarrage de l'API en production, repérait les catégories par leur libellé et réécrivait leur icône ; une catégorie renommée par l'administration l'aurait fait échouer (adresse déjà prise), et l'API avec lui. Il les repère désormais par leur adresse et garde l'icône choisie.
 - Corrections au passage : le badge Pionnier était donné à l'inscription même arrêté ; le profil et les classements cachaient les badges obtenus dès qu'un badge était désactivé (ils restent affichés, comme un outil archivé).
 - Vérifié dans le navigateur avec `administration-demo` (1280 et 375 px) : catégorie d'essai ajoutée, renommée (nom déjà pris refusé, adresse inchangée), archivée ; licence d'essai ajoutée (adresse http refusée), licence par défaut, puis CC BY 4.0 rétablie ; « Sécurité » archivée puis rétablie depuis la recherche et le filtre ; attribution de « Podium » arrêtée puis reprise ; version des CGU au 15 novembre publiée puis retirée. Éléments d'essai supprimés ensuite ; vérification en deux étapes de `administration-demo` effacée et session fermée.
+- `pnpm verifier` : lint, formatage, types, tests unitaires (106, 166, 62) et de bout en bout (284) verts, seul sur sa base de test.
+- Suite : décision du porteur du projet sur l'hébergeur et le domaine (OPS-01), validation des écrans d'administration (référentiels, documents légaux), puis les décisions réservées aux administrateurs (ADM-02) et DEC-02.
 
 ### 2026-10-31 — Écran des référentiels (ADM-02) et compléments des classements (S-08)
 
