@@ -52,6 +52,7 @@ import { VerificationEmailService } from './verification-email.service.js';
   ],
   exports: [
     SessionsService,
+    InvitationsService,
     EtatCompteService,
     DocumentsLegauxService,
     AnnonceDocumentsService,

@@ -13,5 +13,6 @@ import { SignalementsService } from './signalements.service.js';
   imports: [AuthModule, ProgressionModule, NotificationsModule],
   controllers: [SignalementsController, ModerationController],
   providers: [SignalementsService, DossiersService, DecisionsService],
+  exports: [DossiersService],
 })
 export class ModerationModule {}

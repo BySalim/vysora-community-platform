@@ -1,0 +1,209 @@
+---
+/* Rôles de l'équipe (ADM-01, EC-23, F-96, RG-111). Écran sans maquette dans le prototype, conçu dans
+   le style des écrans de modération : l'équipe par défaut, ou les membres trouvés ; pour chacun, son
+   rôle et l'état de sa double authentification (SEC-02). Les changements partent de
+   scripts/administration.ts, après confirmation. */
+import {
+  raisonRefus,
+  type ListeMembresAdministresApi,
+  type MembreAdministreApi,
+  type Role,
+} from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import AvatarMembre from '../../components/AvatarMembre.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { dateCourte, pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const q = (Astro.url.searchParams.get('q') ?? '').trim().slice(0, 80);
+const liste = raison
+  ? null
+  : await appelerApi<ListeMembresAdministresApi>(
+      `/api/v1/admin/membres${q ? `?q=${encodeURIComponent(q)}` : ''}`,
+      { requete: Astro.request, adresseClient },
+    );
+const moi = Astro.locals.membre?.id ?? null;
+
+const ROLES: [Role, string][] = [
+  ['MEMBRE', 'Membre'],
+  ['MODERATEUR', 'Modérateur'],
+  ['ADMINISTRATEUR', 'Administrateur'],
+];
+const DEUX_FACTEURS: Record<MembreAdministreApi['deuxFacteurs'], [string, string]> = {
+  active: ['Vérification en deux étapes activée', 'is-ok'],
+  'en-attente': ['Vérification en deux étapes commencée, jamais confirmée', 'is-alerte'],
+  absente: ['Vérification en deux étapes à configurer', ''],
+};
+const STATUTS: Record<string, string> = {
+  ACTIF: '',
+  SUSPENDU: 'Compte suspendu',
+  BANNI: 'Compte banni',
+  EN_SUPPRESSION: 'Suppression demandée',
+};
+---
+
+<Base
+  titre="Rôles de l’équipe"
+  description="Rôles de modération et d’administration des membres de Vysora."
+  classeCorps="md"
+  icones={['search', 'user']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Rôles de l’équipe</h1>
+    {liste && (
+      <p class="md-statut">
+        <span class="is-fort">
+          {pluriel(liste.administrateursActifs, 'administrateur actif', 'administrateurs actifs')}
+        </span>
+        <span>{typo('La plateforme en compte toujours au moins un.')}</span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="roles" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="gérer les rôles de l’équipe" />
+    </div>
+  ) : (
+    liste && (
+      <div class="container md-file" data-ad-roles>
+        <form class="ad-outils" method="get" role="search">
+          <div class="ad-champ is-large">
+            <label for="ad-q">Trouver un membre</label>
+            <input
+              id="ad-q"
+              name="q"
+              type="search"
+              value={q}
+              maxlength="80"
+              placeholder="Pseudo, nom ou adresse e-mail exacte"
+              autocomplete="off"
+            />
+          </div>
+          <button class="btn btn-secondary" type="submit">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-search" />
+            </svg>
+            Rechercher
+          </button>
+          {q && (
+            <a class="btn btn-secondary" href="?">
+              Voir l’équipe
+            </a>
+          )}
+        </form>
+        <p class="md-regle">
+          {q
+            ? typo(`Membres trouvés pour « ${q} » (vingt au plus).`)
+            : typo(
+                'Modération et administration. La vérification en deux étapes est exigée à chaque nouvelle connexion de ces comptes.',
+              )}
+        </p>
+        {liste.elements.length ? (
+          <ul class="md-liste">
+            {liste.elements.map((m) => {
+              const [texte2fa, classe2fa] = DEUX_FACTEURS[m.deuxFacteurs];
+              return (
+                <li class="ad-membre" data-ad-membre={m.membre.id}>
+                  <AvatarMembre membre={m.membre} taille={40} />
+                  <div class="ad-membre-corps">
+                    <span class="ad-membre-nom">
+                      {m.membre.nom}
+                      {m.membre.id === moi && ' (vous)'}
+                    </span>
+                    <span class="ad-membre-meta">
+                      <span>{`@${m.membre.pseudo} · inscrit le ${dateCourte(m.dateInscription)}`}</span>
+                      {(m.role !== 'MEMBRE' || m.deuxFacteurs !== 'absente') && (
+                        <span class={classe2fa}>{typo(texte2fa)}</span>
+                      )}
+                      {STATUTS[m.statutCompte] && (
+                        <span class="is-alerte">{STATUTS[m.statutCompte]}</span>
+                      )}
+                    </span>
+                  </div>
+                  <div class="ad-membre-actions">
+                    <label class="sr-only" for={`ad-role-${m.membre.id}`}>
+                      {`Rôle de ${m.membre.nom}`}
+                    </label>
+                    <select
+                      id={`ad-role-${m.membre.id}`}
+                      data-ad-role
+                      data-actuel={m.role}
+                      data-nom={m.membre.nom}
+                    >
+                      {ROLES.map(([valeur, libelle]) => (
+                        <option value={valeur} selected={valeur === m.role}>
+                          {libelle}
+                        </option>
+                      ))}
+                    </select>
+                    {m.deuxFacteurs !== 'absente' && (
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        type="button"
+                        data-ad-reinitialiser
+                        data-nom={m.membre.nom}
+                      >
+                        Réinitialiser la vérification
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p class="md-rien ad-vide">{typo('Aucun membre ne correspond à cette recherche.')}</p>
+        )}
+      </div>
+    )
+  )}
+
+  <Fragment slot="fin">
+    {liste && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="ad-dialogue-titre"
+        aria-describedby="ad-dialogue-texte"
+        data-ad-dialogue
+      >
+        <form method="dialog">
+          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Annuler
+            </button>
+            <button class="btn btn-primary" type="button" data-ad-confirmer>
+              Confirmer
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../../scripts/administration';
+</script>

@@ -1,0 +1,177 @@
+---
+/* Codes d'invitation de la bêta fermée (ADM-01, INV-01). Écran sans maquette dans le prototype,
+   conçu dans le style des écrans de modération : création de codes (nombre, validité), puis liste
+   des codes, libres, utilisés ou expirés. La création part de scripts/administration.ts. */
+import { raisonRefus, type ListeInvitationsApi } from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { dateCourte, fmt, pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const page = Math.max(1, Math.min(1000, Number(Astro.url.searchParams.get('page')) || 1));
+const liste = raison
+  ? null
+  : await appelerApi<ListeInvitationsApi>(`/api/v1/admin/invitations?page=${page}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+const maintenant = new Date();
+---
+
+<Base
+  titre="Invitations"
+  description="Codes d’invitation de la bêta fermée de Vysora."
+  classeCorps="md"
+  icones={['plus', 'copy', 'arrow', 'arrow-left']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Invitations</h1>
+    {liste && (
+      <p class="md-statut">
+        <span class="is-fort">{pluriel(liste.libres, 'code libre', 'codes libres')}</span>
+        <span>{`${fmt(liste.total)} au total`}</span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="invitations" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="gérer les invitations" />
+    </div>
+  ) : (
+    liste && (
+      <div class="container md-file">
+        <form class="ad-outils" novalidate data-ad-invitations>
+          <div class="ad-champ is-court">
+            <label for="ad-nombre">Nombre de codes</label>
+            <input
+              id="ad-nombre"
+              name="nombre"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="50"
+              value="10"
+              required
+            />
+          </div>
+          <div class="ad-champ is-court">
+            <label for="ad-jours">Valables (jours)</label>
+            <input
+              id="ad-jours"
+              name="joursValidite"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="365"
+              value="30"
+            />
+          </div>
+          <button class="btn btn-primary" type="submit">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+            Créer les codes
+          </button>
+          <p class="md-erreur" data-ad-erreur role="alert" hidden />
+        </form>
+        <div class="ad-codes" data-ad-codes hidden>
+          <p>{typo('Nouveaux codes : transmettez-en un à chaque personne invitée.')}</p>
+          <ul data-ad-codes-liste />
+          <button class="btn btn-secondary btn-sm" type="button" data-ad-copier>
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-copy" />
+            </svg>
+            Copier les codes
+          </button>
+        </div>
+        {liste.elements.length ? (
+          <table class="ad-table">
+            <thead>
+              <tr>
+                <th scope="col">Code</th>
+                <th scope="col">Création</th>
+                <th scope="col">Validité</th>
+                <th scope="col">État</th>
+              </tr>
+            </thead>
+            <tbody>
+              {liste.elements.map((i) => {
+                const expire =
+                  !i.utilisation && i.dateExpiration && new Date(i.dateExpiration) <= maintenant;
+                return (
+                  <tr>
+                    <td>
+                      <code>{i.code}</code>
+                    </td>
+                    <td>
+                      {`${dateCourte(i.dateCreation)}${i.createur ? ` · ${i.createur.nom}` : ''}`}
+                    </td>
+                    <td>
+                      {i.dateExpiration
+                        ? `Jusqu’au ${dateCourte(i.dateExpiration)}`
+                        : 'Sans limite'}
+                    </td>
+                    <td>
+                      {i.utilisation ? (
+                        <span class="ad-etat">
+                          {`Utilisé le ${dateCourte(i.utilisation.date)}${i.utilisation.membre ? ` par ${i.utilisation.membre.nom}` : ''}`}
+                        </span>
+                      ) : expire ? (
+                        <span class="ad-etat is-expire">Expiré</span>
+                      ) : (
+                        <span class="ad-etat is-libre">Libre</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p class="md-rien ad-vide">
+            {typo('Aucun code pour l’instant : créez les premiers pour inviter des membres.')}
+          </p>
+        )}
+        {liste.pages > 1 && (
+          <nav class="md-pages" aria-label="Pages des invitations">
+            {page > 1 && (
+              <a class="btn btn-secondary" href={`?page=${page - 1}`}>
+                Codes plus récents
+              </a>
+            )}
+            {page < liste.pages && (
+              <a class="btn btn-secondary" href={`?page=${page + 1}`}>
+                Codes plus anciens
+              </a>
+            )}
+          </nav>
+        )}
+      </div>
+    )
+  )}
+</Base>
+
+<script>
+  import '../../scripts/administration';
+</script>

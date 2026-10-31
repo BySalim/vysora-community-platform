@@ -1,0 +1,24 @@
+---
+/* Onglets des écrans d'administration (ADM-01) : rôles de l'équipe, codes d'invitation, journal
+   des décisions de modération. */
+import { ROUTES } from '../lib/navigation';
+
+interface Props {
+  actif: 'roles' | 'invitations' | 'decisions';
+}
+
+const { actif } = Astro.props;
+const ONGLETS = [
+  { cle: 'roles', libelle: 'Rôles', href: ROUTES.administration },
+  { cle: 'invitations', libelle: 'Invitations', href: ROUTES.invitationsAdmin },
+  { cle: 'decisions', libelle: 'Journal des décisions', href: ROUTES.journalDecisions },
+] as const;
+---
+
+<nav class="md-onglets" aria-label="Écrans d’administration">
+  {ONGLETS.map((onglet) => (
+    <a href={onglet.href} aria-current={onglet.cle === actif ? 'page' : undefined}>
+      {onglet.libelle}
+    </a>
+  ))}
+</nav>

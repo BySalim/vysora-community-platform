@@ -1,0 +1,212 @@
+---
+/* Journal des décisions de modération (ADM-01, EC-21, F-92). Écran sans maquette dans le prototype,
+   conçu dans le style du dossier de modération : filtres (modérateur, membre, action, période) en
+   tête, décisions immuables de la plus récente à la plus ancienne, avec leur motif et un lien vers
+   le dossier du contenu. Rendu par le serveur depuis GET /api/v1/admin/decisions. */
+import {
+  ACTIONS_DECISION,
+  LIBELLES_ACTION_DECISION,
+  raisonRefus,
+  type JournalDecisionsApi,
+} from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import AvatarMembre from '../../components/AvatarMembre.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi, ErreurApi } from '../../lib/api';
+import { ROUTES } from '../../lib/navigation';
+import { dateCourte, dateLongue, enPhrase, fmt, pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const parametres = Astro.url.searchParams;
+const filtres = {
+  moderateur: (parametres.get('moderateur') ?? '').trim().slice(0, 40),
+  membre: (parametres.get('membre') ?? '').trim().slice(0, 40),
+  action: (ACTIONS_DECISION as readonly string[]).includes(parametres.get('action') ?? '')
+    ? (parametres.get('action') ?? '')
+    : '',
+  du: /^\d{4}-\d{2}-\d{2}$/.test(parametres.get('du') ?? '') ? (parametres.get('du') ?? '') : '',
+  au: /^\d{4}-\d{2}-\d{2}$/.test(parametres.get('au') ?? '') ? (parametres.get('au') ?? '') : '',
+};
+const page = Math.max(1, Math.min(1000, Number(parametres.get('page')) || 1));
+const requete = (n: number) => {
+  const p = new URLSearchParams(Object.entries(filtres).filter(([, v]) => v));
+  if (n > 1) p.set('page', String(n));
+  return p.toString();
+};
+let journal: JournalDecisionsApi | null = null;
+if (!raison) {
+  try {
+    journal = await appelerApi<JournalDecisionsApi>(`/api/v1/admin/decisions?${requete(page)}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 400) throw erreur;
+    return Astro.redirect(ROUTES.journalDecisions, 302);
+  }
+}
+const filtre = Object.values(filtres).some(Boolean);
+---
+
+<Base
+  titre="Journal des décisions"
+  description="Décisions de modération de Vysora, filtrables par modérateur, membre, action et période."
+  classeCorps="md"
+  icones={['history', 'arrow-up-right']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Journal des décisions</h1>
+    {journal && (
+      <p class="md-statut">
+        <span class="is-fort">
+          {journal.total ? pluriel(journal.total, 'décision', 'décisions') : 'Aucune décision'}
+          {filtre ? ' pour ces filtres' : ''}
+        </span>
+        <span>
+          {typo(
+            'Une décision ne se modifie pas : une erreur se corrige par une nouvelle décision.',
+          )}
+        </span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="decisions" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="consulter le journal des décisions" />
+    </div>
+  ) : (
+    journal && (
+      <div class="container md-file">
+        <form class="ad-outils" method="get">
+          <div class="ad-champ">
+            <label for="ad-moderateur">Modérateur</label>
+            <input
+              id="ad-moderateur"
+              name="moderateur"
+              value={filtres.moderateur}
+              placeholder="Pseudo"
+              maxlength="40"
+              autocomplete="off"
+            />
+          </div>
+          <div class="ad-champ">
+            <label for="ad-membre">Membre</label>
+            <input
+              id="ad-membre"
+              name="membre"
+              value={filtres.membre}
+              placeholder="Pseudo"
+              maxlength="40"
+              autocomplete="off"
+            />
+          </div>
+          <div class="ad-champ">
+            <label for="ad-action">Action</label>
+            <select id="ad-action" name="action">
+              <option value="">Toutes</option>
+              {ACTIONS_DECISION.map((action) => (
+                <option value={action} selected={action === filtres.action}>
+                  {typo(LIBELLES_ACTION_DECISION[action])}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div class="ad-champ">
+            <label for="ad-du">Du</label>
+            <input id="ad-du" name="du" type="date" value={filtres.du} />
+          </div>
+          <div class="ad-champ">
+            <label for="ad-au">Au</label>
+            <input id="ad-au" name="au" type="date" value={filtres.au} />
+          </div>
+          <button class="btn btn-primary" type="submit">
+            Filtrer
+          </button>
+          {filtre && (
+            <a class="btn btn-secondary" href={ROUTES.journalDecisions}>
+              Effacer les filtres
+            </a>
+          )}
+        </form>
+        {journal.elements.length ? (
+          <ol class="md-fil">
+            {journal.elements.map((d) => (
+              <li class="md-ligne">
+                <AvatarMembre membre={d.decideur} taille={32} />
+                <div class="md-ligne-corps">
+                  <p class="md-ligne-haut">
+                    <b>{typo(LIBELLES_ACTION_DECISION[d.action])}</b>
+                    <span>
+                      {[
+                        `Par ${d.decideur.nom}, le ${dateCourte(d.date)}`,
+                        d.finSuspension ? `jusqu’au ${dateLongue(d.finSuspension)}` : '',
+                        d.signalementsClos
+                          ? `${fmt(d.signalementsClos)} ${d.signalementsClos > 1 ? 'signalements clos' : 'signalement clos'}`
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                    <span class="md-ref">{`Décision n° ${d.id}`}</span>
+                  </p>
+                  {d.contenuId !== null && (
+                    <p class="md-ligne-sur">
+                      Sur{' '}
+                      <a href={ROUTES.dossierModeration(d.contenuId)}>
+                        {typo(d.intituleContenu ?? `le contenu n° ${d.contenuId}`)}
+                      </a>
+                    </p>
+                  )}
+                  {d.membreVise && (
+                    <p class="md-ligne-sur">{`Membre visé : ${d.membreVise.nom} (@${d.membreVise.pseudo})`}</p>
+                  )}
+                  <p class="md-ligne-texte">{typo(enPhrase(d.motif))}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p class="md-rien ad-vide">
+            {filtre
+              ? typo('Aucune décision ne correspond à ces filtres.')
+              : typo('Aucune décision de modération pour l’instant.')}
+          </p>
+        )}
+        {journal.pages > 1 && (
+          <nav class="md-pages" aria-label="Pages du journal">
+            {page > 1 && (
+              <a class="btn btn-secondary" href={`?${requete(page - 1)}`}>
+                Décisions plus récentes
+              </a>
+            )}
+            {page < journal.pages && (
+              <a class="btn btn-secondary" href={`?${requete(page + 1)}`}>
+                Décisions plus anciennes
+              </a>
+            )}
+          </nav>
+        )}
+      </div>
+    )
+  )}
+</Base>

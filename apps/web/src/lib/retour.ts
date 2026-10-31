@@ -15,6 +15,7 @@ const PAGES: [prefixe: string, libelle: string][] = [
   ['/classements', 'Retour aux classements'],
   ['/defis', 'Retour aux défis'],
   ['/moderation', 'Retour à la modération'],
+  ['/admin', 'Retour à l’administration'],
 ];
 const RETOUR_ACCUEIL = 'Retour à l’accueil';
 const RETOUR_AUTRE = 'Retour à la page précédente';

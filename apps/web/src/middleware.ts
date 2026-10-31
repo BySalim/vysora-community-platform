@@ -18,7 +18,7 @@ export const onRequest = defineMiddleware(async (contexte, suite) => {
   contexte.locals.deuxFacteurs = session.deuxFacteurs ?? null;
 
   // SEC-02 : la modération et l'administration attendent la vérification en deux étapes.
-  const reservee = /^\/(moderation|administration)(\/|$)/.test(contexte.url.pathname);
+  const reservee = /^\/(moderation|admin)(\/|$)/.test(contexte.url.pathname);
   if (reservee && session.deuxFacteurs) {
     const retour = encodeURIComponent(contexte.url.pathname + contexte.url.search);
     const redirection = contexte.redirect(`${ROUTES.connexion}?retour=${retour}`, 302);
