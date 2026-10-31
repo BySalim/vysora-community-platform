@@ -9,7 +9,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import { conflit, estViolationUnicite, introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees, Executeur } from '../../db/client.js';
-import { editeur, journalAudit, modele, outil, outilModele } from '../../db/schema/index.js';
+import { editeur, modele, outil, outilModele } from '../../db/schema/index.js';
+import { auditer } from './journal-audit.js';
 
 /* Référentiel des outils et modèles d'IA (ADM-02, EC-22, F-95, RG-110) : un outil ou un modèle
    utilisé n'est jamais supprimé ; archivé (outil) ou retiré (modèle), il reste affiché sur les
@@ -74,7 +75,7 @@ export class ReferentielsAdminService {
             famille: saisie.famille,
           })
           .returning({ id: outil.id });
-        await this.auditer(tx, adminId, 'OUTIL_CREE', 'outil', cree!.id, { nom: saisie.nom });
+        await auditer(tx, adminId, 'OUTIL_CREE', 'outil', cree!.id, { nom: saisie.nom });
         return cree!.id;
       } catch (erreur) {
         if (estViolationUnicite(erreur))
@@ -120,7 +121,7 @@ export class ReferentielsAdminService {
         .onConflictDoNothing()
         .returning({ id: outilModele.modeleId });
       if (!lie.length) throw conflit('Ce modèle est déjà proposé avec cet outil.');
-      await this.auditer(tx, adminId, 'MODELE_AJOUTE', 'modele', modeleId, { outilId });
+      await auditer(tx, adminId, 'MODELE_AJOUTE', 'modele', modeleId, { outilId });
     });
     return this.un(outilId);
   }
@@ -136,7 +137,7 @@ export class ReferentielsAdminService {
       .where(eq(outil.id, id))
       .returning({ id: outil.id });
     if (!modifie.length) throw introuvable('Cet outil est introuvable.');
-    await this.auditer(this.db, adminId, `OUTIL_${statut}`, 'outil', id);
+    await auditer(this.db, adminId, `OUTIL_${statut}`, 'outil', id);
     return this.un(id);
   }
 
@@ -151,7 +152,7 @@ export class ReferentielsAdminService {
       .where(eq(modele.id, id))
       .returning({ id: modele.id });
     if (!modifie.length) throw introuvable('Ce modèle est introuvable.');
-    await this.auditer(this.db, adminId, `MODELE_${statut}`, 'modele', id);
+    await auditer(this.db, adminId, `MODELE_${statut}`, 'modele', id);
     return { id, statut };
   }
 
@@ -169,18 +170,5 @@ export class ReferentielsAdminService {
     const trouve = (await this.outils()).find((o) => o.id === id);
     if (!trouve) throw introuvable('Cet outil est introuvable.');
     return trouve;
-  }
-
-  private async auditer(
-    db: Executeur,
-    acteurId: number,
-    action: string,
-    cibleType: string,
-    cibleId: number,
-    details?: Record<string, unknown>,
-  ): Promise<void> {
-    await db
-      .insert(journalAudit)
-      .values({ acteurId, action, cibleType, cibleId, details: details ?? null });
   }
 }

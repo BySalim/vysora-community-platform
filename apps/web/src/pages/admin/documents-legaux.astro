@@ -1,0 +1,230 @@
+---
+/* Documents légaux (ADM-02, EC-25, F-04, RG-112). Écran sans maquette dans le prototype, conçu dans
+   le style des écrans d'administration : nouvelle version d'un document et sa date d'effet, puis les
+   versions de chaque document, de la plus récente à la plus ancienne, avec leur annonce et leurs
+   acceptations. Le texte est celui de la page du document sur le site (LEG-01).
+   Envoi : scripts/administration.ts. */
+import { raisonRefus, type DocumentLegalAdministreApi } from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { CLE_DOCUMENT, RESUMES_DOCUMENTS } from '../../lib/documents-legaux';
+import { dateCourte, dateLongue, pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const documents = raison
+  ? null
+  : await appelerApi<DocumentLegalAdministreApi[]>('/api/v1/admin/documents-legaux', {
+      requete: Astro.request,
+    });
+const aujourdhui = new Date().toISOString().slice(0, 10);
+const aVenir =
+  documents?.flatMap((d) => d.versions).filter((v) => v.etat === 'a-venir').length ?? 0;
+const titre = (d: DocumentLegalAdministreApi) => RESUMES_DOCUMENTS[CLE_DOCUMENT[d.type]].titre;
+const ETATS = {
+  'a-venir': ['À venir', 'is-avenir'],
+  'en-vigueur': ['En vigueur', 'is-libre'],
+  remplacee: ['Remplacée', 'is-expire'],
+} as const;
+const acceptations = (
+  d: DocumentLegalAdministreApi,
+  v: DocumentLegalAdministreApi['versions'][number],
+) =>
+  !d.acceptationRequise
+    ? 'Sans acceptation'
+    : v.etat === 'a-venir'
+      ? 'À sa prise d’effet'
+      : v.acceptations
+        ? pluriel(v.acceptations, 'membre', 'membres')
+        : 'Aucun membre';
+/** RG-90 : la première version d'un document n'est jamais annoncée (EMAIL-01). */
+const annonce = (v: DocumentLegalAdministreApi['versions'][number], premiere: boolean) =>
+  premiere
+    ? 'Aucune, première version'
+    : v.dateAnnonce
+      ? `Envoyée le ${dateCourte(v.dateAnnonce)}`
+      : v.etat === 'a-venir'
+        ? 'Le jour de sa prise d’effet'
+        : 'Aucune';
+---
+
+<Base
+  titre="Documents légaux · Administration"
+  description="Versions des conditions d’utilisation, de la politique de confidentialité et de la charte communautaire."
+  classeCorps="md"
+  icones={['plus', 'arrow-up-right']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Documents légaux</h1>
+    {documents && (
+      <p class="md-statut">
+        <span class="is-fort">
+          {aVenir
+            ? pluriel(aVenir, 'version à venir', 'versions à venir')
+            : 'Aucune version à venir'}
+        </span>
+        <span>
+          {typo(
+            'Une nouvelle version prend effet à sa date : son acceptation est alors demandée aux membres, prévenus par e-mail. Les versions précédentes et leurs acceptations sont conservées.',
+          )}
+        </span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="documents" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="gérer les documents légaux" />
+    </div>
+  ) : (
+    documents && (
+      <div class="container md-file">
+        <form class="ad-defi" novalidate data-ad-document-form>
+          <h2>Nouvelle version</h2>
+          <div class="ad-outils">
+            <div class="ad-champ">
+              <label for="ad-document-type">Document</label>
+              <select id="ad-document-type" class="is-large" name="type" required>
+                {documents.map((d) => (
+                  <option value={d.type} data-acceptation={String(d.acceptationRequise)}>
+                    {titre(d)}
+                  </option>
+                ))}
+              </select>
+              <p class="md-erreur" data-ad-erreur="type" hidden />
+            </div>
+            <div class="ad-champ">
+              <label for="ad-document-date">Date d’effet</label>
+              <input id="ad-document-date" name="dateEffet" type="date" min={aujourdhui} required />
+              <p class="md-erreur" data-ad-erreur="dateEffet" hidden />
+            </div>
+          </div>
+          <div class="ad-champ">
+            <label for="ad-document-resume">Ce qui change</label>
+            <textarea
+              id="ad-document-resume"
+              name="resumeChangements"
+              rows="3"
+              maxlength="500"
+            ></textarea>
+            <p class="md-erreur" data-ad-erreur="resumeChangements" hidden />
+          </div>
+          <div class="ad-actions-defi is-debut">
+            <button class="btn btn-primary" type="submit">
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-plus" />
+              </svg>
+              Publier la version
+            </button>
+          </div>
+          <p class="md-rien">
+            {typo(
+              'Le résumé est montré aux membres qui acceptent la nouvelle version. Le texte du document est celui de sa page sur le site : mettez-le en ligne avant la date d’effet. La politique de confidentialité informe les membres sans demander leur acceptation.',
+            )}
+          </p>
+          <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+        </form>
+
+        {documents.map((d) => (
+          <section class="ad-famille" aria-labelledby={`ad-document-${d.type}`}>
+            <h2 id={`ad-document-${d.type}`}>{titre(d)}</h2>
+            <p class="ad-document-lien">
+              <a class="ad-lien" href={d.url}>
+                Lire la page du document
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-arrow-up-right" />
+                </svg>
+              </a>
+            </p>
+            <table class="ad-table ad-versions">
+              <caption class="sr-only">{`Versions : ${titre(d)}`}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Version</th>
+                  <th scope="col">État</th>
+                  <th scope="col">Ce qui change</th>
+                  <th scope="col">Annonce</th>
+                  <th scope="col">Acceptations</th>
+                  <th scope="col">
+                    <span class="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.versions.map((v, i) => (
+                  <tr id={`version-${v.id}`}>
+                    <td>
+                      <b>{dateLongue(v.dateEffet)}</b>
+                    </td>
+                    <td>
+                      <span class:list={['ad-etat', ETATS[v.etat][1]]}>{ETATS[v.etat][0]}</span>
+                    </td>
+                    <td data-libelle="Ce qui change">
+                      {v.resumeChangements ? typo(v.resumeChangements) : 'Non précisé'}
+                    </td>
+                    <td data-libelle="Annonce">{annonce(v, i === d.versions.length - 1)}</td>
+                    <td data-libelle="Acceptations">{acceptations(d, v)}</td>
+                    <td>
+                      {v.retirable && (
+                        <div class="ad-actions-defi">
+                          <button
+                            class="btn btn-secondary btn-sm"
+                            type="button"
+                            data-ad-document-retirer={v.id}
+                            data-nom={`${titre(d)} du ${dateLongue(v.dateEffet)}`}
+                          >
+                            Retirer
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ))}
+      </div>
+    )
+  )}
+
+  <Fragment slot="fin">
+    {documents && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="ad-dialogue-titre"
+        aria-describedby="ad-dialogue-texte"
+        data-ad-dialogue
+      >
+        <form method="dialog">
+          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Revenir
+            </button>
+            <button class="btn btn-primary" type="button" data-ad-confirmer>
+              Confirmer
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../../scripts/administration';
+</script>

@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { ACTIONS_DECISION, FAMILLES_OUTIL, ROLES, TYPES_OUTIL } from '../enums';
+import {
+  ACTIONS_DECISION,
+  FAMILLES_OUTIL,
+  ROLES,
+  TYPES_DOCUMENT_LEGAL,
+  TYPES_OUTIL,
+} from '../enums';
 import { DELAIS } from '../regles';
 
 /** PUT /api/v1/admin/membres/:id/role (F-96, RG-111). */
@@ -140,3 +146,165 @@ export const schemaStatutOutil = z.object({
 export const schemaStatutModele = z.object({
   statut: z.enum(['DISPONIBLE', 'RETIRE'], { error: 'Choisissez un statut.' }),
 });
+
+/** PATCH d'une catégorie, d'une licence, d'une étiquette ou d'un badge (RG-110) : archivé, l'élément
+    reste affiché sur les contenus qui le citent et n'est plus proposé (un badge n'est plus attribué). */
+export const schemaEtatReferentiel = z.object({
+  actif: z.boolean({ error: 'Indiquez si l’élément est proposé.' }),
+});
+export type EtatReferentiel = z.output<typeof schemaEtatReferentiel>;
+
+/** Icônes du sprite proposées pour une catégorie (charte 13.2) : celles du prototype et d'autres
+    pictogrammes de domaine. */
+export const ICONES_CATEGORIE = [
+  'browser',
+  'image',
+  'pen',
+  'code',
+  'flow',
+  'chart',
+  'film',
+  'music',
+  'school',
+  'shapes',
+  'book',
+  'box',
+  'camera',
+  'compass',
+  'doc',
+  'globe',
+  'grid',
+  'heart',
+  'layers',
+  'mail',
+  'message',
+  'monitor',
+  'phone',
+  'scale',
+  'sparkle',
+  'tableur',
+  'terminal',
+  'users',
+  'wrench',
+] as const;
+export type IconeCategorie = (typeof ICONES_CATEGORIE)[number];
+
+/** POST et PUT /api/v1/admin/categories (F-95) : l'adresse de la page du domaine se tire du premier
+    libellé et ne change plus ensuite. */
+export const schemaCategorie = z.object({
+  libelle: z
+    .string({ error: 'Indiquez le libellé de la catégorie.' })
+    .trim()
+    .min(1, { error: 'Indiquez le libellé de la catégorie.' })
+    .min(2, { error: 'Le libellé compte au moins 2 caractères.' })
+    .max(60, { error: 'Le libellé compte 60 caractères au plus.' }),
+  icone: z.enum(ICONES_CATEGORIE, { error: 'Choisissez une icône.' }),
+  description: z
+    .string({ error: 'Rédigez la présentation du domaine.' })
+    .trim()
+    .min(1, { error: 'Rédigez la présentation du domaine.' })
+    .min(20, { error: 'La présentation compte au moins 20 caractères.' })
+    .max(300, { error: 'La présentation compte 300 caractères au plus.' }),
+});
+export type SaisieCategorie = z.output<typeof schemaCategorie>;
+
+const libelleLicence = z
+  .string({ error: 'Indiquez le libellé de la licence.' })
+  .trim()
+  .min(1, { error: 'Indiquez le libellé de la licence.' })
+  .min(2, { error: 'Le libellé compte au moins 2 caractères.' })
+  .max(100, { error: 'Le libellé compte 100 caractères au plus.' });
+const resumeLicence = z
+  .string({ error: 'Résumez ce que la licence permet.' })
+  .trim()
+  .min(1, { error: 'Résumez ce que la licence permet.' })
+  .min(10, { error: 'Le résumé compte au moins 10 caractères.' })
+  .max(200, { error: 'Le résumé compte 200 caractères au plus.' });
+/** Texte de la licence : une adresse https, ou une page du site (« /cgu#licences »). */
+const adresseLicence = z
+  .string({ error: 'Indiquez l’adresse du texte de la licence.' })
+  .trim()
+  .min(1, { error: 'Indiquez l’adresse du texte de la licence.' })
+  .max(2048, { error: 'L’adresse compte 2 048 caractères au plus.' })
+  .superRefine((valeur, ctx) => {
+    if (/^\/(?!\/)\S*$/.test(valeur)) return;
+    let url: URL | null;
+    try {
+      url = new URL(valeur);
+    } catch {
+      url = null;
+    }
+    if (!url || !url.hostname.includes('.') || /\s/.test(valeur))
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Indiquez une adresse complète (https://…) ou une page du site (/cgu#licences).',
+      });
+    else if (url.protocol !== 'https:')
+      ctx.addIssue({ code: 'custom', message: 'Utilisez une adresse sécurisée, en https.' });
+  });
+
+/** PUT /api/v1/admin/licences/:id : le code et les variantes permises définissent la licence et
+    ne changent plus (les créations publiées sous cette licence restent sous ses conditions). */
+export const schemaModificationLicence = z.object({
+  libelle: libelleLicence,
+  resume: resumeLicence,
+  url: adresseLicence,
+});
+export type ModificationLicence = z.output<typeof schemaModificationLicence>;
+
+/** POST /api/v1/admin/licences (F-17, F-95). */
+export const schemaLicence = schemaModificationLicence.extend({
+  code: z
+    .string({ error: 'Indiquez le code de la licence.' })
+    .trim()
+    .min(1, { error: 'Indiquez le code de la licence.' })
+    .toUpperCase()
+    .regex(/^[A-Z0-9][A-Z0-9.-]{1,29}$/, {
+      error: 'Le code compte 2 à 30 lettres, chiffres, points ou tirets (CC-BY-4.0).',
+    }),
+  autoriseVariantes: z.boolean({ error: 'Indiquez si la licence permet les variantes.' }),
+});
+export type SaisieLicence = z.output<typeof schemaLicence>;
+
+/** GET /api/v1/admin/etiquettes?q=&etat=&page= */
+export const schemaFiltresEtiquettes = z.object({
+  q: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .transform((valeur) => valeur || undefined),
+  etat: z
+    .enum(['proposees', 'archivees'])
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  page: z.coerce.number().int().min(1).max(1000).optional().default(1),
+});
+export type FiltresEtiquettes = z.output<typeof schemaFiltresEtiquettes>;
+
+/** POST /api/v1/admin/documents-legaux (EC-25, RG-112) : nouvelle version d'un document, nommée par
+    sa date d'effet. Les conditions et la charte s'acceptent : leur résumé des changements est montré
+    aux membres qui acceptent la nouvelle version (RG-03). */
+export const schemaVersionDocumentLegal = z
+  .object({
+    type: z.enum(TYPES_DOCUMENT_LEGAL, { error: 'Choisissez le document.' }),
+    dateEffet: z
+      .string({ error: 'Indiquez la date d’effet.' })
+      .regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Indiquez la date d’effet.' }),
+    resumeChangements: z
+      .string()
+      .trim()
+      .max(500, { error: 'Le résumé compte 500 caractères au plus.' })
+      .nullish()
+      .transform((valeur) => valeur || null),
+  })
+  .superRefine((v, ctx) => {
+    if (v.type !== 'CONFIDENTIALITE' && (v.resumeChangements?.length ?? 0) < 10)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['resumeChangements'],
+        message:
+          'Résumez ce qui change : les membres le lisent avant d’accepter la nouvelle version.',
+      });
+  });
+export type SaisieVersionDocumentLegal = z.output<typeof schemaVersionDocumentLegal>;

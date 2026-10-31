@@ -1,0 +1,216 @@
+---
+/* Licences (ADM-02, EC-22, F-17, F-95, CI-26, RG-110) : licences proposées aux auteurs à la
+   publication. Nouvelle licence, puis chaque licence avec son libellé, son résumé et l'adresse de son
+   texte ; une seule licence par défaut, toujours proposée. Le code et les variantes permises ne
+   changent plus après la création : les créations publiées gardent leurs conditions.
+   Envois : scripts/referentiels.ts. */
+import { raisonRefus, type LicenceAdministreeApi } from '@vysora/shared';
+import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
+import { appelerApi } from '../../../lib/api';
+import { pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const licences = raison
+  ? null
+  : await appelerApi<LicenceAdministreeApi[]>('/api/v1/admin/licences', {
+      requete: Astro.request,
+    });
+const archivees = licences?.filter((l) => !l.active).length ?? 0;
+const parDefaut = licences?.find((l) => l.parDefaut);
+const choisie = (n: number) =>
+  n ? `Choisie pour ${pluriel(n, 'création', 'créations')}` : 'Choisie pour aucune création';
+---
+
+<ReferentielsAdmin
+  actif="licences"
+  titre="Licences"
+  description="Licences proposées aux auteurs à la publication d’une création."
+  {raison}
+  icones={['doc', 'arrow-up-right']}
+>
+  {licences && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {pluriel(licences.length - archivees, 'licence proposée', 'licences proposées')}
+      </span>
+      {archivees > 0 && <span>{pluriel(archivees, 'licence archivée', 'licences archivées')}</span>}
+      {parDefaut && <span>{typo(`Licence par défaut : ${parDefaut.libelle}`)}</span>}
+    </p>
+  )}
+  {licences && (
+    <>
+      <form class="ad-defi" novalidate data-ad-licence-form>
+        <h2>Nouvelle licence</h2>
+        <div class="ad-outils">
+          <div class="ad-champ">
+            <label for="ad-licence-code">Code</label>
+            <input
+              id="ad-licence-code"
+              name="code"
+              maxlength="30"
+              placeholder="CC-BY-ND-4.0"
+              autocomplete="off"
+              required
+            />
+            <p class="md-erreur" data-ad-erreur="code" hidden />
+          </div>
+          <div class="ad-champ is-large">
+            <label for="ad-licence-libelle">Libellé</label>
+            <input id="ad-licence-libelle" name="libelle" maxlength="100" required />
+            <p class="md-erreur" data-ad-erreur="libelle" hidden />
+          </div>
+        </div>
+        <div class="ad-outils">
+          <div class="ad-champ is-large">
+            <label for="ad-licence-resume">Ce que la licence permet, en une phrase</label>
+            <input id="ad-licence-resume" name="resume" maxlength="200" required />
+            <p class="md-erreur" data-ad-erreur="resume" hidden />
+          </div>
+          <div class="ad-champ is-large">
+            <label for="ad-licence-url">Adresse du texte de la licence</label>
+            <input
+              id="ad-licence-url"
+              name="url"
+              maxlength="2048"
+              inputmode="url"
+              placeholder="https://"
+              required
+            />
+            <p class="md-erreur" data-ad-erreur="url" hidden />
+          </div>
+        </div>
+        <label class="ad-case">
+          <input type="checkbox" name="autoriseVariantes" checked />
+          {typo('Elle permet aux membres de publier des variantes d’une création')}
+        </label>
+        <div class="ad-actions-defi is-debut">
+          <button class="btn btn-primary" type="submit">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+            Ajouter la licence
+          </button>
+        </div>
+        <p class="md-rien">
+          {typo(
+            'Le code et les variantes permises ne changent plus ensuite : les créations publiées sous cette licence en gardent les conditions.',
+          )}
+        </p>
+        <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+      </form>
+
+      <ul class="ad-refs">
+        {licences.map((l) => (
+          <li>
+            <details class:list={['ad-ref', { 'is-archive': !l.active }]} id={`licence-${l.id}`}>
+              <summary>
+                <span class="ad-ref-logo is-vide" aria-hidden="true">
+                  <svg class="icon icon-sm">
+                    <use href="#i-doc" />
+                  </svg>
+                </span>
+                <span class="ad-membre-corps">
+                  <span class="ad-membre-nom">{l.libelle}</span>
+                  <span class="ad-membre-meta">
+                    <span>{l.code}</span>
+                    <span>{l.autoriseVariantes ? 'Variantes permises' : 'Sans variantes'}</span>
+                    <span>{choisie(l.utilisations)}</span>
+                  </span>
+                </span>
+                {l.parDefaut && <span class="ad-etat is-libre">Par défaut</span>}
+                {!l.active && <span class="ad-etat is-expire">Archivée</span>}
+                <svg class="icon icon-sm ad-ref-chevron" aria-hidden="true">
+                  <use href="#i-chevron-down" />
+                </svg>
+              </summary>
+              <div class="ad-ref-corps">
+                <form class="ad-modification" novalidate data-ad-licence-form={l.id}>
+                  <div class="ad-outils">
+                    <div class="ad-champ is-large">
+                      <label for={`ad-licence-libelle-${l.id}`}>Libellé</label>
+                      <input
+                        id={`ad-licence-libelle-${l.id}`}
+                        name="libelle"
+                        maxlength="100"
+                        value={l.libelle}
+                        required
+                      />
+                      <p class="md-erreur" data-ad-erreur="libelle" hidden />
+                    </div>
+                    <div class="ad-champ is-large">
+                      <label for={`ad-licence-resume-${l.id}`}>
+                        Ce que la licence permet, en une phrase
+                      </label>
+                      <input
+                        id={`ad-licence-resume-${l.id}`}
+                        name="resume"
+                        maxlength="200"
+                        value={l.resume ?? ''}
+                        required
+                      />
+                      <p class="md-erreur" data-ad-erreur="resume" hidden />
+                    </div>
+                  </div>
+                  <div class="ad-outils">
+                    <div class="ad-champ is-large">
+                      <label for={`ad-licence-url-${l.id}`}>Adresse du texte de la licence</label>
+                      <input
+                        id={`ad-licence-url-${l.id}`}
+                        name="url"
+                        maxlength="2048"
+                        inputmode="url"
+                        value={l.url}
+                        required
+                      />
+                      <p class="md-erreur" data-ad-erreur="url" hidden />
+                    </div>
+                    <button class="btn btn-secondary" type="submit">
+                      Enregistrer les modifications
+                    </button>
+                  </div>
+                  <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+                </form>
+                <div class="ad-ref-pied">
+                  <a class="ad-lien" href={l.url} rel="noopener noreferrer" target="_blank">
+                    Lire le texte de la licence
+                    <svg class="icon icon-sm" aria-hidden="true">
+                      <use href="#i-arrow-up-right" />
+                    </svg>
+                  </a>
+                  <div class="ad-actions-defi">
+                    {l.active && !l.parDefaut && (
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        type="button"
+                        data-ad-licence-defaut={l.id}
+                        data-nom={l.libelle}
+                      >
+                        En faire la licence par défaut
+                      </button>
+                    )}
+                    {l.parDefaut ? (
+                      <p>{typo('La licence par défaut reste toujours proposée.')}</p>
+                    ) : (
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        type="button"
+                        data-ad-activer="licences"
+                        data-ad-id={l.id}
+                        data-actif={String(!l.active)}
+                        data-nom={l.libelle}
+                        data-utilisations={l.utilisations}
+                      >
+                        {l.active ? 'Archiver la licence' : 'Proposer de nouveau la licence'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+</ReferentielsAdmin>

@@ -1,20 +1,25 @@
 /* Administration (ADM-01, ADM-02) : changement de rôle et réinitialisation de la double
    authentification après confirmation (F-96, RG-111, SEC-02), création de codes d'invitation
-   (INV-01), défis (EC-24), outils et modèles d'IA (EC-22, RG-110). L'API reste seule juge : un refus
-   (dernier administrateur, compte banni, nom déjà pris) s'affiche tel qu'elle le formule. */
+   (INV-01), défis (EC-24), versions des documents légaux (EC-25, RG-112). Référentiels :
+   scripts/referentiels.ts. */
 
 import {
   erreursParChamp,
   schemaCreationInvitations,
   schemaDefi,
-  schemaModele,
-  schemaOutil,
+  schemaVersionDocumentLegal,
   type MembreAdministreApi,
-  type OutilAdministreApi,
   type Role,
 } from '@vysora/shared';
+import {
+  afficherErreurs,
+  confirmer,
+  dialogue,
+  erreursDuRefus,
+  signalerRefus,
+} from './commun/administration';
 import { api } from './commun/api';
-import { dateCourte } from '../lib/texte';
+import { dateCourte, dateLongue } from '../lib/texte';
 import { $, $$, esc, messageApresChargement, t, toast, typo } from './commun/outils';
 
 const LIBELLES_ROLE: Record<Role, string> = {
@@ -23,55 +28,11 @@ const LIBELLES_ROLE: Record<Role, string> = {
   ADMINISTRATEUR: 'Administrateur',
 };
 
-const dialogue = $<HTMLDialogElement>('[data-ad-dialogue]');
-let action: (() => Promise<void>) | null = null;
-
-/** Fenêtre de confirmation ; « Confirmer » lance l'action. */
-function confirmer(
-  titre: string,
-  texte: string,
-  libelle: string,
-  surConfirmation: () => Promise<void>,
-) {
-  if (!dialogue) return;
-  $('[data-ad-dialogue-titre]', dialogue)!.textContent = typo(titre);
-  $('[data-ad-dialogue-texte]', dialogue)!.textContent = typo(texte);
-  $('[data-ad-confirmer]', dialogue)!.textContent = typo(libelle);
-  action = surConfirmation;
-  dialogue.showModal();
-}
-$('[data-ad-confirmer]', dialogue ?? document)?.addEventListener('click', () => {
-  dialogue?.close();
-  void action?.();
-  action = null;
-});
 dialogue?.addEventListener('close', () => {
   // Annulé : les listes reprennent le rôle actuel.
   for (const liste of $$<HTMLSelectElement>('[data-ad-role]'))
     liste.value = liste.dataset.actuel ?? liste.value;
 });
-
-function signalerRefus(probleme: { status: number; detail?: string; title: string }): void {
-  toast(
-    probleme.status === 409 || probleme.status === 404
-      ? (probleme.detail ?? probleme.title)
-      : 'La modification n’a pas abouti. Réessayez dans un instant.',
-    'alert',
-  );
-}
-
-/** Erreurs d'un formulaire, chacune sous son champ (`data-ad-erreur`), « general » en dernier. */
-function afficherErreurs(formulaire: HTMLFormElement, erreurs: Record<string, string>): void {
-  for (const zone of $$<HTMLElement>('[data-ad-erreur]', formulaire)) {
-    const message = erreurs[zone.dataset.adErreur ?? ''] ?? '';
-    zone.textContent = typo(message);
-    zone.hidden = !message;
-    zone
-      .closest('.ad-champ')
-      ?.querySelector('input, select, textarea')
-      ?.setAttribute('aria-invalid', String(Boolean(message)));
-  }
-}
 
 /* Rôles ------------------------------------------------------------------------- */
 
@@ -283,128 +244,61 @@ formDefi?.addEventListener('submit', async (evenement) => {
   window.location.reload();
 });
 
-/* Référentiels : outils et modèles d'IA (ADM-02, EC-22, F-95, RG-110) -------------------------- */
+/* Documents légaux (EC-25, RG-112) ---------------------------------------------------------- */
 
-const SAISIES = 'les nouvelles créations, les sujets du forum, les cas et les essais';
-
-/** Après un changement, la page se recharge sur l'outil concerné, ouvert. */
-function rechargerSurOutil(outilId: number | string, message: string): void {
-  messageApresChargement(message);
-  history.replaceState(null, '', `#outil-${outilId}`);
-  // Sinon le navigateur rend la position de défilement d'avant le rechargement.
-  history.scrollRestoration = 'manual';
-  window.location.reload();
-}
-const ouvert = /^#outil-\d+$/.test(location.hash) ? $<HTMLDetailsElement>(location.hash) : null;
-if (ouvert) {
-  ouvert.open = true;
-  setTimeout(() => ouvert.scrollIntoView({ block: 'start', behavior: 'instant' }), 0);
-}
-
-/** Refus d'un ajout : sous les champs que l'API désigne, sinon sous le formulaire. */
-const erreursDuRefus = (probleme: {
-  status: number;
-  detail?: string;
-  title: string;
-  erreurs?: Record<string, string>;
-}): Record<string, string> =>
-  probleme.erreurs ?? {
-    general:
-      probleme.status === 409 || probleme.status === 404
-        ? (probleme.detail ?? probleme.title)
-        : 'L’ajout n’a pas abouti. Réessayez dans un instant.',
-  };
-
-const formOutil = $<HTMLFormElement>('[data-ad-outil-form]');
-formOutil?.addEventListener('submit', async (evenement) => {
+const formDocument = $<HTMLFormElement>('[data-ad-document-form]');
+formDocument?.addEventListener('submit', (evenement) => {
   evenement.preventDefault();
-  const donnees = new FormData(formOutil);
-  const resultat = schemaOutil.safeParse(Object.fromEntries(donnees));
-  if (!resultat.success) return afficherErreurs(formOutil, erreursParChamp(resultat.error));
-  afficherErreurs(formOutil, {});
-  const envoyer = $<HTMLButtonElement>('button[type="submit"]', formOutil);
-  if (envoyer) envoyer.disabled = true;
-  const reponse = await api<OutilAdministreApi>('POST', '/api/v1/admin/outils', resultat.data);
-  if (envoyer) envoyer.disabled = false;
-  if (!reponse.ok) return afficherErreurs(formOutil, erreursDuRefus(reponse.probleme));
-  rechargerSurOutil(
-    reponse.donnees.id,
-    `Outil « ${reponse.donnees.nom} » ajouté : ajoutez-lui ses modèles.`,
+  const resultat = schemaVersionDocumentLegal.safeParse(
+    Object.fromEntries(new FormData(formDocument)),
+  );
+  if (!resultat.success) return afficherErreurs(formDocument, erreursParChamp(resultat.error));
+  afficherErreurs(formDocument, {});
+  const choix = $<HTMLSelectElement>('[name="type"]', formDocument)?.selectedOptions[0];
+  const nom = choix?.textContent?.trim() ?? '';
+  const date = dateLongue(resultat.data.dateEffet);
+  confirmer(
+    `Publier la version du ${date} ?`,
+    choix?.dataset.acceptation === 'true'
+      ? `${nom} : à compter du ${date}, chaque membre accepte la nouvelle version avant de pouvoir de nouveau publier, commenter ou voter. Les membres en sont prévenus par e-mail ce jour-là.`
+      : `${nom} : à compter du ${date}, la nouvelle version remplace la précédente. Les membres en sont prévenus par e-mail ce jour-là.`,
+    'Publier la version',
+    async () => {
+      const envoyer = $<HTMLButtonElement>('button[type="submit"]', formDocument);
+      if (envoyer) envoyer.disabled = true;
+      const reponse = await api('POST', '/api/v1/admin/documents-legaux', resultat.data);
+      if (envoyer) envoyer.disabled = false;
+      if (!reponse.ok)
+        return afficherErreurs(
+          formDocument,
+          erreursDuRefus(
+            reponse.probleme,
+            'La version n’a pas été publiée. Réessayez dans un instant.',
+          ),
+        );
+      messageApresChargement(`Version du ${date} publiée.`);
+      window.location.reload();
+    },
   );
 });
 
-for (const form of $$<HTMLFormElement>('[data-ad-modele-form]')) {
-  form.addEventListener('submit', async (evenement) => {
-    evenement.preventDefault();
-    const outilId = form.dataset.adModeleForm ?? '';
-    const resultat = schemaModele.safeParse(Object.fromEntries(new FormData(form)));
-    if (!resultat.success) return afficherErreurs(form, erreursParChamp(resultat.error));
-    afficherErreurs(form, {});
-    const envoyer = $<HTMLButtonElement>('button[type="submit"]', form);
-    if (envoyer) envoyer.disabled = true;
-    const reponse = await api<OutilAdministreApi>(
-      'POST',
-      `/api/v1/admin/outils/${outilId}/modeles`,
-      resultat.data,
-    );
-    if (envoyer) envoyer.disabled = false;
-    if (!reponse.ok) return afficherErreurs(form, erreursDuRefus(reponse.probleme));
-    rechargerSurOutil(outilId, `Modèle « ${resultat.data.nom} » ajouté à ${reponse.donnees.nom}.`);
-  });
-}
-
-for (const bouton of $$<HTMLButtonElement>('[data-ad-outil-statut]')) {
-  bouton.addEventListener('click', () => {
-    const outilId = bouton.dataset.adOutilStatut ?? '';
-    const nom = bouton.dataset.nom ?? '';
-    const archiver = bouton.dataset.statut === 'ARCHIVE';
-    const utilisations = Number(bouton.dataset.utilisations) || 0;
-    const garde = utilisations
-      ? ` Les ${utilisations > 1 ? `${utilisations} contenus qui le citent l’affichent` : 'contenu qui le cite l’affiche'} toujours.`
-      : '';
-    confirmer(
-      archiver ? `Archiver « ${nom} » ?` : `Proposer de nouveau « ${nom} » ?`,
-      archiver
-        ? `Il n’est plus proposé pour ${SAISIES}.${garde}`
-        : `Il est de nouveau proposé pour ${SAISIES}.`,
-      archiver ? 'Archiver' : 'Proposer de nouveau',
-      async () => {
-        bouton.disabled = true;
-        const reponse = await api('PATCH', `/api/v1/admin/outils/${outilId}`, {
-          statut: bouton.dataset.statut,
-        });
-        bouton.disabled = false;
-        if (!reponse.ok) return signalerRefus(reponse.probleme);
-        rechargerSurOutil(
-          outilId,
-          archiver ? `${nom} est archivé.` : `${nom} est de nouveau proposé.`,
-        );
-      },
-    );
-  });
-}
-
-for (const bouton of $$<HTMLButtonElement>('[data-ad-modele]')) {
+for (const bouton of $$<HTMLButtonElement>('[data-ad-document-retirer]')) {
   bouton.addEventListener('click', () => {
     const nom = bouton.dataset.nom ?? '';
-    const retirer = bouton.dataset.statut === 'RETIRE';
     confirmer(
-      retirer ? `Retirer « ${nom} » ?` : `Proposer de nouveau « ${nom} » ?`,
-      retirer
-        ? `Il n’est plus proposé pour ${SAISIES}, avec aucun des outils qui le comptent. Les contenus qui le citent l’affichent toujours.`
-        : `Il est de nouveau proposé pour ${SAISIES}, avec les outils qui le comptent.`,
-      retirer ? 'Retirer' : 'Proposer de nouveau',
+      'Retirer cette version ?',
+      `${nom} : elle n’a pas encore pris effet et disparaît de l’historique. La version en vigueur reste appliquée.`,
+      'Retirer la version',
       async () => {
         bouton.disabled = true;
-        const reponse = await api('PATCH', `/api/v1/admin/modeles/${bouton.dataset.adModele}`, {
-          statut: bouton.dataset.statut,
-        });
+        const reponse = await api(
+          'DELETE',
+          `/api/v1/admin/documents-legaux/${bouton.dataset.adDocumentRetirer}`,
+        );
         bouton.disabled = false;
         if (!reponse.ok) return signalerRefus(reponse.probleme);
-        rechargerSurOutil(
-          bouton.dataset.adOutil ?? '',
-          retirer ? `${nom} est retiré.` : `${nom} est de nouveau proposé.`,
-        );
+        messageApresChargement('Version retirée.');
+        window.location.reload();
       },
     );
   });

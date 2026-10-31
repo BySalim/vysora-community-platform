@@ -3,17 +3,13 @@
    prototype, conçu dans le style des écrans d'administration : nouvel outil, puis les outils par
    famille, chacun avec ses modèles. Un outil ou un modèle déjà cité ne se supprime pas : archivé
    (outil) ou retiré (modèle), il reste affiché sur les contenus et n'est plus proposé dans les
-   nouvelles saisies. Envois : scripts/administration.ts. */
+   nouvelles saisies. Envois : scripts/referentiels.ts. */
 import { FAMILLES_OUTIL, raisonRefus, TYPES_OUTIL, type OutilAdministreApi } from '@vysora/shared';
-import AccesBloc from '../../components/AccesBloc.astro';
-import OngletsAdministration from '../../components/OngletsAdministration.astro';
-import Base from '../../layouts/Base.astro';
-import { editeurs, LIBELLES_TYPE_OUTIL, parFamille } from '../../lib/administration';
-import { appelerApi } from '../../lib/api';
-import { FAMILLES } from '../../lib/publier/donnees';
-import { dateCourte, fmt, pluriel, typo } from '../../lib/texte';
-import '../../styles/moderation.css';
-import '../../styles/moderation-complements.css';
+import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
+import { editeurs, LIBELLES_TYPE_OUTIL, parFamille } from '../../../lib/administration';
+import { appelerApi } from '../../../lib/api';
+import { FAMILLES } from '../../../lib/publier/donnees';
+import { dateCourte, fmt, pluriel, typo } from '../../../lib/texte';
 
 const raison = raisonRefus('administrer', Astro.locals.etat);
 if (raison === 'role') Astro.response.status = 403;
@@ -31,286 +27,236 @@ const proposes = (o: OutilAdministreApi) => {
 };
 ---
 
-<Base
-  titre="Référentiels · Administration"
+<ReferentielsAdmin
+  actif="outils"
+  titre="Outils et modèles"
   description="Outils et modèles d’IA proposés dans les saisies de Vysora."
-  classeCorps="md"
-  icones={['plus', 'chevron-down']}
-  nonIndexee
+  {raison}
 >
-  <div class="container md-tete">
-    <p class="md-rubrique">
-      <svg class="icon icon-sm" aria-hidden="true">
-        <use href="#i-shield"></use>
-      </svg>
-      Administration
+  {outils && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {pluriel(outils.length - archives, 'outil proposé', 'outils proposés')}
+      </span>
+      {archives > 0 && <span>{pluriel(archives, 'outil archivé', 'outils archivés')}</span>}
+      <span>
+        {typo(
+          'Un outil ou un modèle déjà cité ne se supprime pas : archivé ou retiré, il reste affiché sur les contenus existants.',
+        )}
+      </span>
     </p>
-    <h1>Référentiels</h1>
-    {outils && (
-      <p class="md-statut">
-        <span class="is-fort">
-          {pluriel(outils.length - archives, 'outil proposé', 'outils proposés')}
-        </span>
-        {archives > 0 && <span>{pluriel(archives, 'outil archivé', 'outils archivés')}</span>}
-        <span>
-          {typo(
-            'Un outil ou un modèle déjà cité ne se supprime pas : archivé ou retiré, il reste affiché sur les contenus existants.',
-          )}
-        </span>
-      </p>
-    )}
-    {!raison && <OngletsAdministration actif="referentiels" />}
-  </div>
-
-  {raison ? (
-    <div class="container md-acces">
-      <AccesBloc action="administrer" quoi="gérer les référentiels" />
-    </div>
-  ) : (
-    outils && (
-      <div class="container md-file">
-        <form class="ad-defi" novalidate data-ad-outil-form>
-          <h2>Nouvel outil</h2>
-          <div class="ad-outils">
-            <div class="ad-champ is-large">
-              <label for="ad-outil-nom">Nom</label>
-              <input id="ad-outil-nom" name="nom" maxlength="100" required />
-              <p class="md-erreur" data-ad-erreur="nom" hidden />
-            </div>
-            <div class="ad-champ is-large">
-              <label for="ad-outil-editeur">Éditeur</label>
-              <input
-                id="ad-outil-editeur"
-                name="editeur"
-                maxlength="100"
-                list="ad-editeurs"
-                autocomplete="off"
-                required
-              />
-              <datalist id="ad-editeurs">
-                {editeurs(outils).map((e) => (
-                  <option value={e} />
-                ))}
-              </datalist>
-              <p class="md-erreur" data-ad-erreur="editeur" hidden />
-            </div>
-          </div>
-          <div class="ad-outils">
-            <div class="ad-champ">
-              <label for="ad-outil-type">Type</label>
-              <select id="ad-outil-type" name="type" required>
-                {TYPES_OUTIL.map((t) => (
-                  <option value={t}>{LIBELLES_TYPE_OUTIL[t]}</option>
-                ))}
-              </select>
-              <p class="md-erreur" data-ad-erreur="type" hidden />
-            </div>
-            <div class="ad-champ">
-              <label for="ad-outil-famille">Famille du catalogue</label>
-              <select id="ad-outil-famille" name="famille" required>
-                {FAMILLES_OUTIL.map((f) => (
-                  <option value={f}>{libelleFamille[f]}</option>
-                ))}
-              </select>
-              <p class="md-erreur" data-ad-erreur="famille" hidden />
-            </div>
-            <button class="btn btn-primary" type="submit">
-              <svg class="icon icon-sm" aria-hidden="true">
-                <use href="#i-plus" />
-              </svg>
-              Ajouter l’outil
-            </button>
-          </div>
-          <p class="md-rien">
-            {typo(
-              'Un éditeur inconnu est ajouté avec l’outil. L’outil s’affiche sans logo tant que son fichier n’a pas été ajouté au site.',
-            )}
-          </p>
-          <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
-        </form>
-
-        {familles.map((famille) => (
-          <section class="ad-famille" aria-labelledby={`ad-famille-${famille.id}`}>
-            <h2 id={`ad-famille-${famille.id}`}>
-              {famille.libelle}
-              <span class="ad-famille-nb">{fmt(famille.outils.length)}</span>
-            </h2>
-            <ul class="ad-refs">
-              {famille.outils.map((o) => (
-                <li>
-                  <details
-                    class:list={['ad-ref', { 'is-archive': o.statut === 'ARCHIVE' }]}
-                    id={`outil-${o.id}`}
-                  >
-                    <summary>
-                      {o.logo ? (
-                        <img
-                          class:list={['ad-ref-logo', { 'is-mono': o.logoMonochrome }]}
-                          src={`/assets/logos-ia/${o.logo}.svg`}
-                          alt=""
-                          width="28"
-                          height="28"
-                        />
-                      ) : (
-                        <span class="ad-ref-logo is-vide" aria-hidden="true">
-                          {o.nom.slice(0, 1)}
-                        </span>
-                      )}
-                      <span class="ad-membre-corps">
-                        <span class="ad-membre-nom">{o.nom}</span>
-                        <span class="ad-membre-meta">
-                          <span>{o.editeur}</span>
-                          <span>{proposes(o)}</span>
-                          <span>{citations(o.utilisations)}</span>
-                        </span>
-                      </span>
-                      {o.statut === 'ARCHIVE' && <span class="ad-etat is-expire">Archivé</span>}
-                      <svg class="icon icon-sm ad-ref-chevron" aria-hidden="true">
-                        <use href="#i-chevron-down" />
-                      </svg>
-                    </summary>
-                    <div class="ad-ref-corps">
-                      {o.modeles.length ? (
-                        <table class="ad-table">
-                          <caption class="sr-only">{`Modèles de ${o.nom}`}</caption>
-                          <thead>
-                            <tr>
-                              <th scope="col">Modèle</th>
-                              <th scope="col">Nom court</th>
-                              <th scope="col">Sortie</th>
-                              <th scope="col">État</th>
-                              <th scope="col">
-                                <span class="sr-only">Actions</span>
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {o.modeles.map((m) => (
-                              <tr>
-                                <td>
-                                  <b>{m.nom}</b>
-                                </td>
-                                <td data-libelle="Nom court">{m.nomCourt}</td>
-                                <td data-libelle="Sortie">
-                                  {m.dateSortie ? dateCourte(m.dateSortie) : 'Non précisée'}
-                                </td>
-                                <td>
-                                  <span
-                                    class:list={[
-                                      'ad-etat',
-                                      m.statut === 'DISPONIBLE' ? 'is-libre' : 'is-expire',
-                                    ]}
-                                  >
-                                    {m.statut === 'DISPONIBLE' ? 'Proposé' : 'Retiré'}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div class="ad-actions-defi">
-                                    <button
-                                      class="btn btn-secondary btn-sm"
-                                      type="button"
-                                      data-ad-modele={m.id}
-                                      data-ad-outil={o.id}
-                                      data-statut={
-                                        m.statut === 'DISPONIBLE' ? 'RETIRE' : 'DISPONIBLE'
-                                      }
-                                      data-nom={m.nom}
-                                    >
-                                      {m.statut === 'DISPONIBLE'
-                                        ? 'Retirer'
-                                        : 'Proposer de nouveau'}
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <p class="md-rien">
-                          {typo('Aucun modèle n’est encore proposé avec cet outil.')}
-                        </p>
-                      )}
-                      <form class="ad-outils ad-modele" novalidate data-ad-modele-form={o.id}>
-                        <div class="ad-champ is-large">
-                          <label for={`ad-modele-nom-${o.id}`}>Nouveau modèle, nom complet</label>
-                          <input id={`ad-modele-nom-${o.id}`} name="nom" maxlength="100" required />
-                          <p class="md-erreur" data-ad-erreur="nom" hidden />
-                        </div>
-                        <div class="ad-champ">
-                          <label for={`ad-modele-court-${o.id}`}>Nom court</label>
-                          <input
-                            id={`ad-modele-court-${o.id}`}
-                            name="nomCourt"
-                            maxlength="60"
-                            required
-                          />
-                          <p class="md-erreur" data-ad-erreur="nomCourt" hidden />
-                        </div>
-                        <div class="ad-champ">
-                          <label for={`ad-modele-sortie-${o.id}`}>Sortie (facultatif)</label>
-                          <input id={`ad-modele-sortie-${o.id}`} name="dateSortie" type="date" />
-                          <p class="md-erreur" data-ad-erreur="dateSortie" hidden />
-                        </div>
-                        <button class="btn btn-secondary" type="submit">
-                          <svg class="icon icon-sm" aria-hidden="true">
-                            <use href="#i-plus" />
-                          </svg>
-                          Ajouter le modèle
-                        </button>
-                        <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
-                      </form>
-                      <div class="ad-ref-pied">
-                        <p>{typo(`Type : ${LIBELLES_TYPE_OUTIL[o.type]}`)}</p>
-                        <button
-                          class="btn btn-secondary btn-sm"
-                          type="button"
-                          data-ad-outil-statut={o.id}
-                          data-statut={o.statut === 'ACTIF' ? 'ARCHIVE' : 'ACTIF'}
-                          data-nom={o.nom}
-                          data-utilisations={o.utilisations}
-                        >
-                          {o.statut === 'ACTIF'
-                            ? 'Archiver l’outil'
-                            : 'Proposer de nouveau l’outil'}
-                        </button>
-                      </div>
-                    </div>
-                  </details>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-    )
   )}
-
-  <Fragment slot="fin">
-    {outils && (
-      <dialog
-        class="md-dialogue"
-        aria-labelledby="ad-dialogue-titre"
-        aria-describedby="ad-dialogue-texte"
-        data-ad-dialogue
-      >
-        <form method="dialog">
-          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
-          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
-          <div class="md-dialogue-actions">
-            <button class="btn btn-secondary" type="submit" value="annuler">
-              Revenir
-            </button>
-            <button class="btn btn-primary" type="button" data-ad-confirmer>
-              Confirmer
-            </button>
+  {outils && (
+    <>
+      <form class="ad-defi" novalidate data-ad-outil-form>
+        <h2>Nouvel outil</h2>
+        <div class="ad-outils">
+          <div class="ad-champ is-large">
+            <label for="ad-outil-nom">Nom</label>
+            <input id="ad-outil-nom" name="nom" maxlength="100" required />
+            <p class="md-erreur" data-ad-erreur="nom" hidden />
           </div>
-        </form>
-      </dialog>
-    )}
-  </Fragment>
-</Base>
+          <div class="ad-champ is-large">
+            <label for="ad-outil-editeur">Éditeur</label>
+            <input
+              id="ad-outil-editeur"
+              name="editeur"
+              maxlength="100"
+              list="ad-editeurs"
+              autocomplete="off"
+              required
+            />
+            <datalist id="ad-editeurs">
+              {editeurs(outils).map((e) => (
+                <option value={e} />
+              ))}
+            </datalist>
+            <p class="md-erreur" data-ad-erreur="editeur" hidden />
+          </div>
+        </div>
+        <div class="ad-outils">
+          <div class="ad-champ">
+            <label for="ad-outil-type">Type</label>
+            <select id="ad-outil-type" name="type" required>
+              {TYPES_OUTIL.map((t) => (
+                <option value={t}>{LIBELLES_TYPE_OUTIL[t]}</option>
+              ))}
+            </select>
+            <p class="md-erreur" data-ad-erreur="type" hidden />
+          </div>
+          <div class="ad-champ">
+            <label for="ad-outil-famille">Famille du catalogue</label>
+            <select id="ad-outil-famille" name="famille" required>
+              {FAMILLES_OUTIL.map((f) => (
+                <option value={f}>{libelleFamille[f]}</option>
+              ))}
+            </select>
+            <p class="md-erreur" data-ad-erreur="famille" hidden />
+          </div>
+          <button class="btn btn-primary" type="submit">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+            Ajouter l’outil
+          </button>
+        </div>
+        <p class="md-rien">
+          {typo(
+            'Un éditeur inconnu est ajouté avec l’outil. L’outil s’affiche sans logo tant que son fichier n’a pas été ajouté au site.',
+          )}
+        </p>
+        <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+      </form>
 
-<script>
-  import '../../scripts/administration';
-</script>
+      {familles.map((famille) => (
+        <section class="ad-famille" aria-labelledby={`ad-famille-${famille.id}`}>
+          <h2 id={`ad-famille-${famille.id}`}>
+            {famille.libelle}
+            <span class="ad-famille-nb">{fmt(famille.outils.length)}</span>
+          </h2>
+          <ul class="ad-refs">
+            {famille.outils.map((o) => (
+              <li>
+                <details
+                  class:list={['ad-ref', { 'is-archive': o.statut === 'ARCHIVE' }]}
+                  id={`outil-${o.id}`}
+                >
+                  <summary>
+                    {o.logo ? (
+                      <img
+                        class:list={['ad-ref-logo', { 'is-mono': o.logoMonochrome }]}
+                        src={`/assets/logos-ia/${o.logo}.svg`}
+                        alt=""
+                        width="28"
+                        height="28"
+                      />
+                    ) : (
+                      <span class="ad-ref-logo is-vide" aria-hidden="true">
+                        {o.nom.slice(0, 1)}
+                      </span>
+                    )}
+                    <span class="ad-membre-corps">
+                      <span class="ad-membre-nom">{o.nom}</span>
+                      <span class="ad-membre-meta">
+                        <span>{o.editeur}</span>
+                        <span>{proposes(o)}</span>
+                        <span>{citations(o.utilisations)}</span>
+                      </span>
+                    </span>
+                    {o.statut === 'ARCHIVE' && <span class="ad-etat is-expire">Archivé</span>}
+                    <svg class="icon icon-sm ad-ref-chevron" aria-hidden="true">
+                      <use href="#i-chevron-down" />
+                    </svg>
+                  </summary>
+                  <div class="ad-ref-corps">
+                    {o.modeles.length ? (
+                      <table class="ad-table">
+                        <caption class="sr-only">{`Modèles de ${o.nom}`}</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">Modèle</th>
+                            <th scope="col">Nom court</th>
+                            <th scope="col">Sortie</th>
+                            <th scope="col">État</th>
+                            <th scope="col">
+                              <span class="sr-only">Actions</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {o.modeles.map((m) => (
+                            <tr>
+                              <td>
+                                <b>{m.nom}</b>
+                              </td>
+                              <td data-libelle="Nom court">{m.nomCourt}</td>
+                              <td data-libelle="Sortie">
+                                {m.dateSortie ? dateCourte(m.dateSortie) : 'Non précisée'}
+                              </td>
+                              <td>
+                                <span
+                                  class:list={[
+                                    'ad-etat',
+                                    m.statut === 'DISPONIBLE' ? 'is-libre' : 'is-expire',
+                                  ]}
+                                >
+                                  {m.statut === 'DISPONIBLE' ? 'Proposé' : 'Retiré'}
+                                </span>
+                              </td>
+                              <td>
+                                <div class="ad-actions-defi">
+                                  <button
+                                    class="btn btn-secondary btn-sm"
+                                    type="button"
+                                    data-ad-modele={m.id}
+                                    data-ad-outil={o.id}
+                                    data-statut={
+                                      m.statut === 'DISPONIBLE' ? 'RETIRE' : 'DISPONIBLE'
+                                    }
+                                    data-nom={m.nom}
+                                  >
+                                    {m.statut === 'DISPONIBLE' ? 'Retirer' : 'Proposer de nouveau'}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p class="md-rien">
+                        {typo('Aucun modèle n’est encore proposé avec cet outil.')}
+                      </p>
+                    )}
+                    <form class="ad-outils ad-modele" novalidate data-ad-modele-form={o.id}>
+                      <div class="ad-champ is-large">
+                        <label for={`ad-modele-nom-${o.id}`}>Nouveau modèle, nom complet</label>
+                        <input id={`ad-modele-nom-${o.id}`} name="nom" maxlength="100" required />
+                        <p class="md-erreur" data-ad-erreur="nom" hidden />
+                      </div>
+                      <div class="ad-champ">
+                        <label for={`ad-modele-court-${o.id}`}>Nom court</label>
+                        <input
+                          id={`ad-modele-court-${o.id}`}
+                          name="nomCourt"
+                          maxlength="60"
+                          required
+                        />
+                        <p class="md-erreur" data-ad-erreur="nomCourt" hidden />
+                      </div>
+                      <div class="ad-champ">
+                        <label for={`ad-modele-sortie-${o.id}`}>Sortie (facultatif)</label>
+                        <input id={`ad-modele-sortie-${o.id}`} name="dateSortie" type="date" />
+                        <p class="md-erreur" data-ad-erreur="dateSortie" hidden />
+                      </div>
+                      <button class="btn btn-secondary" type="submit">
+                        <svg class="icon icon-sm" aria-hidden="true">
+                          <use href="#i-plus" />
+                        </svg>
+                        Ajouter le modèle
+                      </button>
+                      <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+                    </form>
+                    <div class="ad-ref-pied">
+                      <p>{typo(`Type : ${LIBELLES_TYPE_OUTIL[o.type]}`)}</p>
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        type="button"
+                        data-ad-outil-statut={o.id}
+                        data-statut={o.statut === 'ACTIF' ? 'ARCHIVE' : 'ACTIF'}
+                        data-nom={o.nom}
+                        data-utilisations={o.utilisations}
+                      >
+                        {o.statut === 'ACTIF' ? 'Archiver l’outil' : 'Proposer de nouveau l’outil'}
+                      </button>
+                    </div>
+                  </div>
+                </details>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </>
+  )}
+</ReferentielsAdmin>

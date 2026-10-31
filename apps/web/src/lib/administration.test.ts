@@ -1,6 +1,6 @@
-import type { OutilAdministreApi } from '@vysora/shared';
+import type { BadgeAdministreApi, OutilAdministreApi } from '@vysora/shared';
 import { describe, expect, it } from 'vitest';
-import { editeurs, parFamille } from './administration';
+import { badgesParCategorie, editeurs, parFamille } from './administration';
 
 const outil = (o: Partial<OutilAdministreApi> & Pick<OutilAdministreApi, 'nom'>) =>
   ({
@@ -39,5 +39,30 @@ describe('référentiel des outils (ADM-02, RG-110)', () => {
         outil({ nom: 'Gemini', editeur: 'Google' }),
       ]),
     ).toEqual(['Google', 'OpenAI']);
+  });
+});
+
+describe('badges de l’administration (ADM-02, RG-86)', () => {
+  const badge = (b: Pick<BadgeAdministreApi, 'id' | 'categorie'>): BadgeAdministreApi => ({
+    code: `B${b.id}`,
+    libelle: `Badge ${b.id}`,
+    critere: 'Publier sa première création',
+    icone: 'layers',
+    ton: 'BLEU',
+    actif: true,
+    obtentions: 0,
+    ...b,
+  });
+
+  it('range les badges par catégorie, sans les catégories vides', () => {
+    const groupes = badgesParCategorie([
+      badge({ id: 1, categorie: 'COMMUNAUTE' }),
+      badge({ id: 2, categorie: 'CONTRIBUTION' }),
+      badge({ id: 3, categorie: 'COMMUNAUTE' }),
+    ]);
+    expect(groupes.map((g) => [g.libelle, g.badges.map((b) => b.id)])).toEqual([
+      ['Contribution', [2]],
+      ['Communauté', [1, 3]],
+    ]);
   });
 });

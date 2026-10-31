@@ -1,0 +1,171 @@
+---
+/* Étiquettes (ADM-02, EC-22, F-95, CI-04, RG-110) : les membres les créent en les saisissant ;
+   l'administration archive celles qui ne doivent plus être proposées (doublons, termes déplacés).
+   Archivée, une étiquette reste sur les contenus qui la portent. Recherche et filtre rendus par le
+   serveur depuis GET /api/v1/admin/etiquettes ; envois : scripts/referentiels.ts. */
+import { raisonRefus, type ListeEtiquettesAdministreesApi } from '@vysora/shared';
+import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
+import { appelerApi, ErreurApi } from '../../../lib/api';
+import { ROUTES } from '../../../lib/navigation';
+import { fmt, pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const parametres = Astro.url.searchParams;
+const filtres = {
+  q: (parametres.get('q') ?? '').trim().slice(0, 40),
+  etat: ['proposees', 'archivees'].includes(parametres.get('etat') ?? '')
+    ? (parametres.get('etat') ?? '')
+    : '',
+};
+const page = Math.max(1, Math.min(1000, Number(parametres.get('page')) || 1));
+const requete = (n: number) => {
+  const p = new URLSearchParams(Object.entries(filtres).filter(([, v]) => v));
+  if (n > 1) p.set('page', String(n));
+  return p.toString();
+};
+let liste: ListeEtiquettesAdministreesApi | null = null;
+if (!raison) {
+  try {
+    liste = await appelerApi<ListeEtiquettesAdministreesApi>(
+      `/api/v1/admin/etiquettes?${requete(page)}`,
+      { requete: Astro.request },
+    );
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 400) throw erreur;
+    return Astro.redirect(ROUTES.etiquettesAdmin, 302);
+  }
+}
+const filtre = Boolean(filtres.q || filtres.etat);
+---
+
+<ReferentielsAdmin
+  actif="etiquettes"
+  titre="Étiquettes"
+  description="Étiquettes saisies par les membres sur leurs créations, sujets et cas."
+  {raison}
+  icones={['search']}
+>
+  {liste && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {pluriel(liste.proposees, 'étiquette proposée', 'étiquettes proposées')}
+      </span>
+      {liste.archivees > 0 && (
+        <span>{pluriel(liste.archivees, 'étiquette archivée', 'étiquettes archivées')}</span>
+      )}
+      <span>
+        {typo(
+          'Les membres créent les étiquettes en les saisissant. Archivée, une étiquette reste sur les contenus qui la portent et n’est plus proposée ailleurs.',
+        )}
+      </span>
+    </p>
+  )}
+  {liste && (
+    <>
+      <form class="ad-outils" method="get" role="search">
+        <div class="ad-champ is-large">
+          <label for="ad-etiquette-q">Chercher une étiquette</label>
+          <input
+            id="ad-etiquette-q"
+            name="q"
+            type="search"
+            value={filtres.q}
+            maxlength="40"
+            autocomplete="off"
+          />
+        </div>
+        <div class="ad-champ">
+          <label for="ad-etiquette-etat">État</label>
+          <select id="ad-etiquette-etat" name="etat">
+            <option value="" selected={!filtres.etat}>
+              Toutes
+            </option>
+            <option value="proposees" selected={filtres.etat === 'proposees'}>
+              Proposées
+            </option>
+            <option value="archivees" selected={filtres.etat === 'archivees'}>
+              Archivées
+            </option>
+          </select>
+        </div>
+        <button class="btn btn-secondary" type="submit">
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-search" />
+          </svg>
+          Chercher
+        </button>
+      </form>
+
+      {liste.elements.length ? (
+        <table class="ad-table ad-etiquettes">
+          <caption class="sr-only">
+            {filtre
+              ? `Étiquettes trouvées, page ${liste.page} sur ${liste.pages}`
+              : `Étiquettes, des plus utilisées aux moins utilisées, page ${liste.page} sur ${liste.pages}`}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Étiquette</th>
+              <th scope="col">Contenus</th>
+              <th scope="col">État</th>
+              <th scope="col">
+                <span class="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {liste.elements.map((e) => (
+              <tr id={`etiquette-${e.id}`}>
+                <td>
+                  <b>{e.libelle}</b>
+                </td>
+                <td data-libelle="Contenus">{fmt(e.utilisations)}</td>
+                <td>
+                  <span class:list={['ad-etat', e.active ? 'is-libre' : 'is-expire']}>
+                    {e.active ? 'Proposée' : 'Archivée'}
+                  </span>
+                </td>
+                <td>
+                  <div class="ad-actions-defi">
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      type="button"
+                      data-ad-activer="etiquettes"
+                      data-ad-id={e.id}
+                      data-actif={String(!e.active)}
+                      data-nom={e.libelle}
+                      data-utilisations={e.utilisations}
+                    >
+                      {e.active ? 'Archiver' : 'Proposer de nouveau'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p class="md-rien ad-vide">
+          {filtre
+            ? typo('Aucune étiquette ne correspond à cette recherche.')
+            : typo('Aucune étiquette pour l’instant.')}
+        </p>
+      )}
+      {liste.pages > 1 && (
+        <nav class="md-pages" aria-label="Pages des étiquettes">
+          {page > 1 && (
+            <a class="btn btn-secondary" href={`?${requete(page - 1)}`}>
+              Page précédente
+            </a>
+          )}
+          {page < liste.pages && (
+            <a class="btn btn-secondary" href={`?${requete(page + 1)}`}>
+              Page suivante
+            </a>
+          )}
+        </nav>
+      )}
+    </>
+  )}
+</ReferentielsAdmin>

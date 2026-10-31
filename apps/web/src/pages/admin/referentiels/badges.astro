@@ -1,0 +1,77 @@
+---
+/* Badges (ADM-02, EC-22, F-74, F-95, RG-86) : les critères de chaque badge sont des règles de la
+   plateforme ; l'administration arrête ou reprend leur attribution. Arrêté, un badge n'est plus
+   attribué ni proposé dans les prochains badges du profil ; ceux qui l'ont obtenu le gardent.
+   Envois : scripts/referentiels.ts. */
+import { raisonRefus, type BadgeAdministreApi } from '@vysora/shared';
+import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
+import { badgesParCategorie } from '../../../lib/administration';
+import { embleme } from '../../../lib/accueil/elements';
+import { appelerApi } from '../../../lib/api';
+import { fmt, pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const badges = raison
+  ? null
+  : await appelerApi<BadgeAdministreApi[]>('/api/v1/admin/badges', { requete: Astro.request });
+const arretes = badges?.filter((b) => !b.actif).length ?? 0;
+const obtenu = (n: number) =>
+  n ? `Obtenu par ${pluriel(n, 'membre', 'membres')}` : 'Obtenu par aucun membre';
+---
+
+<ReferentielsAdmin
+  actif="badges"
+  titre="Badges"
+  description="Badges attribués aux membres selon leurs contributions."
+  {raison}
+  icones={badges?.map((b) => b.icone) ?? []}
+>
+  {badges && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {pluriel(badges.length - arretes, 'badge attribué', 'badges attribués')}
+      </span>
+      {arretes > 0 && <span>{pluriel(arretes, 'badge arrêté', 'badges arrêtés')}</span>}
+      <span>
+        {typo(
+          'Les critères des badges sont des règles de la plateforme. Arrêté, un badge n’est plus attribué ; les membres qui l’ont obtenu le gardent.',
+        )}
+      </span>
+    </p>
+  )}
+  {badgesParCategorie(badges ?? []).map((groupe) => (
+    <section class="ad-famille" aria-labelledby={`ad-badges-${groupe.categorie}`}>
+      <h2 id={`ad-badges-${groupe.categorie}`}>
+        {groupe.libelle}
+        <span class="ad-famille-nb">{fmt(groupe.badges.length)}</span>
+      </h2>
+      <ul class="ad-refs">
+        {groupe.badges.map((b) => (
+          <li class:list={['ad-badge', { 'is-archive': !b.actif }]} id={`badge-${b.id}`}>
+            <Fragment set:html={embleme(b)} />
+            <span class="ad-membre-corps">
+              <span class="ad-membre-nom">{b.libelle}</span>
+              <span class="ad-membre-meta">
+                <span>{typo(b.critere)}</span>
+                <span>{obtenu(b.obtentions)}</span>
+              </span>
+            </span>
+            {!b.actif && <span class="ad-etat is-expire">Arrêté</span>}
+            <button
+              class="btn btn-secondary btn-sm"
+              type="button"
+              data-ad-activer="badges"
+              data-ad-id={b.id}
+              data-actif={String(!b.actif)}
+              data-nom={b.libelle}
+              data-utilisations={b.obtentions}
+            >
+              {b.actif ? 'Arrêter l’attribution' : 'Reprendre l’attribution'}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</ReferentielsAdmin>

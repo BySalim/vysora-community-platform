@@ -1,0 +1,54 @@
+---
+/* Champs d'une catégorie dans l'administration (ADM-02, EC-22) : libellé, icône du domaine et
+   présentation affichée en tête de sa page ; préremplis pour une catégorie existante. */
+import { ICONES_CATEGORIE, type CategorieAdministreeApi } from '@vysora/shared';
+import { LIBELLES_ICONE_CATEGORIE } from '../lib/administration';
+
+interface Props {
+  categorie: CategorieAdministreeApi | null;
+}
+
+const { categorie } = Astro.props;
+const prefixe = `ad-categorie-${categorie?.id ?? 'nouvelle'}`;
+const icone = categorie?.icone ?? null;
+---
+
+<div class="ad-outils">
+  <div class="ad-champ is-large">
+    <label for={`${prefixe}-libelle`}>Libellé</label>
+    <input
+      id={`${prefixe}-libelle`}
+      name="libelle"
+      maxlength="60"
+      value={categorie?.libelle}
+      required
+    />
+    <p class="md-erreur" data-ad-erreur="libelle" hidden />
+  </div>
+</div>
+<fieldset class="ad-champ ad-icones">
+  <legend>Icône</legend>
+  <div class="ad-icones-liste">
+    {ICONES_CATEGORIE.map((nom) => (
+      <label class="ad-icone" title={LIBELLES_ICONE_CATEGORIE[nom]}>
+        <input type="radio" name="icone" value={nom} checked={nom === icone} required />
+        <svg class="icon" aria-hidden="true">
+          <use href={`#i-${nom}`} />
+        </svg>
+        <span class="sr-only">{LIBELLES_ICONE_CATEGORIE[nom]}</span>
+      </label>
+    ))}
+  </div>
+  <p class="md-erreur" data-ad-erreur="icone" hidden />
+</fieldset>
+<div class="ad-champ">
+  <label for={`${prefixe}-description`}>Présentation du domaine</label>
+  <textarea
+    id={`${prefixe}-description`}
+    name="description"
+    rows="3"
+    maxlength="300"
+    required
+  >{categorie?.description ?? ''}</textarea>
+  <p class="md-erreur" data-ad-erreur="description" hidden />
+</div>

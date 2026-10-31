@@ -1,0 +1,101 @@
+---
+/* Gabarit des écrans des référentiels (ADM-02, EC-22, F-95) : en-tête de l'administration, onglets
+   des référentiels, porte d'entrée rendue par le serveur et fenêtre de confirmation commune.
+   Écrans sans maquette dans le prototype, dans le style des écrans d'administration.
+   Envois : scripts/referentiels.ts. */
+import type { RaisonRefus } from '@vysora/shared';
+import AccesBloc from './AccesBloc.astro';
+import OngletsAdministration from './OngletsAdministration.astro';
+import Base from '../layouts/Base.astro';
+import { ROUTES } from '../lib/navigation';
+import '../styles/moderation.css';
+import '../styles/moderation-complements.css';
+
+export type OngletReferentiel = 'outils' | 'categories' | 'licences' | 'etiquettes' | 'badges';
+
+interface Props {
+  actif: OngletReferentiel;
+  /** Nom du référentiel, en tête du titre de la page. */
+  titre: string;
+  description: string;
+  /** Refus de l'accès, calculé par la page avant de lire l'API. */
+  raison: RaisonRefus | null;
+  icones?: string[];
+}
+
+const { actif, titre, description, raison, icones = [] } = Astro.props;
+const ONGLETS = [
+  { cle: 'outils', libelle: 'Outils et modèles', href: ROUTES.referentielsAdmin },
+  { cle: 'categories', libelle: 'Catégories', href: ROUTES.categoriesAdmin },
+  { cle: 'licences', libelle: 'Licences', href: ROUTES.licencesAdmin },
+  { cle: 'etiquettes', libelle: 'Étiquettes', href: ROUTES.etiquettesAdmin },
+  { cle: 'badges', libelle: 'Badges', href: ROUTES.badgesAdmin },
+] as const;
+---
+
+<Base
+  titre={`${titre} · Référentiels · Administration`}
+  {description}
+  classeCorps="md"
+  icones={['plus', 'chevron-down', ...icones]}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Référentiels</h1>
+    {!raison && <slot name="statut" />}
+    {!raison && <OngletsAdministration actif="referentiels" />}
+    {!raison && (
+      <nav class="ad-sous-onglets" aria-label="Référentiels">
+        {ONGLETS.map((onglet) => (
+          <a href={onglet.href} aria-current={onglet.cle === actif ? 'page' : undefined}>
+            {onglet.libelle}
+          </a>
+        ))}
+      </nav>
+    )}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="gérer les référentiels" />
+    </div>
+  ) : (
+    <div class="container md-file">
+      <slot />
+    </div>
+  )}
+
+  <Fragment slot="fin">
+    {!raison && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="ad-dialogue-titre"
+        aria-describedby="ad-dialogue-texte"
+        data-ad-dialogue
+      >
+        <form method="dialog">
+          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Revenir
+            </button>
+            <button class="btn btn-primary" type="button" data-ad-confirmer>
+              Confirmer
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../scripts/referentiels';
+</script>

@@ -1,0 +1,130 @@
+---
+/* Catégories (ADM-02, EC-22, F-95, RG-110) : les domaines d'Explorer, proposés aux auteurs pour
+   classer une création, un guide ou un cas. Nouvelle catégorie (libellé, icône, présentation du
+   domaine), puis chaque catégorie avec ses modifications et son archivage. L'adresse de la page du
+   domaine, tirée du premier libellé, ne change plus. Envois : scripts/referentiels.ts. */
+import { ICONES_CATEGORIE, raisonRefus, type CategorieAdministreeApi } from '@vysora/shared';
+import ChampsCategorie from '../../../components/ChampsCategorie.astro';
+import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
+import { appelerApi } from '../../../lib/api';
+import { ROUTES } from '../../../lib/navigation';
+import { pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const categories = raison
+  ? null
+  : await appelerApi<CategorieAdministreeApi[]>('/api/v1/admin/categories', {
+      requete: Astro.request,
+    });
+const archivees = categories?.filter((c) => !c.active).length ?? 0;
+const citations = (n: number) =>
+  n ? `Citée dans ${pluriel(n, 'contenu', 'contenus')}` : 'Citée dans aucun contenu';
+---
+
+<ReferentielsAdmin
+  actif="categories"
+  titre="Catégories"
+  description="Catégories proposées aux auteurs : les domaines d’Explorer."
+  {raison}
+  icones={[...ICONES_CATEGORIE, 'arrow-up-right']}
+>
+  {categories && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {pluriel(categories.length - archivees, 'catégorie proposée', 'catégories proposées')}
+      </span>
+      {archivees > 0 && (
+        <span>{pluriel(archivees, 'catégorie archivée', 'catégories archivées')}</span>
+      )}
+      <span>
+        {typo(
+          'Les catégories sont les domaines d’Explorer. Archivée, une catégorie reste affichée sur les contenus qui la citent.',
+        )}
+      </span>
+    </p>
+  )}
+  {categories && (
+    <>
+      <form class="ad-defi" novalidate data-ad-categorie-form>
+        <h2>Nouvelle catégorie</h2>
+        <ChampsCategorie categorie={null} />
+        <div class="ad-actions-defi is-debut">
+          <button class="btn btn-primary" type="submit">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+            Ajouter la catégorie
+          </button>
+        </div>
+        <p class="md-rien">
+          {typo(
+            'Son adresse, tirée du libellé, ne change plus ensuite : les liens vers la page du domaine restent valables.',
+          )}
+        </p>
+        <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+      </form>
+
+      <ul class="ad-refs">
+        {categories.map((c) => (
+          <li>
+            <details class:list={['ad-ref', { 'is-archive': !c.active }]} id={`categorie-${c.id}`}>
+              <summary>
+                <span class="ad-ref-logo is-vide" aria-hidden="true">
+                  <svg class="icon icon-sm">
+                    <use href={`#i-${c.icone ?? 'compass'}`} />
+                  </svg>
+                </span>
+                <span class="ad-membre-corps">
+                  <span class="ad-membre-nom">{c.libelle}</span>
+                  <span class="ad-membre-meta">
+                    <span>{ROUTES.domaine(c.slug)}</span>
+                    <span>{citations(c.utilisations)}</span>
+                  </span>
+                </span>
+                {!c.active && <span class="ad-etat is-expire">Archivée</span>}
+                <svg class="icon icon-sm ad-ref-chevron" aria-hidden="true">
+                  <use href="#i-chevron-down" />
+                </svg>
+              </summary>
+              <div class="ad-ref-corps">
+                <form class="ad-modification" novalidate data-ad-categorie-form={c.id}>
+                  <ChampsCategorie categorie={c} />
+                  <div class="ad-actions-defi is-debut">
+                    <button class="btn btn-secondary" type="submit">
+                      Enregistrer les modifications
+                    </button>
+                  </div>
+                  <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+                </form>
+                <div class="ad-ref-pied">
+                  {c.active ? (
+                    <a class="ad-lien" href={ROUTES.domaine(c.slug)}>
+                      Voir la page du domaine
+                      <svg class="icon icon-sm" aria-hidden="true">
+                        <use href="#i-arrow-up-right" />
+                      </svg>
+                    </a>
+                  ) : (
+                    <p>{typo('Ni proposée aux auteurs ni présentée dans Explorer.')}</p>
+                  )}
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    type="button"
+                    data-ad-activer="categories"
+                    data-ad-id={c.id}
+                    data-actif={String(!c.active)}
+                    data-nom={c.libelle}
+                    data-utilisations={c.utilisations}
+                  >
+                    {c.active ? 'Archiver la catégorie' : 'Proposer de nouveau la catégorie'}
+                  </button>
+                </div>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+</ReferentielsAdmin>
