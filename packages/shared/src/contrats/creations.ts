@@ -9,6 +9,7 @@ import type {
   TypeMomentCle,
 } from '../enums';
 import type { CodeNiveau } from '../regles';
+import type { EtatDefi } from './defis';
 import type { MediaApi } from './medias';
 import type { MasquageApi } from './moderation';
 
@@ -174,7 +175,17 @@ export interface CreationFicheApi {
   etiquettes: { libelle: string; slug: string }[];
   /** RG-23 */
   avertissementAgent: AvertissementAgent;
-  defi: { id: number; slug: string; titre: string } | null;
+  /** F-64 : défi auquel la création participe (publiée) ou participera à sa publication (brouillon). */
+  defi: {
+    id: number;
+    slug: string;
+    titre: string;
+    dateDebut: string;
+    dateFin: string;
+    etat: EtatDefi;
+    /** Participations ouvertes : défi publié et en cours (RG-74). */
+    ouvert: boolean;
+  } | null;
   /** Guide d'Explorer qui présente la création, si elle est publiée et visible (DEC-01). */
   guide: { slug: string; titre: string; titreCourt: string } | null;
   /** Résultat : images de la création (ILLUSTRER), texte ou code obtenu, liens externes. */

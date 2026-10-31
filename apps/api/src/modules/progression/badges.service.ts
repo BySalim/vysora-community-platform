@@ -65,7 +65,8 @@ const MESURES: Record<CodeBadgeAvancement, SQL> = {
     where statut = 'FONDE' group by signaleur_id`,
   PARTICIPANT: sql`select c.auteur_id as id, count(distinct d.id) as valeur
     from creation cr join contenu c on c.id = cr.id join defi d on d.id = cr.defi_id
-    where d.statut = 'CLOTURE' and ${VISIBLE} group by c.auteur_id`,
+    where d.statut = 'CLOTURE' and cr.statut_publication = 'PUBLIEE' and ${VISIBLE}
+    group by c.auteur_id`,
   PODIUM: sql`select c.auteur_id as id, count(*) as valeur
     from creation cr join contenu c on c.id = cr.id
     where cr.rang_final_participation between 1 and 3 and ${VISIBLE} group by c.auteur_id`,

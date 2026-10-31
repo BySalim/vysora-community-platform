@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  etatDefi,
+  participationsOuvertes,
   SEUILS,
   type CommentaireApi,
   type ConfigurationIaApi,
@@ -106,7 +108,14 @@ export class CreationsService {
           url: licence.url,
           autoriseVariantes: licence.autoriseVariantes,
         },
-        defi: { id: defi.id, slug: defi.slug, titre: defi.titre },
+        defi: {
+          id: defi.id,
+          slug: defi.slug,
+          titre: defi.titre,
+          dateDebut: defi.dateDebut,
+          dateFin: defi.dateFin,
+          statut: defi.statut,
+        },
         // DEC-01 : guide d'Explorer qui présente la création (fil d'Ariane, retour au guide).
         guide: sql<{ slug: string; titre: string; titreCourt: string } | null>`(
           select json_build_object('slug', g.slug, 'titre', g.titre, 'titreCourt', g.titre_court)
@@ -254,7 +263,15 @@ export class CreationsService {
       licence: ligne.licence,
       etiquettes,
       avertissementAgent: c.avertissementAgent,
-      defi: ligne.defi,
+      defi: ligne.defi && {
+        id: ligne.defi.id,
+        slug: ligne.defi.slug,
+        titre: ligne.defi.titre,
+        dateDebut: ligne.defi.dateDebut.toISOString(),
+        dateFin: ligne.defi.dateFin.toISOString(),
+        etat: etatDefi(ligne.defi.statut, ligne.defi.dateDebut, ligne.defi.dateFin),
+        ouvert: participationsOuvertes(ligne.defi.statut, ligne.defi.dateDebut, ligne.defi.dateFin),
+      },
       // Un guide ne présente que des parcours publiés et visibles (RG-30).
       guide: publiee && !masquee ? ligne.guide : null,
       images: imagesDeLaCreation,

@@ -262,6 +262,9 @@ export const schemaContenuCreation = z
     etiquettes: champEtiquettes,
     /** RG-23 : avertissement « instructions pour agent » posé par l'auteur. */
     instructionsAgent: z.boolean().default(false),
+    /** F-64, RG-74 : défi auquel participer. Un brouillon le garde et y participe à sa publication ;
+        une création publiée y participe aussitôt. Absent : inchangé ; null : sans participation. */
+    defiId: identifiant.nullable().optional(),
     resultat: schemaResultatSaisi,
     /** Images du résultat (ILLUSTRER), dans l'ordre, déjà téléversées (POST /api/v1/medias). */
     images: z.array(identifiant).default([]),

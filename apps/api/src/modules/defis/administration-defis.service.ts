@@ -50,7 +50,8 @@ export class AdministrationDefisService {
   async liste(maintenant = new Date()): Promise<DefiAdministreApi[]> {
     const { rows } = await this.db.execute<LigneDefi>(sql`
       select d.*, (select count(*) from creation cr join contenu c on c.id = cr.id
-        where cr.defi_id = d.id and c.statut = 'VISIBLE')::int as participations
+        where cr.defi_id = d.id and c.statut = 'VISIBLE'
+          and cr.statut_publication = 'PUBLIEE')::int as participations
       from defi d order by d.date_debut desc, d.id desc`);
     return rows.map((l) => this.presenter(l, maintenant));
   }

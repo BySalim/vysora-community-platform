@@ -2,9 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   controlerPublication,
   dansLeDelai,
+  etatDefi,
   LIMITES,
   limiteQuotidienne,
   liensMaximum,
+  MESSAGES_PARTICIPATION,
   MESSAGES_PUBLICATION,
   type AvertissementAgent,
   type ContenuCreation,
@@ -28,6 +30,7 @@ import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees, Transaction } from '../../db/client.js';
 import { contenu, creation, utilisateur } from '../../db/schema/index.js';
 import { rattacherAuGuide } from '../decouverte/rattachement.js';
+import { defiPublic, refusParticipation } from '../defis/participation.js';
 import { contenusLies } from '../moderation/contenus-moderes.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReputationService } from '../progression/reputation.service.js';
@@ -56,6 +59,8 @@ interface CreationVerrouillee {
   statutContenu: StatutContenu;
   datePublication: Date | null;
   avertissementAgent: AvertissementAgent;
+  defiId: number | null;
+  rangDefi: number | null;
 }
 
 /* CREA-05 : écriture des créations par leur auteur (F-10 à F-17).
@@ -66,6 +71,10 @@ interface CreationVerrouillee {
      change plus après la première publication.
    - Dépublication (RG-17) : retour en brouillon ; commentaires et reproductions ne se voient plus.
    - Suppression (RG-19) : contenu SUPPRIME, mouvements de réputation liés annulés (RG-82).
+   - Défi (F-64, RG-74) : un brouillon garde le défi choisi dans l'éditeur et y participe à sa
+     publication, si le défi est encore en cours et que l'auteur n'y participe pas déjà ; sinon la
+     publication est refusée, l'erreur sous le champ du défi. Une création publiée y participe ou
+     s'en retire aussitôt, tant que le défi est en cours.
    Une création publiée et visible est un document de recherche (RG-31). */
 @Injectable()
 export class EcritureCreationsService {
@@ -85,12 +94,19 @@ export class EcritureCreationsService {
     const id = await this.db.transaction(async (tx) => {
       await this.verifierBrouillons(tx, auteur.id);
       const licenceId = await licenceDe(tx, saisie.licenceId);
+      if (saisie.defiId && !(await defiPublic(tx, saisie.defiId)))
+        throw erreurValidation({ defiId: MESSAGES_PARTICIPATION.introuvable });
       const [ligne] = await tx
         .insert(contenu)
         .values({ typeContenu: 'CREATION', auteurId: auteur.id, dateCreation: maintenant })
         .returning({ id: contenu.id });
       if (!ligne) throw new Error('Création non enregistrée');
-      await tx.insert(creation).values({ id: ligne.id, typeCreation: saisie.type, licenceId });
+      await tx.insert(creation).values({
+        id: ligne.id,
+        typeCreation: saisie.type,
+        licenceId,
+        defiId: saisie.defiId ?? null,
+      });
       await ecrireContenu(
         tx,
         { id: ligne.id, auteurId: auteur.id, avertissementAgent: 'AUCUN' },
@@ -115,8 +131,12 @@ export class EcritureCreationsService {
       if (existante.datePublication && saisie.type !== existante.type)
         throw erreurValidation({ type: 'Le type d’une création publiée ne change plus.' });
       await ecrireContenu(tx, existante, saisie, maintenant);
-      if (existante.statut !== 'PUBLIEE') return;
-      await this.controler(tx, auteur, id);
+      const refusDefi = await this.changerDeDefi(tx, existante, saisie.defiId, maintenant);
+      if (existante.statut !== 'PUBLIEE') {
+        if (refusDefi) throw erreurValidation({ defiId: refusDefi });
+        return;
+      }
+      await this.controler(tx, auteur, id, refusDefi ? { defiId: refusDefi } : {});
       if (!saisie.confirmationDonnees)
         throw erreurValidation({ confirmationDonnees: MESSAGES_PUBLICATION.confirmation });
       await tx
@@ -138,7 +158,19 @@ export class EcritureCreationsService {
     await this.db.transaction(async (tx) => {
       const existante = await this.sienne(tx, auteur.id, id);
       if (existante.statut === 'PUBLIEE') throw conflit('Cette création est déjà publiée.');
-      await this.controler(tx, auteur, id);
+      // RG-74 : le brouillon rattaché à un défi y participe s'il est publié pendant le défi en cours.
+      // Une participation déjà classée (rang figé, création dépubliée puis republiée) est conservée.
+      const refusDefi =
+        existante.defiId !== null && existante.rangDefi === null
+          ? await refusParticipation(tx, {
+              auteurId: auteur.id,
+              creationId: id,
+              defiId: existante.defiId,
+              datePublication: maintenant,
+              maintenant,
+            })
+          : null;
+      await this.controler(tx, auteur, id, refusDefi ? { defiId: refusDefi } : {});
       await this.verifierLimite(tx, auteur, id, maintenant);
       if (!saisie.confirmationDonnees)
         throw erreurValidation({ confirmationDonnees: MESSAGES_PUBLICATION.confirmation });
@@ -199,6 +231,8 @@ export class EcritureCreationsService {
         statutContenu: contenu.statut,
         datePublication: creation.datePublication,
         avertissementAgent: creation.avertissementAgent,
+        defiId: creation.defiId,
+        rangDefi: creation.rangFinalParticipation,
       })
       .from(creation)
       .innerJoin(contenu, eq(contenu.id, creation.id))
@@ -213,6 +247,43 @@ export class EcritureCreationsService {
       throw interdit('Seul son auteur peut modifier cette création.');
     }
     return ligne;
+  }
+
+  /** F-64, RG-74 : défi choisi dans l'éditeur (absent : inchangé). Un brouillon garde tout défi
+      public, contrôlé à sa publication ; une création publiée y participe aussitôt, ou s'en retire
+      tant que son défi est en cours. Renvoie la raison d'un refus, sans rien changer. */
+  private async changerDeDefi(
+    tx: Transaction,
+    existante: CreationVerrouillee,
+    defiId: number | null | undefined,
+    maintenant: Date,
+  ): Promise<string | null> {
+    if (defiId === undefined || defiId === existante.defiId) return null;
+    if (existante.statut !== 'PUBLIEE' || !existante.datePublication) {
+      if (defiId !== null && !(await defiPublic(tx, defiId)))
+        return MESSAGES_PARTICIPATION.introuvable;
+    } else {
+      if (existante.defiId !== null) {
+        // Classement figé à la clôture (RG-75) : la participation ne se retire plus.
+        const actuel = await defiPublic(tx, existante.defiId);
+        const etat =
+          actuel && etatDefi(actuel.statut, actuel.dateDebut, actuel.dateFin, maintenant);
+        if (existante.rangDefi !== null || etat === 'TERMINE' || etat === 'CLOTURE')
+          return MESSAGES_PARTICIPATION.conservee;
+      }
+      if (defiId !== null) {
+        const refus = await refusParticipation(tx, {
+          auteurId: existante.auteurId,
+          creationId: existante.id,
+          defiId,
+          datePublication: existante.datePublication,
+          maintenant,
+        });
+        if (refus) return refus;
+      }
+    }
+    await tx.update(creation).set({ defiId }).where(eq(creation.id, existante.id));
+    return null;
   }
 
   /** Garde-fou : 50 brouillons au plus par membre (registre, points tranchés de CREA-02). */
@@ -243,11 +314,20 @@ export class EcritureCreationsService {
       );
   }
 
-  /** RG-10 à RG-16 et règle du résultat, sur ce qui est enregistré. */
-  private async controler(tx: Transaction, auteur: Redacteur, id: number): Promise<void> {
-    const erreurs = controlerPublication(await lireAControler(tx, id), {
-      liensMaximum: liensMaximum(auteur.etat),
-    });
+  /** RG-10 à RG-16 et règle du résultat, sur ce qui est enregistré ; `autres` : erreurs annoncées
+      avec elles (défi). */
+  private async controler(
+    tx: Transaction,
+    auteur: Redacteur,
+    id: number,
+    autres: Record<string, string> = {},
+  ): Promise<void> {
+    const erreurs = {
+      ...controlerPublication(await lireAControler(tx, id), {
+        liensMaximum: liensMaximum(auteur.etat),
+      }),
+      ...autres,
+    };
     const n = Object.keys(erreurs).length;
     if (n)
       throw erreurValidation(

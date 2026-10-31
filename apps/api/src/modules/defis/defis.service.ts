@@ -1,12 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  CreationPalmaresApi,
-  DefiApi,
-  DefisApi,
-  DefiTermineApi,
-  EtatDefi,
-  ParticipationDefiApi,
-  TypeCreation,
+import {
+  etatDefi,
+  MESSAGES_PARTICIPATION,
+  participationsOuvertes,
+  type CreationPalmaresApi,
+  type DefiApi,
+  type DefisApi,
+  type DefiTermineApi,
+  type EtatDefi,
+  type ParticipationDefiApi,
+  type TypeCreation,
 } from '@vysora/shared';
 import { sql } from 'drizzle-orm';
 import { conflit, introuvable } from '../../commun/erreurs.js';
@@ -16,6 +19,7 @@ import { reglesDuDefi } from '../accueil/periodes.js';
 import { apercusDesCreations } from '../creations/apercus.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
+import { refusParticipation } from './participation.js';
 
 const TERMINES = 6;
 
@@ -46,12 +50,8 @@ type LigneParticipation = {
 
 const iso = (d: Date | string) => new Date(d).toISOString();
 
-function etatDe(l: LigneDefi, maintenant: Date): EtatDefi {
-  if (l.statut === 'CLOTURE') return 'CLOTURE';
-  if (l.statut === 'ANNULE') return 'ANNULE';
-  if (new Date(l.date_debut) > maintenant) return 'A_VENIR';
-  return new Date(l.date_fin) > maintenant ? 'EN_COURS' : 'TERMINE';
-}
+const etatDe = (l: LigneDefi, maintenant: Date): EtatDefi =>
+  etatDefi(l.statut, l.date_debut, l.date_fin, maintenant);
 
 /** Défis présentés au public : publiés, clôturés ou annulés (jamais un brouillon, F-63). */
 const DEFIS_PUBLICS = sql`
@@ -153,22 +153,16 @@ export class DefisService {
   /** F-64, RG-74 : inscrire une de ses créations, publiée pendant le défi en cours. */
   async participer(membreId: number, defiId: number, creationId: number): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const { rows } = await tx.execute<LigneDefi>(
-        sql`${DEFIS_PUBLICS} and d.id = ${defiId} for update of d`,
-      );
-      const defi = rows[0];
-      if (!defi) throw introuvable('Ce défi est introuvable.');
-      if (defi.statut !== 'PUBLIE' || etatDe(defi, new Date()) !== 'EN_COURS')
-        throw conflit('Les participations à ce défi sont fermées.');
       const { rows: creations } = await tx.execute<{
         auteur_id: string;
         defi_id: string | null;
-        date_publication: Date | string | null;
+        date_publication: Date | string;
         visible: boolean;
       }>(sql`
         select c.auteur_id, cr.defi_id, cr.date_publication, c.statut = 'VISIBLE' as visible
         from creation cr join contenu c on c.id = cr.id
-        where cr.id = ${creationId} and cr.statut_publication = 'PUBLIEE'`);
+        where cr.id = ${creationId} and cr.statut_publication = 'PUBLIEE'
+        for update of cr`);
       const c = creations[0];
       if (!c || Number(c.auteur_id) !== membreId || !c.visible)
         throw introuvable('Cette création est introuvable parmi vos créations publiées.');
@@ -178,17 +172,15 @@ export class DefisService {
             ? 'Cette création participe déjà au défi.'
             : 'Une création participe à un seul défi.',
         );
-      const publication = c.date_publication ? new Date(c.date_publication) : null;
-      if (
-        !publication ||
-        publication < new Date(defi.date_debut) ||
-        publication > new Date(defi.date_fin)
-      )
-        throw conflit('La création doit être publiée pendant la période du défi.');
-      const { rows: deja } = await tx.execute(sql`
-        select 1 from creation cr join contenu c on c.id = cr.id
-        where cr.defi_id = ${defiId} and c.auteur_id = ${membreId} and c.statut <> 'SUPPRIME'`);
-      if (deja.length) throw conflit('Vous participez déjà à ce défi : une création par personne.');
+      const refus = await refusParticipation(tx, {
+        auteurId: membreId,
+        creationId,
+        defiId,
+        datePublication: new Date(c.date_publication),
+        maintenant: new Date(),
+      });
+      if (refus === MESSAGES_PARTICIPATION.introuvable) throw introuvable(refus);
+      if (refus) throw conflit(refus);
       await tx.execute(sql`update creation set defi_id = ${defiId} where id = ${creationId}`);
     });
   }
@@ -197,12 +189,14 @@ export class DefisService {
   async retirer(membreId: number, defiId: number): Promise<void> {
     const { rows } = await this.db.execute<LigneDefi>(sql`${DEFIS_PUBLICS} and d.id = ${defiId}`);
     const defi = rows[0];
-    if (!defi) throw introuvable('Ce défi est introuvable.');
-    if (defi.statut !== 'PUBLIE' || etatDe(defi, new Date()) !== 'EN_COURS')
-      throw conflit('Le défi n’est plus en cours : la participation est conservée.');
+    if (!defi) throw introuvable(MESSAGES_PARTICIPATION.introuvable);
+    if (!participationsOuvertes(defi.statut, defi.date_debut, defi.date_fin))
+      throw conflit(MESSAGES_PARTICIPATION.conservee);
+    // La participation, pas un brouillon rattaché au défi depuis l'éditeur.
     const { rows: retirees } = await this.db.execute(sql`
       update creation cr set defi_id = null from contenu c
       where c.id = cr.id and cr.defi_id = ${defiId} and c.auteur_id = ${membreId}
+        and cr.statut_publication = 'PUBLIEE'
       returning cr.id`);
     if (!retirees.length) throw introuvable('Vous ne participez pas à ce défi.');
   }
