@@ -89,7 +89,39 @@ export const LIMITES = {
   brouillonsParMembre: 50,
   // Pièges proposés par un membre et pas encore relus (garde-fou de DEC-01, aucune règle ne les limite).
   propositionsPiegeEnRelecture: 20,
+  prochainsBadges: 3, // PROF-02 : « Prochains badges » du profil (prototype)
 } as const;
+
+/** RG-86 : objectif de chaque badge qui se gagne en avançant, et unité de son avancement, accordée
+    à l'objectif (« 3 sur 5 membres », « 0 sur 1 création publiée » : prototype, profil-data.js).
+    Pionnier n'y est pas : il s'obtient à l'inscription pendant la bêta (INV-01). */
+// prettier-ignore
+export const OBJECTIFS_BADGES = {
+  PREMIERE_CREATION: { objectif: 1, unite: 'création publiée' },
+  PARCOURS_COMPLET: { objectif: 1, unite: 'projet complet' }, // 3 étapes au moins, avec un moment clé
+  REPRODUCTIBLE: { objectif: 5, unite: 'membres' }, // sur une même création
+  ASTUCIEUX: { objectif: 10, unite: 'votes « Testé, ça marche »' }, // sur une même astuce
+  PREMIER_ESSAI: { objectif: 1, unite: 'reproduction déclarée' },
+  BON_REFLEXE: { objectif: 10, unite: 'cas réussis' },
+  ASSIDU: { objectif: 50, unite: 'cas répondus' },
+  PREMIER_COUP_DE_MAIN: { objectif: 1, unite: 'réponse acceptée' },
+  MENTOR: { objectif: 10, unite: 'réponses acceptées' },
+  VIGILANT: { objectif: 5, unite: 'signalements fondés' },
+  PARTICIPANT: { objectif: 1, unite: 'défi clôturé' },
+  PODIUM: { objectif: 1, unite: 'podium' },
+} as const;
+export type CodeBadgeAvancement = keyof typeof OBJECTIFS_BADGES;
+
+/** PROF-02 : badges à montrer comme prochains, les plus avancés d'abord (part de l'objectif atteinte,
+    puis ce qu'il reste à faire, puis l'ordre reçu). */
+export function prochainsBadges<T extends { valeur: number; objectif: number }>(
+  badges: readonly T[],
+  nombre: number = LIMITES.prochainsBadges,
+): T[] {
+  const part = (b: T) => Math.min(1, b.valeur / b.objectif);
+  const reste = (b: T) => Math.max(0, b.objectif - b.valeur);
+  return badges.toSorted((a, b) => part(b) - part(a) || reste(a) - reste(b)).slice(0, nombre);
+}
 
 /** Seuils d'affichage et de déclenchement. */
 export const SEUILS = {

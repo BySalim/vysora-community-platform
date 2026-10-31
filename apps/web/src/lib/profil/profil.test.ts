@@ -1,9 +1,10 @@
-import type { ProfilApi } from '@vysora/shared';
+import type { ProfilApi, ProfilPriveApi } from '@vysora/shared';
 import { describe, expect, it } from 'vitest';
 import type { ContexteProfil } from './elements';
 import { arrondiHaut, courbe, libelleDetail, progressionHTML } from './progression';
 import {
   aproposHTML,
+  badgesSectionHTML,
   chiffresHTML,
   contributionsHTML,
   creationsHTML,
@@ -255,6 +256,7 @@ describe('Progression (RG-88)', () => {
         reponses: { utilisees: 12, limite: 100 },
       },
       brouillons: { nombre: 0, dernier: null },
+      prochainsBadges: [],
     });
     expect(html).toContain(
       `Votes «${NBSP}Utile${NBSP}» reçus sur vos créations <small>× 7</small>`,
@@ -280,5 +282,63 @@ describe('Progression (RG-88)', () => {
     expect(c.svg).toContain('Cette semaine');
     expect(c.svg).toContain(`Artisan · 300${NBSP}points`);
     expect(c.largeur).toBe(660);
+  });
+});
+
+describe('Badges (F-74, PROF-02)', () => {
+  const prive = (prochainsBadges: ProfilPriveApi['prochainsBadges']): ProfilPriveApi => ({
+    reputation: { total: 182, semaine: 0, parSemaine: [], details: [] },
+    apprentissage: { casRepondus: 58, casReussis: 42, reproductionsDeclarees: 9 },
+    limites: null,
+    brouillons: { nombre: 0, dernier: null },
+    prochainsBadges,
+  });
+  const reproductible = {
+    code: 'REPRODUCTIBLE',
+    libelle: 'Reproductible',
+    critere: 'Être reproduit avec succès par 5 membres',
+    icone: 'repeat',
+    ton: 'VERT' as const,
+    valeur: 3,
+    objectif: 5,
+    unite: 'membres',
+  };
+  const participant = {
+    ...reproductible,
+    code: 'PARTICIPANT',
+    libelle: 'Participant',
+    critere: 'Participer à un défi clôturé',
+    valeur: 0,
+    objectif: 1,
+    unite: 'défi clôturé',
+  };
+  const assidu = {
+    code: 'ASSIDU',
+    libelle: 'Assidu',
+    critere: 'Répondre à 50 cas Bon réflexe',
+    icone: 'history',
+    ton: 'AMBRE' as const,
+    date: '2026-10-09T10:00:00Z',
+  };
+
+  it('montre au seul propriétaire son avancement vers les prochains badges', () => {
+    const p = profil({ badges: [assidu], prive: prive([reproductible, participant]) });
+    const html = badgesSectionHTML(p, proprietaire);
+    expect(html).toContain('Prochains badges <span>Visible par vous uniquement</span>');
+    expect(html).toContain('class="emblem is-verrouille"');
+    expect(html).toContain('aria-label="3 sur 5 membres"><i style="--v:0.6"></i>');
+    expect(html).toContain('<small>0 sur 1 défi clôturé</small>');
+    expect(badgesSectionHTML(p, visiteur)).not.toContain('pf-prochains');
+    expect(badgesSectionHTML(p, { ...proprietaire, prive: false, apercu: true })).not.toContain(
+      'pf-prochains',
+    );
+  });
+
+  it('attend un premier badge ou un premier pas sur un profil encore vide', () => {
+    const vide = profil({ prive: prive([{ ...participant }]) });
+    expect(badgesSectionHTML(vide, proprietaire)).toContain('Aucun badge pour le moment');
+    expect(badgesSectionHTML(vide, proprietaire)).not.toContain('pf-prochains');
+    const entame = profil({ prive: prive([reproductible, participant]) });
+    expect(badgesSectionHTML(entame, proprietaire)).toContain('pf-prochains');
   });
 });

@@ -424,8 +424,18 @@ export function aproposHTML(p: ProfilApi, c: ContexteProfil): string {
       ${c.prive ? `<p class="pf-confidentiel">${icone('lock', 'icon-sm')}<span>Votre adresse e-mail et vos statistiques d’apprentissage ne sont jamais visibles des autres membres. <a href="${ROUTES.parametres}">Gérer votre compte</a></span></p>` : ''}`;
 }
 
-/** Badges obtenus (prototype : renderBadges). « Prochains badges » attend l'attribution
-    automatique (S-09). */
+/** « Prochains badges » du propriétaire (prototype : renderBadges, avancement). Le prototype n'en
+    montre pas à un profil encore vide : rien tant qu'aucun badge n'est obtenu ni entamé. */
+function prochainsBadgesHTML(p: ProfilApi, c: ContexteProfil): string {
+  const prochains = c.prive ? (p.prive?.prochainsBadges ?? []) : [];
+  if (!prochains.length || (!p.badges.length && !prochains.some((b) => b.valeur > 0))) return '';
+  return `<div class="pf-prochains">
+        <h3>${icone('lock', 'icon-sm')}Prochains badges <span>Visible par vous uniquement</span></h3>
+        <ul>${prochains.map((b) => `<li>${emblemeBadge(b, 'is-verrouille')}<div><b>${t(b.libelle)}</b><p>${t(b.critere)}</p><span class="pf-jauge" role="img" aria-label="${t(`${b.valeur} sur ${b.objectif} ${b.unite}`)}"><i style="--v:${Math.min(1, b.valeur / b.objectif)}"></i></span><small>${t(`${fmt(b.valeur)} sur ${fmt(b.objectif)} ${b.unite}`)}</small></div></li>`).join('')}</ul>
+      </div>`;
+}
+
+/** Badges obtenus et prochains badges (prototype : renderBadges). */
 export function badgesSectionHTML(p: ProfilApi, c: ContexteProfil): string {
   const annee = c.maintenant.getUTCFullYear();
   const vide = c.prive
@@ -445,7 +455,8 @@ export function badgesSectionHTML(p: ProfilApi, c: ContexteProfil): string {
               )
               .join('')}</ul>`
           : vide
-      }`;
+      }
+      ${prochainsBadgesHTML(p, c)}`;
 }
 
 /** Bandeau de l'aperçu public (prototype : renderApercu). */

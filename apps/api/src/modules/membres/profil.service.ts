@@ -27,6 +27,7 @@ import { apercusDesCreations } from '../creations/apercus.js';
 import { limitePublication } from '../creations/limite-publication.js';
 import { tauxDeReussite } from '../decouverte/chiffres-guides.js';
 import { Stockage } from '../medias/stockage.js';
+import { BadgesService } from '../progression/badges.service.js';
 import { resumerMembres } from './resumes.js';
 
 const JOUR_MS = 86_400_000;
@@ -76,6 +77,7 @@ export class ProfilService {
     @Inject(BASE) private readonly db: BaseDeDonnees,
     private readonly stockage: Stockage,
     private readonly cas: CasService,
+    private readonly badgesService: BadgesService,
   ) {}
 
   async profil(
@@ -363,26 +365,28 @@ export class ProfilService {
 
   /** RG-88 : progression du propriétaire. */
   private async prive(id: number, etat: EtatVisiteur, maintenant: Date): Promise<ProfilPriveApi> {
-    const [reputation, apprentissage, reproductions, limites, brouillons] = await Promise.all([
-      this.reputation(id, maintenant),
-      this.cas.apprentissage(id),
-      this.db.execute<{ n: number }>(sql`
+    const [reputation, apprentissage, reproductions, limites, brouillons, prochainsBadges] =
+      await Promise.all([
+        this.reputation(id, maintenant),
+        this.cas.apprentissage(id),
+        this.db.execute<{ n: number }>(sql`
         select count(*)::int as n from reproduction r join contenu rc on rc.id = r.id
         where rc.auteur_id = ${id} and rc.statut = 'VISIBLE'`),
-      this.limites(id, etat, maintenant),
-      this.db.execute<{
-        nombre: number;
-        id: string | null;
-        titre: string | null;
-        date: Date | null;
-      }>(sql`
+        this.limites(id, etat, maintenant),
+        this.db.execute<{
+          nombre: number;
+          id: string | null;
+          titre: string | null;
+          date: Date | null;
+        }>(sql`
         select count(*) over ()::int as nombre, c.id, cr.titre,
           coalesce(c.date_modification, c.date_creation) as date
         from creation cr join contenu c on c.id = cr.id
         where c.auteur_id = ${id} and c.statut <> 'SUPPRIME' and cr.statut_publication = 'BROUILLON'
         order by coalesce(c.date_modification, c.date_creation) desc, c.id desc
         limit 1`),
-    ]);
+        this.badgesService.prochains(id),
+      ]);
     const dernier = brouillons.rows[0];
     return {
       reputation,
@@ -403,6 +407,7 @@ export class ProfilService {
               }
             : null,
       },
+      prochainsBadges,
     };
   }
 

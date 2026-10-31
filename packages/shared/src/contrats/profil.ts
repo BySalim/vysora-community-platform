@@ -74,6 +74,15 @@ export interface BadgeObtenuApi {
   date: string;
 }
 
+/** Badge pas encore obtenu et avancement du membre vers son objectif (PROF-02, RG-86). */
+export interface ProchainBadgeApi extends Omit<BadgeObtenuApi, 'date'> {
+  /** Où en est le membre : peut atteindre l'objectif avant le passage de l'attribution. */
+  valeur: number;
+  objectif: number;
+  /** « membres », « cas répondus », accordée à l'objectif. */
+  unite: string;
+}
+
 /** Points d'un même motif (RG-80), annulations comprises (RG-82). */
 export interface DetailReputationApi {
   motif: Exclude<MotifMouvementReputation, 'ANNULATION'>;
@@ -109,6 +118,8 @@ export interface ProfilPriveApi {
     /** Le plus récemment modifié. */
     dernier: { id: number; titre: string | null; date: string } | null;
   };
+  /** Les plus avancés d'abord, trois au plus (`prochainsBadges`). */
+  prochainsBadges: ProchainBadgeApi[];
 }
 
 export interface ProfilApi {
