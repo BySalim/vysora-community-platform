@@ -63,3 +63,24 @@ export interface DefiAdministreApi {
   /** Actions possibles dans l'état du défi (RG-73). */
   actions: ('publier' | 'annuler' | 'cloturer')[];
 }
+
+/** Outil du référentiel tel que l'administration le gère (EC-22, F-95, RG-110). */
+export interface OutilAdministreApi {
+  id: number;
+  nom: string;
+  slug: string;
+  editeur: string;
+  famille: string;
+  logo: string | null;
+  logoMonochrome: boolean;
+  statut: 'ACTIF' | 'ARCHIVE';
+  /** Contenus qui citent l'outil (créations, sujets, cas, essais) : il s'archive, il ne se supprime pas. */
+  utilisations: number;
+  modeles: {
+    id: number;
+    nom: string;
+    nomCourt: string;
+    dateSortie: string | null;
+    statut: 'DISPONIBLE' | 'RETIRE';
+  }[];
+}

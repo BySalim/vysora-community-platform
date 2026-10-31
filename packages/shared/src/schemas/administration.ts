@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ACTIONS_DECISION, ROLES } from '../enums';
+import { ACTIONS_DECISION, FAMILLES_OUTIL, ROLES, TYPES_OUTIL } from '../enums';
 import { DELAIS } from '../regles';
 
 /** PUT /api/v1/admin/membres/:id/role (F-96, RG-111). */
@@ -94,3 +94,49 @@ export const schemaDefi = z
       });
   });
 export type SaisieDefi = z.output<typeof schemaDefi>;
+
+/** POST /api/v1/admin/outils (F-95) : un outil, et son éditeur s'il est nouveau. */
+export const schemaOutil = z.object({
+  nom: z
+    .string({ error: 'Indiquez le nom de l’outil.' })
+    .trim()
+    .min(2, { error: 'Le nom compte au moins 2 caractères.' })
+    .max(100, { error: 'Le nom compte 100 caractères au plus.' }),
+  editeur: z
+    .string({ error: 'Indiquez l’éditeur de l’outil.' })
+    .trim()
+    .min(2, { error: 'L’éditeur compte au moins 2 caractères.' })
+    .max(100, { error: 'L’éditeur compte 100 caractères au plus.' }),
+  type: z.enum(TYPES_OUTIL, { error: 'Choisissez le type de l’outil.' }),
+  famille: z.enum(FAMILLES_OUTIL, { error: 'Choisissez la famille de l’outil.' }),
+});
+export type SaisieOutil = z.output<typeof schemaOutil>;
+
+/** POST /api/v1/admin/outils/:id/modeles (F-95) : un modèle proposé avec cet outil. */
+export const schemaModele = z.object({
+  nom: z
+    .string({ error: 'Indiquez le nom complet du modèle.' })
+    .trim()
+    .min(2, { error: 'Le nom compte au moins 2 caractères.' })
+    .max(100, { error: 'Le nom compte 100 caractères au plus.' }),
+  nomCourt: z
+    .string({ error: 'Indiquez le nom court du modèle.' })
+    .trim()
+    .min(1, { error: 'Indiquez le nom court du modèle.' })
+    .max(60, { error: 'Le nom court compte 60 caractères au plus.' }),
+  dateSortie: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Indiquez une date au format AAAA-MM-JJ.' })
+    .nullish()
+    .or(z.literal('').transform(() => null))
+    .transform((valeur) => valeur || null),
+});
+export type SaisieModele = z.output<typeof schemaModele>;
+
+/** PATCH d'un outil ou d'un modèle (RG-110) : archivé ou retiré, il reste affiché sur les contenus. */
+export const schemaStatutOutil = z.object({
+  statut: z.enum(['ACTIF', 'ARCHIVE'], { error: 'Choisissez un statut.' }),
+});
+export const schemaStatutModele = z.object({
+  statut: z.enum(['DISPONIBLE', 'RETIRE'], { error: 'Choisissez un statut.' }),
+});

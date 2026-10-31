@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
   Query,
@@ -15,6 +16,10 @@ import {
   schemaChangementRole,
   schemaCreationInvitations,
   schemaFiltresDecisions,
+  schemaModele,
+  schemaOutil,
+  schemaStatutModele,
+  schemaStatutOutil,
   type ChangementRole,
   type CreationInvitations,
   type FiltresDecisions,
@@ -22,11 +27,16 @@ import {
   type ListeInvitationsApi,
   type ListeMembresAdministresApi,
   type MembreAdministreApi,
+  type OutilAdministreApi,
+  type SaisieModele,
+  type SaisieOutil,
 } from '@vysora/shared';
+import { z } from 'zod';
 import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { Exige, SessionCourante } from '../auth/droits.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { AdministrationService, type Acteur } from './administration.service.js';
+import { ReferentielsAdminService } from './referentiels-admin.service.js';
 
 const acteur = (session: SessionOuverte, requete: RequeteVysora): Acteur => ({
   id: session.utilisateur.id,
@@ -38,7 +48,10 @@ const acteur = (session: SessionOuverte, requete: RequeteVysora): Acteur => ({
 @Controller('admin')
 @Exige('administrer')
 export class AdministrationController {
-  constructor(private readonly administration: AdministrationService) {}
+  constructor(
+    private readonly administration: AdministrationService,
+    private readonly referentiels: ReferentielsAdminService,
+  ) {}
 
   /** GET /api/v1/admin/membres?q= : l'équipe, ou les membres trouvés (EC-23). */
   @Get('membres')
@@ -93,5 +106,52 @@ export class AdministrationController {
     @Query(new ValidationZod(schemaFiltresDecisions)) filtres: FiltresDecisions,
   ): Promise<JournalDecisionsApi> {
     return this.administration.journal(filtres);
+  }
+
+  /** GET /api/v1/admin/outils : outils et modèles, archivés et retirés compris (EC-22). */
+  @Get('outils')
+  outils(): Promise<OutilAdministreApi[]> {
+    return this.referentiels.outils();
+  }
+
+  /** POST /api/v1/admin/outils (F-95). */
+  @Post('outils')
+  @HttpCode(201)
+  creerOutil(
+    @Body(new ValidationZod(schemaOutil)) saisie: SaisieOutil,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<OutilAdministreApi> {
+    return this.referentiels.creerOutil(session.utilisateur.id, saisie);
+  }
+
+  /** PATCH /api/v1/admin/outils/:id : archiver ou réactiver (RG-110). */
+  @Patch('outils/:id')
+  statutOutil(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationZod(schemaStatutOutil)) { statut }: z.output<typeof schemaStatutOutil>,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<OutilAdministreApi> {
+    return this.referentiels.statutOutil(session.utilisateur.id, id, statut);
+  }
+
+  /** POST /api/v1/admin/outils/:id/modeles : un modèle proposé avec l'outil (F-95). */
+  @Post('outils/:id/modeles')
+  @HttpCode(201)
+  ajouterModele(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationZod(schemaModele)) saisie: SaisieModele,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<OutilAdministreApi> {
+    return this.referentiels.ajouterModele(session.utilisateur.id, id, saisie);
+  }
+
+  /** PATCH /api/v1/admin/modeles/:id : retirer ou proposer de nouveau (RG-110). */
+  @Patch('modeles/:id')
+  statutModele(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationZod(schemaStatutModele)) { statut }: z.output<typeof schemaStatutModele>,
+    @SessionCourante() session: SessionOuverte,
+  ) {
+    return this.referentiels.statutModele(session.utilisateur.id, id, statut);
   }
 }
