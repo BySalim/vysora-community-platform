@@ -1,0 +1,17 @@
+# Contexte des images de production (Dockerfile) : ni dépendances locales, ni builds, ni secrets.
+**/node_modules
+**/dist
+**/.astro
+**/coverage
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+apps/api/stockage
+.git
+.github
+.claude
+.vscode
+.idea
+docs
+*.log

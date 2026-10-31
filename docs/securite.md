@@ -45,7 +45,7 @@
 | E-mails en attente chiffrés dans la file (AES-256-GCM authentifié, `CLE_CHIFFREMENT`) : ni adresse, ni message, ni lien à usage unique en clair dans la base (les jetons n'y sont qu'en empreinte) ; tâche d'e-mail supprimée un jour après son envoi ou son abandon ; journaux de la file sans les données des tâches (nom, identifiant, numéro d'essai, erreur seulement) ; l'appelant n'attend jamais le serveur SMTP (« mot de passe oublié » répond aussi vite que l'adresse existe ou non) | `EmailService`, `commun/securite/chiffrement.ts`, `FileTachesPgBoss` (EMAIL-01) |
 | Durées de conservation de la politique de confidentialité appliquées chaque jour : sessions expirées supprimées, tentatives et dates de connexion gardées un an, notifications 12 mois ; images abandonnées supprimées après 24 h | `ConservationService`, `TachesPlanifiees` (EMAIL-01) |
 | Nouvelle version d'un document légal annoncée par e-mail aux seuls comptes actifs d'adresse vérifiée (RG-90), une seule fois | `AnnonceDocumentsService` (EMAIL-01) |
-| Données de démonstration refusées en production (la fonction et la commande vérifient `NODE_ENV`) ; comptes en `@example.test` (domaine réservé), mot de passe de développement commun consigné dans le dépôt et haché en Argon2id comme les vrais ; deux comptes d'équipe (modération, administration) qui ne doivent exister que hors production | `db/demo/` (DEMO-01) |
+| Données de démonstration refusées en production (la fonction et la commande vérifient `NODE_ENV` ; une préproduction se déclare par `ENVIRONNEMENT=preproduction` et doit alors fournir son propre `MOT_DE_PASSE_DEMO`, le mot de passe du dépôt étant refusé, OPS-01) ; comptes en `@example.test` (domaine réservé), mot de passe de développement commun consigné dans le dépôt et haché en Argon2id comme les vrais ; deux comptes d'équipe (modération, administration) qui ne doivent exister que hors production | `db/demo/` (DEMO-01) |
 
 ## 2. À mettre en place (par ordre d'arrivée)
 
@@ -66,7 +66,7 @@
 - [~] Limites par niveau (RG-85) et masquage automatique (RG-101). Limites des créations, des liens, des sujets, des réponses et des commentaires en place (CREA-05, INT-03, FORUM-01) ; signalements et décisions de modération en place (MOD-01) ; reste le masquage automatique au seuil de signalements (S-13).
 
 **Exploitation**
-- [ ] HTTPS partout (Caddy, certificats automatiques), HSTS.
+- [x] HTTPS partout (Caddy, certificats automatiques), HSTS : `infra/production/Caddyfile` (OPS-01) ; seul Caddy est exposé, PostgreSQL, l'API et le site restent sur le réseau interne ; secrets du serveur dans `infra/production/.env` (jamais commité, `chmod 600`), l'API refuse les secrets de développement en production.
 - [ ] Secrets hors du dépôt (variables d'environnement du serveur), rotation documentée. Changer `CLE_CHIFFREMENT` rend illisibles les e-mails encore en file (ils échouent puis sont abandonnés, journalisés) : attendre que la file soit vide, ou prévoir une clé précédente acceptée en lecture (et le secret TOTP chiffré de SEC-02 à rechiffrer).
 - [ ] Sauvegardes quotidiennes chiffrées, conservées 30 jours, restauration testée chaque trimestre (ENF-08).
 - [ ] Mises à jour des dépendances (Renovate ou Dependabot) et audit (`pnpm audit`) en CI.

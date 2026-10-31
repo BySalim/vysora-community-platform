@@ -1,0 +1,28 @@
+# Serveur frontal de Vysora (OPS-01, ADR-0008) : certificat HTTPS obtenu et renouvelé par Caddy,
+# /api envoyé directement à l'API (adresse du visiteur dans X-Forwarded-For), le reste au site.
+{
+	email {$EMAIL_CERTIFICATS}
+}
+
+{$DOMAINE} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	# Les images téléversées (/api/v1/fichiers/*) portent déjà leur en-tête de cache, posé par l'API.
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		reverse_proxy web:4321
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

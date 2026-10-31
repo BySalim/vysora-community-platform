@@ -10,6 +10,12 @@ const NIVEAUX_JOURNAL = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'si
 const schemaEnvironnement = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    /** OPS-01 : une préproduction tourne avec NODE_ENV=production mais accepte les données de
+        démonstration (pnpm db:demo) ; la production les refuse. */
+    ENVIRONNEMENT: z.enum(['developpement', 'preproduction', 'production']).optional(),
+    /** OPS-01 : mot de passe des comptes de démonstration d'une préproduction, propre au serveur
+        (celui du dépôt est public : il ouvrirait les comptes d'équipe de la démonstration). */
+    MOT_DE_PASSE_DEMO: z.string().optional(),
     LOG_LEVEL: z.enum(NIVEAUX_JOURNAL).default('info'),
     API_PORT: z.coerce.number().int().positive().default(3000),
     SITE_URL: z.url().default('http://localhost:4321'),

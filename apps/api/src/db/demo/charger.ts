@@ -116,11 +116,13 @@ const UTILES_MAXIMUM = Math.max(...CREATIONS.map((c) => c.utiles));
 
 export interface OptionsDemo {
   /** Environnement d'exécution (NODE_ENV) : la production est refusée. */
-  environnement: 'development' | 'test' | 'production';
+  environnement: 'development' | 'test' | 'preproduction' | 'production';
   /** Heure de référence du chargement ; par défaut, l'heure courante. */
   maintenant?: Date;
   /** Stockage où écrire les photos de profil et les images (celui de l'API). */
   stockage: Stockage;
+  /** Mot de passe des comptes créés ; par défaut celui du dépôt (développement). */
+  motDePasse?: string;
 }
 
 /** Éléments ajoutés par un chargement (tout à zéro quand les données sont déjà en base). */
@@ -161,7 +163,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
   const maintenant = options.maintenant ?? new Date();
   const documents = new DocumentsLegauxService(db);
   return db.transaction(async (tx) => {
-    const ctx = await preparer(tx, maintenant);
+    const ctx = await preparer(tx, maintenant, options.motDePasse ?? MOT_DE_PASSE_DEMO);
     await chargerMembres(ctx, documents);
     await chargerDefis(ctx);
     for (const c of CREATIONS) await chargerCreation(ctx, c);
@@ -230,6 +232,8 @@ interface ModeleReference {
 interface Contexte {
   tx: Transaction;
   maintenant: Date;
+  /** Mot de passe des comptes créés par ce chargement. */
+  motDePasse: string;
   decalage: number;
   membres: Map<string, MembreCharge>;
   nouveaux: Set<string>;
@@ -250,7 +254,7 @@ interface Contexte {
   bilan: BilanDemo;
 }
 
-async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
+async function preparer(tx: Transaction, maintenant: Date, motDePasse: string): Promise<Contexte> {
   // Une transaction n'a qu'une connexion : les lectures se suivent.
   const outils = await tx.select({ id: outil.id, nom: outil.nom }).from(outil);
   const modeles = await tx
@@ -271,6 +275,7 @@ async function preparer(tx: Transaction, maintenant: Date): Promise<Contexte> {
   return {
     tx,
     maintenant,
+    motDePasse,
     decalage: maintenant.getTime() - MAINTENANT_PROTOTYPE.getTime(),
     membres: new Map(),
     nouveaux: new Set(),
@@ -666,7 +671,7 @@ async function chargerMembres(ctx: Contexte, documents: DocumentsLegauxService):
   }
 
   const absents = MEMBRES.filter((m) => !ctx.membres.has(m.pseudo));
-  const empreintes = await Promise.all(absents.map(() => hacherMotDePasse(MOT_DE_PASSE_DEMO)));
+  const empreintes = await Promise.all(absents.map(() => hacherMotDePasse(ctx.motDePasse)));
   for (const [i, m] of absents.entries()) {
     const inscription = dater(ctx, m.inscription);
     const [ligne] = await ctx.tx
