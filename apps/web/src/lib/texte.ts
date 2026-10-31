@@ -54,6 +54,19 @@ const formatDateLongue = new Intl.DateTimeFormat('fr-FR', {
 export const dateLongue = (valeur: string | Date): string =>
   formatDateLongue.format(new Date(valeur)).replace(/^1 /, '1er ');
 
+const formatJour = new Intl.DateTimeFormat('fr-FR', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+});
+/** « lundi 19 octobre à 23 h 59 » : instant lu en temps universel (échéance d'un défi). */
+export const jourEtHeure = (valeur: string | Date): string => {
+  const date = new Date(valeur);
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${formatJour.format(date).replace(/ 1 /, ' 1er ')} à ${date.getUTCHours()} h ${minutes}`;
+};
+
 const formatDateCourte = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
   month: 'short',

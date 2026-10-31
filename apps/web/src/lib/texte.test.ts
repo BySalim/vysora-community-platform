@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dateLongue, enPhrase, esc, fmt, masquerEmail, t, typo } from './texte';
+import { dateLongue, enPhrase, esc, fmt, jourEtHeure, masquerEmail, t, typo } from './texte';
 
 describe('enPhrase', () => {
   it('termine un motif par un point, sauf s’il porte déjà sa ponctuation finale', () => {
@@ -44,6 +44,13 @@ describe('dateLongue', () => {
     expect(dateLongue('2026-10-15')).toBe('15 octobre 2026');
     expect(dateLongue('2026-09-01')).toBe('1er septembre 2026');
     expect(dateLongue('2026-11-02T23:30:00.000Z')).toBe('2 novembre 2026');
+  });
+});
+
+describe('jourEtHeure', () => {
+  it('donne le jour, la date et l’heure en temps universel (échéance d’un défi)', () => {
+    expect(jourEtHeure('2026-10-19T23:59:00.000Z')).toBe('lundi 19 octobre à 23 h 59');
+    expect(jourEtHeure('2026-11-01T08:05:00.000Z')).toBe('dimanche 1er novembre à 8 h 05');
   });
 });
 

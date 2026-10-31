@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { creerImport } from './import';
 import {
   categorieProposee,
+  contexteDefi,
   controler,
   depuisFiche,
   nouveauBrouillon,
@@ -20,6 +21,7 @@ import {
   typeLien,
   versContenu,
   type Brouillon,
+  type DefiEditeur,
   type OutilEditeur,
   type Referentiels,
 } from './modele';
@@ -420,6 +422,90 @@ describe('création de l’auteur ouverte dans l’éditeur', () => {
       ],
       confirmationDonnees: true,
     });
+  });
+});
+
+describe('participation à un défi (F-64, RG-74)', () => {
+  const enCours: DefiEditeur = {
+    id: 4,
+    slug: 'une-affiche-touristique',
+    titre: 'Une affiche touristique',
+    dateDebut: '2026-10-12T00:00:00.000Z',
+    dateFin: '2026-10-19T23:59:00.000Z',
+    ouvert: true,
+  };
+  const termine = { ...enCours, id: 3, ouvert: false, etat: 'TERMINE' as const };
+
+  it('propose le défi en cours, ou celui de la création, jamais à une création publiée avant lui', () => {
+    const d = complet([[1, 'Un prompt']]);
+    expect(contexteDefi(d, null, enCours, null)).toEqual({
+      defi: enCours,
+      participe: false,
+      autre: null,
+    });
+    expect(contexteDefi(d, null, null, null)).toBeNull();
+    expect(contexteDefi(d, { statut: 'BROUILLON', defi: termine }, enCours, null)).toMatchObject({
+      defi: { id: 3 },
+      participe: false,
+    });
+    Object.assign(d, { statut: 'publiee', publieLe: '2026-10-01T10:00:00.000Z' });
+    expect(contexteDefi(d, { statut: 'PUBLIEE', defi: null }, enCours, null)).toBeNull();
+    expect(contexteDefi(d, { statut: 'PUBLIEE', defi: termine }, enCours, null)).toMatchObject({
+      defi: { id: 3 },
+      participe: true,
+    });
+  });
+
+  it('envoie le défi choisi et annonce sous sa case ce que l’API refuserait', () => {
+    const d = complet([[1, 'Un prompt']]);
+    d.defiId = 4;
+    expect(versContenu(d, refs).contenu.defiId).toBe(4);
+    const avec = (fiche: Parameters<typeof contexteDefi>[1], participation = null as never) =>
+      controler(d, refs, { ...contexte, defi: contexteDefi(d, fiche, enCours, participation) });
+    expect(avec(null).size).toBe(0);
+    expect(avec(null, { id: 12, titre: 'Affiche de Gorée' } as never).get('defi')).toEqual({
+      groupe: 'defi',
+      message:
+        'Vous participez déjà à ce défi avec « Affiche de Gorée » : une création par personne.',
+    });
+    d.defiId = 3;
+    expect(avec({ statut: 'BROUILLON', defi: termine }).get('defi')?.message).toBe(
+      'Les participations à ce défi sont fermées.',
+    );
+    // Une participation déjà publiée reste, défi terminé ; l'erreur de l'API vient sous la case.
+    expect(avec({ statut: 'PUBLIEE', defi: termine }).size).toBe(0);
+    expect(
+      controler(d, refs, contexte, { defiId: 'Ce défi est introuvable.' }).get('defi')?.message,
+    ).toBe('Ce défi est introuvable.');
+  });
+
+  it('retrouve le défi d’un brouillon ouvert dans l’éditeur', () => {
+    const fiche = {
+      id: 34,
+      type: 'ITERATION',
+      statut: 'BROUILLON',
+      titre: 'Affiche du festival de Kafountine',
+      objectif: null,
+      limites: null,
+      formatResultat: null,
+      aAdapter: [],
+      dateCreation: '2026-10-13T09:05:00.000Z',
+      datePublication: null,
+      dateModification: null,
+      categorie: null,
+      licence: { code: 'CC-BY-4.0', libelle: 'CC BY 4.0', url: '', autoriseVariantes: true },
+      etiquettes: [],
+      avertissementAgent: 'AUCUN',
+      images: [],
+      resultat: null,
+      liens: [],
+      etapes: [],
+      defi: { ...enCours, etat: 'EN_COURS' },
+    } as unknown as CreationFicheApi;
+    const d = depuisFiche(fiche, refs);
+    expect(d.defiId).toBe(4);
+    expect(versContenu(d, refs).contenu.defiId).toBe(4);
+    expect(depuisFiche({ ...fiche, defi: null }, refs).defiId).toBeNull();
   });
 });
 

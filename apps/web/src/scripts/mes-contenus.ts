@@ -961,7 +961,11 @@ function demarrer(depart: Donnees): void {
           confirmationDonnees: true,
         });
         if (!reponse.ok) {
-          signalerEchec(reponse.probleme);
+          // RG-74 : défi terminé, ou auquel le membre participe déjà avec une autre création.
+          const defi = reponse.probleme.erreurs?.defiId;
+          if (defi)
+            toast(`${defi} Ouvrez le brouillon pour décocher « Participer au défi ».`, 'alert');
+          else signalerEchec(reponse.probleme);
           await recharger();
           rendrePanneau('brouillons');
           return;

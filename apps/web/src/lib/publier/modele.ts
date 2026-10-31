@@ -2,6 +2,7 @@ import {
   controlerPublication,
   LIMITES,
   LONGUEURS,
+  MESSAGES_PARTICIPATION,
   type CategorieApi,
   type ContenuCreationSaisi,
   type CreationAControler,
@@ -129,6 +130,8 @@ export interface Brouillon {
   agentModeration: boolean;
   /** Données sensibles conservées en connaissance de cause (F-18). */
   decisions: Record<string, 1>;
+  /** F-64 : défi auquel participer (« Participer au défi »), à la publication pour un brouillon. */
+  defiId: number | null;
   publieLe: string | null;
   modifieLe: string | null;
   /** Étape qui porte les prompts sans étape (création « 1 prompt » ou itération, début d'un projet). */
@@ -136,7 +139,7 @@ export interface Brouillon {
   autresMoments: Moment[];
 }
 
-export type GroupeErreur = 'presentation' | 'resultat' | 'chemin' | 'categorie' | 'savoir';
+export type GroupeErreur = 'presentation' | 'resultat' | 'chemin' | 'categorie' | 'defi' | 'savoir';
 
 export interface ErreurChamp {
   groupe: GroupeErreur;
@@ -232,6 +235,7 @@ export function nouveauBrouillon(licenceId: number | null = null): Brouillon {
     agent: null,
     agentModeration: false,
     decisions: {},
+    defiId: null,
     publieLe: null,
     modifieLe: null,
     etapeImpliciteId: null,
@@ -565,6 +569,7 @@ export function versContenu(d: Brouillon, refs: Referentiels, confirmation = fal
     licenceId: d.licenceId,
     etiquettes: d.etiquettes,
     instructionsAgent: agentActif(d, outils),
+    defiId: d.defiId,
     resultat: textuel
       ? {
           nature: textuel.kind === 'code' ? 'CODE' : 'TEXTE',
@@ -638,6 +643,8 @@ export function reporterIdentifiants(
 
 export interface ContexteControle {
   liensMaximum: number;
+  /** Défi proposé dans l'éditeur (contexteDefi), s'il y en a un. */
+  defi?: ContexteDefi | null;
 }
 
 const MESSAGES_TYPE: Record<TypeCreation, string> = {
@@ -654,6 +661,7 @@ export const ENVOI_EN_COURS = 'Patientez : l’image est en cours d’envoi.';
 export function groupeDe(d: Brouillon, cle: string): GroupeErreur {
   if (cle === 'titre' || cle === 'objectif') return 'presentation';
   if (cle === 'categorie') return 'categorie';
+  if (cle === 'defi') return 'defi';
   if (cle === 'aAdapter' || cle === 'limites') return 'savoir';
   if (cle === 'resultats' || cle === 'formatResultat') return 'resultat';
   const [k, id] = cle.split(':');
@@ -661,7 +669,14 @@ export function groupeDe(d: Brouillon, cle: string): GroupeErreur {
   return 'chemin';
 }
 
-const ORDRE_GROUPES: GroupeErreur[] = ['presentation', 'resultat', 'chemin', 'categorie', 'savoir'];
+const ORDRE_GROUPES: GroupeErreur[] = [
+  'presentation',
+  'resultat',
+  'chemin',
+  'categorie',
+  'defi',
+  'savoir',
+];
 const ORDRE_PROPRIETES: Record<string, number> = {
   prompt: 1,
   titre: 1,
@@ -707,6 +722,7 @@ export function controler(
     ['etapes', 'chemin'],
     ['type', 'chemin'],
     ['categorieId', 'categorie'],
+    ['defiId', 'defi'],
     ['formatResultat', 'formatResultat'],
     ['aAdapter', 'aAdapter'],
     ['limites', 'limites'],
@@ -816,6 +832,9 @@ export function controler(
       `Chaque point à adapter compte ${LONGUEURS.pointAAdapter.max} caractères au plus.`,
     );
 
+  const defi = contexte.defi ? refusDefi(d, contexte.defi) : null;
+  if (defi) ajouter('defi', defi);
+
   // Règles de publication de l'API (RG-10 à RG-16, règle du résultat).
   for (const [cle, message] of Object.entries(
     controlerPublication(aControler, { liensMaximum: contexte.liensMaximum }),
@@ -827,6 +846,58 @@ export function controler(
   }
 
   return new Map([...erreurs].toSorted(([a], [b]) => rangDe(d, a) - rangDe(d, b)));
+}
+
+/* Défi (F-64, RG-74) --------------------------------------------------------------------------- */
+
+/** Défi tel que l'éditeur le propose. */
+export interface DefiEditeur {
+  id: number;
+  slug: string;
+  titre: string;
+  dateDebut: string;
+  dateFin: string;
+  /** Participations ouvertes : défi publié et en cours. */
+  ouvert: boolean;
+}
+
+/** Case « Participer au défi » : le défi proposé et ce qui en limite le choix. */
+export interface ContexteDefi {
+  defi: DefiEditeur;
+  /** La création publiée participe déjà à ce défi : elle ne s'en retire que tant qu'il est ouvert. */
+  participe: boolean;
+  /** Autre création de l'auteur inscrite à ce défi (une par personne). */
+  autre: { id: number; titre: string } | null;
+}
+
+/** Défi proposé dans l'éditeur : celui auquel la création est rattachée (dernière version
+    enregistrée), sinon le défi en cours, si la création peut y participer (une création publiée doit
+    l'avoir été pendant le défi, RG-74). `participation` : création de l'auteur inscrite au défi en cours. */
+export function contexteDefi(
+  d: Pick<Brouillon, 'creationId' | 'statut' | 'publieLe'>,
+  fiche: Pick<CreationFicheApi, 'statut' | 'defi'> | null,
+  enCours: DefiEditeur | null,
+  participation: { id: number; titre: string } | null,
+): ContexteDefi | null {
+  const lie = fiche?.defi ?? null;
+  const defi = lie ?? enCours;
+  if (!defi) return null;
+  if (!lie && d.statut === 'publiee' && d.publieLe && d.publieLe < defi.dateDebut) return null;
+  return {
+    defi,
+    participe: fiche?.statut === 'PUBLIEE' && lie !== null,
+    autre:
+      participation && participation.id !== d.creationId && defi.id === enCours?.id
+        ? participation
+        : null,
+  };
+}
+
+/** Ce qui empêche la participation choisie, comme l'API le refuserait (MESSAGES_PARTICIPATION). */
+export function refusDefi(d: Pick<Brouillon, 'defiId'>, contexte: ContexteDefi): string | null {
+  if (d.defiId !== contexte.defi.id) return null;
+  if (!contexte.defi.ouvert && !contexte.participe) return MESSAGES_PARTICIPATION.fermees;
+  return contexte.autre ? MESSAGES_PARTICIPATION.unique(contexte.autre.titre) : null;
 }
 
 /* Depuis l'API ---------------------------------------------------------------------------- */
@@ -894,6 +965,7 @@ export function depuisFiche(fiche: CreationFicheApi, refs: Referentiels): Brouil
     licenceId: refs.licences.find((l) => l.code === fiche.licence.code)?.id ?? null,
     agent: fiche.avertissementAgent === 'AUTEUR',
     agentModeration: fiche.avertissementAgent === 'MODERATION',
+    defiId: fiche.defi?.id ?? null,
     publieLe: fiche.datePublication,
     modifieLe: fiche.dateModification ?? fiche.dateCreation,
   } satisfies Partial<Brouillon>);

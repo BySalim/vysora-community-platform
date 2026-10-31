@@ -1,6 +1,7 @@
 /* Défis (portés de prototype/defis.js) : filtre par outil, recherche et tri des participations,
    vote « Utile » (PUT ou DELETE /api/v1/contenus/:id/votes/UTILE), inscription d'une création au
-   défi (PUT /api/v1/defis/:id/participation, RG-74), apparition des sections au défilement. */
+   défi (PUT /api/v1/defis/:id/participation, RG-74) ou, sans création à inscrire, l'éditeur ouvert
+   sur le défi (?defi=), apparition des sections au défilement. */
 
 import { normaliser } from '../lib/texte';
 import { exiger } from './commun/acces';
@@ -11,6 +12,7 @@ const donnees = JSON.parse($('#df-donnees')?.textContent ?? '{}') as {
   defi: number | null;
   connecte: boolean;
   participation: string | null;
+  publier: string | null;
 };
 const etat = { outil: '', recherche: '', tri: 'utiles' };
 const grille = $('[data-entries]');
@@ -59,7 +61,8 @@ document.addEventListener('click', async (evenement) => {
       return;
     }
     if (!exiger('contribuer', 'participer au défi')) return;
-    dialogue?.showModal();
+    if (donnees.publier) window.location.assign(donnees.publier);
+    else dialogue?.showModal();
     return;
   }
   if (b.hasAttribute('data-close')) dialogue?.close();

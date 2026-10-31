@@ -7,12 +7,13 @@ import {
   liensMaximum,
   raisonRefus,
   type CreationFicheApi,
+  type DefisApi,
   type ReferentielsApi,
 } from '@vysora/shared';
 import Base from '../layouts/Base.astro';
 import { appelerApi } from '../lib/api';
 import { ROUTES } from '../lib/navigation';
-import type { Referentiels } from '../lib/publier/modele';
+import type { DefiEditeur, Referentiels } from '../lib/publier/modele';
 import { outilsDeLaFiche } from '../lib/publier/modele';
 import { typo } from '../lib/texte';
 import AccesBloc from './AccesBloc.astro';
@@ -30,7 +31,20 @@ const { etat } = Astro.locals;
 const ferme = introuvable || raisonRefus('contribuer', etat) !== null;
 
 let referentiels: Referentiels | null = null;
+/** F-64 : défi en cours proposé par la case « Participer au défi », et participation de l'auteur. */
+let defi: DefiEditeur | null = null;
+let participation: { id: number; titre: string } | null = null;
 if (!ferme) {
+  try {
+    const d = await appelerApi<DefisApi>('/api/v1/defis', { requete: Astro.request });
+    if (d.defi?.etat === 'EN_COURS') {
+      const { id, slug, titre, dateDebut, dateFin } = d.defi;
+      defi = { id, slug, titre, dateDebut, dateFin, ouvert: true };
+      participation = d.moi?.participation ?? null;
+    }
+  } catch {
+    // Sans réponse de l'API des défis, l'éditeur ne propose pas de défi.
+  }
   const r = await appelerApi<ReferentielsApi>('/api/v1/referentiels', { requete: Astro.request });
   referentiels = {
     outils: r.outils.map((o) => ({
@@ -51,10 +65,13 @@ if (!ferme) {
 // « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
 const donnees = ferme
   ? ''
-  : JSON.stringify({ referentiels, creation, liensMaximum: liensMaximum(etat) }).replaceAll(
-      '<',
-      '\\u003c',
-    );
+  : JSON.stringify({
+      referentiels,
+      creation,
+      liensMaximum: liensMaximum(etat),
+      defi,
+      participation,
+    }).replaceAll('<', '\\u003c');
 
 const publiee = creation?.statut === 'PUBLIEE';
 const titre = introuvable
@@ -108,6 +125,7 @@ const icones = [
   'flag',
   'tag',
   'compass',
+  'trophy',
 ];
 ---
 

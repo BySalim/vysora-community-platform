@@ -8,6 +8,7 @@
 import {
   LIMITES,
   LONGUEURS,
+  MESSAGES_PARTICIPATION,
   schemaContenuCreation,
   slugifier,
   TYPES_LIEN_EXTERNE,
@@ -32,6 +33,7 @@ import {
   agentActif,
   agentRepere,
   categorieProposee,
+  contexteDefi,
   controler,
   depuisFiche,
   ecrireChamp,
@@ -57,6 +59,7 @@ import {
   type Bloc,
   type BlocPrompt,
   type Brouillon,
+  type DefiEditeur,
   type ErreurChamp,
   type GroupeErreur,
   type Moment,
@@ -64,7 +67,7 @@ import {
   type Referentiels,
   type Resultat,
 } from '../lib/publier/modele';
-import { normaliser } from '../lib/texte';
+import { jourEtHeure, normaliser } from '../lib/texte';
 import { exiger } from './commun/acces';
 import { api, type ReponseApi } from './commun/api';
 import {
@@ -84,6 +87,9 @@ interface DonneesPage {
   referentiels: Referentiels;
   creation: CreationFicheApi | null;
   liensMaximum: number;
+  /** Défi en cours (F-64) et création de l'auteur qui y participe déjà. */
+  defi: DefiEditeur | null;
+  participation: { id: number; titre: string } | null;
 }
 
 const source = document.getElementById('publier-donnees');
@@ -142,6 +148,11 @@ function editeur(donnees: DonneesPage): void {
   let d: Brouillon = donnees.creation
     ? depuisFiche(donnees.creation, refs)
     : nouveauBrouillon(licenceParDefaut);
+  /* Ouverture depuis la page d'un défi (?defi=, prototype) : la case « Participer au défi » est
+     cochée, sauf si l'auteur y participe déjà avec une autre création. */
+  const defiDemande = Number(new URLSearchParams(location.search).get('defi'));
+  if (!donnees.creation && donnees.defi?.id === defiDemande && !donnees.participation)
+    d.defiId = defiDemande;
 
   /* Passages sensibles conservés en connaissance de cause (F-18) : retenus sur l'appareil, par création. */
   const cleDecisions = (id: number) => `vysora-decisions-${id}`;
@@ -211,7 +222,10 @@ function editeur(donnees: DonneesPage): void {
       zone.textContent = texte;
     });
   };
-  const valider = () => controler(d, refs, { liensMaximum: donnees.liensMaximum }, erreursApi);
+  /** Défi proposé par la case « Participer au défi » (F-64), d'après la dernière version enregistrée. */
+  const contexteCourant = () => contexteDefi(d, ficheCourante, donnees.defi, donnees.participation);
+  const valider = () =>
+    controler(d, refs, { liensMaximum: donnees.liensMaximum, defi: contexteCourant() }, erreursApi);
 
   /* Enregistrement dans l'API ---------------------------------------------------------------- */
 
@@ -679,6 +693,32 @@ function editeur(donnees: DonneesPage): void {
       : `${icon('route')}<span>Le type de création se déduit de votre chemin parcouru.</span>`;
   }
 
+  /** Case « Participer au défi » (F-64, RG-74) : le défi en cours, ou celui de la création. */
+  function defiHTML(err: Map<string, ErreurChamp>): string {
+    const contexte = contexteCourant();
+    if (!contexte) return '';
+    const { defi, participe, autre } = contexte;
+    const coche = d.defiId === defi.id;
+    const message = erreurVisible(err, 'defi');
+    // Défi terminé : la participation reste ; une seule création par personne.
+    const conservee = participe && !defi.ouvert;
+    const bloquee = conservee || (!coche && (Boolean(autre) || !defi.ouvert));
+    const aide = conservee
+      ? MESSAGES_PARTICIPATION.conservee
+      : !defi.ouvert
+        ? coche
+          ? 'Décochez la case pour publier votre création.'
+          : MESSAGES_PARTICIPATION.fermees
+        : autre && !coche
+          ? MESSAGES_PARTICIPATION.unique(autre.titre)
+          : `Jusqu’au ${jourEtHeure(defi.dateFin)}, heure UTC.`;
+    return `<div class="pub-champ${message ? ' is-erreur' : ''}" data-champ="defi">
+          <div class="pub-case"><input type="checkbox" id="f-defi" data-defi-choix data-k="defi"${coche ? ' checked' : ''}${bloquee ? ' disabled' : ''}${message ? ' aria-invalid="true"' : ''}${decrit('f-defi-aide', message ? 'f-defi-err' : '')}><label for="f-defi">Participer au défi « ${t(defi.titre)} »</label></div>
+          <p class="pub-aide pub-aide-case" id="f-defi-aide">${t(aide)} <a href="${esc(ROUTES.defi(defi.id, defi.slug))}">Voir les règles</a></p>
+          <div class="pub-sous">${erreurHTML('f-defi', message)}</div>
+        </div>`;
+  }
+
   function coteHTML(err: Map<string, ErreurChamp>): string {
     const publiee = d.statut === 'publiee';
     const msgCat = erreurVisible(err, 'categorie');
@@ -713,6 +753,7 @@ function editeur(donnees: DonneesPage): void {
           <div class="pub-select"><select class="pub-input" id="f-licence" data-licence data-k="licence" aria-describedby="f-licence-aide">${refs.licences.map((l) => `<option value="${l.id}"${licence?.id === l.id ? ' selected' : ''}>${esc(l.libelle)}</option>`).join('')}</select>${icon('chevron-down')}</div>
           <p class="pub-aide" id="f-licence-aide">${licence?.resume ? `${t(licence.resume)}.` : ''}</p>
         </div>
+        ${defiHTML(err)}
         ${
           outilAgentPresent(d, outils) || d.agentModeration
             ? `<div class="pub-champ">
@@ -885,18 +926,25 @@ function editeur(donnees: DonneesPage): void {
 
   function finHTML(): string {
     const fiche = ficheCourante ? adresseCreation(ficheCourante) : ROUTES.mesContenus;
-    // Guide d'Explorer que la création a rejoint (DEC-01) ; défi et badges viendront avec S-07 et S-09.
+    // Guide d'Explorer que la création a rejoint (DEC-01) et défi auquel elle participe (F-64) ; les
+    // badges sont attribués ensuite par la tâche planifiée (S-09) et annoncés par une notification.
     const guide = ficheCourante?.guide;
-    const suites: [string, string, string, string][] = guide
-      ? [
-          [
-            icon('compass'),
-            `Votre création rejoint le guide « ${t(guide.titre)} »`,
-            'Ses moments clés enrichissent les étapes et les pièges du guide.',
-            `<a class="link-arrow" href="${esc(ROUTES.guide(guide.slug))}">Voir le guide${icon('arrow')}</a>`,
-          ],
-        ]
-      : [];
+    const defi = ficheCourante?.defi;
+    const suites: [string, string, string, string][] = [];
+    if (guide)
+      suites.push([
+        icon('compass'),
+        `Votre création rejoint le guide « ${t(guide.titre)} »`,
+        'Ses moments clés enrichissent les étapes et les pièges du guide.',
+        `<a class="link-arrow" href="${esc(ROUTES.guide(guide.slug))}">Voir le guide${icon('arrow')}</a>`,
+      ]);
+    if (defi)
+      suites.push([
+        icon('trophy'),
+        `Participation au défi « ${t(defi.titre)} »`,
+        `Classement selon les votes « Utile » reçus jusqu’au ${jourEtHeure(defi.dateFin)}, heure UTC.`,
+        `<a class="link-arrow" href="${esc(ROUTES.defi(defi.id, defi.slug))}">Voir le défi${icon('arrow')}</a>`,
+      ]);
     return `<div class="container pub-fin-in">
       <span class="pub-fin-icone" aria-hidden="true">${icon('check', '')}</span>
       <h1 tabindex="-1" data-fin-titre>Votre création est publiée</h1>
@@ -1867,6 +1915,13 @@ function editeur(donnees: DonneesPage): void {
     if (c.matches('[data-agent-flag]')) {
       d.agent = c.checked;
       modifie();
+      return;
+    }
+    if (c.matches('[data-defi-choix]')) {
+      d.defiId = c.checked ? (contexteCourant()?.defi.id ?? null) : null;
+      touches.add('defi');
+      modifie();
+      rendreCote('defi');
       return;
     }
     if (c.matches('[data-consentement]')) {

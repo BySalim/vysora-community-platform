@@ -37,6 +37,8 @@ const outils = [
     }),
   ).values(),
 ];
+/** Éditeur ouvert sur ce défi : la case « Participer au défi » y est cochée (F-64). */
+const publierAuDefi = defi ? `${ROUTES.publier}?defi=${defi.id}` : ROUTES.publier;
 const libelleParticiper = !moi
   ? 'Participer au défi'
   : moi.participation
@@ -441,7 +443,7 @@ const ICONES_REGLES = ['type-iteration', 'check-circle', 'globe'];
         </fieldset>
         <p class="df-erreur" role="alert" data-df-erreur hidden />
         <div class="df-dialog-actions">
-          <a class="btn btn-secondary" href={ROUTES.publier}>
+          <a class="btn btn-secondary" href={publierAuDefi}>
             Publier une nouvelle création
           </a>
           <button class="btn btn-primary" type="submit">
@@ -449,21 +451,7 @@ const ICONES_REGLES = ['type-iteration', 'check-circle', 'globe'];
           </button>
         </div>
       </form>
-    ) : (
-      <div>
-        <h2 id="df-dialog-title">Publiez d’abord votre création</h2>
-        <p>
-          {typo(
-            'Créez votre réalisation en respectant les contraintes, publiez-la avec les prompts utilisés, puis revenez ici pour l’inscrire au défi.',
-          )}
-        </p>
-        <div class="df-dialog-actions">
-          <a class="btn btn-primary" href={ROUTES.publier}>
-            Publier une création
-          </a>
-        </div>
-      </div>
-    )}
+    ) : null}
   </div>
 </dialog>
 
@@ -473,6 +461,8 @@ const ICONES_REGLES = ['type-iteration', 'check-circle', 'globe'];
   set:html={JSON.stringify({
     defi: defi?.id ?? null,
     connecte: Boolean(moi),
+    // Sans création à inscrire, « Participer » ouvre l'éditeur, case du défi cochée (prototype).
+    publier: moi && !moi.eligibles.length ? publierAuDefi : null,
     participation: moi?.participation
       ? ROUTES.creation(
           moi.participation.id,
