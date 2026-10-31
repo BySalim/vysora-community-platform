@@ -126,7 +126,7 @@ export const domainesHTML = (domaines: DomaineAccueilApi[]): string =>
   domaines
     .map(
       (d) => `
-      <li><a href="${esc(`${ROUTES.explorer}?categorie=${encodeURIComponent(d.slug)}`)}">
+      <li><a href="${esc(ROUTES.domaine(d.slug))}">
         <span class="domain-icon" aria-hidden="true">${icone(d.icone ?? 'layers', '')}</span>
         <span class="domain-text">${t(d.libelle)}<small>${t(pluriel(d.creations, 'création', 'créations'))}</small></span>
       </a></li>`,

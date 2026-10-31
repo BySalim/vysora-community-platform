@@ -1,4 +1,5 @@
 import type {
+  DomainePageApi,
   GuideApi,
   GuidesApi,
   IndexRechercheApi,
@@ -445,6 +446,36 @@ describe('Guides d’Explorer (DEC-01)', () => {
       expect(index.domaines.find((d) => d.slug === 'application-web')?.creations).toBe(2);
       expect(index.membres.map((m) => m.pseudo)).toContain('awa-sarr');
       expect(index.outils.find((o) => o.nom === 'Claude')?.creations).toBe(1);
+    });
+
+    it('présente la page d’un domaine avec tous ses parcours publiés et visibles (S-06)', async () => {
+      const { salon, terrain, brouillon, masquee } = await guideComplet();
+      // Publiée dans le domaine mais présentée par aucun guide : elle figure sur la page.
+      const seule = await nouvelleCreation('Formulaire de contact d’une boulangerie');
+      const page = (await visiteur().get('/api/v1/domaines/application-web').expect(200))
+        .body as DomainePageApi;
+      expect(page.domaine.slug).toBe('application-web');
+      expect(page.parcours.map((p) => p.id).toSorted()).toEqual([salon, terrain, seule].toSorted());
+      expect(page.parcours.map((p) => p.id)).not.toContain(brouillon);
+      expect(page.parcours.map((p) => p.id)).not.toContain(masquee);
+      expect(page.parcours.find((p) => p.id === salon)?.guide?.slug).toBe('rendez-vous');
+      expect(page.parcours.find((p) => p.id === seule)?.guide).toBeNull();
+      expect(page.guides.map((g) => g.slug)).toEqual(['rendez-vous']);
+      // RG-43 : 5 reproductions des parcours visibles, 4 réussies.
+      expect(page.chiffres).toEqual({ reproductions: 5, tauxReussite: 80, auteurs: 1 });
+      expect(page.pieges.map((p) => [p.titre, p.signale, p.total])).toEqual([
+        ['Deux personnes réservent le même créneau', 2, 2],
+        ['Des séances qui se chevauchent', 1, 2],
+      ]);
+      expect(page.lacunes).toEqual([
+        {
+          texte: 'Aucun parcours ne gère encore le paiement d’un acompte.',
+          guide: { slug: 'rendez-vous', titreCourt: 'Prise de rendez-vous en ligne' },
+        },
+      ]);
+      expect(page.domaines.find((d) => d.slug === 'application-web')?.parcours).toBe(3);
+      expect(page.voisins).toHaveLength(3);
+      await visiteur().get('/api/v1/domaines/inconnu').expect(404);
     });
 
     it('relie la fiche d’une création à son guide publié (fil d’Ariane, retour)', async () => {

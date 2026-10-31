@@ -258,6 +258,51 @@ export interface RechercheCreationsApi {
   }[];
 }
 
+/** Guide cité par un élément de la page d'un domaine. */
+export type GuideCiteApi = Pick<GuideResumeApi, 'slug' | 'titreCourt'>;
+
+/** GET /api/v1/domaines/:slug : page d'un domaine d'Explorer (S-06, F-25, EC-03, prototype
+    categorie.html) : ses guides, les pièges qui reviennent, les outils qui ont fait leurs preuves,
+    tous ses parcours publiés et visibles (RG-30), ses cas et questions, ce qui manque encore. */
+export interface DomainePageApi {
+  domaine: DomaineApi;
+  /** Domaines actifs, avec leurs parcours publiés et visibles (navigation entre domaines). */
+  domaines: (DomaineApi & { parcours: number })[];
+  /** Trois domaines voisins (mêmes savoir-faire), puis les plus fournis (adresses). */
+  voisins: string[];
+  /** Guides du domaine, des plus actifs aux moins actifs. */
+  guides: GuideResumeApi[];
+  /** Guides d'autres domaines qui comptent un parcours de celui-ci. */
+  guidesLies: GuideResumeApi[];
+  /** Reproductions des parcours reproductibles (un projet se consulte) et réussite (RG-43). */
+  chiffres: { reproductions: number; tauxReussite: number | null; auteurs: number };
+  /** Pièges des guides, du plus fréquent (part des parcours de leur guide) au plus rare. */
+  pieges: {
+    id: number;
+    titre: string;
+    solution: string;
+    /** Parcours du guide qui l'ont rencontré, et parcours du guide. */
+    signale: number;
+    total: number;
+    /** Rang du piège dans son guide (ancre #piege-<rang>). */
+    rang: number;
+    guide: GuideCiteApi;
+    sujet: { id: number; slug: string; titre: string } | null;
+  }[];
+  /** Modèles employés par les auteurs et ceux des reproductions réussies, sur tous les parcours. */
+  modeles: ModeleGuideApi[];
+  /** Parcours du domaine, les plus récents d'abord, avec le guide qui les présente. */
+  parcours: (ParcoursGuideApi & { guide: GuideCiteApi | null })[];
+  /** Cas validés du domaine ou de ses guides, avec le guide qui les présente. */
+  cas: (CasGuideApi & { guide: string | null })[];
+  /** Questions de la communauté posées dans les guides du domaine. */
+  sujets: SujetGuideApi[];
+  /** Objectifs cherchés dans le domaine. */
+  demandes: DemandeGuideApi[];
+  /** « Ce que ce guide ne couvre pas encore », pour chaque guide du domaine. */
+  lacunes: { texte: string; guide: GuideCiteApi }[];
+}
+
 /** Membre tel que la recherche le présente (vignette et aperçu). */
 export interface MembreIndexApi {
   pseudo: string;

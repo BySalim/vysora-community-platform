@@ -1007,7 +1007,7 @@ if (D && vue) {
     const domaine = l.domain ? D!.domaines.find((d) => d.libelle === l.domain) : undefined;
     if (domaine)
       items.push(
-        `<li><a href="${ROUTES.explorer}?domaine=${encodeURIComponent(domaine.slug)}">${icon(domaine.icone ?? 'compass')}<span><small>Domaine</small>${t(domaine.libelle)}</span></a></li>`,
+        `<li><a href="${esc(ROUTES.domaine(domaine.slug))}">${icon(domaine.icone ?? 'compass')}<span><small>Domaine</small>${t(domaine.libelle)}</span></a></li>`,
       );
     if (l.publish)
       items.push(

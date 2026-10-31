@@ -16,6 +16,7 @@ import {
   schemaListeControle,
   schemaPropositionPiege,
   schemaRechercheCreations,
+  type DomainePageApi,
   type GuideApi,
   type GuidesApi,
   type IndexRechercheApi,
@@ -57,6 +58,13 @@ export class DecouverteController {
   guide(@Param('slug') slug: string, @Req() requete: RequeteVysora): Promise<GuideApi> {
     const membre = requete.sessionOuverte?.utilisateur;
     return this.guides.guide(slug, membre ? { id: membre.id, role: membre.role } : null);
+  }
+
+  /** GET /api/v1/domaines/:slug : page d'un domaine (S-06). */
+  @Get('domaines/:slug')
+  domaine(@Param('slug') slug: string, @Req() requete: RequeteVysora): Promise<DomainePageApi> {
+    const membre = requete.sessionOuverte?.utilisateur;
+    return this.guides.domaine(slug, membre ? { id: membre.id, role: membre.role } : null);
   }
 
   /** PUT /api/v1/guides/:slug/liste : « Ma liste de contrôle », gardée aussi en lecture seule. */

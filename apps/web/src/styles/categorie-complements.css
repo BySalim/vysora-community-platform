@@ -1,0 +1,15 @@
+/* Compléments de categorie.css (page d'un domaine, S-06) : ce que le prototype dessinait autrement.
+   Un parcours sans image montre l'icône de son domaine sur le fond neutre de la carte (le prototype
+   dessinait des maquettes HTML pour des créations fictives). */
+
+.dm-card-media > .dm-card-vide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--neutral-400);
+}
+.dm-card-media > .dm-card-vide .icon {
+  width: 32px;
+  height: 32px;
+}

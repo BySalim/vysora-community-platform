@@ -263,6 +263,17 @@ const VOISINAGES: readonly string[][] = [
 const voisins = (a: string, b: string) =>
   VOISINAGES.some((groupe) => groupe.includes(a) && groupe.includes(b));
 
+/** Domaines voisins d'un domaine (prototype : nearDomains), puis les plus fournis, trois au plus. */
+export function domainesVoisins(slug: string, parcours: Map<string, number>, nombre = 3): string[] {
+  const proches = [...new Set(VOISINAGES.filter((g) => g.includes(slug)).flat())].filter(
+    (autre) => autre !== slug && parcours.has(autre),
+  );
+  const autres = [...parcours.keys()]
+    .filter((autre) => autre !== slug && !proches.includes(autre))
+    .toSorted((a, b) => (parcours.get(b) ?? 0) - (parcours.get(a) ?? 0));
+  return [...proches, ...autres].slice(0, nombre);
+}
+
 /** Guides proches (prototype : relatedGuides) : même domaine, puis domaine voisin, puis outils
     communs (deux au plus comptent), à égalité les plus actifs. */
 export function guidesProches<

@@ -148,7 +148,7 @@ function entete(e: EtatGuide): string {
   const chapeau = `Synthèse de ${pluriel(r.parcours, 'parcours documenté', 'parcours documentés')} par ${pluriel(r.auteurs.length, 'membre', 'membres')}${r.reproductions ? `, reproduits ${pluriel(r.reproductions, 'fois', 'fois')} par la communauté` : ''}.${derniere ? ` Dernière reproduction réussie ${jourRelatif(derniere.date, e.maintenant)} avec ${derniere.modele}.` : ''}`;
   const [premierObsolete] = obsoletes;
   return `<header class="ex-guide-head">
-      <nav class="ex-crumbs" aria-label="Fil d’Ariane"><a href="${ROUTES.explorer}" data-back>Explorer</a><span aria-hidden="true">/</span><a href="${ROUTES.explorer}?categorie=${esc(r.domaine.slug)}" data-domain-link="${esc(r.domaine.slug)}">${t(r.domaine.libelle)}</a></nav>
+      <nav class="ex-crumbs" aria-label="Fil d’Ariane"><a href="${ROUTES.explorer}" data-back>Explorer</a><span aria-hidden="true">/</span><a href="${esc(ROUTES.domaine(r.domaine.slug))}" data-domain-link="${esc(r.domaine.slug)}">${t(r.domaine.libelle)}</a></nav>
       <label class="ex-guide-switch"><span class="sr-only">Changer de guide</span><select data-guide-select>${g.autres.map((o) => `<option value="${esc(o.slug)}"${o.slug === r.slug ? ' selected' : ''}>${t(o.titreCourt)}</option>`).join('')}</select>${icone('chevron-down')}</label>
       <h1 id="ex-guide-title" tabindex="-1">${t(r.titre)}</h1>
       <p class="ex-guide-lead">${t(chapeau)}</p>
@@ -440,13 +440,13 @@ export function comparaison(e: EtatGuide): string {
 
 /* S'entraîner ------------------------------------------------------------------ */
 
-const NIVEAUX: Record<DifficulteCas, [number, string]> = {
+export const NIVEAUX: Record<DifficulteCas, [number, string]> = {
   DEBUTANT: [1, 'Débutant'],
   INTERMEDIAIRE: [2, 'Intermédiaire'],
   AVANCE: [3, 'Avancé'],
 };
 const LETTRES = ['A', 'B', 'C', 'D', 'E'];
-const GENRES_SUJET: Record<TypeSujet, { libelle: string; icone: string }> = {
+export const GENRES_SUJET: Record<TypeSujet, { libelle: string; icone: string }> = {
   QUESTION: { libelle: 'Question', icone: 'help' },
   CLINIQUE: { libelle: 'Clinique du prompt', icone: 'scan' },
   ASTUCE: { libelle: 'Astuce avant/après', icone: 'bulb' },

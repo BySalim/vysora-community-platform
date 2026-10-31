@@ -478,7 +478,7 @@ function construire(
       cle: `domaine:${d.slug}`,
       groupe: 'guides',
       titre: d.libelle,
-      href: `${ROUTES.explorer}?categorie=${encodeURIComponent(d.slug)}`,
+      href: ROUTES.domaine(d.slug),
       f0: champ(d.libelle),
       f1: champ('domaine catégorie'),
       f2: champ(d.description),

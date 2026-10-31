@@ -1,0 +1,239 @@
+---
+/* Page d'un domaine d'Explorer (S-06, F-25, EC-03), portée de prototype/categorie.html : guides du
+   domaine, pièges qui reviennent, outils qui ont fait leurs preuves, tous ses parcours, cas et
+   questions, ce qui manque encore, domaines voisins. Le serveur rend la page avec lib/explorer/domaine ;
+   le script reprend ces fonctions pour les filtres des parcours et « Mes outils ». Réglages retenus :
+   parcours en grille, en-tête avec créations, guides d'abord. Un domaine inconnu donne la page 404. */
+import type { DomainePageApi, ReferentielsApi } from '@vysora/shared';
+import Base from '../../layouts/Base.astro';
+import { ErreurApi, appelerApi } from '../../lib/api';
+import {
+  PAR_PAGE,
+  chiffresDomaine,
+  mosaique,
+  navigationDomaines,
+  sectionsDomaine,
+  sommaireDomaine,
+  type EtatDomaine,
+} from '../../lib/explorer/domaine';
+import { icone } from '../../lib/explorer/elements';
+import { boutonMesOutils } from '../../lib/explorer/index-guides';
+import { ROUTES } from '../../lib/navigation';
+import { typo } from '../../lib/texte';
+import '../../styles/explorer.css';
+import '../../styles/categorie.css';
+import '../../styles/categorie-complements.css';
+
+const slug = Astro.params.slug ?? '';
+if (!/^[a-z0-9-]{1,80}$/.test(slug)) return Astro.rewrite('/404');
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+const options = { requete: Astro.request, adresseClient };
+let page: DomainePageApi;
+try {
+  page = await appelerApi<DomainePageApi>(`/api/v1/domaines/${slug}`, options);
+} catch (erreur) {
+  if (erreur instanceof ErreurApi && erreur.probleme.status === 404) return Astro.rewrite('/404');
+  throw erreur;
+}
+const referentiels = await appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(
+  () => null,
+);
+const outils = (referentiels?.outils ?? []).map((o) => ({
+  id: o.id,
+  nom: o.nom,
+  slug: o.slug,
+  logo: o.logo,
+  logoMonochrome: o.logoMonochrome,
+  famille: o.famille,
+}));
+const maintenant = new Date();
+const etat: EtatDomaine = {
+  page,
+  maintenant,
+  type: 'tous',
+  tri: 'reproduits',
+  avecMesOutils: false,
+  affiches: PAR_PAGE,
+  tousLesPieges: false,
+  mesOutils: new Set(),
+};
+const { domaine } = page;
+const vignettes = mosaique(page);
+const outilsParSlug = new Map(outils.map((o) => [o.slug, o]));
+
+// « < » échappé : aucune valeur ne peut fermer la balise <script> qui porte les données.
+const json = JSON.stringify({ page, outils, maintenant: maintenant.toISOString() }).replaceAll(
+  '<',
+  '\\u003c',
+);
+
+const icones = [
+  'arrow',
+  'arrow-down',
+  'search',
+  'plus',
+  'menu',
+  'close',
+  'check',
+  'chevron-down',
+  'chevron-left',
+  'repeat',
+  'moment',
+  'check-circle',
+  'layers',
+  'bulb',
+  'message',
+  'flag',
+  'alert',
+  'route',
+  'browser',
+  'image',
+  'pen',
+  'code',
+  'flow',
+  'chart',
+  'film',
+  'music',
+  'school',
+  'shapes',
+  'compass',
+  'replay',
+  'clock',
+  'calendar',
+  'user',
+  'help',
+  'scan',
+  'users',
+  'wrench',
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+];
+---
+
+<Base
+  titre={`${domaine.libelle} · Explorer`}
+  description={typo(
+    domaine.description ??
+      `Les guides, les pièges récurrents, les outils et tous les parcours du domaine ${domaine.libelle}.`,
+  )}
+  classeCorps="ex dm"
+  reglages={{ gallery: 'grille', mosaic: 'images', order: 'guides' }}
+  icones={icones}
+  canonique={ROUTES.domaine(domaine.slug)}
+>
+  <nav class="dm-rail" aria-label="Domaines">
+    <div class="container">
+      <ul data-dm-rail set:html={navigationDomaines(page)} />
+    </div>
+  </nav>
+  <div class="container ex-guide-layout dm-layout">
+    <aside class="ex-guide-nav" aria-labelledby="dm-nav-title">
+      <a class="ex-back" href={ROUTES.explorer}>
+        <Fragment set:html={icone('chevron-left')} />
+        Tous les guides
+      </a>
+      <h2 id="dm-nav-title" class="dm-nav-title">
+        Domaines
+      </h2>
+      <ul data-dm-nav set:html={navigationDomaines(page)} />
+    </aside>
+    <article class="dm-page" aria-labelledby="dm-title">
+      <header class="dm-head">
+        <nav class="ex-crumbs" aria-label="Fil d’Ariane">
+          <a href={ROUTES.explorer}>Explorer</a>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">{typo(domaine.libelle)}</span>
+        </nav>
+        <p class="kicker">
+          <Fragment set:html={icone(domaine.icone ?? 'compass', '')} />
+          Domaine
+        </p>
+        <h1 id="dm-title" tabindex="-1">
+          {typo(domaine.libelle)}
+        </h1>
+        {domaine.description && <p class="dm-lead">{typo(domaine.description)}</p>}
+        <dl class="ex-figures" set:html={chiffresDomaine(page)} />
+        <div class="dm-actions">
+          <a class="btn btn-primary" href="#guides" data-jump="guides">
+            Voir les guides
+            <Fragment set:html={icone('arrow-down')} />
+          </a>
+          <a class="btn btn-secondary" href={ROUTES.publier}>
+            <Fragment set:html={icone('plus')} />
+            Publier un parcours
+          </a>
+          <div
+            class="dm-mytools"
+            data-mytools
+            set:html={boutonMesOutils([], outilsParSlug, true)}
+          />
+        </div>
+        <div
+          class="dm-mosaic"
+          data-dm-mosaic
+          data-count={vignettes.nombre}
+          set:html={vignettes.html}
+        />
+      </header>
+      <nav class="ex-sections" aria-label="Sections du domaine">
+        <ul data-dm-toc set:html={sommaireDomaine()} />
+      </nav>
+      <div data-dm-sections set:html={sectionsDomaine(etat)} />
+    </article>
+  </div>
+
+  <Fragment slot="fin">
+    <dialog
+      class="ex-dialog ex-tools"
+      aria-labelledby="ex-tools-title"
+      aria-describedby="ex-tools-desc"
+      data-tools-dialog
+    >
+      <form method="dialog" class="ex-tools-form">
+        <div class="ex-dialog-head">
+          <div>
+            <h2 id="ex-tools-title">Mes outils</h2>
+            <p id="ex-tools-desc">
+              Sélectionnez les outils que vous utilisez. Les guides indiquent ensuite ce qui a déjà
+              été testé avec eux.
+            </p>
+          </div>
+          <button class="icon-btn" type="button" aria-label="Fermer" data-close-tools>
+            <Fragment set:html={icone('close', '')} />
+          </button>
+        </div>
+        <label class="ex-tools-search">
+          <Fragment set:html={icone('search')} />
+          <span class="sr-only">Rechercher un outil</span>
+          <input
+            type="search"
+            placeholder="Rechercher un outil"
+            autocomplete="off"
+            data-tools-filter
+          />
+        </label>
+        <div class="ex-tools-list" data-tools-list></div>
+        <div class="ex-dialog-foot">
+          <button class="link-btn" type="button" data-tools-reset>
+            Effacer la sélection
+          </button>
+          <button class="btn btn-primary" type="submit" value="save" data-tools-save>
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="application/json" id="dm-donnees" set:html={json} />
+  </Fragment>
+</Base>
+
+<script>
+  import '../../scripts/domaine';
+</script>

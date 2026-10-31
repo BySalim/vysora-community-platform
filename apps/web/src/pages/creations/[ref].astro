@@ -261,9 +261,7 @@ const icones = [
         <span aria-hidden="true">/</span>
         {fiche.categorie && (
           <>
-            <a href={`${ROUTES.explorer}?categorie=${encodeURIComponent(fiche.categorie.slug)}`}>
-              {fiche.categorie.libelle}
-            </a>
+            <a href={ROUTES.domaine(fiche.categorie.slug)}>{fiche.categorie.libelle}</a>
             <span aria-hidden="true">/</span>
           </>
         )}

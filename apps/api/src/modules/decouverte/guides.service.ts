@@ -2,12 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   MOTIF_SLUG_GUIDE,
   type CasGuideApi,
+  type DomainePageApi,
   type GuideApi,
   type GuideResumeApi,
   type GuidesApi,
   type MembreResumeApi,
   type ParcoursGuideApi,
 } from '@vysora/shared';
+import { sql } from 'drizzle-orm';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
 import { ErreurApplication, introuvable } from '../../commun/erreurs.js';
@@ -19,7 +21,9 @@ import { resumerMembres } from '../membres/resumes.js';
 import {
   chiffresDu,
   derniereReussite,
+  domainesVoisins,
   guidesProches,
+  modelesDu,
   souventCherches,
   tauxDeReussite,
   texteRecherche,
@@ -186,6 +190,160 @@ export class GuidesService {
         parcours: this.chiffresDe(o, ensemble).parcours.length,
       })),
       moi: moi && { liste: moi[0], propositions: moi[1] },
+    };
+  }
+
+  /** GET /api/v1/domaines/:slug (S-06, prototype categorie.js, domainData) : tous les parcours
+      publiés et visibles du domaine, y compris ceux qu'aucun guide ne présente encore. */
+  async domaine(
+    slug: string,
+    lecteur: Lecteur | null,
+    maintenant = new Date(),
+  ): Promise<DomainePageApi> {
+    const [ensemble, domaines, demandes, comptes] = await Promise.all([
+      this.charger(maintenant),
+      lireDomaines(this.db),
+      lireDemandes(this.db, lecteur?.id ?? null, maintenant),
+      this.db.execute<{ slug: string; ids: string[] | null }>(sql`
+        select cat.slug, array_agg(cr.id order by cr.date_publication desc, cr.id desc) as ids
+        from categorie cat
+        join creation cr on cr.categorie_id = cat.id and cr.statut_publication = 'PUBLIEE'
+        join contenu c on c.id = cr.id and c.statut = 'VISIBLE'
+        where cat.est_active
+        group by cat.slug`),
+    ]);
+    const domaine = domaines.find((d) => d.slug === slug);
+    if (!domaine) throw introuvable('Ce domaine est introuvable.');
+    const idsPar = new Map(comptes.rows.map((r) => [r.slug, (r.ids ?? []).map(Number)]));
+    const ids = idsPar.get(slug) ?? [];
+
+    const lus = new Map<number, ParcoursLu>();
+    for (const c of ensemble.chiffres.values()) for (const p of c.parcours) lus.set(p.id, p);
+    const manquants = await lireParcours(
+      this.db,
+      this.stockage,
+      ids.filter((id) => !lus.has(id)),
+      maintenant,
+    );
+    for (const [id, p] of manquants) lus.set(id, p);
+    const parcours = ids.flatMap((id) => lus.get(id) ?? []);
+
+    const propres = ensemble.guides.filter((g) => g.domaine.slug === slug);
+    const lies = ensemble.guides.filter(
+      (g) => g.domaine.slug !== slug && this.chiffresDe(g, ensemble).domaines.includes(slug),
+    );
+    const tousGuides = [...propres, ...lies];
+    const guideDe = (id: number) => tousGuides.find((g) => g.parcours.includes(id));
+    const cite = (g: GuideLu) => ({ slug: g.slug, titreCourt: g.titreCourt });
+
+    const { rows: casDuDomaine } = await this.db.execute<{ id: string }>(sql`
+      select k.id from cas_bon_reflexe k join contenu c on c.id = k.id
+      join categorie cat on cat.id = k.categorie_id
+      where cat.slug = ${slug} and c.statut = 'VISIBLE' and k.statut_validation = 'VALIDE'
+      order by k.date_examen desc, k.id desc`);
+    const idsCas = [
+      ...new Set([...casDuDomaine.map((r) => Number(r.id)), ...tousGuides.flatMap((g) => g.cas)]),
+    ];
+    const pieges = tousGuides
+      .flatMap((g) => {
+        const c = this.chiffresDe(g, ensemble);
+        return c.pieges.map((p, rang) => ({ p, g, rang, total: c.parcours.length }));
+      })
+      .filter(({ p }) => p.sources.length)
+      .toSorted(
+        (a, b) =>
+          b.p.sources.length / b.total - a.p.sources.length / a.total ||
+          b.p.sources.length - a.p.sources.length,
+      );
+    const auteursManquants = parcours
+      .map((p) => p.auteurId)
+      .filter((id) => !ensemble.membres.has(id));
+    const [deroulements, sujets, discussions, cas, autresMembres] = await Promise.all([
+      lireDeroulements(this.db, ids),
+      lireSujets(this.db, [...new Set(tousGuides.flatMap((g) => g.sujets))]),
+      lireSujets(
+        this.db,
+        pieges.flatMap(({ p }) => (p.sujetId === null ? [] : [p.sujetId])),
+      ),
+      this.cas(idsCas, lecteur),
+      resumerMembres(this.db, this.stockage, auteursManquants),
+    ]);
+    const membres = new Map([...ensemble.membres, ...autresMembres]);
+    const auteursSujets = await resumerMembres(
+      this.db,
+      this.stockage,
+      sujets.map((s) => s.auteurId),
+    );
+    const reproductibles = parcours.filter((p) => p.type !== 'PROJET');
+    const reproductions = reproductibles.reduce((n, p) => n + p.reproductions.length, 0);
+    const reussies = reproductibles.reduce(
+      (n, p) => n + p.reproductions.filter((r) => r.resultat === 'SUCCES').length,
+      0,
+    );
+    const resumes = (liste: GuideLu[]) =>
+      liste
+        .map((g) => this.resumer(g, ensemble))
+        .toSorted((a, b) => b.activite - a.activite || a.titre.localeCompare(b.titre, 'fr'));
+
+    return {
+      domaine,
+      domaines: domaines.map((d) => ({ ...d, parcours: idsPar.get(d.slug)?.length ?? 0 })),
+      voisins: domainesVoisins(
+        slug,
+        new Map(domaines.map((d) => [d.slug, idsPar.get(d.slug)?.length ?? 0])),
+      ),
+      guides: resumes(propres),
+      guidesLies: resumes(lies),
+      chiffres: {
+        reproductions,
+        tauxReussite: tauxDeReussite(reproductions, reussies),
+        auteurs: new Set(parcours.map((p) => p.auteurId)).size,
+      },
+      pieges: pieges.map(({ p, g, rang, total }) => {
+        const discussion = discussions.find((s) => s.id === p.sujetId);
+        return {
+          id: p.id,
+          titre: p.titre,
+          solution: p.solution,
+          signale: p.sources.length,
+          total,
+          rang,
+          guide: cite(g),
+          sujet: discussion
+            ? { id: discussion.id, slug: discussion.slug, titre: discussion.titre }
+            : null,
+        };
+      }),
+      modeles: modelesDu(parcours),
+      parcours: parcours.map((p) => {
+        const g = guideDe(p.id);
+        return {
+          ...this.presenterParcours(p, deroulements.get(p.id), membres),
+          guide: g ? cite(g) : null,
+        };
+      }),
+      cas: cas.map((c) => ({
+        ...c,
+        guide: tousGuides.find((g) => g.cas.includes(c.id))?.slug ?? null,
+      })),
+      sujets: sujets.flatMap((s) => {
+        const auteur = auteursSujets.get(s.auteurId);
+        return auteur
+          ? [
+              {
+                id: s.id,
+                slug: s.slug,
+                type: s.type,
+                titre: s.titre,
+                etat: s.etat,
+                reponses: s.reponses,
+                auteur,
+              },
+            ]
+          : [];
+      }),
+      demandes: demandes.filter((d) => d.domaine?.slug === slug),
+      lacunes: propres.flatMap((g) => g.lacunes.map((texte) => ({ texte, guide: cite(g) }))),
     };
   }
 

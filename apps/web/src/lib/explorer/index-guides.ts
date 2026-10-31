@@ -193,9 +193,9 @@ export function puceDomaines(
   );
 }
 
-/** Bandeau du domaine choisi. La page du domaine viendra avec S-06 : pas de lien d'ici là. */
+/** Bandeau du domaine choisi, avec le lien vers sa page (S-06). */
 export const banniereDomaine = (d: DomaineApi): string =>
-  `<span class="ex-db-icon" aria-hidden="true">${icone(d.icone ?? 'compass', '')}</span><span class="ex-db-text"><b>${t(d.libelle)}</b>${d.description ? t(d.description) : ''}</span>`;
+  `<span class="ex-db-icon" aria-hidden="true">${icone(d.icone ?? 'compass', '')}</span><span class="ex-db-text"><b>${t(d.libelle)}</b>${d.description ? t(d.description) : ''}</span><a class="link-arrow" href="${esc(ROUTES.domaine(d.slug))}">Ouvrir la page du domaine${icone('arrow')}</a>`;
 
 /** Sous-titre de l'index (prototype : els.sub). */
 export function sousTitre(
