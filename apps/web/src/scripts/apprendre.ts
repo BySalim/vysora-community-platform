@@ -973,7 +973,11 @@ if (D && vue) {
   function rubCas() {
     const levels = [0, 1, 2, 3];
     const list = cases.filter((c) => !state.level || c.level === state.level);
-    return `${rubHeadHTML(RUB['bon-reflexe'])}<div class="container ap-rub">
+    // APP-03 : un membre Expert ou plus, ou l'équipe de modération, propose ses cas (RG-70).
+    const proposer = etats.peut('proposer-cas')
+      ? `<a class="btn btn-secondary btn-sm" href="/bon-reflexe/nouveau">${icon('plus')}Proposer un cas</a>`
+      : '';
+    return `${rubHeadHTML(RUB['bon-reflexe'], proposer)}<div class="container ap-rub">
       <div class="ap-chips" role="group" aria-label="Filtrer par niveau">${levels.map((l) => `<button class="ap-chip" type="button" aria-pressed="${state.level === l}" data-ap-level="${l}">${l ? t(LIBELLES_NIVEAU[l]) : 'Tous les niveaux'}<span>${l ? cases.filter((c) => c.level === l).length : cases.length}</span></button>`).join('')}</div>
       ${list.length ? `<ul class="ap-caselist">${list.map(caseRowHTML).join('')}</ul>` : `<p class="ap-empty">Aucun cas pour ce niveau pour l’instant.</p>`}
     </div>`;

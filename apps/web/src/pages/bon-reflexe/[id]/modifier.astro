@@ -1,0 +1,34 @@
+---
+/* Corriger un cas Bon réflexe (APP-03, EC-11, RG-71) : son auteur le modifie et le soumet de
+   nouveau. GET /api/v1/cas/:id donne la correction à l'auteur ; un autre membre reçoit la 404. */
+import { ErreurApi, appelerApi } from '../../../lib/api';
+import type { CasApi } from '@vysora/shared';
+import EditeurCas from '../../../components/EditeurCas.astro';
+import Base from '../../../layouts/Base.astro';
+import '../../../styles/explorer.css';
+import '../../../styles/forum.css';
+import '../../../styles/forum-complements.css';
+import '../../../styles/editeur-cas.css';
+
+const id = /^\d{1,15}$/.test(Astro.params.id ?? '') ? Number(Astro.params.id) : null;
+if (id === null) return Astro.rewrite('/404');
+let cas: CasApi | null = null;
+if (Astro.locals.etat.session === 'membre') {
+  try {
+    cas = await appelerApi<CasApi>(`/api/v1/cas/${id}`, { requete: Astro.request });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+  }
+  if (!cas?.moi?.auteur) return Astro.rewrite('/404');
+}
+---
+
+<Base
+  titre="Corriger un cas · Bon réflexe"
+  description="Corrigez votre cas Bon réflexe et soumettez-le de nouveau à la modération."
+  classeCorps="ex qa"
+  icones={['plus', 'chevron-down', 'check', 'alert']}
+  nonIndexee
+>
+  <EditeurCas cas={cas} />
+</Base>

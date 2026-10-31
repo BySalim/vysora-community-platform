@@ -1,0 +1,19 @@
+---
+/* Proposer un cas Bon réflexe (APP-03, EC-11) : voir components/EditeurCas.astro. */
+import EditeurCas from '../../components/EditeurCas.astro';
+import Base from '../../layouts/Base.astro';
+import '../../styles/explorer.css';
+import '../../styles/forum.css';
+import '../../styles/forum-complements.css';
+import '../../styles/editeur-cas.css';
+---
+
+<Base
+  titre="Proposer un cas · Bon réflexe"
+  description="Proposez un cas Bon réflexe : une situation réelle avec l’IA, des options plausibles et le bon réflexe expliqué."
+  classeCorps="ex qa"
+  icones={['plus', 'chevron-down', 'check', 'alert']}
+  nonIndexee
+>
+  <EditeurCas />
+</Base>

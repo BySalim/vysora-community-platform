@@ -1,0 +1,100 @@
+---
+/* Proposer un cas Bon réflexe (APP-03, EC-11, F-60, RG-70, RG-71). Écran sans maquette dans le
+   prototype, conçu dans le style de « Poser une question » du forum : situation, échange avec l'IA,
+   question, deux à cinq options dont une seule juste, explications, difficulté, domaine, durée et
+   étiquettes ; « Vos cas proposés » rappelle le statut de chacun et le motif d'un refus. Un cas
+   refusé se corrige ici (/bon-reflexe/[id]/modifier). Envoi : POST ou PUT /api/v1/cas
+   (scripts/editeur-cas.ts), qui soumet le cas à la modération. */
+import type { CasApi, MesCasApi, ReferentielsApi } from '@vysora/shared';
+import { appelerApi } from '../lib/api';
+import { formulaireCas } from '../lib/bon-reflexe/editeur';
+import { ROUTES } from '../lib/navigation';
+import { dateCourte, typo } from '../lib/texte';
+import AccesBloc from './AccesBloc.astro';
+
+interface Props {
+  /** Cas à corriger ; absent pour un nouveau cas. */
+  cas?: CasApi | null;
+}
+
+const { cas = null } = Astro.props;
+const options = { requete: Astro.request };
+const [referentiels, mesCas] = await Promise.all([
+  appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null),
+  appelerApi<MesCasApi>('/api/v1/moi/cas', options).catch(() => null),
+]);
+const STATUTS = {
+  PROPOSE: 'En attente de validation',
+  VALIDE: 'Validé',
+  REFUSE: 'Refusé',
+} as const;
+const formulaire = formulaireCas(cas, referentiels);
+---
+
+<div class="container qa-shell cs-shell">
+  <div class="qa-page">
+    <AccesBloc action="proposer-cas" quoi="proposer un cas Bon réflexe" titre="h1">
+      <div class="qa-main qa-ask">
+        <h1 id="qa-title" tabindex="-1">
+          {cas ? 'Corriger votre cas' : 'Proposer un cas'}
+        </h1>
+        {cas?.examen?.motif && cas.statut === 'REFUSE' && (
+          <section class="qa-box cs-refus" aria-labelledby="cs-refus-titre">
+            <h2 id="cs-refus-titre">{`Refusé le ${dateCourte(cas.examen.date)}`}</h2>
+            <p>{typo(cas.examen.motif)}</p>
+          </section>
+        )}
+        <section class="qa-box is-guide qa-ask-intro" aria-labelledby="cs-intro-titre">
+          <h2 id="cs-intro-titre">Un cas qui apprend le bon réflexe</h2>
+          <p>
+            {typo(
+              'Un cas part d’une situation réelle où l’IA se trompe, invente ou va trop loin :',
+            )}
+          </p>
+          <ol class="qa-steps-mini">
+            <li>{typo('Décrivez la situation et collez l’échange exact avec l’IA.')}</li>
+            <li>{typo('Proposez des options plausibles : une seule est le bon réflexe.')}</li>
+            <li>{typo('Expliquez chaque option : c’est là que l’apprenant progresse.')}</li>
+            <li>{typo('La modération relit le cas avant sa publication dans Bon réflexe.')}</li>
+          </ol>
+        </section>
+        <Fragment set:html={formulaire} />
+      </div>
+      <aside class="qa-side" aria-label="Vos cas proposés">
+        <section class="qa-box cs-mes-cas">
+          <h2>Vos cas proposés</h2>
+          {mesCas?.elements.length ? (
+            <ul>
+              {mesCas.elements.map((c) => (
+                <li>
+                  <b>{typo(c.titre)}</b>
+                  <span class={`cs-statut is-${c.statut.toLowerCase()}`}>{STATUTS[c.statut]}</span>
+                  {c.statut === 'REFUSE' && c.examen?.motif && (
+                    <small>{typo(c.examen.motif)}</small>
+                  )}
+                  {c.statut === 'VALIDE' && !c.masquee ? (
+                    <a href={ROUTES.casBonReflexe(c.id, c.slug)}>Voir le cas</a>
+                  ) : (
+                    c.id !== cas?.id && (
+                      <a href={`/bon-reflexe/${c.id}/modifier`}>
+                        {c.statut === 'REFUSE' ? 'Corriger' : 'Modifier'}
+                      </a>
+                    )
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>
+              {typo('Vos cas apparaîtront ici, avec leur statut et le motif d’un éventuel refus.')}
+            </p>
+          )}
+        </section>
+      </aside>
+    </AccesBloc>
+  </div>
+</div>
+
+<script>
+  import '../scripts/editeur-cas';
+</script>
