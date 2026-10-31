@@ -1,0 +1,16 @@
+/* Compléments de classements.css (gardée identique au prototype) : les membres sont des liens vers
+   leur profil, et non des boutons qui ouvrent une fiche (reportée) ; la personne connectée est
+   repérée dans les palmarès. */
+
+a.cl-who { text-decoration: none; }
+a.cl-who:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.cl-who.is-me b::after { content: " · vous"; color: var(--accent-text); font-weight: 600; }
+.cl-stack a { display: block; border-radius: 50%; }
+.cl-weeks a.cl-week { text-decoration: none; }
+
+/* Quatre palmarès tant que le défi (S-07) et la progression ne sont pas portés. */
+.cl-laureates { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 640px) {
+  .cl-laureates { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 22px; }
+  .cl-laureate:nth-child(3) { border-left: 0; }
+}

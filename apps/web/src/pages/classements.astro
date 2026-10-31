@@ -1,0 +1,254 @@
+---
+/* Classements (S-08, EC-13, F-75, RG-87), portés de prototype/classements.html : palmarès de la
+   semaine (semaines, chiffres, lauréats, quatre palmarès), classement des membres de la semaine et
+   général (cinquante premiers, filtre par niveau, votre place) et règles. Rendus par le serveur
+   depuis GET /api/v1/classements ; scripts/classements.ts alterne les classements et les filtres.
+   Reportés (registre, S-08) : choix de l'outil, fiche d'un membre, défi et progression. */
+import type { ClassementsApi } from '@vysora/shared';
+import Base from '../layouts/Base.astro';
+import { appelerApi } from '../lib/api';
+import {
+  NIVEAUX_FILTRE,
+  ORDRE,
+  categorieHTML,
+  chiffresHTML,
+  datesHTML,
+  laureatsHTML,
+  lignesHTML,
+  panneauMoiHTML,
+  periodeCourte,
+  reglesHTML,
+  semainesHTML,
+} from '../lib/classements/rendu';
+import { fmt, typo } from '../lib/texte';
+import '../styles/explorer.css';
+import '../styles/classements.css';
+import '../styles/classements-complements.css';
+
+const semaine = Astro.url.searchParams.get('semaine') ?? '';
+const donnees = await appelerApi<ClassementsApi>(
+  `/api/v1/classements${/^\d{4}-\d{2}-\d{2}$/.test(semaine) ? `?semaine=${semaine}` : ''}`,
+  { requete: Astro.request },
+);
+const maintenant = new Date();
+const moiId = Astro.locals.membre?.id ?? null;
+const enCours = donnees.semaine.statut === 'provisoire';
+const vues = ORDRE.map((cle) => categorieHTML(cle, donnees, moiId, maintenant)).join('');
+const resume = (quoi: 'semaine' | 'general') => {
+  const classes =
+    quoi === 'semaine' ? donnees.membres.classesSemaine : donnees.membres.classesGeneral;
+  const affiches = Math.min(50, classes);
+  return typo(
+    classes
+      ? `${fmt(affiches)} premiers sur ${fmt(classes)} ${classes > 1 ? 'membres classés' : 'membre classé'}`
+      : 'Aucun membre classé',
+  );
+};
+const ICONES = [
+  'trophy',
+  'arrow',
+  'repeat',
+  'reply',
+  'utile',
+  'bulb',
+  'users',
+  'scale',
+  'calendar',
+  'clock',
+  'replay',
+  'route',
+  'lock',
+  'podium',
+  'school',
+  'up',
+  'down',
+  'minus',
+  'accept',
+  'chevron-down',
+  'type-prompt',
+  'type-iteration',
+  'type-projet',
+];
+---
+
+<Base
+  titre="Classements"
+  description="Le palmarès de la semaine sur Vysora : les membres dont les méthodes, les réponses et les astuces ont fait réussir les autres, avec les preuves."
+  classeCorps="ex cl"
+  reglages={{
+    palmares: 'rangees',
+    preuves: 'detaillees',
+    mesure: 'faits',
+    teintes: 'palette',
+    bande: 'sombre',
+  }}
+  icones={ICONES}
+>
+  <section class="cl-hero" aria-labelledby="cl-title">
+    <div class="container">
+      <div class="cl-hero-top">
+        <p class="kicker">
+          <svg class="icon" aria-hidden="true">
+            <use href="#i-trophy"></use>
+          </svg>
+          Classements
+        </p>
+        <nav class="cl-weeks" aria-label="Semaine du palmarès" set:html={semainesHTML(donnees)} />
+      </div>
+      <div class="cl-hero-main">
+        <div class="cl-hero-copy">
+          <h1 id="cl-title" class="cl-title" tabindex="-1">
+            Palmarès de la semaine
+          </h1>
+          <p class="cl-dates" set:html={datesHTML(donnees.semaine, maintenant)} />
+          <p class="cl-lead">
+            {typo(
+              'Chaque semaine, Vysora distingue les membres dont le travail a fait réussir les autres : une méthode reproduite avec succès, une réponse acceptée, une astuce vérifiée.',
+            )}
+          </p>
+        </div>
+      </div>
+      <dl class="cl-figures" set:html={chiffresHTML(donnees.chiffres)} />
+      <ol
+        class="cl-laureates"
+        aria-label="Premiers de chaque palmarès"
+        set:html={laureatsHTML(donnees)}
+      />
+    </div>
+  </section>
+  <div class="cl-view">
+    <div class="container cl-cats" set:html={vues} />
+    <section
+      class="cl-members cl-reveal"
+      id="membres"
+      aria-labelledby="cl-members-title"
+      data-cl-membres
+    >
+      <div class="container">
+        <div class="cl-members-grid">
+          <div class="cl-members-main">
+            <header class="cl-members-head">
+              <div>
+                <h2 id="cl-members-title">
+                  <span class="cl-cat-icon">
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-users"></use>
+                    </svg>
+                  </span>
+                  Classement des membres
+                </h2>
+                <p
+                  class="cl-cat-rule"
+                  data-cl-count-line
+                  data-semaine={resume('semaine')}
+                  data-general={resume('general')}
+                >
+                  {resume('semaine')}
+                </p>
+              </div>
+              <div class="cl-seg" role="tablist" aria-label="Type de classement">
+                <button
+                  type="button"
+                  role="tab"
+                  id="cl-tab-semaine"
+                  aria-controls="cl-panel-semaine"
+                  aria-selected="true"
+                  data-cl-table-tab="semaine"
+                >
+                  {enCours ? 'Cette semaine' : `Semaine du ${periodeCourte(donnees.semaine)}`}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="cl-tab-general"
+                  aria-controls="cl-panel-general"
+                  aria-selected="false"
+                  tabindex="-1"
+                  data-cl-table-tab="general"
+                >
+                  Général
+                </button>
+              </div>
+            </header>
+            <div class="cl-levels" role="group" aria-label="Filtrer par niveau">
+              {NIVEAUX_FILTRE.map((n) => (
+                <button
+                  type="button"
+                  class="cl-chip"
+                  data-cl-level={n.code}
+                  aria-pressed={n.code === '' ? 'true' : 'false'}
+                >
+                  {n.pluriel}
+                </button>
+              ))}
+            </div>
+            {(['semaine', 'general'] as const).map((quoi) => {
+              const rangs = donnees.membres[quoi];
+              return (
+                <div
+                  class="cl-panel"
+                  id={`cl-panel-${quoi}`}
+                  role="tabpanel"
+                  aria-labelledby={`cl-tab-${quoi}`}
+                  data-cl-panel={quoi}
+                  hidden={quoi === 'general'}
+                >
+                  {rangs.length ? (
+                    <table class="cl-table" data-table={quoi}>
+                      <caption class="sr-only">
+                        {quoi === 'semaine'
+                          ? 'Points gagnés pendant la semaine'
+                          : 'Réputation totale'}
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col" class="cl-td-rank">
+                            Rang
+                          </th>
+                          <th scope="col" class="cl-td-who">
+                            Membre
+                          </th>
+                          <th scope="col" class="cl-td-extra">
+                            {quoi === 'semaine' ? 'Reconnu pour' : ''}
+                          </th>
+                          <th scope="col" class="cl-td-pts">
+                            {quoi === 'semaine' ? 'Points' : 'Réputation'}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody set:html={lignesHTML(rangs, quoi, donnees, moiId)} />
+                    </table>
+                  ) : (
+                    <div class="cl-empty">
+                      <p>{typo('Aucun membre n’a encore gagné de points cette semaine.')}</p>
+                    </div>
+                  )}
+                  <div class="cl-empty" data-cl-level-empty hidden>
+                    <p>{typo('Aucun membre de ce niveau dans ce classement.')}</p>
+                  </div>
+                </div>
+              );
+            })}
+            <button
+              class="cl-more"
+              type="button"
+              aria-expanded="false"
+              data-cl-more
+              hidden
+            ></button>
+          </div>
+          <aside
+            class="cl-members-side"
+            aria-label="Votre place"
+            set:html={panneauMoiHTML(donnees, Astro.locals.membre)}
+          />
+        </div>
+      </div>
+    </section>
+    <Fragment set:html={reglesHTML()} />
+  </div>
+</Base>
+
+<script>
+  import '../scripts/classements';
+</script>

@@ -21,6 +21,7 @@ import { InteractionsModule } from './modules/interactions/interactions.module.j
 import { MediasModule, StockageModule } from './modules/medias/medias.module.js';
 import { MembresModule } from './modules/membres/membres.module.js';
 import { AdministrationModule } from './modules/administration/administration.module.js';
+import { ClassementsModule } from './modules/classements/classements.module.js';
 import { ModerationModule } from './modules/moderation/moderation.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ReferentielsModule } from './modules/referentiels/referentiels.module.js';
@@ -73,6 +74,7 @@ import { TachesModule } from './modules/taches/taches.module.js';
     TachesModule,
     ModerationModule,
     AdministrationModule,
+    ClassementsModule,
     ForumModule,
     ApprentissageModule,
     MembresModule,

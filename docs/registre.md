@@ -18,7 +18,7 @@
 
 Ordre retenu par le porteur du projet pour boucler le backend de la bêta fermée : FORUM-01, APP-01, NOTIF-01 et EMAIL-01 (faits, réunis le 27 octobre sur `feat/integration`), PARAM-01 (fait le 27 octobre, API et page), DEC-01 (fait le 27 octobre, API et page Explorer), ACC-01, INT-04 et PROF-01 (faits le 27 octobre, API et pages), enfin ADM-01 (avec DEC-02), SEC-02 et INV-01. Les pages suivent leur API.
 
-1. **S-08**, **S-07** (classements et défis, pages du menu principal encore absentes), puis **ADM-02** (référentiels, documents légaux, décisions réservées aux administrateurs). Faits les 30 et 31 octobre : FORUM-02, APP-02 (base), INV-01, SEC-02, MOD-03, ADM-01 (base). « Domaine et durée d’un cas » (points à trancher) est à décider avant APP-02. L’accueil et le profil y mènent déjà (sujets en attente, clinique, astuce, réponses d’un membre : `/forum/[id]-[slug]` ; « Voir tous les cas », « Répondre à un cas » : `/apprendre?rubrique=bon-reflexe`) ; les pages de sujet et de cas compteront leurs vues avec `POST /api/v1/contenus/:id/vues` (INT-04, comme la fiche).
+1. **S-07** (défis, dernière page du menu principal encore absente), **S-09** (badges), puis **ADM-02** (référentiels, documents légaux, décisions réservées aux administrateurs). Faits les 30 et 31 octobre : FORUM-02, APP-02 (base), INV-01, SEC-02, MOD-03, ADM-01 (base), S-08 (base). « Domaine et durée d’un cas » (points à trancher) est à décider avant APP-02. L’accueil et le profil y mènent déjà (sujets en attente, clinique, astuce, réponses d’un membre : `/forum/[id]-[slug]` ; « Voir tous les cas », « Répondre à un cas » : `/apprendre?rubrique=bon-reflexe`) ; les pages de sujet et de cas compteront leurs vues avec `POST /api/v1/contenus/:id/vues` (INT-04, comme la fiche).
 2. **ADM-02** et **DEC-02** — Suite de l’administration : référentiels, documents légaux, décisions des administrateurs ; rédaction des guides d’Explorer et relecture des pièges signalés.
 3. **S-07**, **S-08**, **S-09** — Défis, classements et badges : l’accueil présente déjà le défi en cours, le classement de la semaine et les badges du référentiel, le profil les badges obtenus ; leurs liens (`/defis/[id]-[slug]`, `/classements`) attendent ces pages. Avec S-09 viendront « Prochains badges » du profil (PROF-02) et la notification `BADGE_OBTENU`.
 4. **QA-01** — Tests de navigateur (Playwright) : les comparaisons au prototype (mesures à 1280 et 375 px, textes) gagneraient à être automatisées ; l’éditeur (CREA-02), « Mes contenus » (CREA-04 : publier, repasser en brouillon, supprimer, retirer un enregistrement), la décision de modération (MOD-02 : choisir, confirmer, voir le dossier mis à jour), les paramètres (PARAM-01 : changer d’adresse, de mot de passe, exporter, demander la suppression), Explorer (DEC-01 : chercher, filtrer, ouvrir un guide, cocher la liste, répondre au cas, comparer, signaler un piège), l’accueil (ACC-01 : onglets, cas Bon réflexe, fil relu) et le profil (PROF-01 : filtres, aperçu d’une création, modification du profil, aperçu public) sont les premiers parcours à couvrir. Le site de vérification peut tourner en production (`astro build` puis `node dist/server/entry.mjs`) : c’est là qu’on voit la CSP.
@@ -126,7 +126,7 @@ Ordre retenu par le porteur du projet pour boucler le backend de la bêta fermé
 | S-05 | Avertissements « données sensibles » et « instructions pour agent » | ⬜ | F-18, F-19, RG-22, RG-23 |
 | S-06 | Pages catégorie et étiquette (proto `categorie.*`) | ⬜ | F-25, EC-03 |
 | S-07 | Défis : création, participation, clôture, classement figé (proto `defis.*`, admin EC-24) | ⬜ | F-63 à F-65 |
-| S-08 | Classements (proto `classements.*`) | ⬜ | F-75, RG-87 |
+| S-08 | Classements (proto `classements.*`) | ✅ 2026-10-31 (base) | **Fait** : module `classements` de l'API, `GET /api/v1/classements?semaine=` (la semaine en cours, provisoire, et les deux précédentes, arrêtées ; chiffres de la semaine ; quatre palmarès de cinq : méthodes réussies, entraide, créations utiles, astuces vérifiées, comptés sur les gestes des autres membres pendant la semaine ; classement de la semaine et général, cinquante premiers, rang partagé à égalité, évolution depuis la semaine précédente ; votre place). Membres actifs seulement (RG-87). Page `/classements` portée du prototype (CSS d'origine, rendu serveur `lib/classements/rendu.ts`, `scripts/classements.ts` : onglets, filtre par niveau, cinquante premiers, apparition au défilement). 2 tests de bout en bout. Reporté (S-08b) : choix de l'outil, fiche d'un membre (les noms mènent au profil), section du défi (S-07), « Ils progressent » (passages de niveau, badges : S-09), tableau des vérifications d'une astuce outil par outil (le vote « Testé, ça marche » ne garde ni outil ni modèle), moment clé des créations utiles, animation des compteurs. F-75, RG-87 |
 | S-09 | Badges : attribution automatique et affichage | ⬜ | F-74, RG-86 |
 | S-10 | Connexion GitHub et Google (AUTH-08) | ⬜ | F-02 |
 | S-11 | Recherche globale (loupe, Ctrl K ; proto `recherche.*`) | ⬜ | |
@@ -373,6 +373,13 @@ Ordre retenu par le porteur du projet pour boucler le backend de la bêta fermé
 - La photo est envoyée à l’API (carré de 256 px recadré par le serveur, MEDIA-01) au lieu d’être recadrée dans le navigateur ; « Complétez votre profil » fermé reste fermé sur l’appareil.
 
 ## Journal
+
+### 2026-10-31 — Classements (S-08, base)
+
+- API : module `classements` (`ClassementsService`), contrat `ClassementsApi` (`@vysora/shared`, `contrats/classements.ts`).
+- Site : `/classements` (prototype `classements.html`, `classements.css` copiée telle quelle, `classements-complements.css` pour les liens vers les profils et quatre lauréats au lieu de six).
+- Écarts au prototype : pas de choix de l'outil, ni de fiche membre, ni de défi, ni de progression (reportés, voir S-08) ; les membres mènent à leur profil.
+- Suite : S-07 (défis), S-09 (badges).
 
 ### 2026-10-31 — Administration, base (ADM-01)
 

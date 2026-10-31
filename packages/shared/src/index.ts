@@ -35,6 +35,7 @@ export * from './contrats/notifications';
 export * from './contrats/mes-contenus';
 export * from './contrats/moderation';
 export * from './contrats/administration';
+export * from './contrats/classements';
 export * from './contrats/forum';
 export * from './contrats/bon-reflexe';
 export * from './contrats/parametres';
