@@ -392,6 +392,10 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 
 ## Journal
 
+### 2026-10-31 — Tableau de portage à jour
+
+- `docs/portage-prototype.md` donnait encore comme manquants « Ouvrir le dossier » de la fiche (MOD-02), répondre et accepter depuis les notifications (FORUM-01), les deux étapes de la connexion (SEC-02) et l'invitation de l'inscription (INV-01), tous faits ; il nomme désormais ce qui reste réellement (S-06 étiquettes, S-08, S-10).
+
 ### 2026-10-31 — Participer à un défi depuis l'éditeur (S-07)
 
 - Démarrage : `main` à jour avec `origin/main` ; aucune branche en avance à reprendre (les deux branches `claude/*` d'un commit d'avance sont les premières versions d'AUTH-07 et de LEG-01, dépassées). Base de test de la session : `vysora_test_defi_editeur`.
