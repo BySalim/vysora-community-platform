@@ -1,16 +1,40 @@
-/* Référentiels dans l'administration (ADM-02, EC-22, F-95, RG-110) : libellés des types d'outil et
-   regroupement par famille, dans l'ordre du catalogue du prototype ; icônes des catégories ; badges
-   par catégorie. */
+/* Administration : rôles, état d'un compte et de sa double authentification (ADM-01, EC-23) ;
+   référentiels (ADM-02, EC-22, F-95, RG-110) : libellés des types d'outil et regroupement par
+   famille, dans l'ordre du catalogue du prototype ; icônes des catégories ; badges par catégorie. */
 import {
   CATEGORIES_BADGE,
   type BadgeAdministreApi,
   type CategorieBadge,
   type FamilleOutil,
   type IconeCategorie,
+  type MembreAdministreApi,
   type OutilAdministreApi,
+  type Role,
+  type StatutCompte,
   type TypeOutil,
 } from '@vysora/shared';
 import { FAMILLES } from './publier/donnees';
+
+export const LIBELLES_ROLE: Record<Role, string> = {
+  MEMBRE: 'Membre',
+  MODERATEUR: 'Modérateur',
+  ADMINISTRATEUR: 'Administrateur',
+};
+
+/** SEC-02 : état de la double authentification d'un compte, et sa classe. */
+export const DEUX_FACTEURS: Record<MembreAdministreApi['deuxFacteurs'], [string, string]> = {
+  active: ['Vérification en deux étapes activée', 'is-ok'],
+  'en-attente': ['Vérification en deux étapes commencée, jamais confirmée', 'is-alerte'],
+  absente: ['Vérification en deux étapes à configurer', ''],
+};
+
+/** État d'un compte qui n'est pas actif (RG-103, RG-05). */
+export const LIBELLES_STATUT_COMPTE: Record<StatutCompte, string> = {
+  ACTIF: '',
+  EN_SUPPRESSION: 'Suppression demandée',
+  BANNI: 'Compte banni',
+  SUPPRIME: 'Compte supprimé',
+};
 
 export const LIBELLES_TYPE_OUTIL: Record<TypeOutil, string> = {
   ASSISTANT_CONVERSATIONNEL: 'Assistant conversationnel',

@@ -34,6 +34,7 @@ export const ROUTES = {
   moderation: '/moderation/signalements',
   /** Dossier d'un contenu dans la modération (MOD-02) : l'identifiant est celui du contenu. */
   dossierModeration: (contenuId: number) => `/moderation/signalements/${contenuId}`,
+  dossierMembre: (membreId: number) => `/admin/membres/${membreId}`,
   casAValider: '/moderation/cas',
   examenCas: (casId: number) => `/moderation/cas/${casId}`,
   administration: '/admin/roles',

@@ -189,3 +189,14 @@
   .ad-versions th { width: auto; }
   .ad-versions td[data-libelle]::before { content: attr(data-libelle) " : "; color: var(--text-muted); }
 }
+
+/* Dossier d'un membre (ADM-02) : tête du membre et champs des décisions réservées aux administrateurs */
+.ad-dossier-membre { align-items: center; gap: 16px; }
+.ad-dossier-membre .md-titre-dossier { margin: 0; }
+.md-tete .ad-dossier-membre span { margin-top: 6px; }
+.md-champ select {
+  width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: var(--r-control); background: var(--white);
+  color: var(--text); font: 500 0.9375rem/1.3 var(--font-body);
+}
+.md-champ select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent); }
+.md-section .md-cas-faits { margin-top: 0; }

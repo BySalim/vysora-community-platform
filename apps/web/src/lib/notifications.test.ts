@@ -147,6 +147,29 @@ describe('Ce qui reste « À traiter »', () => {
     expect(categorieDe('NIVEAU_ATTEINT')).toBe('progression');
   });
 
+  it('annonce les décisions des administrateurs sur le membre (ADM-02)', () => {
+    const ajustement = notification({
+      type: 'DECISION_MODERATION',
+      points: -30,
+      decision: { action: 'AJUSTER_REPUTATION', finSuspension: null, contenu: null },
+    });
+    expect(titreDetail(ajustement)).toBe('Votre réputation a été corrigée');
+    expect(epinglee(ajustement)).toBe(false);
+    const retrait = notification({
+      type: 'DECISION_MODERATION',
+      badge: {
+        code: 'PODIUM',
+        libelle: 'Podium',
+        critere: 'Finir sur le podium d’un défi',
+        categorie: 'COMMUNAUTE',
+        icone: 'podium',
+        ton: 'AMBRE',
+      },
+      decision: { action: 'RETIRER_BADGE', finSuspension: null, contenu: null },
+    });
+    expect(resume(retrait)).toBe('le badge « Podium » vous a été retiré');
+  });
+
   it('nomme le contenu visé par la modération, accordé à son type (MOD-01)', () => {
     const decision = (
       type: NotificationApi['type'],

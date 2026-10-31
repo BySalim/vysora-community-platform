@@ -1,11 +1,15 @@
 /* Écrans de la modération (MOD-02, EC-19) : ce que la file et le dossier d'un contenu affichent
-   (nature du contenu, page où il se lit, ancienneté, effet de chaque décision). Les règles viennent
-   de l'API et de @vysora/shared (actionsPossibles, issueDesSignalements). */
+   (nature du contenu, page où il se lit, ancienneté, effet de chaque décision). Les décisions
+   réservées aux administrateurs (ADM-02 : bannir, ajuster la réputation, retirer un badge) se
+   prennent depuis le dossier d'un membre. Les règles viennent de l'API et de @vysora/shared
+   (actionsPossibles, actionsAdministrateurPossibles, issueDesSignalements). */
 
 import {
   DELAIS,
   issueDesSignalements,
+  type ActionDecisionAdministrateur,
   type ActionDecisionModerateur,
+  type DecisionApi,
   type PageDuContenuApi,
   type StatutSignalement,
   type TypeContenu,
@@ -151,4 +155,51 @@ export function issueAnnoncee(action: ActionDecisionModerateur, ouverts: number)
   return ouverts > 1
     ? `Les ${fmt(ouverts)} signalements ouverts seront clos comme ${issue}s.`
     : `Le signalement ouvert sera clos comme ${issue}.`;
+}
+
+/** Ce que chaque décision réservée aux administrateurs change (RG-102, RG-103, CI-24). */
+export const EFFETS_ACTION_ADMINISTRATEUR: Record<ActionDecisionAdministrateur, string> = {
+  BANNIR:
+    'Le compte est fermé : le membre est déconnecté et ne peut plus se connecter. Ses contenus restent en place, la modération décide de chacun. Cette mesure est définitive.',
+  AJUSTER_REPUTATION:
+    'En cas de fraude avérée : des points sont ajoutés à sa réputation ou en sont retirés, et son niveau suit.',
+  RETIRER_BADGE: 'Le badge disparaît de son profil et ne lui sera plus attribué.',
+};
+
+export const QUESTIONS_ACTION_ADMINISTRATEUR: Record<ActionDecisionAdministrateur, string> = {
+  BANNIR: 'Fermer ce compte ?',
+  AJUSTER_REPUTATION: 'Ajuster la réputation ?',
+  RETIRER_BADGE: 'Retirer ce badge ?',
+};
+
+/** Points ajoutés ou retirés, signés : « +90 points », « −30 points ». */
+export const pointsSignes = (points: number): string =>
+  `${points > 0 ? '+' : '−'}${pluriel(Math.abs(points), 'point', 'points')}`;
+
+/** Ce qu'une décision précise en plus de son action : les points d'un ajustement, le badge retiré. */
+export function precisionDecision(d: Pick<DecisionApi, 'points' | 'badge'>): string {
+  if (d.points !== null) return pointsSignes(d.points);
+  if (d.badge) return `Badge « ${d.badge.libelle} »`;
+  return '';
+}
+
+/** Texte de la fenêtre de confirmation d'une décision sur un membre : ce qu'elle change, l'e-mail
+    (et la notification, sauf pour un compte fermé qui ne se connecte plus), décision immuable. */
+export function confirmationDecisionMembre(
+  action: ActionDecisionAdministrateur,
+  precision: { points?: number | null; reputation?: number; badge?: string | null } = {},
+): string {
+  const points = precision.points ?? 0;
+  const apres = Math.max(0, (precision.reputation ?? 0) + points);
+  return [
+    action === 'BANNIR'
+      ? 'Le compte sera fermé, ses sessions aussi.'
+      : action === 'AJUSTER_REPUTATION'
+        ? `${points > 0 ? `${pluriel(points, 'point sera ajouté à', 'points seront ajoutés à')}` : `${pluriel(-points, 'point sera retiré de', 'points seront retirés de')}`} sa réputation, qui passera à ${pluriel(apres, 'point', 'points')}.`
+        : `Le badge « ${precision.badge ?? ''} » sera retiré de son profil et ne lui sera plus attribué.`,
+    action === 'BANNIR'
+      ? 'Le membre en est informé par e-mail, avec votre motif.'
+      : 'Le membre en est informé par e-mail et dans ses notifications, avec votre motif.',
+    'La décision ne pourra plus être modifiée.',
+  ].join(' ');
 }

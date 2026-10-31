@@ -11,6 +11,7 @@ import {
   type MembreAdministreApi,
   type Role,
 } from '@vysora/shared';
+import { LIBELLES_ROLE } from '../lib/administration';
 import {
   afficherErreurs,
   confirmer,
@@ -21,12 +22,6 @@ import {
 import { api } from './commun/api';
 import { dateCourte, dateLongue } from '../lib/texte';
 import { $, $$, esc, messageApresChargement, t, toast, typo } from './commun/outils';
-
-const LIBELLES_ROLE: Record<Role, string> = {
-  MEMBRE: 'Membre',
-  MODERATEUR: 'Modérateur',
-  ADMINISTRATEUR: 'Administrateur',
-};
 
 dialogue?.addEventListener('close', () => {
   // Annulé : les listes reprennent le rôle actuel.

@@ -162,6 +162,10 @@ function titreDecision(n: NotificationApi): string {
       return 'Un avertissement a été ajouté à votre création';
     case 'RETIRER_AVERTISSEMENT_AGENT':
       return 'L’avertissement de votre création a été retiré';
+    case 'AJUSTER_REPUTATION':
+      return 'Votre réputation a été corrigée';
+    case 'RETIRER_BADGE':
+      return `Le badge « ${n.badge?.libelle ?? ''} » vous a été retiré`;
     default:
       return 'La modération a pris une décision qui vous concerne';
   }

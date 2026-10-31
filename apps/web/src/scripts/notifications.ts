@@ -24,6 +24,7 @@ import {
   type SujetApi,
 } from '@vysora/shared';
 import { LIBELLES_TYPE } from '../lib/creations';
+import { pointsSignes } from '../lib/moderation';
 import { ROUTES } from '../lib/navigation';
 import {
   CATEGORIES,
@@ -339,6 +340,8 @@ function entete(n: NotificationApi): { quoi: string; titre: string; extrait: str
         SUPPRIMER: `${majuscule(vise.nom)} supprimé${vise.e} : « ${vise.intitule} »`,
         AJOUTER_AVERTISSEMENT_AGENT: `Avertissement « instructions pour agent » : « ${vise.intitule} »`,
         RETIRER_AVERTISSEMENT_AGENT: `Avertissement retiré : « ${vise.intitule} »`,
+        AJUSTER_REPUTATION: `Réputation corrigée : ${pointsSignes(n.points ?? 0)}`,
+        RETIRER_BADGE: `Badge retiré : « ${n.badge?.libelle ?? ''} »`,
       };
       return {
         quoi: 'Décision de la modération',
@@ -664,7 +667,23 @@ function corps(n: NotificationApi): string {
                       `« ${vise.intitule} » ne porte plus l’avertissement « instructions pour agent ».`,
                     ],
                   ]
-                : [['alert', 'Un nouvel écart peut entraîner la suspension du compte.']];
+                : n.decision?.action === 'AJUSTER_REPUTATION'
+                  ? [
+                      [
+                        'trend-up',
+                        (n.points ?? 0) > 0
+                          ? `${pluriel(n.points ?? 0, 'point a été ajouté', 'points ont été ajoutés')} à votre réputation.`
+                          : `${pluriel(-(n.points ?? 0), 'point a été retiré', 'points ont été retirés')} de votre réputation.`,
+                      ],
+                    ]
+                  : n.decision?.action === 'RETIRER_BADGE'
+                    ? [
+                        [
+                          'award',
+                          `Le badge « ${n.badge?.libelle ?? ''} » n’apparaît plus sur votre profil et ne vous sera plus attribué.`,
+                        ],
+                      ]
+                    : [['alert', 'Un nouvel écart peut entraîner la suspension du compte.']];
       return `${n.motif ? `<div class="nt-motif"><p><b>Motif</b>${t(n.motif)}</p></div>` : ''}
           <ul class="nt-effets">${[...effets, ['mail', 'Cette décision vous a aussi été envoyée par e-mail.']].map(([i, texte]) => `<li>${icon(i as string)}<span>${t(texte)}</span></li>`).join('')}</ul>`;
     }

@@ -1,14 +1,18 @@
-import { ACTIONS_DECISION_MODERATEUR } from '@vysora/shared';
+import { ACTIONS_DECISION_ADMINISTRATEUR, ACTIONS_DECISION_MODERATEUR } from '@vysora/shared';
 import { describe, expect, it } from 'vitest';
 import {
   EFFETS_ACTION,
+  EFFETS_ACTION_ADMINISTRATEUR,
   GROUPES_ACTIONS,
   QUESTIONS_ACTION,
+  QUESTIONS_ACTION_ADMINISTRATEUR,
   adresseDuContenu,
   anciennete,
   confirmationDecision,
+  confirmationDecisionMembre,
   finSuspension,
   issueAnnoncee,
+  precisionDecision,
 } from './moderation';
 
 describe('confirmationDecision (RG-102, F-92)', () => {
@@ -76,5 +80,42 @@ describe('décisions du formulaire', () => {
     expect(GROUPES_ACTIONS.flatMap((g) => g.actions).toSorted()).toEqual(
       [...ACTIONS_DECISION_MODERATEUR].toSorted(),
     );
+  });
+});
+
+describe('décisions des administrateurs (ADM-02, RG-102)', () => {
+  it('décrivent chaque action réservée aux administrateurs', () => {
+    expect(Object.keys(EFFETS_ACTION_ADMINISTRATEUR).toSorted()).toEqual(
+      [...ACTIONS_DECISION_ADMINISTRATEUR].toSorted(),
+    );
+    expect(Object.keys(QUESTIONS_ACTION_ADMINISTRATEUR).toSorted()).toEqual(
+      [...ACTIONS_DECISION_ADMINISTRATEUR].toSorted(),
+    );
+  });
+
+  it('confirment ce que la décision change, sans notification pour un compte fermé', () => {
+    expect(confirmationDecisionMembre('BANNIR')).toBe(
+      'Le compte sera fermé, ses sessions aussi. Le membre en est informé par e-mail, avec votre motif. La décision ne pourra plus être modifiée.',
+    );
+    expect(
+      confirmationDecisionMembre('AJUSTER_REPUTATION', { points: -30, reputation: 20 }),
+    ).toMatch(
+      /^30 points seront retirés de sa réputation, qui passera à 0 point\. Le membre en est informé par e-mail et dans ses notifications/,
+    );
+    expect(confirmationDecisionMembre('AJUSTER_REPUTATION', { points: 1, reputation: 20 })).toMatch(
+      /^1 point sera ajouté à sa réputation, qui passera à 21 points\./,
+    );
+    expect(confirmationDecisionMembre('RETIRER_BADGE', { badge: 'Podium' })).toMatch(
+      /^Le badge « Podium » sera retiré de son profil et ne lui sera plus attribué\./,
+    );
+  });
+
+  it('précisent les points d’un ajustement et le badge retiré', () => {
+    expect(precisionDecision({ points: -1200, badge: null })).toBe('−1\u202f200 points');
+    expect(precisionDecision({ points: 1, badge: null })).toBe('+1 point');
+    expect(precisionDecision({ points: null, badge: { code: 'PODIUM', libelle: 'Podium' } })).toBe(
+      'Badge « Podium »',
+    );
+    expect(precisionDecision({ points: null, badge: null })).toBe('');
   });
 });

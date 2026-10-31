@@ -1,0 +1,426 @@
+---
+/* Dossier d'un membre et décisions réservées aux administrateurs (ADM-02, RG-102, RG-103, CI-24) :
+   bannir, ajuster la réputation, retirer un badge. Écran sans maquette dans le prototype, conçu
+   comme le dossier d'un contenu (MOD-02) : tête du membre, sections à filets (compte, badges,
+   décisions qui l'ont visé ou ont visé ses contenus), panneau clair du formulaire. Rendu par le
+   serveur depuis GET /api/v1/admin/membres/:id ; le formulaire ne propose que les décisions
+   possibles (`actions`) et scripts/dossier-membre.ts l'envoie après confirmation. RG-104 : aucune
+   décision sur son propre compte. */
+import {
+  LIBELLES_ACTION_DECISION,
+  LIMITES,
+  LONGUEURS,
+  raisonRefus,
+  type DossierMembreApi,
+} from '@vysora/shared';
+import AccesBloc from '../../../components/AccesBloc.astro';
+import AvatarMembre from '../../../components/AvatarMembre.astro';
+import OngletsAdministration from '../../../components/OngletsAdministration.astro';
+import Base from '../../../layouts/Base.astro';
+import { embleme } from '../../../lib/accueil/elements';
+import { DEUX_FACTEURS, LIBELLES_ROLE, LIBELLES_STATUT_COMPTE } from '../../../lib/administration';
+import { appelerApi, ErreurApi } from '../../../lib/api';
+import { EFFETS_ACTION_ADMINISTRATEUR, precisionDecision } from '../../../lib/moderation';
+import { ROUTES } from '../../../lib/navigation';
+import { dateCourte, dateLongue, enPhrase, fmt, pluriel, typo } from '../../../lib/texte';
+import '../../../styles/moderation.css';
+import '../../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+const id = /^\d{1,15}$/.test(Astro.params.id ?? '') ? Number(Astro.params.id) : null;
+let dossier: DossierMembreApi | null = null;
+let introuvable = false;
+if (raison === 'role') Astro.response.status = 403;
+else if (!raison && id === null) introuvable = true;
+else if (!raison) {
+  try {
+    dossier = await appelerApi<DossierMembreApi>(`/api/v1/admin/membres/${id}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+    introuvable = true;
+  }
+}
+if (introuvable) Astro.response.status = 404;
+
+const membre = dossier?.membre;
+const statut = membre ? LIBELLES_STATUT_COMPTE[membre.statutCompte] : '';
+const [texte2fa] = membre ? DEUX_FACTEURS[membre.deuxFacteurs] : [''];
+const actif = membre?.statutCompte === 'ACTIF';
+const reputation = dossier?.pointsReputation ?? 0;
+/** Pourquoi aucune décision n'est proposée. */
+const sansDecision = !dossier
+  ? ''
+  : dossier.soi
+    ? 'C’est votre compte : un autre administrateur prend les décisions qui vous concernent.'
+    : membre?.statutCompte === 'BANNI'
+      ? 'Ce compte est fermé : plus aucune décision n’est possible. Son dossier reste consultable.'
+      : 'Ce compte a été supprimé : plus aucune décision n’est possible. Son dossier reste consultable.';
+
+const icones = [
+  'user',
+  'shield',
+  'award',
+  'history',
+  'lock',
+  'info',
+  'arrow-up-right',
+  'calendar',
+  'trend-up',
+  ...(dossier?.badges.map((b) => b.icone) ?? []),
+];
+---
+
+<Base
+  titre={membre ? `Dossier : ${membre.membre.nom}` : 'Dossier d’un membre'}
+  description="Dossier d’un membre : compte, réputation, badges, décisions de modération et mesures réservées aux administrateurs."
+  classeCorps="md"
+  icones={icones}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <nav class="md-ariane" aria-label="Fil d’Ariane">
+      <ol>
+        <li>
+          <a href={ROUTES.administration}>Rôles de l’équipe</a>
+        </li>
+        <li>
+          <span aria-current="page">{membre ? `@${membre.membre.pseudo}` : 'Dossier'}</span>
+        </li>
+      </ol>
+    </nav>
+    {membre ? (
+      <>
+        <p class="md-rubrique">
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-user" />
+          </svg>
+          Dossier d’un membre
+          {statut && (
+            <>
+              <span class="md-sep" aria-hidden="true">
+                ·
+              </span>
+              <span class="md-etat is-masque">{statut}</span>
+            </>
+          )}
+        </p>
+        <div class="md-meta">
+          <div class="md-auteur ad-dossier-membre">
+            <AvatarMembre membre={membre.membre} taille={56} />
+            <div>
+              <h1 class="md-titre-dossier">{membre.membre.nom}</h1>
+              <span>
+                {`@${membre.membre.pseudo} · ${LIBELLES_ROLE[membre.role]} · ${membre.membre.niveau.libelle}`}
+              </span>
+            </div>
+          </div>
+          <div class="md-meta-actions">
+            {actif && (
+              <a class="btn btn-secondary btn-sm" href={ROUTES.profil(membre.membre.pseudo)}>
+                Voir le profil
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-arrow-up-right" />
+                </svg>
+              </a>
+            )}
+            {dossier && dossier.actions.length > 0 && (
+              <a class="btn btn-primary btn-sm md-aller" href="#md-decision">
+                Prendre une décision
+              </a>
+            )}
+          </div>
+        </div>
+        {dossier?.suspensionJusqua && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-lock" />
+            </svg>
+            <span>
+              <b>{`Compte suspendu jusqu’au ${dateLongue(dossier.suspensionJusqua)}.`}</b>
+              {typo(
+                ' Le membre lit les contenus et gère ses paramètres, sans publier ni interagir.',
+              )}
+            </span>
+          </p>
+        )}
+        {membre.statutCompte === 'EN_SUPPRESSION' && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-info" />
+            </svg>
+            <span>
+              <b>Suppression du compte demandée.</b>
+              {typo(
+                ' Le compte sera supprimé au terme des 30 jours ; s’il se reconnecte, sa demande est annulée.',
+              )}
+            </span>
+          </p>
+        )}
+      </>
+    ) : (
+      <h1>Dossier d’un membre</h1>
+    )}
+    {!raison && <OngletsAdministration actif="roles" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="consulter le dossier d’un membre" />
+    </div>
+  ) : introuvable ? (
+    <div class="container md-file">
+      <div class="md-vide">
+        <span class="md-vide-icone" aria-hidden="true">
+          <svg class="icon">
+            <use href="#i-user" />
+          </svg>
+        </span>
+        <h2>Ce membre est introuvable</h2>
+        <p>{typo('L’adresse ne correspond à aucun compte de Vysora.')}</p>
+        <a class="btn btn-secondary" href={ROUTES.administration}>
+          Revenir à l’équipe
+        </a>
+      </div>
+    </div>
+  ) : (
+    dossier &&
+    membre && (
+      <div class="container md-dossier">
+        <div class="md-principal">
+          <section class="md-section" aria-labelledby="ad-compte-titre">
+            <h2 id="ad-compte-titre">Compte</h2>
+            <ul class="md-cas-faits">
+              <li>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-calendar" />
+                </svg>
+                {`Inscrit le ${dateLongue(membre.dateInscription)}`}
+              </li>
+              <li>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-trend-up" />
+                </svg>
+                {`${pluriel(Math.max(0, reputation), 'point', 'points')} de réputation`}
+                {reputation < 0 && typo(` (${fmt(reputation)} en tout, affichée 0 sur le site)`)}
+              </li>
+              <li>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-shield" />
+                </svg>
+                {typo(texte2fa)}
+              </li>
+            </ul>
+          </section>
+
+          <section class="md-section" aria-labelledby="ad-badges-titre">
+            <div class="md-section-tete">
+              <h2 id="ad-badges-titre">Badges</h2>
+              {dossier.badges.length > 0 && (
+                <p>{pluriel(dossier.badges.length, 'badge obtenu', 'badges obtenus')}</p>
+              )}
+            </div>
+            {dossier.badges.length ? (
+              <ul class="ad-refs">
+                {dossier.badges.map((b) => (
+                  <li class="ad-badge">
+                    <Fragment set:html={embleme(b)} />
+                    <span class="ad-membre-corps">
+                      <span class="ad-membre-nom">{b.libelle}</span>
+                      <span class="ad-membre-meta">
+                        <span>{typo(b.critere)}</span>
+                        <span>{`Obtenu le ${dateCourte(b.date)}`}</span>
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="md-rien">Aucun badge pour l’instant.</p>
+            )}
+          </section>
+
+          <section class="md-section" aria-labelledby="ad-decisions-titre">
+            <div class="md-section-tete">
+              <h2 id="ad-decisions-titre">Décisions</h2>
+              <p>Décisions qui ont visé ce membre ou ses contenus</p>
+            </div>
+            {dossier.decisions.length ? (
+              <ol class="md-fil">
+                {dossier.decisions.map((d) => (
+                  <li class="md-ligne">
+                    <AvatarMembre membre={d.decideur} taille={32} />
+                    <div class="md-ligne-corps">
+                      <p class="md-ligne-haut">
+                        <b>{typo(LIBELLES_ACTION_DECISION[d.action])}</b>
+                        <span>
+                          {[
+                            precisionDecision(d),
+                            `Par ${d.decideur.nom}, le ${dateCourte(d.date)}`,
+                            d.finSuspension ? `jusqu’au ${dateLongue(d.finSuspension)}` : '',
+                          ]
+                            .filter(Boolean)
+                            .map(typo)
+                            .join(' · ')}
+                        </span>
+                        <span class="md-ref">{`Décision n° ${d.id}`}</span>
+                      </p>
+                      {d.contenuId !== null && (
+                        <p class="md-ligne-sur">
+                          Sur{' '}
+                          <a href={ROUTES.dossierModeration(d.contenuId)}>
+                            {typo(d.intituleContenu ?? `le contenu n° ${d.contenuId}`)}
+                          </a>
+                        </p>
+                      )}
+                      <p class="md-ligne-texte">{typo(enPhrase(d.motif))}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p class="md-rien">Aucune décision n’a visé ce membre jusqu’ici.</p>
+            )}
+          </section>
+        </div>
+
+        <aside class="md-decision" id="md-decision" aria-labelledby="md-decision-titre">
+          <h2 id="md-decision-titre">Prendre une décision</h2>
+          {dossier.actions.length ? (
+            <form
+              class="md-form"
+              novalidate
+              autocomplete="off"
+              data-ad-dossier
+              data-membre={membre.membre.id}
+              data-reputation={reputation}
+            >
+              <fieldset class="md-actions">
+                <legend class="sr-only">Décision</legend>
+                <div class="md-groupe" role="group" aria-label="Réservées aux administrateurs">
+                  <p class="md-groupe-titre" aria-hidden="true">
+                    Réservées aux administrateurs
+                  </p>
+                  {dossier.actions.map((action) => (
+                    <label class="md-choix">
+                      <input type="radio" name="action" value={action} required />
+                      <span>
+                        <b>{typo(LIBELLES_ACTION_DECISION[action])}</b>
+                        <span>{typo(EFFETS_ACTION_ADMINISTRATEUR[action])}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <p class="md-erreur" data-md-erreur="action" hidden />
+
+              <div class="md-champ" data-ad-points hidden>
+                <label for="ad-points">Points</label>
+                <div class="md-duree">
+                  <input
+                    id="ad-points"
+                    name="points"
+                    type="number"
+                    inputmode="numeric"
+                    min={-LIMITES.ajustementReputation}
+                    max={LIMITES.ajustementReputation}
+                    step="1"
+                    aria-describedby="ad-points-aide ad-points-erreur"
+                  />
+                  <span>points</span>
+                </div>
+                <p class="md-aide" id="ad-points-aide" data-ad-points-aide>
+                  {typo(
+                    `Nombre positif pour ajouter des points, négatif pour en retirer. Réputation actuelle : ${pluriel(Math.max(0, reputation), 'point', 'points')}.`,
+                  )}
+                </p>
+                <p class="md-erreur" id="ad-points-erreur" data-md-erreur="points" hidden />
+              </div>
+
+              {dossier.badges.length > 0 && (
+                <div class="md-champ" data-ad-badge hidden>
+                  <label for="ad-badge">Badge à retirer</label>
+                  <select id="ad-badge" name="badge" aria-describedby="ad-badge-erreur">
+                    <option value="">Choisissez un badge</option>
+                    {dossier.badges.map((b) => (
+                      <option value={b.code}>{b.libelle}</option>
+                    ))}
+                  </select>
+                  <p class="md-erreur" id="ad-badge-erreur" data-md-erreur="badge" hidden />
+                </div>
+              )}
+
+              <div class="md-champ">
+                <label for="md-motif">Motif communiqué au membre</label>
+                <textarea
+                  id="md-motif"
+                  name="motif"
+                  rows="5"
+                  maxlength={LONGUEURS.motifDecision.max}
+                  required
+                  aria-describedby="md-motif-aide md-motif-erreur"
+                />
+                <p class="md-aide" id="md-motif-aide">
+                  <span>{typo('Envoyé au membre par e-mail et conservé avec la décision.')}</span>
+                  <span class="md-compteur" data-md-compteur>
+                    {`0 / ${fmt(LONGUEURS.motifDecision.max)}`}
+                  </span>
+                </p>
+                <p class="md-erreur" id="md-motif-erreur" data-md-erreur="motif" hidden />
+              </div>
+
+              <p class="md-erreur" data-md-erreur="general" role="alert" hidden />
+              <button class="btn btn-primary md-envoyer" type="submit">
+                Enregistrer la décision
+              </button>
+              <p class="md-note">
+                {typo(
+                  'Une décision ne se modifie plus : une erreur se corrige par une nouvelle décision.',
+                )}
+              </p>
+            </form>
+          ) : (
+            <p class="md-rien">{typo(sansDecision)}</p>
+          )}
+        </aside>
+      </div>
+    )
+  )}
+
+  <Fragment slot="fin">
+    {dossier && dossier.actions.length > 0 && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="md-dialogue-titre"
+        aria-describedby="md-dialogue-texte"
+        data-md-dialogue
+      >
+        <form method="dialog" class="md-dialogue-form">
+          <h2 id="md-dialogue-titre" data-md-dialogue-titre />
+          <p id="md-dialogue-texte" data-md-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Annuler
+            </button>
+            <button class="btn btn-primary" type="button" data-md-confirmer>
+              Confirmer la décision
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../../../scripts/dossier-membre';
+</script>

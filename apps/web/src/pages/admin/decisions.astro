@@ -14,6 +14,7 @@ import AvatarMembre from '../../components/AvatarMembre.astro';
 import OngletsAdministration from '../../components/OngletsAdministration.astro';
 import Base from '../../layouts/Base.astro';
 import { appelerApi, ErreurApi } from '../../lib/api';
+import { precisionDecision } from '../../lib/moderation';
 import { ROUTES } from '../../lib/navigation';
 import { dateCourte, dateLongue, enPhrase, fmt, pluriel, typo } from '../../lib/texte';
 import '../../styles/moderation.css';
@@ -158,6 +159,7 @@ const filtre = Object.values(filtres).some(Boolean);
                     <b>{typo(LIBELLES_ACTION_DECISION[d.action])}</b>
                     <span>
                       {[
+                        precisionDecision(d),
                         `Par ${d.decideur.nom}, le ${dateCourte(d.date)}`,
                         d.finSuspension ? `jusqu’au ${dateLongue(d.finSuspension)}` : '',
                         d.signalementsClos
@@ -165,6 +167,7 @@ const filtre = Object.values(filtres).some(Boolean);
                           : '',
                       ]
                         .filter(Boolean)
+                        .map(typo)
                         .join(' · ')}
                     </span>
                     <span class="md-ref">{`Décision n° ${d.id}`}</span>
@@ -178,7 +181,12 @@ const filtre = Object.values(filtres).some(Boolean);
                     </p>
                   )}
                   {d.membreVise && (
-                    <p class="md-ligne-sur">{`Membre visé : ${d.membreVise.nom} (@${d.membreVise.pseudo})`}</p>
+                    <p class="md-ligne-sur">
+                      {'Membre visé : '}
+                      <a href={ROUTES.dossierMembre(d.membreVise.id)}>
+                        {`${d.membreVise.nom} (@${d.membreVise.pseudo})`}
+                      </a>
+                    </p>
                   )}
                   <p class="md-ligne-texte">{typo(enPhrase(d.motif))}</p>
                 </div>

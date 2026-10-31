@@ -1,19 +1,17 @@
 ---
 /* Rôles de l'équipe (ADM-01, EC-23, F-96, RG-111). Écran sans maquette dans le prototype, conçu dans
    le style des écrans de modération : l'équipe par défaut, ou les membres trouvés ; pour chacun, son
-   rôle et l'état de sa double authentification (SEC-02). Les changements partent de
-   scripts/administration.ts, après confirmation. */
-import {
-  raisonRefus,
-  type ListeMembresAdministresApi,
-  type MembreAdministreApi,
-  type Role,
-} from '@vysora/shared';
+   rôle et l'état de sa double authentification (SEC-02), et un lien vers son dossier (décisions
+   réservées aux administrateurs). Les changements partent de scripts/administration.ts, après
+   confirmation. */
+import { raisonRefus, type ListeMembresAdministresApi, type Role } from '@vysora/shared';
 import AccesBloc from '../../components/AccesBloc.astro';
 import AvatarMembre from '../../components/AvatarMembre.astro';
 import OngletsAdministration from '../../components/OngletsAdministration.astro';
 import Base from '../../layouts/Base.astro';
+import { DEUX_FACTEURS, LIBELLES_ROLE, LIBELLES_STATUT_COMPTE } from '../../lib/administration';
 import { appelerApi } from '../../lib/api';
+import { ROUTES } from '../../lib/navigation';
 import { dateCourte, pluriel, typo } from '../../lib/texte';
 import '../../styles/moderation.css';
 import '../../styles/moderation-complements.css';
@@ -36,22 +34,7 @@ const liste = raison
     );
 const moi = Astro.locals.membre?.id ?? null;
 
-const ROLES: [Role, string][] = [
-  ['MEMBRE', 'Membre'],
-  ['MODERATEUR', 'Modérateur'],
-  ['ADMINISTRATEUR', 'Administrateur'],
-];
-const DEUX_FACTEURS: Record<MembreAdministreApi['deuxFacteurs'], [string, string]> = {
-  active: ['Vérification en deux étapes activée', 'is-ok'],
-  'en-attente': ['Vérification en deux étapes commencée, jamais confirmée', 'is-alerte'],
-  absente: ['Vérification en deux étapes à configurer', ''],
-};
-const STATUTS: Record<string, string> = {
-  ACTIF: '',
-  SUSPENDU: 'Compte suspendu',
-  BANNI: 'Compte banni',
-  EN_SUPPRESSION: 'Suppression demandée',
-};
+const ROLES = Object.entries(LIBELLES_ROLE) as [Role, string][];
 ---
 
 <Base
@@ -136,12 +119,19 @@ const STATUTS: Record<string, string> = {
                       {(m.role !== 'MEMBRE' || m.deuxFacteurs !== 'absente') && (
                         <span class={classe2fa}>{typo(texte2fa)}</span>
                       )}
-                      {STATUTS[m.statutCompte] && (
-                        <span class="is-alerte">{STATUTS[m.statutCompte]}</span>
+                      {LIBELLES_STATUT_COMPTE[m.statutCompte] && (
+                        <span class="is-alerte">{LIBELLES_STATUT_COMPTE[m.statutCompte]}</span>
                       )}
                     </span>
                   </div>
                   <div class="ad-membre-actions">
+                    <a
+                      class="btn btn-secondary btn-sm"
+                      href={ROUTES.dossierMembre(m.membre.id)}
+                      aria-label={`Dossier de ${m.membre.nom}`}
+                    >
+                      Dossier
+                    </a>
                     <label class="sr-only" for={`ad-role-${m.membre.id}`}>
                       {`Rôle de ${m.membre.nom}`}
                     </label>

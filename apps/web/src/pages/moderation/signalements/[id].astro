@@ -28,10 +28,12 @@ import {
   TITRES_TEXTE,
   adresseDuContenu,
   lienDuContenu,
+  precisionDecision,
 } from '../../../lib/moderation';
 import { ROUTES } from '../../../lib/navigation';
 import { dateCourte, dateLongue, enPhrase, fmt, typo } from '../../../lib/texte';
 import '../../../styles/moderation.css';
+import '../../../styles/moderation-complements.css';
 
 let adresseClient: string | undefined;
 try {
@@ -42,6 +44,8 @@ try {
 
 const { etat } = Astro.locals;
 const raison = raisonRefus('moderer', etat);
+/** Un administrateur ouvre aussi le dossier de l'auteur (décisions réservées, ADM-02). */
+const administrateur = !raisonRefus('administrer', etat);
 const id = /^\d{1,15}$/.test(Astro.params.id ?? '') ? Number(Astro.params.id) : null;
 
 const INTROUVABLE = {
@@ -116,6 +120,7 @@ const icones = [
 /** Une décision, dans le dossier comme dans l'historique de l'auteur. */
 const resumeDecision = (d: DecisionApi) =>
   [
+    precisionDecision(d),
     `Par ${d.decideur.nom}, le ${dateCourte(d.date)}`,
     d.finSuspension ? `jusqu’au ${dateLongue(d.finSuspension)}` : '',
     d.signalementsClos
@@ -123,6 +128,7 @@ const resumeDecision = (d: DecisionApi) =>
       : '',
   ]
     .filter(Boolean)
+    .map(typo)
     .join(' · ');
 ---
 
@@ -340,6 +346,14 @@ const resumeDecision = (d: DecisionApi) =>
             <div class="md-section-tete">
               <h2 id="md-historique-titre">Historique de l’auteur</h2>
               <p>Décisions qui ont visé l’auteur ou ses autres contenus</p>
+              {administrateur && (
+                <a class="ad-lien" href={ROUTES.dossierMembre(contenu.auteur.id)}>
+                  Dossier du membre
+                  <svg class="icon icon-sm" aria-hidden="true">
+                    <use href="#i-arrow-up-right" />
+                  </svg>
+                </a>
+              )}
             </div>
             {dossier.historiqueAuteur.length ? (
               <ol class="md-fil">
