@@ -29,7 +29,11 @@ import { horodatage, identifiant, reference, valeursPermises } from './_outils.j
 export const editeur = pgTable('editeur', {
   id: identifiant(),
   nom: varchar({ length: 100 }).notNull().unique(),
+  /** Extension : clé stable, tirée du premier nom ; un nom modifié par l'administration ne la change
+      pas, et le chargement des référentiels (db:seed) repère l'éditeur par elle. */
+  slug: varchar({ length: 100 }).notNull().unique(),
   siteWeb: varchar({ length: 2048 }),
+  /** RG-110 : archivé, l'éditeur n'est plus proposé ; ses outils et modèles l'ont été avec lui. */
   estActif: boolean().notNull().default(true),
 });
 

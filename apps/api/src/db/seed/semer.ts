@@ -67,14 +67,15 @@ export async function semer(db: BaseDeDonnees): Promise<void> {
     const nomsEditeurs = [
       ...new Set([...OUTILS.map((o) => o.editeur), ...MODELES.map((m) => m.editeur)]),
     ];
+    // Un éditeur est repéré par sa clé : le nom que l'administration lui a donné reste (ADM-02).
     const editeurs = await tx
       .insert(editeur)
-      .values(nomsEditeurs.map((nom) => ({ nom })))
-      .onConflictDoUpdate({ target: editeur.nom, set: { nom: propose('nom') } })
-      .returning({ id: editeur.id, nom: editeur.nom });
-    const idEditeur = new Map(editeurs.map((e) => [e.nom, e.id]));
+      .values(nomsEditeurs.map((nom) => ({ nom, slug: slugifier(nom) })))
+      .onConflictDoUpdate({ target: editeur.slug, set: { slug: propose('slug') } })
+      .returning({ id: editeur.id, slug: editeur.slug });
+    const idEditeur = new Map(editeurs.map((e) => [e.slug, e.id]));
     const editeurDe = (nom: string) => {
-      const id = idEditeur.get(nom);
+      const id = idEditeur.get(slugifier(nom));
       if (!id) throw new Error(`Éditeur inconnu : ${nom}`);
       return id;
     };

@@ -13,8 +13,10 @@ import {
   categorie,
   defi,
   demandeGuide,
+  editeur,
   etiquette,
   guide,
+  invitation,
   journalAudit,
   licence,
   modele,
@@ -32,6 +34,13 @@ type Noms = (db: BaseDeDonnees, ids: number[]) => Promise<{ id: number; nom: str
 /** Nom actuel d'un élément visé, par type de cible ; une version d'un document légal se nomme par
     les détails inscrits (elle peut avoir été retirée). */
 const NOMS: Record<string, Noms> = {
+  invitation: (db, ids) =>
+    db
+      .select({ id: invitation.id, nom: invitation.code })
+      .from(invitation)
+      .where(inArray(invitation.id, ids)),
+  editeur: (db, ids) =>
+    db.select({ id: editeur.id, nom: editeur.nom }).from(editeur).where(inArray(editeur.id, ids)),
   outil: (db, ids) =>
     db.select({ id: outil.id, nom: outil.nom }).from(outil).where(inArray(outil.id, ids)),
   modele: (db, ids) =>

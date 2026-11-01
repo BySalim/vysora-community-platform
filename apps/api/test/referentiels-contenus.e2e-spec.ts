@@ -164,6 +164,59 @@ describe('Référentiels des contenus (ADM-02, F-95, RG-110)', () => {
     await contexte.db.delete(licence).where(eq(licence.id, creee.id));
   });
 
+  it('change l’ordre d’affichage des catégories et des licences, respecté partout (F-95)', async () => {
+    const categories = (await a.get('/api/v1/admin/categories').expect(200))
+      .body as CategorieAdministreeApi[];
+    const origine = categories.map((c) => c.id);
+    const [premiere, seconde, ...suite] = origine;
+    const nouvel = [seconde!, ...suite, premiere!];
+    const apres = (await a.put('/api/v1/admin/categories/ordre').send({ ids: nouvel }).expect(200))
+      .body as CategorieAdministreeApi[];
+    expect(apres.map((c) => c.id)).toEqual(nouvel);
+    const actives = new Set(apres.filter((c) => c.active).map((c) => c.id));
+    expect((await publics()).categories.map((c) => c.id)).toEqual(
+      nouvel.filter((id) => actives.has(id)),
+    );
+    const [entree] = await contexte.db
+      .select()
+      .from(journalAudit)
+      .where(eq(journalAudit.action, 'CATEGORIES_ORDONNEES'));
+    expect(entree).toMatchObject({ acteurId: adminId, cibleType: null, cibleId: null });
+    expect((entree!.details as { ordre: string[] }).ordre).toEqual(apres.map((c) => c.libelle));
+
+    // Liste incomplète, élément inconnu ou en double : refusés.
+    expect(
+      (
+        await a
+          .put('/api/v1/admin/categories/ordre')
+          .send({ ids: nouvel.slice(1) })
+          .expect(409)
+      ).body.detail,
+    ).toContain('ont changé entre-temps');
+    await a
+      .put('/api/v1/admin/categories/ordre')
+      .send({ ids: [...nouvel.slice(1), 999999] })
+      .expect(409);
+    await a
+      .put('/api/v1/admin/categories/ordre')
+      .send({ ids: [...nouvel, premiere] })
+      .expect(400);
+    await a.put('/api/v1/admin/categories/ordre').send({ ids: origine }).expect(200);
+
+    const licences = (await a.get('/api/v1/admin/licences').expect(200))
+      .body as LicenceAdministreeApi[];
+    const ordreLicences = licences.map((l) => l.id).toReversed();
+    await a.put('/api/v1/admin/licences/ordre').send({ ids: ordreLicences }).expect(200);
+    const proposees = new Set(licences.filter((l) => l.active).map((l) => l.id));
+    expect((await publics()).licences.map((l) => l.id)).toEqual(
+      ordreLicences.filter((id) => proposees.has(id)),
+    );
+    await a
+      .put('/api/v1/admin/licences/ordre')
+      .send({ ids: licences.map((l) => l.id) })
+      .expect(200);
+  });
+
   it('cherche les étiquettes et archive celles qui ne doivent plus être proposées', async () => {
     const liste = async (requete: string) =>
       (await a.get(`/api/v1/admin/etiquettes${requete}`).expect(200))

@@ -125,6 +125,12 @@ export class ReferentielsContenusService {
     return this.categorie(id);
   }
 
+  /** Ordre des domaines dans Explorer, l'accueil et les saisies (F-95). */
+  async ordonnerCategories(adminId: number, ids: number[]): Promise<CategorieAdministreeApi[]> {
+    await this.ordonner(adminId, 'categorie', ids);
+    return this.categories();
+  }
+
   private async categorie(id: number): Promise<CategorieAdministreeApi> {
     const [trouvee] = await this.categories(id);
     if (!trouvee) throw introuvable('Cette catégorie est introuvable.');
@@ -240,10 +246,55 @@ export class ReferentielsContenusService {
     return this.licences();
   }
 
+  /** Ordre des licences proposées à la publication d'une création (F-17, F-95). */
+  async ordonnerLicences(adminId: number, ids: number[]): Promise<LicenceAdministreeApi[]> {
+    await this.ordonner(adminId, 'licence', ids);
+    return this.licences();
+  }
+
   private async licence(id: number): Promise<LicenceAdministreeApi> {
     const trouvee = (await this.licences()).find((l) => l.id === id);
     if (!trouvee) throw introuvable('Cette licence est introuvable.');
     return trouvee;
+  }
+
+  /** Nouvel ordre d'affichage : tous les éléments du référentiel, archivés compris, chacun une fois.
+      Une liste qui ne correspond plus au référentiel (élément ajouté entre-temps) est refusée. */
+  private async ordonner(adminId: number, quoi: 'categorie' | 'licence', ids: number[]) {
+    const table = quoi === 'categorie' ? categorie : licence;
+    await this.db.transaction(async (tx) => {
+      // Verrou sur tout le référentiel : deux ordres envoyés en même temps s'appliquent l'un après l'autre.
+      const lignes = await tx
+        .select({ id: table.id, libelle: table.libelle, ordre: table.ordreAffichage })
+        .from(table)
+        .for('update');
+      const connus = new Set(lignes.map((l) => l.id));
+      if (ids.length !== lignes.length || ids.some((id) => !connus.has(id)))
+        throw conflit(
+          quoi === 'categorie'
+            ? 'Les catégories ont changé entre-temps : rechargez la page, puis recommencez.'
+            : 'Les licences ont changé entre-temps : rechargez la page, puis recommencez.',
+        );
+      const avant = lignes.toSorted((a, b) => a.ordre - b.ordre || a.id - b.id).map((l) => l.id);
+      if (avant.every((id, rang) => id === ids[rang])) return;
+      const liste = sql.join(
+        ids.map((id) => sql`${id}`),
+        sql`, `,
+      );
+      await tx.execute(sql`
+        update ${table} set ordre_affichage = nouvel.rang - 1
+        from unnest(array[${liste}]::bigint[]) with ordinality as nouvel(id, rang)
+        where ${table}.id = nouvel.id`);
+      const libelle = new Map(lignes.map((l) => [l.id, l.libelle]));
+      await auditer(
+        tx,
+        adminId,
+        quoi === 'categorie' ? 'CATEGORIES_ORDONNEES' : 'LICENCES_ORDONNEES',
+        null,
+        null,
+        { ordre: ids.map((id) => libelle.get(id)) },
+      );
+    });
   }
 
   /* Étiquettes ------------------------------------------------------------------- */

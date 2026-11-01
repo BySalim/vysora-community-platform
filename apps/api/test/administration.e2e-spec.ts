@@ -1,4 +1,5 @@
 import type {
+  InvitationAdministreeApi,
   JournalAuditApi,
   JournalDecisionsApi,
   ListeInvitationsApi,
@@ -8,14 +9,18 @@ import type {
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import type TestAgent from 'supertest/lib/agent.js';
+import { CONFIG } from '../src/config/configuration.module.js';
+import type { Configuration } from '../src/config/env.js';
 import {
   badge,
   decisionModeration,
   doubleAuthentification,
+  invitation,
   journalAudit,
   session,
   utilisateur,
 } from '../src/db/schema/index.js';
+import { CODE_INVALIDE } from '../src/modules/auth/invitations.service.js';
 import {
   confirmerIdentite,
   creerCreation,
@@ -195,6 +200,85 @@ describe('Administration (ADM-01, F-92, F-96, RG-111)', () => {
       createur: { pseudo: 'claire-dubois' },
       utilisation: null,
       libre: true,
+    });
+  });
+
+  it('désactive un code libre, jamais un code utilisé ni expiré, et le refuse ensuite à l’inscription (ADM-02)', async () => {
+    const agent = await claire();
+    const { codes } = (
+      await agent.post('/api/v1/admin/invitations').send({ nombre: 3 }).expect(201)
+    ).body as { codes: string[] };
+    const [libre, utilise, expire] = codes as [string, string, string];
+    await contexte.db
+      .update(invitation)
+      .set({ dateUtilisation: new Date(), utilisateurId: awaId })
+      .where(eq(invitation.code, utilise));
+    await contexte.db
+      .update(invitation)
+      .set({ dateExpiration: new Date(Date.now() - 60_000) })
+      .where(eq(invitation.code, expire));
+
+    const desactiver = (code: string) =>
+      agent.post(`/api/v1/admin/invitations/${code}/desactivation`).send({});
+    const desactive = (await desactiver(libre.toLowerCase()).expect(200))
+      .body as InvitationAdministreeApi;
+    expect(desactive).toMatchObject({ code: libre, libre: false, utilisation: null });
+    expect(desactive.dateDesactivation).not.toBeNull();
+    // Déjà désactivé : rien ne change.
+    expect((await desactiver(libre).expect(200)).body.dateDesactivation).toBe(
+      desactive.dateDesactivation,
+    );
+    expect((await desactiver(utilise).expect(409)).body.detail).toBe(
+      'Ce code a déjà servi à une inscription : il ne se désactive pas.',
+    );
+    await desactiver(expire).expect(409);
+    await desactiver('VYS-AAAA-AA').expect(404);
+    await desactiver('inconnu').expect(404);
+
+    const liste = (await agent.get('/api/v1/admin/invitations').expect(200))
+      .body as ListeInvitationsApi;
+    expect(liste).toMatchObject({ total: 3, libres: 0 });
+    // Un code utilisé reste compté comme utilisé, même si le membre a supprimé son compte depuis.
+    await contexte.db
+      .update(invitation)
+      .set({ utilisateurId: null })
+      .where(eq(invitation.code, utilise));
+    expect(
+      ((await agent.get('/api/v1/admin/invitations').expect(200)).body as ListeInvitationsApi)
+        .libres,
+    ).toBe(0);
+
+    // L'inscription et le lien d'invitation le refusent comme un code inconnu.
+    expect((await request(serveur()).get(`/api/v1/invitations/${libre}`).expect(200)).body).toEqual(
+      { valable: false, par: null },
+    );
+    const config = contexte.app.get<Configuration>(CONFIG);
+    config.INSCRIPTION_SUR_INVITATION = true;
+    try {
+      const refus = await request(serveur())
+        .post('/api/v1/comptes')
+        .set('Origin', ORIGINE_SITE)
+        .set('X-Forwarded-For', ipDeTest())
+        .send({
+          email: 'kofi.mensah@example.com',
+          motDePasse: MOT_DE_PASSE,
+          accepteConditions: true,
+          codeInvitation: libre,
+        })
+        .expect(400);
+      expect(refus.body.erreurs).toEqual({ codeInvitation: CODE_INVALIDE });
+    } finally {
+      config.INSCRIPTION_SUR_INVITATION = false;
+    }
+
+    const [entree] = (
+      (await agent.get('/api/v1/admin/journal?domaine=invitations').expect(200))
+        .body as JournalAuditApi
+    ).elements;
+    expect(entree).toMatchObject({
+      action: 'INVITATION_DESACTIVEE',
+      acteur: { pseudo: 'claire-dubois' },
+      cible: { type: 'invitation', nom: libre },
     });
   });
 

@@ -55,7 +55,9 @@ export interface InvitationAdministreeApi {
   createur: MembreResumeApi | null;
   /** Membre inscrit avec ce code et date de l'inscription ; null tant que le code est libre. */
   utilisation: { date: string; membre: MembreResumeApi | null } | null;
-  /** Ni utilisé ni expiré. */
+  /** Désactivé par l'administration (ADM-02) : refusé à l'inscription. */
+  dateDesactivation: string | null;
+  /** Ni utilisé, ni expiré, ni désactivé : seul un code libre se désactive. */
   libre: boolean;
 }
 
@@ -119,12 +121,28 @@ export interface DefiAdministreApi {
   actions: ('publier' | 'annuler' | 'cloturer')[];
 }
 
+/** Éditeur d'outils et de modèles d'IA tel que l'administration le gère (EC-22, F-95, RG-110). */
+export interface EditeurAdministreApi {
+  id: number;
+  nom: string;
+  /** Proposé à la saisie d'un nouvel outil ; archivé, ses outils et modèles l'ont été avec lui. */
+  actif: boolean;
+  /** Ses outils, proposés d'abord, chacun par ordre alphabétique. */
+  outils: { id: number; nom: string; statut: 'ACTIF' | 'ARCHIVE' }[];
+  /** Ses modèles, et ceux encore proposés. */
+  modeles: number;
+  modelesProposes: number;
+}
+
 /** Outil du référentiel tel que l'administration le gère (EC-22, F-95, RG-110). */
 export interface OutilAdministreApi {
   id: number;
   nom: string;
   slug: string;
+  editeurId: number;
   editeur: string;
+  /** Un outil d'un éditeur archivé ne se propose de nouveau qu'avec son éditeur. */
+  editeurActif: boolean;
   type: TypeOutil;
   famille: FamilleOutil;
   logo: string | null;

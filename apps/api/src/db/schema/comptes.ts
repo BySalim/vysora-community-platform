@@ -252,6 +252,8 @@ export const invitation = pgTable(
     dateCreation: horodatage().notNull().defaultNow(),
     dateExpiration: horodatage(),
     dateUtilisation: horodatage(),
+    /** ADM-02 : un code libre désactivé par l'administration n'est plus accepté (définitif). */
+    dateDesactivation: horodatage(),
   },
   (t) => [index('invitation_createur_idx').on(t.createurId)],
 );

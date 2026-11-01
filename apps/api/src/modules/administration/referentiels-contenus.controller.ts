@@ -16,7 +16,9 @@ import {
   schemaFiltresEtiquettes,
   schemaLicence,
   schemaModificationLicence,
+  schemaOrdreReferentiel,
   type EtatReferentiel,
+  type OrdreReferentiel,
   type BadgeAdministreApi,
   type CategorieAdministreeApi,
   type EtiquetteAdministreeApi,
@@ -55,6 +57,15 @@ export class ReferentielsContenusController {
     return this.referentiels.creerCategorie(session.utilisateur.id, saisie);
   }
 
+  /** PUT /api/v1/admin/categories/ordre : ordre des domaines, archivés compris (F-95). */
+  @Put('categories/ordre')
+  ordonnerCategories(
+    @Body(new ValidationZod(schemaOrdreReferentiel)) { ids }: OrdreReferentiel,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<CategorieAdministreeApi[]> {
+    return this.referentiels.ordonnerCategories(session.utilisateur.id, ids);
+  }
+
   /** PUT /api/v1/admin/categories/:id : libellé, icône et présentation du domaine. */
   @Put('categories/:id')
   modifierCategorie(
@@ -89,6 +100,15 @@ export class ReferentielsContenusController {
     @SessionCourante() session: SessionOuverte,
   ): Promise<LicenceAdministreeApi> {
     return this.referentiels.creerLicence(session.utilisateur.id, saisie);
+  }
+
+  /** PUT /api/v1/admin/licences/ordre : ordre des licences proposées, archivées comprises. */
+  @Put('licences/ordre')
+  ordonnerLicences(
+    @Body(new ValidationZod(schemaOrdreReferentiel)) { ids }: OrdreReferentiel,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<LicenceAdministreeApi[]> {
+    return this.referentiels.ordonnerLicences(session.utilisateur.id, ids);
   }
 
   /** PUT /api/v1/admin/licences/:id : libellé, résumé et adresse du texte. */

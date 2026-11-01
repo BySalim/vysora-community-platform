@@ -56,6 +56,18 @@ export interface Acteur {
   ip?: string;
 }
 
+/** Ni utilisé, ni désactivé, ni expiré (INV-01, ADM-02). */
+const estLibre = (
+  code: Pick<
+    typeof invitation.$inferSelect,
+    'dateUtilisation' | 'dateDesactivation' | 'dateExpiration'
+  >,
+  maintenant: Date,
+) =>
+  !code.dateUtilisation &&
+  !code.dateDesactivation &&
+  (!code.dateExpiration || code.dateExpiration > maintenant);
+
 /** Échappe % et _ d'une recherche LIKE. */
 const motif = (texte: string) => `%${texte.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
@@ -159,7 +171,8 @@ export class AdministrationService {
   async listeInvitations(page = 1): Promise<ListeInvitationsApi> {
     const maintenant = new Date();
     const libre = and(
-      isNull(invitation.utilisateurId),
+      isNull(invitation.dateUtilisation),
+      isNull(invitation.dateDesactivation),
       or(isNull(invitation.dateExpiration), gt(invitation.dateExpiration, maintenant)),
     );
     const [[totaux], lignes] = await Promise.all([
@@ -176,26 +189,9 @@ export class AdministrationService {
         .limit(INVITATIONS_PAR_PAGE)
         .offset((page - 1) * INVITATIONS_PAR_PAGE),
     ]);
-    const membres = await resumerMembres(
-      this.db,
-      this.stockage,
-      lignes.flatMap((l) => [l.createurId, l.utilisateurId].filter((id) => id !== null)),
-    );
     const total = totaux?.total ?? 0;
     return {
-      elements: lignes.map((l): InvitationAdministreeApi => ({
-        code: l.code,
-        dateCreation: l.dateCreation.toISOString(),
-        dateExpiration: l.dateExpiration?.toISOString() ?? null,
-        createur: l.createurId === null ? null : (membres.get(l.createurId) ?? null),
-        utilisation: l.dateUtilisation
-          ? {
-              date: l.dateUtilisation.toISOString(),
-              membre: l.utilisateurId === null ? null : (membres.get(l.utilisateurId) ?? null),
-            }
-          : null,
-        libre: !l.utilisateurId && (!l.dateExpiration || l.dateExpiration > maintenant),
-      })),
+      elements: await this.presenterInvitations(lignes, maintenant),
       total,
       libres: totaux?.libres ?? 0,
       page,
@@ -213,6 +209,69 @@ export class AdministrationService {
     const codes = await this.invitations.creer(nombre, acteur.id, expiration);
     await this.auditer(this.db, acteur, 'INVITATIONS_CREEES', null, { nombre, joursValidite });
     return { codes };
+  }
+
+  /** ADM-02 : un code libre désactivé n'est plus accepté à l'inscription ; c'est définitif. Un code
+      qui a servi reste attaché au membre inscrit, un code expiré n'est déjà plus accepté. */
+  async desactiverInvitation(acteur: Acteur, code: string): Promise<InvitationAdministreeApi> {
+    await this.db.transaction(async (tx) => {
+      // Verrou du code : une inscription qui l'utilise au même instant passe avant ou après.
+      const [ligne] = await tx
+        .select()
+        .from(invitation)
+        .where(eq(invitation.code, code.toUpperCase()))
+        .for('update');
+      if (!ligne) throw introuvable('Ce code d’invitation est introuvable.');
+      if (ligne.dateDesactivation) return;
+      if (ligne.dateUtilisation)
+        throw conflit('Ce code a déjà servi à une inscription : il ne se désactive pas.');
+      if (!estLibre(ligne, new Date()))
+        throw conflit('Ce code a expiré : il n’est déjà plus accepté à l’inscription.');
+      await tx
+        .update(invitation)
+        .set({ dateDesactivation: new Date() })
+        .where(eq(invitation.id, ligne.id));
+      await this.auditer(
+        tx,
+        acteur,
+        'INVITATION_DESACTIVEE',
+        ligne.id,
+        { code: ligne.code },
+        'invitation',
+      );
+    });
+    const lignes = await this.db
+      .select()
+      .from(invitation)
+      .where(eq(invitation.code, code.toUpperCase()));
+    const [presente] = await this.presenterInvitations(lignes);
+    if (!presente) throw introuvable('Ce code d’invitation est introuvable.');
+    return presente;
+  }
+
+  private async presenterInvitations(
+    lignes: (typeof invitation.$inferSelect)[],
+    maintenant = new Date(),
+  ): Promise<InvitationAdministreeApi[]> {
+    const membres = await resumerMembres(
+      this.db,
+      this.stockage,
+      lignes.flatMap((l) => [l.createurId, l.utilisateurId].filter((id) => id !== null)),
+    );
+    return lignes.map((l) => ({
+      code: l.code,
+      dateCreation: l.dateCreation.toISOString(),
+      dateExpiration: l.dateExpiration?.toISOString() ?? null,
+      createur: l.createurId === null ? null : (membres.get(l.createurId) ?? null),
+      utilisation: l.dateUtilisation
+        ? {
+            date: l.dateUtilisation.toISOString(),
+            membre: l.utilisateurId === null ? null : (membres.get(l.utilisateurId) ?? null),
+          }
+        : null,
+      dateDesactivation: l.dateDesactivation?.toISOString() ?? null,
+      libre: estLibre(l, maintenant),
+    }));
   }
 
   /** F-92 : journal des décisions, filtrable par modérateur, membre, action et période. */
@@ -312,11 +371,12 @@ export class AdministrationService {
     action: ActionAudit,
     cibleId: number | null,
     details?: Record<string, unknown>,
+    cibleType = 'utilisateur',
   ): Promise<void> {
     await db.insert(journalAudit).values({
       acteurId: acteur.id,
       action,
-      cibleType: cibleId === null ? null : 'utilisateur',
+      cibleType: cibleId === null ? null : cibleType,
       cibleId,
       details: details ?? null,
       empreinteIp: acteur.ip ? empreinteSalee(this.config.SEL_EMPREINTES, acteur.ip) : null,

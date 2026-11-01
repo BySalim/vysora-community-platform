@@ -78,6 +78,13 @@
       "when": 1793522567151,
       "tag": "0010_guides-administration",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793527072070,
+      "tag": "0011_editeurs-invitations",
+      "breakpoints": true
     }
   ]
 }

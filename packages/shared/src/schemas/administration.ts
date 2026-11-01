@@ -153,6 +153,30 @@ export const schemaModele = z.object({
 });
 export type SaisieModele = z.output<typeof schemaModele>;
 
+/** PUT /api/v1/admin/editeurs/:id (F-95) : le nouveau nom s'affiche partout où l'éditeur apparaît. */
+export const schemaNomEditeur = z.object({
+  nom: z
+    .string({ error: 'Indiquez le nom de l’éditeur.' })
+    .trim()
+    .min(1, { error: 'Indiquez le nom de l’éditeur.' })
+    .min(2, { error: 'Le nom compte au moins 2 caractères.' })
+    .max(100, { error: 'Le nom compte 100 caractères au plus.' }),
+});
+export type NomEditeur = z.output<typeof schemaNomEditeur>;
+
+/** PUT /api/v1/admin/categories/ordre et /licences/ordre : tous les éléments du référentiel,
+    archivés compris, dans le nouvel ordre d'affichage. */
+export const schemaOrdreReferentiel = z.object({
+  ids: z
+    .array(z.number().int().positive(), { error: 'Indiquez l’ordre des éléments.' })
+    .min(1, { error: 'Indiquez l’ordre des éléments.' })
+    .max(200, { error: 'Le référentiel compte 200 éléments au plus.' })
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: 'Chaque élément figure une seule fois.',
+    }),
+});
+export type OrdreReferentiel = z.output<typeof schemaOrdreReferentiel>;
+
 /** PATCH d'un outil ou d'un modèle (RG-110) : archivé ou retiré, il reste affiché sur les contenus. */
 export const schemaStatutOutil = z.object({
   statut: z.enum(['ACTIF', 'ARCHIVE'], { error: 'Choisissez un statut.' }),
@@ -161,8 +185,9 @@ export const schemaStatutModele = z.object({
   statut: z.enum(['DISPONIBLE', 'RETIRE'], { error: 'Choisissez un statut.' }),
 });
 
-/** PATCH d'une catégorie, d'une licence, d'une étiquette ou d'un badge (RG-110) : archivé, l'élément
-    reste affiché sur les contenus qui le citent et n'est plus proposé (un badge n'est plus attribué). */
+/** PATCH d'un éditeur, d'une catégorie, d'une licence, d'une étiquette ou d'un badge (RG-110) :
+    archivé, l'élément reste affiché sur les contenus qui le citent et n'est plus proposé (un badge
+    n'est plus attribué). */
 export const schemaEtatReferentiel = z.object({
   actif: z.boolean({ error: 'Indiquez si l’élément est proposé.' }),
 });

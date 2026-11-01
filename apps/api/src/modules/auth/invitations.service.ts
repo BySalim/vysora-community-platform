@@ -19,8 +19,9 @@ export const genererCodeInvitation = (): string => `VYS-${tirer(4)}-${tirer(2)}`
 export const CODE_INVALIDE =
   'Ce code n’est pas valable. Vérifiez-le, ou demandez une nouvelle invitation.';
 
-/* Bêta fermée sur invitation (INV-01) : un code sert une fois, avant sa date d'expiration ; le membre
-   inscrit avec un code reçoit le badge « Pionnier ». */
+/* Bêta fermée sur invitation (INV-01) : un code sert une fois, avant sa date d'expiration, sauf si
+   l'administration l'a désactivé (ADM-02) ; le membre inscrit avec un code reçoit le badge
+   « Pionnier ». */
 @Injectable()
 export class InvitationsService {
   constructor(
@@ -32,6 +33,7 @@ export class InvitationsService {
     return and(
       eq(invitation.code, code),
       isNull(invitation.dateUtilisation),
+      isNull(invitation.dateDesactivation),
       or(isNull(invitation.dateExpiration), gt(invitation.dateExpiration, maintenant)),
     );
   }

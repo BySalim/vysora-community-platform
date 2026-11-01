@@ -13,12 +13,15 @@ import {
   Req,
 } from '@nestjs/common';
 import {
+  MOTIF_CODE_INVITATION,
   schemaChangementRole,
   schemaCreationInvitations,
   schemaDecisionAdministrateur,
+  schemaEtatReferentiel,
   schemaFiltresAudit,
   schemaFiltresDecisions,
   schemaModele,
+  schemaNomEditeur,
   schemaOutil,
   schemaStatutModele,
   schemaStatutOutil,
@@ -27,18 +30,23 @@ import {
   type DecisionAdministrateur,
   type DecisionApi,
   type DossierMembreApi,
+  type EditeurAdministreApi,
+  type EtatReferentiel,
   type FiltresAudit,
   type FiltresDecisions,
+  type InvitationAdministreeApi,
   type JournalAuditApi,
   type JournalDecisionsApi,
   type ListeInvitationsApi,
   type ListeMembresAdministresApi,
   type MembreAdministreApi,
+  type NomEditeur,
   type OutilAdministreApi,
   type SaisieModele,
   type SaisieOutil,
 } from '@vysora/shared';
 import { z } from 'zod';
+import { introuvable } from '../../commun/erreurs.js';
 import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { Exige, SessionCourante } from '../auth/droits.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
@@ -133,6 +141,19 @@ export class AdministrationController {
     return this.administration.creerInvitations(acteur(session, requete), creation);
   }
 
+  /** POST /api/v1/admin/invitations/:code/desactivation : un code libre n'est plus accepté (ADM-02). */
+  @Post('invitations/:code/desactivation')
+  @HttpCode(200)
+  desactiverInvitation(
+    @Param('code') code: string,
+    @SessionCourante() session: SessionOuverte,
+    @Req() requete: RequeteVysora,
+  ): Promise<InvitationAdministreeApi> {
+    if (!MOTIF_CODE_INVITATION.test(code.toUpperCase()))
+      throw introuvable('Ce code d’invitation est introuvable.');
+    return this.administration.desactiverInvitation(acteur(session, requete), code);
+  }
+
   /** GET /api/v1/admin/decisions?moderateur=&membre=&action=&du=&au=&page= (EC-21, F-92). */
   @Get('decisions')
   decisions(
@@ -147,6 +168,33 @@ export class AdministrationController {
     @Query(new ValidationZod(schemaFiltresAudit)) filtres: FiltresAudit,
   ): Promise<JournalAuditApi> {
     return this.journalAudit.journal(filtres);
+  }
+
+  /** GET /api/v1/admin/editeurs : éditeurs, archivés compris, avec leurs outils (EC-22). */
+  @Get('editeurs')
+  editeurs(): Promise<EditeurAdministreApi[]> {
+    return this.referentiels.editeurs();
+  }
+
+  /** PUT /api/v1/admin/editeurs/:id : renommer (F-95). */
+  @Put('editeurs/:id')
+  renommerEditeur(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationZod(schemaNomEditeur)) { nom }: NomEditeur,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<EditeurAdministreApi> {
+    return this.referentiels.renommerEditeur(session.utilisateur.id, id, nom);
+  }
+
+  /** PATCH /api/v1/admin/editeurs/:id : archiver, avec ses outils et modèles, ou proposer de
+      nouveau (RG-110). */
+  @Patch('editeurs/:id')
+  activerEditeur(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationZod(schemaEtatReferentiel)) { actif }: EtatReferentiel,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<EditeurAdministreApi> {
+    return this.referentiels.activerEditeur(session.utilisateur.id, id, actif);
   }
 
   /** GET /api/v1/admin/outils : outils et modèles, archivés et retirés compris (EC-22). */
