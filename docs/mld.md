@@ -25,7 +25,7 @@
 
 | Table | Origine | Clés et contraintes notables |
 |---|---|---|
-| `editeur` | EDITEUR | `nom` unique |
+| `editeur` | EDITEUR (+ `slug`) | `nom` unique ; `slug` unique, clé stable tirée du premier nom (le chargement des référentiels repère l'éditeur par elle ; un nom changé par l'administration reste) ; `est_actif` (archivé : ses outils archivés et ses modèles retirés avec lui, RG-110) |
 | `outil` | OUTIL (+ extensions) | `nom`, `slug` uniques ; `editeur_id` ; `type` (MCD) et `famille` (prototype) ; `logo`, `logo_monochrome`, `alias[]`, `est_agent` ; `statut` ACTIF/ARCHIVE |
 | `modele` | MODELE (+ `nom_court`) | unique `(editeur_id, nom)` ; `statut` DISPONIBLE/RETIRE |
 | `outil_modele` | extension | modèles proposés pour un outil (`(outil_id, modele_id)`, ordre) |
@@ -49,7 +49,7 @@
 | `notification` | NOTIFICATION (DESTINER, DECLENCHER, CONCERNER) | `contenu_id` : l'objet de l'événement (le commentaire, l'essai, la réponse du forum, le contenu voté ou masqué, la variante), la création ou le sujet qui le porte se déduit à l'affichage ; `donnees` (JSONB figé : points gagnés, commentaire d'origine, badge, niveau, motif (refus d'un cas, décision), défi et rang, décision (action, fin de suspension, type et intitulé du contenu visé, lisibles après sa suppression), obsolescence ; type `DonneesNotification`) ; `cle_regroupement` unique par destinataire : `VOTES_UTILE_RECUS:<contenu>:<jour UTC>` (votes regroupés, RG-91), `NIVEAU_ATTEINT:<code>` et `BADGE_OBTENU:<code>` (une fois) ; supprimée après 12 mois (politique de confidentialité, EMAIL-01), clé de regroupement comprise ; `email_en_attente` : e-mail encore à décider selon les préférences, remis à faux par la tâche `notifications.emails` avant l'envoi (index partiel, migration `0006`) |
 | `obtention_badge` | OBTENIR | clé `(utilisateur_id, badge_id)` (CI-27) |
 | `preference_notification` | extension (paramètres du prototype) | clé `(utilisateur_id, evenement)` ; canaux application et e-mail ; sans ligne, la valeur par défaut (e-mail pour les réponses à ses sujets et les réponses acceptées, WF-25) ; écrite par la page Paramètres (PARAM-01) |
-| `invitation` | extension (bêta fermée sur invitation) | `code` unique ; créateur, utilisateur, expiration |
+| `invitation` | extension (bêta fermée sur invitation) | `code` unique ; créateur, utilisateur, expiration ; `date_desactivation` (ADM-02 : code libre désactivé, refusé à l’inscription) |
 
 ### Contenus (généralisation) et interactions communes
 
