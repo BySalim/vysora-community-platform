@@ -47,7 +47,7 @@ Réglages communs à toutes les pages, déjà posés par le gabarit : `accent=bl
 | `mentions-legales.html` | `/mentions-legales` | `lg`, `data-document="mentions"` | — | idem | `documents-legaux.css` | idem | **Fait** |
 | `recherche.js`, `recherche.css` (composant) | fenêtre de recherche globale (loupe, Ctrl K) | — | — | — | `recherche.css` | `recherche.js` | **Fait** (S-11, `scripts/commun/recherche.ts`) |
 
-**Écrans sans maquette dans le prototype** (à concevoir dans le même style, puis faire valider) : modération (EC-20 ; EC-19 est fait, voir les repères), administration (EC-21 à EC-26 ; EC-21 à EC-25 faits avec ADM-01 et ADM-02, ainsi que le dossier d'un membre `/admin/membres/[id]` et le journal d'audit `/admin/journal-audit`, à faire valider), acceptation des nouveaux documents (`/accepter-documents`), erreurs (403, 500). La page 404 existe (`pages/404.astro`).
+**Écrans sans maquette dans le prototype** (à concevoir dans le même style, puis faire valider) : modération (EC-20 ; EC-19 est fait, voir les repères), administration (EC-21 à EC-26 ; EC-21 à EC-25 faits avec ADM-01 et ADM-02, ainsi que le dossier d'un membre `/admin/membres/[id]` et le journal d'audit `/admin/journal-audit`, validés le 1er novembre 2026), acceptation des nouveaux documents (`/accepter-documents`), erreurs (403, 500). La page 404 existe (`pages/404.astro`).
 
 ## 3. Repères
 
