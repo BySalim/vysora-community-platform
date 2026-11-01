@@ -71,6 +71,13 @@
       "when": 1793403164318,
       "tag": "0009_deux-facteurs",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793522567151,
+      "tag": "0010_guides-administration",
+      "breakpoints": true
     }
   ]
 }

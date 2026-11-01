@@ -52,16 +52,16 @@ export const LONGUEURS = {
   contactNom: { max: 100 },
   contactMessage: { min: 20, max: 5000 },
   // Guides d'Explorer (extension, prototype explorer.html) : rédigés par l'équipe.
-  guideTitre: { max: 150 },
-  guideTitreCourt: { max: 80 },
+  guideTitre: { min: 10, max: 150 },
+  guideTitreCourt: { min: 3, max: 80 },
   guideMotCle: { max: 40 },
   guideLacune: { max: 300 },
-  guideEtapeTitre: { max: 150 },
-  guideConseil: { max: 1000 },
+  guideEtapeTitre: { min: 3, max: 150 },
+  guideConseil: { min: 10, max: 1000 },
   guideCitation: { max: 5000 },
-  guidePiegeTitre: { max: 200 },
-  guideSolution: { max: 1000 },
-  demandeGuide: { max: 120 }, // « Ce que la communauté cherche encore »
+  guidePiegeTitre: { min: 10, max: 200 },
+  guideSolution: { min: 10, max: 1000 },
+  demandeGuide: { min: 3, max: 120 }, // « Ce que la communauté cherche encore »
   // « Signaler un piège » (prototype : une phrase d'au moins 15 caractères).
   propositionPiegeTitre: { min: 15, max: 300 },
   propositionPiegeSolution: { max: 1500 },
@@ -89,6 +89,8 @@ export const LIMITES = {
   brouillonsParMembre: 50,
   // Pièges proposés par un membre et pas encore relus (garde-fou de DEC-01, aucune règle ne les limite).
   propositionsPiegeEnRelecture: 20,
+  // Guide d'Explorer rédigé par l'équipe (DEC-02) : garde-fous de l'écran de rédaction.
+  guide: { motsCles: 15, lacunes: 10, etapes: 12, pieges: 20 },
   prochainsBadges: 3, // PROF-02 : « Prochains badges » du profil (prototype)
   // RG-102 : ajustement de la réputation par un administrateur (fraude avérée), en points, dans un
   // sens ou dans l'autre ; garde-fou du seuil du plus haut niveau (aucune règle ne le borne).

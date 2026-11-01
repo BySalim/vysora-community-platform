@@ -12,11 +12,14 @@ import {
   badge,
   categorie,
   defi,
+  demandeGuide,
   etiquette,
+  guide,
   journalAudit,
   licence,
   modele,
   outil,
+  propositionPiege,
   utilisateur,
 } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
@@ -52,11 +55,23 @@ const NOMS: Record<string, Noms> = {
     db.select({ id: badge.id, nom: badge.libelle }).from(badge).where(inArray(badge.id, ids)),
   defi: (db, ids) =>
     db.select({ id: defi.id, nom: defi.titre }).from(defi).where(inArray(defi.id, ids)),
+  guide: (db, ids) =>
+    db.select({ id: guide.id, nom: guide.titreCourt }).from(guide).where(inArray(guide.id, ids)),
+  demande_guide: (db, ids) =>
+    db
+      .select({ id: demandeGuide.id, nom: demandeGuide.libelle })
+      .from(demandeGuide)
+      .where(inArray(demandeGuide.id, ids)),
+  proposition_piege: (db, ids) =>
+    db
+      .select({ id: propositionPiege.id, nom: propositionPiege.titre })
+      .from(propositionPiege)
+      .where(inArray(propositionPiege.id, ids)),
 };
 
 /* ENF-09 : consultation du journal d'audit par les administrateurs (ADM-02) : les actions
    d'administration (rôles, double authentification, invitations, référentiels, documents légaux,
-   défis), de la plus récente à la plus ancienne, filtrables par domaine, auteur et période.
+   défis, guides d'Explorer), de la plus récente à la plus ancienne, filtrables par domaine, auteur et période.
    L'empreinte de l'adresse IP reste en base : elle ne sert qu'à une enquête. */
 @Injectable()
 export class JournalAuditService {

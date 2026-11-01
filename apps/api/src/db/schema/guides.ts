@@ -70,6 +70,21 @@ export const guideContenu = pgTable(
   ],
 );
 
+/** Parcours retiré d'un guide par l'équipe (DEC-02) : le rapprochement ne l'y range plus. */
+export const guideContenuRetire = pgTable(
+  'guide_contenu_retire',
+  {
+    guideId: reference()
+      .notNull()
+      .references(() => guide.id, { onDelete: 'cascade' }),
+    contenuId: reference()
+      .notNull()
+      .references(() => contenu.id, { onDelete: 'cascade' }),
+    date: horodatage().notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.guideId, t.contenuId] })],
+);
+
 /** « La méthode qui ressort » : étapes communes aux parcours, dans l'ordre où ils les suivent. */
 export const guideEtape = pgTable(
   'guide_etape',

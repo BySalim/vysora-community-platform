@@ -7,7 +7,8 @@ import { guide, guideContenu } from '../../db/schema/index.js';
    guide ; « Votre création rejoint le guide… »). Le rapprochement est celui du prototype : chaque
    mot fort du titre, de l'objectif et des étiquettes compte 2 s'il est dans le titre ou les mots-clés
    d'un guide, 1 s'il est ailleurs dans le guide ; le domaine commun ajoute 1 ; il faut 2 au moins.
-   L'équipe garde la main sur la méthode et les pièges ; elle retire un parcours mal rangé. */
+   L'équipe garde la main sur la méthode et les pièges ; elle retire un parcours mal rangé, que le
+   rapprochement ne remet plus dans ce guide (DEC-02, guide_contenu_retire). */
 
 /** Mots trop généraux pour rapprocher une création d'un guide (prototype : MOTS_VIDES). */
 // prettier-ignore
@@ -111,6 +112,8 @@ export async function rattacherAuGuide(db: Executeur, creationId: number): Promi
       ) as texte
     from guide g join categorie cat on cat.id = g.categorie_id
     where g.date_publication is not null
+      and not exists (select 1 from guide_contenu_retire r
+        where r.guide_id = g.id and r.contenu_id = ${creationId})
     order by g.id`);
   const choisi = guideLePlusProche(
     {

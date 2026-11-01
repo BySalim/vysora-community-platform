@@ -407,3 +407,138 @@ export interface IndexRechercheApi {
     image: MediaApi | null;
   } | null;
 }
+
+/* Administration des guides (DEC-02) --------------------------------------------------------- */
+
+/** Domaine proposé dans les listes de l'administration. */
+export interface DomaineChoixApi {
+  id: number;
+  libelle: string;
+}
+
+/** Élément de GET /api/v1/admin/guides. */
+export interface GuideAdministreResumeApi {
+  id: number;
+  slug: string;
+  titre: string;
+  titreCourt: string;
+  domaine: Pick<DomaineApi, 'libelle' | 'slug' | 'icone'>;
+  /** null tant que le guide est en préparation (montré à personne). */
+  datePublication: string | null;
+  dateModification: string;
+  /** Parcours publiés et visibles (ceux qu'Explorer présente). */
+  parcours: number;
+  etapes: number;
+  pieges: number;
+  /** Pièges signalés par les membres, en attente de relecture. */
+  aRelire: number;
+}
+
+/** GET /api/v1/admin/guides */
+export interface GuidesAdministresApi {
+  /** En préparation d'abord, puis par nom court. */
+  elements: GuideAdministreResumeApi[];
+  domaines: DomaineChoixApi[];
+  /** Pièges signalés en attente de relecture, tous guides confondus. */
+  aRelire: number;
+  /** Objectifs cherchés encore ouverts. */
+  demandes: number;
+}
+
+/** Parcours, question ou cas d'un guide, tel que l'administration le voit. */
+export interface ContenuGuideAdministreApi {
+  id: number;
+  type: 'CREATION' | 'SUJET' | 'CAS_BON_REFLEXE';
+  titre: string;
+  slug: string | null;
+  auteur: MembreResumeApi;
+  /** Publié (validé pour un cas) et visible : Explorer le présente (RG-30). */
+  presente: boolean;
+  /** Pourquoi il n'est pas présenté. */
+  etat: 'MASQUE' | 'SUPPRIME' | 'NON_PUBLIE' | null;
+}
+
+/** GET /api/v1/admin/guides/:id : ce que l'équipe rédige, et les contenus du guide. */
+export interface GuideAdministreApi {
+  id: number;
+  slug: string;
+  titre: string;
+  titreCourt: string;
+  categorieId: number;
+  motsCles: string[];
+  lacunes: string[];
+  datePublication: string | null;
+  /** Version lue, à renvoyer avec la modification (PUT). */
+  version: string;
+  etapes: {
+    id: number;
+    titre: string;
+    conseil: string;
+    sources: number[];
+    citation: { parcoursId: number; texte: string } | null;
+  }[];
+  /** Dans l'ordre du guide (Explorer les présente du plus rencontré au moins rencontré). */
+  pieges: {
+    id: number;
+    titre: string;
+    solution: string;
+    etapeId: number | null;
+    sources: number[];
+    sujetId: number | null;
+    casId: number | null;
+  }[];
+  /** Parcours, questions et cas, dans l'ordre du guide. */
+  contenus: ContenuGuideAdministreApi[];
+  /** Parcours retirés : le rapprochement ne les range plus dans ce guide. */
+  retires: ContenuGuideAdministreApi[];
+  aRelire: number;
+  /** Domaines actifs, et celui du guide s'il a été archivé. */
+  domaines: DomaineChoixApi[];
+  /** Un guide en préparation que personne n'a encore utilisé (liste de contrôle, piège signalé)
+      peut être supprimé. */
+  supprimable: boolean;
+}
+
+/** Piège signalé, tel que l'administration le relit. */
+export interface PropositionPiegeAdministreeApi extends PropositionPiegeApi {
+  auteur: MembreResumeApi;
+  guide: { id: number; slug: string; titreCourt: string; publie: boolean };
+  /** Étapes de la méthode du guide, pour y écrire le piège retenu. */
+  etapes: { id: number; titre: string }[];
+}
+
+/** GET /api/v1/admin/propositions-pieges : du plus ancien au plus récent, par pages de 20. */
+export interface PropositionsPiegeApi {
+  elements: PropositionPiegeAdministreeApi[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+/** Réponse de POST /api/v1/admin/propositions-pieges/:id/relecture. */
+export interface RelecturePiegeApi {
+  id: number;
+  statut: StatutPropositionPiege;
+  /** Piège écrit dans le guide, s'il a été retenu. */
+  piegeId: number | null;
+}
+
+/** Objectif cherché, tel que l'administration le voit. */
+export interface DemandeAdministreeApi {
+  id: number;
+  libelle: string;
+  domaine: Pick<DomaineApi, 'libelle' | 'slug' | 'icone'> | null;
+  /** Membres qui le cherchent, sur les 30 derniers jours. */
+  soutiens: number;
+  dateCreation: string;
+  dateCloture: string | null;
+}
+
+/** GET /api/v1/admin/demandes */
+export interface DemandesAdministreesApi {
+  /** Des plus demandées aux moins demandées. */
+  ouvertes: DemandeAdministreeApi[];
+  /** Des plus récemment closes aux plus anciennes. */
+  closes: DemandeAdministreeApi[];
+  domaines: DomaineChoixApi[];
+}

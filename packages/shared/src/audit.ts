@@ -28,6 +28,20 @@ export const ACTIONS_AUDIT = {
   ],
   documents: ['DOCUMENT_LEGAL_PUBLIE', 'DOCUMENT_LEGAL_RETIRE'],
   defis: ['DEFI_CREE', 'DEFI_PUBLIE', 'DEFI_ANNULE', 'DEFI_CLOTURE'],
+  guides: [
+    'GUIDE_CREE',
+    'GUIDE_MODIFIE',
+    'GUIDE_PUBLIE',
+    'GUIDE_EN_PREPARATION',
+    'GUIDE_SUPPRIME',
+    'GUIDE_CONTENU_AJOUTE',
+    'GUIDE_CONTENU_RETIRE',
+    'PIEGE_RETENU',
+    'PIEGE_ECARTE',
+    'DEMANDE_CREEE',
+    'DEMANDE_CLOSE',
+    'DEMANDE_ROUVERTE',
+  ],
 } as const;
 
 export type DomaineAudit = keyof typeof ACTIONS_AUDIT;
@@ -41,6 +55,7 @@ export const LIBELLES_DOMAINE_AUDIT: Record<DomaineAudit, string> = {
   referentiels: 'Référentiels',
   documents: 'Documents légaux',
   defis: 'Défis',
+  guides: 'Guides d’Explorer',
 };
 
 export const LIBELLES_ACTION_AUDIT: Record<ActionAudit, string> = {
@@ -72,4 +87,16 @@ export const LIBELLES_ACTION_AUDIT: Record<ActionAudit, string> = {
   DEFI_PUBLIE: 'Défi publié',
   DEFI_ANNULE: 'Défi annulé',
   DEFI_CLOTURE: 'Défi clôturé',
+  GUIDE_CREE: 'Guide créé',
+  GUIDE_MODIFIE: 'Guide modifié',
+  GUIDE_PUBLIE: 'Guide publié',
+  GUIDE_EN_PREPARATION: 'Guide repassé en préparation',
+  GUIDE_SUPPRIME: 'Guide supprimé',
+  GUIDE_CONTENU_AJOUTE: 'Contenu ajouté à un guide',
+  GUIDE_CONTENU_RETIRE: 'Contenu retiré d’un guide',
+  PIEGE_RETENU: 'Piège signalé retenu',
+  PIEGE_ECARTE: 'Piège signalé écarté',
+  DEMANDE_CREEE: 'Objectif cherché ajouté',
+  DEMANDE_CLOSE: 'Objectif cherché clos',
+  DEMANDE_ROUVERTE: 'Objectif cherché rouvert',
 };
