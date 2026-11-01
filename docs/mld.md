@@ -100,14 +100,15 @@ Le prototype présente Explorer comme un index de **guides par objectif**. Le MC
 | Table | Rôle | Clés et contraintes notables |
 |---|---|---|
 | `guide` | Objectif (« Mettre en place la prise de rendez-vous en ligne »), nom court, domaine, mots-clés, lacunes (« Ce que ce guide ne couvre pas encore ») | `slug` unique (adresse `/explorer?guide=…`) ; `categorie_id` (domaine) ; `date_publication` null tant que le guide est en préparation |
-| `guide_contenu` | Parcours (créations), questions (sujets) et cas Bon réflexe du guide, dans son ordre | clé `(guide_id, contenu_id)` ; cascade depuis le guide et le contenu ; seuls les contenus publiés et visibles sont présentés (RG-30) ; une création publiée y est ajoutée par rapprochement (`rattachement.ts`) |
-| `guide_etape` | « La méthode qui ressort » : titre, conseil, prompt cité | unique `(guide_id, ordre)` ; `citation_creation_id` (`set null`) et `citation_texte` : pas de création citée sans texte |
+| `guide_contenu` | Parcours (créations), questions (sujets) et cas Bon réflexe du guide, dans son ordre | clé `(guide_id, contenu_id)` ; cascade depuis le guide et le contenu ; seuls les contenus publiés et visibles sont présentés (RG-30) ; une création publiée y est ajoutée par rapprochement (`rattachement.ts`) ; l'administration en ajoute ou en retire (DEC-02) : un parcours n'appartient qu'à un guide, une question ou un cas peut servir à plusieurs |
+| `guide_contenu_retire` | Parcours retiré d'un guide par l'équipe (DEC-02, migration `0010`) : le rapprochement ne l'y range plus | clé `(guide_id, contenu_id)`, cascades ; `date` ; effacé quand le parcours est remis dans le guide |
+| `guide_etape` | « La méthode qui ressort » : titre, conseil, prompt cité | unique `(guide_id, ordre)`, ordre à partir de 0 ; `citation_creation_id` (`set null`) et `citation_texte` : pas de création citée sans texte |
 | `guide_etape_source` | Parcours qui suivent une étape | clé `(etape_id, creation_id)`, cascades |
 | `guide_piege` | « Les pièges à anticiper » : titre, ce qui a fonctionné, étape, discussion, cas | unique `(guide_id, ordre)` ; `etape_id`, `sujet_id`, `cas_id` en `set null` |
 | `guide_piege_source` | Parcours où le piège a été rencontré | clé `(piege_id, creation_id)`, cascades |
 | `demande_guide` | « Ce que la communauté cherche encore » | `libelle` unique ; `date_cloture` quand un guide couvre l'objectif |
 | `soutien_demande` | « Je le cherche aussi » | clé `(demande_id, utilisateur_id)` ; compté sur 30 jours, date renouvelée à chaque clic |
-| `proposition_piege` | « Signaler un piège » : relu par l'équipe | `statut` EN_RELECTURE/RETENUE/ECARTEE ; `date_relecture` présente si et seulement si relu ; `etape_id` en `set null` |
+| `proposition_piege` | « Signaler un piège » : relu par l'équipe (DEC-02 : retenu, il est réécrit dans `guide_piege` ; écarté, il quitte la relecture) | `statut` EN_RELECTURE/RETENUE/ECARTEE ; `relecteur_id` et `date_relecture` présente si et seulement si relu ; `etape_id` en `set null` |
 | `liste_controle` | « Ma liste de contrôle » d'un membre | clé `(utilisateur_id, guide_id)` ; étapes et pièges cochés (`bigint[]`, réduits à la lecture à ceux qui existent encore) |
 
 Les tables d'un membre (`soutien_demande`, `proposition_piege`, `liste_controle`) figurent dans l'export F-07 et sont effacées à la suppression du compte (F-08).
