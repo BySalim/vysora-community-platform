@@ -1,7 +1,7 @@
 ---
-/* Cas Bon réflexe (APP-02, F-62) : la page d'Apprendre ouverte sur le cas. L'adresse
-   /bon-reflexe/[id]-[slug] redirige vers la bonne si le titre a changé ; un cas que la personne ne
-   peut pas voir (RG-30), ou qui n'est pas encore validé, répond 404. */
+/* Cas Bon réflexe (APP-02, F-62) : la page d'Apprendre ouverte sur le cas, rendue par le serveur avec
+   ses options (APP-03). L'adresse /bon-reflexe/[id]-[slug] redirige vers la bonne si le titre a
+   changé ; un cas que la personne ne peut pas voir (RG-30), ou qui n'est pas encore validé, répond 404. */
 import type { CasApi } from '@vysora/shared';
 import ApprendreApp from '../../components/ApprendreApp.astro';
 import Base from '../../layouts/Base.astro';
@@ -35,5 +35,5 @@ if (!cas) return Astro.rewrite('/404');
   reglages={{ bases: 'frise', resumes: 'oui', bande: 'sombre', avantapres: 'cote' }}
   icones={ICONES_APPRENDRE}
 >
-  <ApprendreApp casOuvert={cas.id} />
+  <ApprendreApp casOuvert={cas.id} casComplet={cas} />
 </Base>

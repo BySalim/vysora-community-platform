@@ -2,9 +2,12 @@
 /* Apprendre (APP-02), porté de prototype/apprendre.html : barre locale des rubriques, recherche,
    lien « Ma progression » et zone des vues, que le script rend (scripts/apprendre.ts) à partir des
    contenus éditoriaux et des cas Bon réflexe de l'API, posés ici en JSON (#ap-donnees), avec la
-   progression du membre sur les savoirs (APP-03). */
+   progression du membre sur les savoirs (APP-03). La page d'un savoir et celle d'un cas arrivent
+   rendues par le serveur (référencement), avec les fonctions de lib/apprendre/pages.ts que le script
+   emploie ensuite : il reprend la main sur le même balisage. */
 import {
   raisonRefus,
+  type CasApi,
   type CasResumeApi,
   type GuidesApi,
   type ListeCasApi,
@@ -13,6 +16,13 @@ import {
   type ReferentielsApi,
 } from '@vysora/shared';
 import { appelerApi } from '../lib/api';
+import {
+  creerModele,
+  creerPages,
+  lireVue,
+  progressionDuServeur,
+  typographier,
+} from '../lib/apprendre/pages';
 import type { DonneesPageApprendre } from '../lib/apprendre/types';
 import { icone } from '../lib/explorer/elements';
 import { ROUTES } from '../lib/navigation';
@@ -20,9 +30,11 @@ import { ROUTES } from '../lib/navigation';
 interface Props {
   /** Cas demandé par l'adresse /bon-reflexe/[id]-[slug]. */
   casOuvert?: number | null;
+  /** Ce cas en entier, lu par la page (options, et correction après une réponse). */
+  casComplet?: CasApi | null;
 }
 
-const { casOuvert = null } = Astro.props;
+const { casOuvert = null, casComplet = null } = Astro.props;
 const options = { requete: Astro.request };
 
 /** Cas validés, vingt par page : les premières pages suffisent à la bêta (au plus cent cas). */
@@ -70,10 +82,33 @@ const donnees: DonneesPageApprendre = {
     icone: c.icone,
   })),
   casOuvert,
+  casComplet,
   aujourdhui: new Date().toISOString().slice(0, 10),
   chiffres: { sujets: sujets?.total ?? 0, outils: referentiels?.outils.length ?? 0 },
   progression,
 };
+
+// Référencement : la page d'un savoir et celle d'un cas sont rendues ici, comme le script les rend.
+const modele = creerModele(donnees);
+const vue = lireVue(modele, Astro.url.searchParams);
+const progres = progressionDuServeur(modele);
+const pages = creerPages(modele, { progress: () => progres, today: donnees.aujourdhui });
+const savoir = vue.view === 'savoir' ? modele.byId[vue.id] : undefined;
+const casVu = vue.view === 'cas' ? modele.caseById[vue.id] : undefined;
+// Une règle se met à l'épreuve d'un cas : il est lu ici et rendu avec ses options, puis le script le
+// trouve dans les données de la page sans le redemander.
+const situation = savoir ? modele.casDuPrototype(savoir.situation) : undefined;
+if (situation && !situation.detail) {
+  const complet = await appelerApi<CasApi>(`/api/v1/cas/${situation.id}`, options).catch(
+    () => null,
+  );
+  if (complet) {
+    donnees.casComplet = complet;
+    situation.detail = complet;
+    if (complet.correction) situation.correction = complet.correction;
+  }
+}
+const rendu = typographier(savoir ? pages.savoirHTML(savoir) : casVu ? pages.casHTML(casVu) : '');
 ---
 
 <nav class="ap-local" aria-label="Rubriques d’Apprendre" data-ap-local>
@@ -131,7 +166,13 @@ const donnees: DonneesPageApprendre = {
     </div>
   </div>
 </nav>
-<div class="ap-view" data-ap-view></div>
+<div
+  class="ap-view"
+  data-ap-view
+  data-ap-screen={rendu ? vue.view : undefined}
+  data-ap-rendue={rendu ? '' : undefined}
+  set:html={rendu}
+/>
 
 <dialog
   class="ex-dialog ex-tools"

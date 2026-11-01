@@ -1,16 +1,22 @@
 ---
 /* Apprendre (APP-02, F-60 à F-62), porté de prototype/apprendre.html. Réglages retenus : bases en
-   frise, résumés visibles, bande sombre, prompts avant et après côte à côte. */
+   frise, résumés visibles, bande sombre, prompts avant et après côte à côte. Titre, description et
+   adresse canonique selon la vue demandée (?savoir=, ?rubrique=, ?vue=progression ; APP-03). */
 import ApprendreApp from '../components/ApprendreApp.astro';
 import Base from '../layouts/Base.astro';
 import { ICONES_APPRENDRE } from '../lib/apprendre/icones';
+import { entetePage } from '../lib/apprendre/pages';
 import '../styles/explorer.css';
 import '../styles/apprendre.css';
+
+const entete = entetePage(Astro.url.searchParams);
 ---
 
 <Base
-  titre="Apprendre"
-  description="Les bases pour démarrer, les notions, les règles qui évitent les erreurs coûteuses, les astuces de chaque outil et les cas Bon réflexe."
+  titre={entete.titre}
+  description={entete.description}
+  canonique={entete.canonique}
+  nonIndexee={entete.nonIndexee}
   classeCorps="ex ap"
   reglages={{ bases: 'frise', resumes: 'oui', bande: 'sombre', avantapres: 'cote' }}
   icones={ICONES_APPRENDRE}

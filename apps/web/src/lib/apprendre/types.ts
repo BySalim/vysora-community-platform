@@ -1,7 +1,7 @@
 /* Types des contenus éditoriaux d'Apprendre (prototype/apprendre-data.js) et des données que la page
    reçoit du serveur (cas Bon réflexe de l'API, outils, guides, domaines). */
 
-import type { CasResumeApi, ProgressionSavoirsApi } from '@vysora/shared';
+import type { CasApi, CasResumeApi, ProgressionSavoirsApi } from '@vysora/shared';
 
 export type IdRubrique = 'bases' | 'notions' | 'regles' | 'astuces' | 'bon-reflexe';
 
@@ -73,6 +73,8 @@ export interface DonneesPageApprendre {
   domaines: { libelle: string; slug: string; icone: string | null }[];
   /** Cas demandé par l'adresse /bon-reflexe/[id]-[slug]. */
   casOuvert: number | null;
+  /** Ce cas en entier, lu par le serveur : la page arrive rendue avec ses options (APP-03). */
+  casComplet: CasApi | null;
   /** Aujourd'hui (AAAA-MM-JJ), date du serveur. */
   aujourdhui: string;
   /** Chiffres de « D'où viennent ces savoirs » : sujets du forum, outils suivis. */
