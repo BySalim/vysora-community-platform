@@ -19,7 +19,9 @@ const outil = (o: Partial<OutilAdministreApi> & Pick<OutilAdministreApi, 'nom'>)
   ({
     id: 1,
     slug: o.nom.toLowerCase(),
+    editeurId: 1,
     editeur: 'OpenAI',
+    editeurActif: true,
     type: 'ASSISTANT_CONVERSATIONNEL',
     famille: 'ASSISTANT',
     logo: null,
@@ -44,12 +46,13 @@ describe('référentiel des outils (ADM-02, RG-110)', () => {
     ]);
   });
 
-  it('propose chaque éditeur connu une seule fois, par ordre alphabétique', () => {
+  it('propose chaque éditeur connu une seule fois, par ordre alphabétique, sauf les archivés', () => {
     expect(
       editeurs([
         outil({ nom: 'ChatGPT' }),
         outil({ nom: 'Sora', editeur: 'OpenAI' }),
         outil({ nom: 'Gemini', editeur: 'Google' }),
+        outil({ nom: 'Pi', editeur: 'Inflection AI', editeurActif: false, statut: 'ARCHIVE' }),
       ]),
     ).toEqual(['Google', 'OpenAI']);
   });
@@ -130,6 +133,36 @@ describe('journal d’audit (ADM-02, ENF-09)', () => {
     expect(
       precisionAudit(entree({ action: 'PIEGE_ECARTE', details: { guide: 'Photos réalistes' } })),
     ).toBe('Guide « Photos réalistes »');
+    // Suite d'ADM-02 : éditeurs et ordre d'affichage.
+    expect(
+      precisionAudit(
+        entree({ action: 'EDITEUR_RENOMME', details: { avant: 'Mistral', apres: 'Mistral AI' } }),
+      ),
+    ).toBe('Mistral → Mistral AI');
+    expect(
+      precisionAudit(
+        entree({
+          action: 'EDITEUR_ARCHIVE',
+          details: { outils: ['Pi'], modeles: ['Inflection 2', 'Inflection 2.5'] },
+        }),
+      ),
+    ).toBe('1 outil archivé, 2 modèles retirés');
+    expect(
+      precisionAudit(entree({ action: 'EDITEUR_ARCHIVE', details: { outils: [], modeles: [] } })),
+    ).toBe('');
+    expect(
+      precisionAudit(
+        entree({
+          action: 'CATEGORIES_ORDONNEES',
+          details: { ordre: ['Code', 'Image', 'Texte', 'Vidéo', 'Audio', 'Données'] },
+        }),
+      ),
+    ).toBe('Code, Image, Texte, Vidéo, Audio…');
+    expect(
+      precisionAudit(
+        entree({ action: 'LICENCES_ORDONNEES', details: { ordre: ['CC BY', 'MIT'] } }),
+      ),
+    ).toBe('CC BY, MIT');
   });
 
   it('nomme l’élément visé, une version de document légal par ses détails', () => {

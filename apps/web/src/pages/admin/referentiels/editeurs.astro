@@ -1,0 +1,148 @@
+---
+/* Éditeurs des outils et modèles d'IA (ADM-02, EC-22, F-95, RG-110). Écran sans maquette dans le
+   prototype, conçu dans le style des référentiels : chaque éditeur, par ordre alphabétique, avec son
+   nom à modifier, ses outils et son archivage. Un éditeur se crée avec son premier outil (onglet
+   Outils et modèles). Archivé, il n'est plus proposé, et ses outils et modèles ne le sont plus non
+   plus ; proposé de nouveau, il ne les rétablit pas. Envois : scripts/referentiels.ts. */
+import { raisonRefus, type EditeurAdministreApi } from '@vysora/shared';
+import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
+import { appelerApi } from '../../../lib/api';
+import { ROUTES } from '../../../lib/navigation';
+import { pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const editeurs = raison
+  ? null
+  : await appelerApi<EditeurAdministreApi[]>('/api/v1/admin/editeurs', {
+      requete: Astro.request,
+    });
+const archives = editeurs?.filter((e) => !e.actif).length ?? 0;
+const proposes = (e: EditeurAdministreApi) => e.outils.filter((o) => o.statut === 'ACTIF').length;
+const outils = (e: EditeurAdministreApi) => {
+  if (!e.outils.length) return 'Aucun outil';
+  const n = proposes(e);
+  return n ? pluriel(n, 'outil proposé', 'outils proposés') : 'Aucun outil proposé';
+};
+const modeles = (e: EditeurAdministreApi) =>
+  e.modeles
+    ? e.modelesProposes
+      ? pluriel(e.modelesProposes, 'modèle proposé', 'modèles proposés')
+      : 'Aucun modèle proposé'
+    : 'Aucun modèle';
+---
+
+<ReferentielsAdmin
+  actif="editeurs"
+  titre="Éditeurs"
+  description="Éditeurs des outils et modèles d’IA proposés dans les saisies de Vysora."
+  {raison}
+>
+  {editeurs && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {pluriel(editeurs.length - archives, 'éditeur proposé', 'éditeurs proposés')}
+      </span>
+      {archives > 0 && <span>{pluriel(archives, 'éditeur archivé', 'éditeurs archivés')}</span>}
+      <span>
+        {typo(
+          'Un éditeur s’ajoute avec son premier outil. Archivé, il n’est plus proposé, ni ses outils et ses modèles ; les contenus qui les citent les affichent toujours.',
+        )}
+      </span>
+    </p>
+  )}
+  {editeurs && (
+    <ul class="ad-refs">
+      {editeurs.map((e) => (
+        <li>
+          <details class:list={['ad-ref', { 'is-archive': !e.actif }]} id={`editeur-${e.id}`}>
+            <summary>
+              <span class="ad-ref-logo is-vide" aria-hidden="true">
+                {e.nom.slice(0, 1)}
+              </span>
+              <span class="ad-membre-corps">
+                <span class="ad-membre-nom">{e.nom}</span>
+                <span class="ad-membre-meta">
+                  <span>{outils(e)}</span>
+                  <span>{modeles(e)}</span>
+                </span>
+              </span>
+              {!e.actif && <span class="ad-etat is-expire">Archivé</span>}
+              <svg class="icon icon-sm ad-ref-chevron" aria-hidden="true">
+                <use href="#i-chevron-down" />
+              </svg>
+            </summary>
+            <div class="ad-ref-corps">
+              <form
+                class="ad-outils ad-modele"
+                novalidate
+                data-ad-editeur-form={e.id}
+                data-nom={e.nom}
+              >
+                <div class="ad-champ is-large">
+                  <label for={`ad-editeur-nom-${e.id}`}>Nom</label>
+                  <input
+                    id={`ad-editeur-nom-${e.id}`}
+                    name="nom"
+                    maxlength="100"
+                    value={e.nom}
+                    autocomplete="off"
+                    required
+                  />
+                  <p class="md-erreur" data-ad-erreur="nom" hidden />
+                </div>
+                <button class="btn btn-secondary" type="submit">
+                  Renommer
+                </button>
+                <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+              </form>
+              {e.outils.length ? (
+                <>
+                  <h3>Outils</h3>
+                  <ul class="ad-ref-outils">
+                    {e.outils.map((o) => (
+                      <li>
+                        <a class="ad-lien" href={`${ROUTES.referentielsAdmin}#outil-${o.id}`}>
+                          {o.nom}
+                        </a>
+                        {o.statut === 'ARCHIVE' && <span class="ad-etat is-expire">Archivé</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p class="md-rien">
+                  {typo(
+                    e.modeles
+                      ? 'Aucun outil : ses modèles sont proposés avec les outils d’autres éditeurs.'
+                      : 'Aucun outil ni modèle pour l’instant.',
+                  )}
+                </p>
+              )}
+              <div class="ad-ref-pied">
+                <p>
+                  {typo(
+                    e.actif
+                      ? 'Proposé à la saisie d’un nouvel outil.'
+                      : 'Ni proposé pour un nouvel outil, ni ses outils et ses modèles dans les saisies.',
+                  )}
+                </p>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  type="button"
+                  data-ad-editeur-statut={e.id}
+                  data-actif={String(!e.actif)}
+                  data-nom={e.nom}
+                  data-outils={proposes(e)}
+                  data-modeles={e.modelesProposes}
+                >
+                  {e.actif ? 'Archiver l’éditeur' : 'Proposer de nouveau l’éditeur'}
+                </button>
+              </div>
+            </div>
+          </details>
+        </li>
+      ))}
+    </ul>
+  )}
+</ReferentielsAdmin>

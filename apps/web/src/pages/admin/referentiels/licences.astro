@@ -1,10 +1,12 @@
 ---
 /* Licences (ADM-02, EC-22, F-17, F-95, CI-26, RG-110) : licences proposées aux auteurs à la
    publication. Nouvelle licence, puis chaque licence avec son libellé, son résumé et l'adresse de son
-   texte ; une seule licence par défaut, toujours proposée. Le code et les variantes permises ne
-   changent plus après la création : les créations publiées gardent leurs conditions.
+   texte ; une seule licence par défaut, toujours proposée ; l'ordre dans lequel les licences sont
+   proposées. Le code et les variantes permises ne changent plus après la création : les créations
+   publiées gardent leurs conditions.
    Envois : scripts/referentiels.ts. */
 import { raisonRefus, type LicenceAdministreeApi } from '@vysora/shared';
+import OrdreReferentiel from '../../../components/OrdreReferentiel.astro';
 import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
 import { appelerApi } from '../../../lib/api';
 import { pluriel, typo } from '../../../lib/texte';
@@ -27,7 +29,7 @@ const choisie = (n: number) =>
   titre="Licences"
   description="Licences proposées aux auteurs à la publication d’une création."
   {raison}
-  icones={['doc', 'arrow-up-right']}
+  icones={['doc', 'arrow-up-right', 'chevron-up-down', 'arrow-up', 'arrow-down']}
 >
   {licences && (
     <p class="md-statut" slot="statut">
@@ -99,6 +101,15 @@ const choisie = (n: number) =>
         </p>
         <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
       </form>
+
+      {licences.length > 1 && (
+        <OrdreReferentiel
+          referentiel="licences"
+          elements={licences}
+          usage="L’ordre des licences proposées à la publication d’une création"
+          archive="Archivée"
+        />
+      )}
 
       <ul class="ad-refs">
         {licences.map((l) => (

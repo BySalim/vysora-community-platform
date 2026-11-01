@@ -1,0 +1,91 @@
+---
+/* Ordre d'affichage d'un référentiel (ADM-02, F-95) : catégories ou licences, archivées comprises.
+   Les boutons monter et descendre déplacent un élément dans la liste ; le nouvel ordre s'enregistre
+   d'un coup, après confirmation. Écran sans maquette, dans le style des référentiels.
+   Envoi : scripts/referentiels.ts. */
+import { typo } from '../lib/texte';
+
+interface Props {
+  referentiel: 'categories' | 'licences';
+  elements: { id: number; libelle: string; active: boolean }[];
+  /** Où l'ordre s'applique, sous le titre du bloc. */
+  usage: string;
+  /** « Archivée » : le libellé de l'état d'un élément archivé. */
+  archive: string;
+}
+
+const { referentiel, elements, usage, archive } = Astro.props;
+const dernier = elements.length - 1;
+---
+
+<div class="ad-refs ad-ordre">
+  <details class="ad-ref" id={`ordre-${referentiel}`} data-ad-ordre={referentiel}>
+    <summary>
+      <span class="ad-ref-logo is-vide" aria-hidden="true">
+        <svg class="icon icon-sm">
+          <use href="#i-chevron-up-down" />
+        </svg>
+      </span>
+      <span class="ad-membre-corps">
+        <span class="ad-membre-nom">Ordre d’affichage</span>
+        <span class="ad-membre-meta">
+          <span>{typo(usage)}</span>
+        </span>
+      </span>
+      <svg class="icon icon-sm ad-ref-chevron" aria-hidden="true">
+        <use href="#i-chevron-down" />
+      </svg>
+    </summary>
+    <div class="ad-ref-corps">
+      <ol class="ad-ordre-liste" data-ad-ordre-liste>
+        {elements.map((e, rang) => (
+          <li data-id={e.id} data-nom={e.libelle}>
+            <span class="ad-ordre-rang" aria-hidden="true">
+              {rang + 1}
+            </span>
+            <span class="ad-ordre-nom">
+              {e.libelle}
+              {!e.active && <span class="ad-etat is-expire">{archive}</span>}
+            </span>
+            <span class="ad-ordre-boutons">
+              <button
+                class="icon-btn"
+                type="button"
+                data-ad-monter
+                aria-label={`Monter « ${e.libelle} »`}
+                disabled={rang === 0}
+              >
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-arrow-up" />
+                </svg>
+              </button>
+              <button
+                class="icon-btn"
+                type="button"
+                data-ad-descendre
+                aria-label={`Descendre « ${e.libelle} »`}
+                disabled={rang === dernier}
+              >
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-arrow-down" />
+                </svg>
+              </button>
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p class="sr-only" aria-live="polite" data-ad-ordre-annonce />
+      <div class="ad-ref-pied">
+        <p data-ad-ordre-etat>{typo('Déplacez les éléments, puis enregistrez le nouvel ordre.')}</p>
+        <div class="ad-actions-defi">
+          <button class="btn btn-secondary btn-sm" type="button" data-ad-ordre-annuler disabled>
+            Rétablir l’ordre enregistré
+          </button>
+          <button class="btn btn-primary btn-sm" type="button" data-ad-ordre-enregistrer disabled>
+            Enregistrer l’ordre
+          </button>
+        </div>
+      </div>
+    </div>
+  </details>
+</div>

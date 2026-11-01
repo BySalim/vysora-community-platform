@@ -11,7 +11,8 @@ import { ROUTES } from '../lib/navigation';
 import '../styles/moderation.css';
 import '../styles/moderation-complements.css';
 
-export type OngletReferentiel = 'outils' | 'categories' | 'licences' | 'etiquettes' | 'badges';
+export type OngletReferentiel =
+  'outils' | 'editeurs' | 'categories' | 'licences' | 'etiquettes' | 'badges';
 
 interface Props {
   actif: OngletReferentiel;
@@ -26,6 +27,7 @@ interface Props {
 const { actif, titre, description, raison, icones = [] } = Astro.props;
 const ONGLETS = [
   { cle: 'outils', libelle: 'Outils et modèles', href: ROUTES.referentielsAdmin },
+  { cle: 'editeurs', libelle: 'Éditeurs', href: ROUTES.editeursAdmin },
   { cle: 'categories', libelle: 'Catégories', href: ROUTES.categoriesAdmin },
   { cle: 'licences', libelle: 'Licences', href: ROUTES.licencesAdmin },
   { cle: 'etiquettes', libelle: 'Étiquettes', href: ROUTES.etiquettesAdmin },

@@ -1,8 +1,27 @@
 /* Outils communs des écrans d'administration (ADM-01, ADM-02) : fenêtre de confirmation, refus de
-   l'API et erreurs des formulaires, chacune sous son champ. L'API reste seule juge : un refus
-   (dernier administrateur, nom déjà pris, licence par défaut) s'affiche tel qu'elle le formule. */
+   l'API et erreurs des formulaires, chacune sous son champ, rechargement sur l'élément modifié.
+   L'API reste seule juge : un refus (dernier administrateur, nom déjà pris, licence par défaut)
+   s'affiche tel qu'elle le formule. */
 
-import { $, $$, toast, typo } from './outils';
+import { $, $$, messageApresChargement, toast, typo } from './outils';
+
+/** Après un changement, la page se recharge sur l'élément concerné (ouvert s'il se déplie). */
+export function rechargerSur(ancre: string, message: string): void {
+  messageApresChargement(message);
+  history.replaceState(null, '', `${location.search}#${ancre}`);
+  // Sinon le navigateur rend la position de défilement d'avant le rechargement.
+  history.scrollRestoration = 'manual';
+  window.location.reload();
+}
+
+/** Au chargement, l'élément désigné par l'adresse (« #outil-12 », « #ordre-categories »,
+    « #code-VYS-K7M2-Q9 ») est ouvert et amené en haut de l'écran. */
+export function allerALElementVise(): void {
+  const vise = /^#[a-z]+-[\w-]+$/.test(location.hash) ? $<HTMLElement>(location.hash) : null;
+  if (!vise) return;
+  if (vise instanceof HTMLDetailsElement) vise.open = true;
+  setTimeout(() => vise.scrollIntoView({ block: 'start', behavior: 'instant' }), 0);
+}
 
 export interface ProblemeAdministration {
   status: number;

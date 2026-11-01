@@ -1,10 +1,12 @@
 ---
 /* Catégories (ADM-02, EC-22, F-95, RG-110) : les domaines d'Explorer, proposés aux auteurs pour
    classer une création, un guide ou un cas. Nouvelle catégorie (libellé, icône, présentation du
-   domaine), puis chaque catégorie avec ses modifications et son archivage. L'adresse de la page du
-   domaine, tirée du premier libellé, ne change plus. Envois : scripts/referentiels.ts. */
+   domaine), ordre d'affichage, puis chaque catégorie avec ses modifications et son archivage.
+   L'adresse de la page du domaine, tirée du premier libellé, ne change plus.
+   Envois : scripts/referentiels.ts. */
 import { ICONES_CATEGORIE, raisonRefus, type CategorieAdministreeApi } from '@vysora/shared';
 import ChampsCategorie from '../../../components/ChampsCategorie.astro';
+import OrdreReferentiel from '../../../components/OrdreReferentiel.astro';
 import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
 import { appelerApi } from '../../../lib/api';
 import { ROUTES } from '../../../lib/navigation';
@@ -27,7 +29,7 @@ const citations = (n: number) =>
   titre="Catégories"
   description="Catégories proposées aux auteurs : les domaines d’Explorer."
   {raison}
-  icones={[...ICONES_CATEGORIE, 'arrow-up-right']}
+  icones={[...ICONES_CATEGORIE, 'arrow-up-right', 'chevron-up-down', 'arrow-up', 'arrow-down']}
 >
   {categories && (
     <p class="md-statut" slot="statut">
@@ -64,6 +66,15 @@ const citations = (n: number) =>
         </p>
         <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
       </form>
+
+      {categories.length > 1 && (
+        <OrdreReferentiel
+          referentiel="categories"
+          elements={categories}
+          usage="L’ordre des domaines dans Explorer, sur l’accueil et dans les saisies"
+          archive="Archivée"
+        />
+      )}
 
       <ul class="ad-refs">
         {categories.map((c) => (

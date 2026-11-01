@@ -77,9 +77,12 @@ export function parFamille(outils: OutilAdministreApi[]): FamilleAdministree[] {
   }).filter((f) => f.outils.length > 0);
 }
 
-/** Éditeurs connus, proposés à la saisie d'un nouvel outil (un éditeur inconnu est créé). */
+/** Éditeurs connus et proposés, suggérés à la saisie d'un nouvel outil (un éditeur inconnu est créé,
+    un éditeur archivé refusé). */
 export const editeurs = (outils: OutilAdministreApi[]): string[] =>
-  [...new Set(outils.map((o) => o.editeur))].toSorted((a, b) => a.localeCompare(b, 'fr'));
+  [...new Set(outils.filter((o) => o.editeurActif).map((o) => o.editeur))].toSorted((a, b) =>
+    a.localeCompare(b, 'fr'),
+  );
 
 /** Nom de chaque icône proposée pour une catégorie, lu par les lecteurs d'écran (EC-22). */
 export const LIBELLES_ICONE_CATEGORIE: Record<IconeCategorie, string> = {
@@ -134,6 +137,8 @@ export const badgesParCategorie = (
 
 const texteDe = (valeur: unknown): string | null => (typeof valeur === 'string' ? valeur : null);
 const nombreDe = (valeur: unknown): number | null => (typeof valeur === 'number' ? valeur : null);
+const listeDe = (valeur: unknown): string[] =>
+  Array.isArray(valeur) ? valeur.filter((v): v is string => typeof v === 'string') : [];
 
 /** Version d'un document légal nommée par les détails inscrits (elle peut avoir été retirée) :
     « Conditions générales d’utilisation, version du 15 novembre 2026 ». */
@@ -199,6 +204,28 @@ export function precisionAudit(entree: EntreeAuditApi): string {
     case 'LICENCE_PAR_DEFAUT': {
       const avant = texteDe(d?.avant);
       return avant ? `Auparavant : ${avant}` : '';
+    }
+    case 'EDITEUR_RENOMME': {
+      const avant = texteDe(d?.avant);
+      const apres = texteDe(d?.apres);
+      return avant && apres ? `${avant} → ${apres}` : '';
+    }
+    case 'EDITEUR_ARCHIVE': {
+      // Outils archivés et modèles retirés avec l'éditeur.
+      const outils = listeDe(d?.outils).length;
+      const modeles = listeDe(d?.modeles).length;
+      return [
+        outils ? pluriel(outils, 'outil archivé', 'outils archivés') : '',
+        modeles ? pluriel(modeles, 'modèle retiré', 'modèles retirés') : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+    }
+    case 'CATEGORIES_ORDONNEES':
+    case 'LICENCES_ORDONNEES': {
+      // Les cinq premiers du nouvel ordre.
+      const ordre = listeDe(d?.ordre);
+      return `${ordre.slice(0, 5).join(', ')}${ordre.length > 5 ? '…' : ''}`;
     }
     default:
       return '';

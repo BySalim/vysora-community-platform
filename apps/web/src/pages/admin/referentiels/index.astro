@@ -3,11 +3,13 @@
    prototype, conçu dans le style des écrans d'administration : nouvel outil, puis les outils par
    famille, chacun avec ses modèles. Un outil ou un modèle déjà cité ne se supprime pas : archivé
    (outil) ou retiré (modèle), il reste affiché sur les contenus et n'est plus proposé dans les
-   nouvelles saisies. Envois : scripts/referentiels.ts. */
+   nouvelles saisies. Les outils d'un éditeur archivé (onglet Éditeurs) ne se proposent de nouveau
+   qu'avec lui. Envois : scripts/referentiels.ts. */
 import { FAMILLES_OUTIL, raisonRefus, TYPES_OUTIL, type OutilAdministreApi } from '@vysora/shared';
 import ReferentielsAdmin from '../../../components/ReferentielsAdmin.astro';
 import { editeurs, LIBELLES_TYPE_OUTIL, parFamille } from '../../../lib/administration';
 import { appelerApi } from '../../../lib/api';
+import { ROUTES } from '../../../lib/navigation';
 import { FAMILLES } from '../../../lib/publier/donnees';
 import { dateCourte, fmt, pluriel, typo } from '../../../lib/texte';
 
@@ -138,7 +140,7 @@ const proposes = (o: OutilAdministreApi) => {
                     <span class="ad-membre-corps">
                       <span class="ad-membre-nom">{o.nom}</span>
                       <span class="ad-membre-meta">
-                        <span>{o.editeur}</span>
+                        <span>{o.editeurActif ? o.editeur : `${o.editeur} (éditeur archivé)`}</span>
                         <span>{proposes(o)}</span>
                         <span>{citations(o.utilisations)}</span>
                       </span>
@@ -184,7 +186,7 @@ const proposes = (o: OutilAdministreApi) => {
                                 </span>
                               </td>
                               <td>
-                                <div class="ad-actions-defi">
+                                <div class="ad-actions-defi" hidden={!o.editeurActif}>
                                   <button
                                     class="btn btn-secondary btn-sm"
                                     type="button"
@@ -208,7 +210,12 @@ const proposes = (o: OutilAdministreApi) => {
                         {typo('Aucun modèle n’est encore proposé avec cet outil.')}
                       </p>
                     )}
-                    <form class="ad-outils ad-modele" novalidate data-ad-modele-form={o.id}>
+                    <form
+                      class="ad-outils ad-modele"
+                      novalidate
+                      data-ad-modele-form={o.id}
+                      hidden={!o.editeurActif}
+                    >
                       <div class="ad-champ is-large">
                         <label for={`ad-modele-nom-${o.id}`}>Nouveau modèle, nom complet</label>
                         <input id={`ad-modele-nom-${o.id}`} name="nom" maxlength="100" required />
@@ -239,16 +246,24 @@ const proposes = (o: OutilAdministreApi) => {
                     </form>
                     <div class="ad-ref-pied">
                       <p>{typo(`Type : ${LIBELLES_TYPE_OUTIL[o.type]}`)}</p>
-                      <button
-                        class="btn btn-secondary btn-sm"
-                        type="button"
-                        data-ad-outil-statut={o.id}
-                        data-statut={o.statut === 'ACTIF' ? 'ARCHIVE' : 'ACTIF'}
-                        data-nom={o.nom}
-                        data-utilisations={o.utilisations}
-                      >
-                        {o.statut === 'ACTIF' ? 'Archiver l’outil' : 'Proposer de nouveau l’outil'}
-                      </button>
+                      {o.editeurActif ? (
+                        <button
+                          class="btn btn-secondary btn-sm"
+                          type="button"
+                          data-ad-outil-statut={o.id}
+                          data-statut={o.statut === 'ACTIF' ? 'ARCHIVE' : 'ACTIF'}
+                          data-nom={o.nom}
+                          data-utilisations={o.utilisations}
+                        >
+                          {o.statut === 'ACTIF'
+                            ? 'Archiver l’outil'
+                            : 'Proposer de nouveau l’outil'}
+                        </button>
+                      ) : (
+                        <a class="ad-lien" href={`${ROUTES.editeursAdmin}#editeur-${o.editeurId}`}>
+                          {typo(`Éditeur archivé : proposez de nouveau ${o.editeur} d’abord`)}
+                        </a>
+                      )}
                     </div>
                   </div>
                 </details>

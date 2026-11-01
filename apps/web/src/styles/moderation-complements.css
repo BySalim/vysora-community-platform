@@ -283,3 +283,29 @@
   .ad-guides td:nth-child(3) { white-space: normal; }
   .ad-guides td[data-libelle]::before, .ad-demandes td[data-libelle]::before { content: attr(data-libelle) " : "; color: var(--text-muted); }
 }
+
+/* Suite d'ADM-02 : désactivation d'un code d'invitation, ordre d'affichage des catégories et des
+   licences, éditeurs des outils d'IA */
+.ad-table td.ad-cellule-action { text-align: right; }
+.ad-invitations td { vertical-align: middle; }
+.ad-ordre { margin: 4px 0 8px; border-top: 1px solid var(--border); }
+.ad-ordre-liste { display: grid; margin: 0 0 4px; padding: 0; list-style: none; }
+.ad-ordre-liste li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 48px; border-bottom: 1px solid var(--border); }
+.ad-ordre-liste li:last-child { border-bottom: 0; }
+.ad-ordre-rang { color: var(--text-muted); font: 600 0.8125rem/1 var(--font-body); font-variant-numeric: tabular-nums; text-align: right; }
+.ad-ordre-nom { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; color: var(--text); font: 600 0.9375rem/1.35 var(--font-body); overflow-wrap: anywhere; }
+.ad-ordre-nom .ad-etat { font-size: 0.8125rem; }
+.ad-ordre-boutons { display: flex; gap: 2px; }
+.ad-ordre-boutons .icon-btn:disabled { opacity: 0.32; cursor: default; background: none; }
+.ad-ordre .ad-ref-pied .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.ad-ordre-boutons .icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ad-ref-outils { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; }
+.ad-ref-outils li { color: var(--text-muted); font: 500 0.8125rem/1.4 var(--font-body); }
+.ad-ref-outils .ad-etat { margin-left: 6px; }
+.ad-ref-corps > h3 { margin: 10px 0 2px; color: var(--text-muted); font: 600 0.75rem/1.3 var(--font-body); }
+
+@media (max-width: 720px) {
+  .ad-table td.ad-cellule-action { text-align: left; }
+  .ad-table td.ad-cellule-action:empty { display: none; }
+  .ad-ordre-liste li { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; }
+}

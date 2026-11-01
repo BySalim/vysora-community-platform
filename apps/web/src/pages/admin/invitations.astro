@@ -1,7 +1,8 @@
 ---
 /* Codes d'invitation de la bêta fermée (ADM-01, INV-01). Écran sans maquette dans le prototype,
    conçu dans le style des écrans de modération : création de codes (nombre, validité), puis liste
-   des codes, libres, utilisés ou expirés. La création part de scripts/administration.ts. */
+   des codes, libres, utilisés, expirés ou désactivés ; un code libre se désactive après confirmation
+   (ADM-02). Création et désactivation : scripts/administration.ts. */
 import { raisonRefus, type ListeInvitationsApi } from '@vysora/shared';
 import AccesBloc from '../../components/AccesBloc.astro';
 import OngletsAdministration from '../../components/OngletsAdministration.astro';
@@ -106,13 +107,16 @@ const maintenant = new Date();
           </button>
         </div>
         {liste.elements.length ? (
-          <table class="ad-table">
+          <table class="ad-table ad-invitations">
             <thead>
               <tr>
                 <th scope="col">Code</th>
                 <th scope="col">Création</th>
                 <th scope="col">Validité</th>
                 <th scope="col">État</th>
+                <th scope="col">
+                  <span class="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -120,7 +124,7 @@ const maintenant = new Date();
                 const expire =
                   !i.utilisation && i.dateExpiration && new Date(i.dateExpiration) <= maintenant;
                 return (
-                  <tr>
+                  <tr id={`code-${i.code}`}>
                     <td>
                       <code>{i.code}</code>
                     </td>
@@ -137,10 +141,25 @@ const maintenant = new Date();
                         <span class="ad-etat">
                           {`Utilisé le ${dateCourte(i.utilisation.date)}${i.utilisation.membre ? ` par ${i.utilisation.membre.nom}` : ''}`}
                         </span>
+                      ) : i.dateDesactivation ? (
+                        <span class="ad-etat is-expire">
+                          {`Désactivé le ${dateCourte(i.dateDesactivation)}`}
+                        </span>
                       ) : expire ? (
                         <span class="ad-etat is-expire">Expiré</span>
                       ) : (
                         <span class="ad-etat is-libre">Libre</span>
+                      )}
+                    </td>
+                    <td class="ad-cellule-action">
+                      {i.libre && (
+                        <button
+                          class="btn btn-secondary btn-sm"
+                          type="button"
+                          data-ad-desactiver={i.code}
+                        >
+                          Désactiver
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -170,6 +189,30 @@ const maintenant = new Date();
       </div>
     )
   )}
+
+  <Fragment slot="fin">
+    {!raison && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="ad-dialogue-titre"
+        aria-describedby="ad-dialogue-texte"
+        data-ad-dialogue
+      >
+        <form method="dialog">
+          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Revenir
+            </button>
+            <button class="btn btn-primary" type="button" data-ad-confirmer>
+              Confirmer
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
 </Base>
 
 <script>

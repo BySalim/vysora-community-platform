@@ -48,6 +48,7 @@ export const ROUTES = {
   piegesAdmin: '/admin/guides/pieges',
   demandesAdmin: '/admin/guides/demandes',
   referentielsAdmin: '/admin/referentiels',
+  editeursAdmin: '/admin/referentiels/editeurs',
   categoriesAdmin: '/admin/referentiels/categories',
   licencesAdmin: '/admin/referentiels/licences',
   etiquettesAdmin: '/admin/referentiels/etiquettes',

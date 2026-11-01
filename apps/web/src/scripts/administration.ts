@@ -1,7 +1,7 @@
 /* Administration (ADM-01, ADM-02) : changement de rôle et réinitialisation de la double
-   authentification après confirmation (F-96, RG-111, SEC-02), création de codes d'invitation
-   (INV-01), défis (EC-24), versions des documents légaux (EC-25, RG-112). Référentiels :
-   scripts/referentiels.ts. */
+   authentification après confirmation (F-96, RG-111, SEC-02), création et désactivation de codes
+   d'invitation (INV-01), défis (EC-24), versions des documents légaux (EC-25, RG-112).
+   Référentiels : scripts/referentiels.ts. */
 
 import {
   erreursParChamp,
@@ -14,14 +14,18 @@ import {
 import { LIBELLES_ROLE } from '../lib/administration';
 import {
   afficherErreurs,
+  allerALElementVise,
   confirmer,
   dialogue,
   erreursDuRefus,
+  rechargerSur,
   signalerRefus,
 } from './commun/administration';
 import { api } from './commun/api';
 import { dateCourte, dateLongue } from '../lib/texte';
 import { $, $$, esc, messageApresChargement, t, toast, typo } from './commun/outils';
+
+allerALElementVise();
 
 dialogue?.addEventListener('close', () => {
   // Annulé : les listes reprennent le rôle actuel.
@@ -142,7 +146,7 @@ if (formInvitations) {
         codes
           .map(
             (code) =>
-              `<tr><td><code>${esc(code)}</code></td><td>${t(dateCourte(new Date()))}</td><td>${t(validite)}</td><td><span class="ad-etat is-libre">Libre</span></td></tr>`,
+              `<tr id="code-${esc(code)}"><td><code>${esc(code)}</code></td><td>${t(dateCourte(new Date()))}</td><td>${t(validite)}</td><td><span class="ad-etat is-libre">Libre</span></td><td class="ad-cellule-action"><button class="btn btn-secondary btn-sm" type="button" data-ad-desactiver="${esc(code)}">Désactiver</button></td></tr>`,
           )
           .join(''),
       );
@@ -159,6 +163,31 @@ if (formInvitations) {
     }
   });
 }
+
+// ADM-02 : un code libre désactivé est refusé à l'inscription ; les codes créés à l'instant aussi.
+document.addEventListener('click', (evenement) => {
+  const bouton = (evenement.target as Element | null)?.closest<HTMLButtonElement>(
+    '[data-ad-desactiver]',
+  );
+  if (!bouton) return;
+  const code = bouton.dataset.adDesactiver ?? '';
+  confirmer(
+    `Désactiver le code ${code} ?`,
+    'Il n’est plus accepté à l’inscription, même par la personne qui l’a reçu. Cette action est définitive : pour inviter cette personne, créez-lui un nouveau code.',
+    'Désactiver le code',
+    async () => {
+      bouton.disabled = true;
+      const reponse = await api(
+        'POST',
+        `/api/v1/admin/invitations/${encodeURIComponent(code)}/desactivation`,
+        {},
+      );
+      bouton.disabled = false;
+      if (!reponse.ok) return signalerRefus(reponse.probleme);
+      rechargerSur(`code-${code}`, `Code ${code} désactivé.`);
+    },
+  );
+});
 
 /* Défis (EC-24) ------------------------------------------------------------------------ */
 
