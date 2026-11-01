@@ -530,7 +530,11 @@ function demarrer(depart: Donnees): void {
       meta = `<span class="mc-qui">${avatar(x.auteur)}${t(x.auteur.nom)}</span>${x.outil ? `<span>${outilHTML(x.outil, x.modele ?? '')}</span>` : ''}${date}`;
     } else {
       vig = `<span class="mc-vignette is-cas" aria-hidden="true">${icon('shield', '')}</span>`;
-      typ = `<span class="mc-genre">${icon('shield')}Cas Bon réflexe</span><span class="mc-sep" aria-hidden="true">·</span><span>${t(DIFFICULTES[x.difficulte])}</span>`;
+      // Comme le prototype : « Code et scripts · 5 min » ; la difficulté si l'auteur n'a précisé ni l'un ni l'autre.
+      const details = [x.domaine?.libelle, x.dureeMinutes ? `${x.dureeMinutes} min` : null].filter(
+        (d): d is string => Boolean(d),
+      );
+      typ = `<span class="mc-genre">${icon('shield')}Cas Bon réflexe</span>${(details.length ? details : [DIFFICULTES[x.difficulte]]).map((d) => `<span class="mc-sep" aria-hidden="true">·</span><span>${t(d)}</span>`).join('')}`;
       href = ROUTES.casBonReflexe(x.id, x.slug);
       meta = `<span class="mc-qui">${avatar(x.auteur)}${t(`Proposé par ${x.auteur.nom}`)}</span>${date}`;
     }

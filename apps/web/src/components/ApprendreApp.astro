@@ -1,13 +1,16 @@
 ---
 /* Apprendre (APP-02), porté de prototype/apprendre.html : barre locale des rubriques, recherche,
    lien « Ma progression » et zone des vues, que le script rend (scripts/apprendre.ts) à partir des
-   contenus éditoriaux et des cas Bon réflexe de l'API, posés ici en JSON (#ap-donnees). */
-import type {
-  CasResumeApi,
-  GuidesApi,
-  ListeCasApi,
-  ListeSujetsApi,
-  ReferentielsApi,
+   contenus éditoriaux et des cas Bon réflexe de l'API, posés ici en JSON (#ap-donnees), avec la
+   progression du membre sur les savoirs (APP-03). */
+import {
+  raisonRefus,
+  type CasResumeApi,
+  type GuidesApi,
+  type ListeCasApi,
+  type ListeSujetsApi,
+  type ProgressionSavoirsApi,
+  type ReferentielsApi,
 } from '@vysora/shared';
 import { appelerApi } from '../lib/api';
 import type { DonneesPageApprendre } from '../lib/apprendre/types';
@@ -34,11 +37,16 @@ async function tousLesCas(): Promise<CasResumeApi[]> {
   return [premiere, ...suite].flatMap((page) => page?.elements ?? []);
 }
 
-const [cas, referentiels, guides, sujets] = await Promise.all([
+// La progression d'un membre qui peut contribuer est gardée dans son compte ; sinon dans le navigateur.
+const enCompte = !raisonRefus('contribuer', Astro.locals.etat);
+const [cas, referentiels, guides, sujets, progression] = await Promise.all([
   tousLesCas(),
   appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null),
   appelerApi<GuidesApi>('/api/v1/guides', options).catch(() => null),
   appelerApi<ListeSujetsApi>('/api/v1/sujets', options).catch(() => null),
+  enCompte
+    ? appelerApi<ProgressionSavoirsApi>('/api/v1/moi/savoirs', options).catch(() => null)
+    : null,
 ]);
 
 const donnees: DonneesPageApprendre = {
@@ -64,6 +72,7 @@ const donnees: DonneesPageApprendre = {
   casOuvert,
   aujourdhui: new Date().toISOString().slice(0, 10),
   chiffres: { sujets: sujets?.total ?? 0, outils: referentiels?.outils.length ?? 0 },
+  progression,
 };
 ---
 

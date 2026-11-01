@@ -1,7 +1,7 @@
 /* Types des contenus éditoriaux d'Apprendre (prototype/apprendre-data.js) et des données que la page
    reçoit du serveur (cas Bon réflexe de l'API, outils, guides, domaines). */
 
-import type { CasResumeApi } from '@vysora/shared';
+import type { CasResumeApi, ProgressionSavoirsApi } from '@vysora/shared';
 
 export type IdRubrique = 'bases' | 'notions' | 'regles' | 'astuces' | 'bon-reflexe';
 
@@ -77,4 +77,6 @@ export interface DonneesPageApprendre {
   aujourdhui: string;
   /** Chiffres de « D'où viennent ces savoirs » : sujets du forum, outils suivis. */
   chiffres: { sujets: number; outils: number };
+  /** APP-03 : progression du membre sur les savoirs, lue dans son compte ; null pour un visiteur. */
+  progression: ProgressionSavoirsApi | null;
 }

@@ -1,10 +1,18 @@
 /* Apprendre (APP-02), porté de prototype/apprendre.js : vue d'ensemble, rubriques (bases, notions,
    règles, astuces, Bon réflexe), page d'un savoir, page d'un cas, progression, recherche locale.
    Les savoirs sont les contenus éditoriaux de lib/apprendre/contenus.ts ; les cas Bon réflexe et
-   leurs réponses passent par l'API (APP-01). La progression sur les savoirs reste dans le
-   navigateur, comme dans le prototype ; celle des cas est enregistrée dans le compte du membre. */
+   leurs réponses passent par l'API (APP-01). La progression d'un membre (savoirs acquis, réponses
+   aux questions de vérification et aux cas) est enregistrée dans son compte (APP-03) ; celle d'un
+   visiteur reste dans le navigateur, comme dans le prototype, et rejoint son compte à sa première
+   visite connectée. */
 
-import type { CasApi, CorrectionCasApi, CasResumeApi, ReponseCasApi } from '@vysora/shared';
+import type {
+  CasApi,
+  CorrectionCasApi,
+  CasResumeApi,
+  ProgressionSavoirsApi,
+  ReponseCasApi,
+} from '@vysora/shared';
 import { APPRENDRE as A } from '../lib/apprendre/contenus';
 import type { DonneesPageApprendre, IdRubrique, Savoir } from '../lib/apprendre/types';
 import { decouper, contient, plier, surligner } from '../lib/explorer/recherche';
@@ -176,11 +184,12 @@ if (D && vue) {
     !model ? tool : /^(GPT|DALL)/.test(model) || tool === 'Le Chat' ? model : `${tool} ${model}`;
   const kindOf = (s: SavoirVue) => RUB[s.kind];
 
-  /* Progression : savoirs dans ce navigateur ; cas dans le compte (RG-72) ------------ */
+  /* Progression : dans le compte du membre (savoirs, APP-03 ; cas, RG-72), sinon dans ce
+     navigateur ---------------------------------------------------------------------- */
 
   const CLE = 'vysora-apprendre-progres';
   const lirePlat = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
-  let progress: Progression = (() => {
+  const locale: Progression = (() => {
     try {
       const p = JSON.parse(localStorage.getItem(CLE) ?? '{}') as Partial<Progression>;
       return {
@@ -192,22 +201,70 @@ if (D && vue) {
       return { acquis: {}, cas: {}, checks: {} };
     }
   })();
-  const enCompte = () => etats.peut('contribuer');
+  const enCompte = () => etats.peut('contribuer') && D.progression !== null;
+  /** Progression du compte, au format du prototype. */
+  const duCompte = (p: ProgressionSavoirsApi): Pick<Progression, 'acquis' | 'checks'> => ({
+    acquis: { ...p.acquis },
+    checks: Object.fromEntries(
+      Object.entries(p.verifications).map(([id, v]) => [
+        id,
+        { choice: v.choix, right: v.correcte, date: v.date },
+      ]),
+    ),
+  });
+  let progress: Progression =
+    enCompte() && D.progression ? { ...duCompte(D.progression), cas: {} } : locale;
   // Les réponses du membre viennent de son compte (« Réussi », « À revoir »).
-  if (enCompte()) {
-    progress.cas = {};
+  if (enCompte())
     for (const c of cases)
       if (c.api.maReponse)
         progress.cas[c.id] = { choice: -1, right: c.api.maReponse.correcte, date: today };
-  }
   const saveProgress = () => {
+    // Un membre retrouve sa progression dans son compte : rien n'est gardé dans le navigateur.
+    if (enCompte()) return;
     try {
-      const garde = enCompte() ? { ...progress, cas: {} } : progress;
-      localStorage.setItem(CLE, JSON.stringify(garde));
+      localStorage.setItem(CLE, JSON.stringify(progress));
     } catch {
       // Stockage indisponible : la progression dure le temps de la page.
     }
   };
+  const ECHEC_PROGRESSION = 'Votre progression n’a pas été enregistrée. Réessayez dans un instant.';
+  /** État d'un savoir enregistré dans le compte du membre (APP-03). */
+  async function envoyerSavoir(id: string) {
+    if (!enCompte()) return;
+    const check = progress.checks[id];
+    const reponse = await api<ProgressionSavoirsApi>(
+      'PUT',
+      `/api/v1/moi/savoirs/${encodeURIComponent(id)}`,
+      {
+        acquis: Boolean(progress.acquis[id]),
+        verification: check ? { choix: check.choice, correcte: check.right } : null,
+      },
+    );
+    if (!reponse.ok) toast(ECHEC_PROGRESSION, 'alert');
+  }
+  // Première visite connectée : la progression gardée dans ce navigateur rejoint le compte.
+  const aVerser = Object.keys(locale.acquis).length + Object.keys(locale.checks).length > 0;
+  async function verserAuCompte() {
+    const reponse = await api<ProgressionSavoirsApi>('POST', '/api/v1/moi/savoirs', {
+      acquis: locale.acquis,
+      verifications: Object.fromEntries(
+        Object.entries(locale.checks).map(([id, c]) => [
+          id,
+          { choix: c.choice, correcte: c.right, date: c.date },
+        ]),
+      ),
+    });
+    if (!reponse.ok) return;
+    try {
+      localStorage.removeItem(CLE);
+    } catch {
+      // Stockage indisponible : rien à retirer.
+    }
+    Object.assign(progress, duCompte(reponse.donnees));
+    renderProgressLink();
+    show({ focus: false });
+  }
   const lieu = () =>
     enCompte()
       ? 'Votre progression est enregistrée dans votre compte, sur tous vos appareils.'
@@ -217,6 +274,7 @@ if (D && vue) {
     if (on) progress.acquis[id] = progress.acquis[id] || today;
     else delete progress.acquis[id];
     saveProgress();
+    void envoyerSavoir(id);
     renderProgressLink();
   }
   const revisedSince = (s: SavoirVue) =>
@@ -494,6 +552,7 @@ if (D && vue) {
     if (type === 'check') delete progress.checks[id];
     else delete progress.cas[id];
     saveProgress();
+    if (type === 'check') void envoyerSavoir(id);
     renderProgressLink();
     const c = type === 'cas' ? caseById[id] : null;
     scope.outerHTML =
@@ -529,6 +588,7 @@ if (D && vue) {
       const right = choice === s.check!.correct;
       progress.checks[id] = { choice, right, date: today };
       if (right) progress.acquis[id] = progress.acquis[id] || today;
+      void envoyerSavoir(id);
     } else {
       // F-62, RG-72 : la réponse part à l'API, qui renvoie la correction (et l'enregistre pour un membre).
       const c = caseById[id]!;
@@ -546,7 +606,10 @@ if (D && vue) {
       c.correction = resultat.donnees.correction;
       const right = resultat.donnees.correcte;
       progress.cas[id] = { choice, right, date: today };
-      if (right && c.regle) progress.acquis[c.regle] = progress.acquis[c.regle] || today;
+      if (right && c.regle && !progress.acquis[c.regle]) {
+        progress.acquis[c.regle] = today;
+        void envoyerSavoir(c.regle);
+      }
     }
     saveProgress();
     renderProgressLink();
@@ -1507,6 +1570,11 @@ if (D && vue) {
       return;
     }
     if (target.closest('[data-ap-reset-yes]')) {
+      if (enCompte()) {
+        void api('DELETE', '/api/v1/moi/savoirs').then((reponse) => {
+          if (!reponse.ok) toast(ECHEC_PROGRESSION, 'alert');
+        });
+      }
       progress = { acquis: {}, cas: enCompte() ? progress.cas : {}, checks: {} };
       saveProgress();
       show({ focus: true });
@@ -1634,4 +1702,5 @@ if (D && vue) {
 
   readURL();
   show({ focus: false, hash: location.hash });
+  if (enCompte() && aVerser) void verserAuCompte();
 }
