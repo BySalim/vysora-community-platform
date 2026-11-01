@@ -84,6 +84,7 @@
 | `message` | MESSAGE (REPONDRE) | sous-type ; `sujet_id`. Un prompt proposé suit le texte du `corps`, dans un bloc de code « text » final (`composerMessage`, `lireMessage`) |
 | `cas_bon_reflexe` | CAS_BON_REFLEXE (EXAMINER) | sous-type ; examen présent si et seulement si le cas est VALIDE ou REFUSE (CI-18), effacé à une nouvelle soumission (RG-71) ; motif obligatoire si REFUSE ; outil et modèle de la réponse étudiée, mêmes règles que pour un sujet (migration `0004`). Seul un cas VALIDE et visible a un document de recherche (RG-31) |
 | `option_reponse` | OPTION_REPONSE (PROPOSER) | unique différé `(cas_id, ordre)` ; au plus une option correcte par cas (index partiel, **non différé** : l’API retire la bonne réponse avant de la reposer quand elle change). Options gardées par identifiant à la modification ; figées dès qu’une réponse les désigne (RG-72, contrôlé par l’API) |
+| `progression_savoir` | extension (APP-03 : « Ma progression » d'Apprendre) | clé `(utilisateur_id, savoir)` ; `savoir` : identifiant d'un savoir, contenu éditorial du site ; `date_acquis` ; réponse à la question de vérification (`choix` 0 à 4, `correcte`, `date_verification`, toutes trois présentes ou absentes) ; une ligne sans acquis ni réponse est supprimée ; effacée avec les données personnelles du compte |
 | `choix_option` | CHOISIR | clé `(utilisateur_id, cas_id)` : une réponse définitive par cas (RG-72) ; clé étrangère `(option_id, cas_id)` qui garantit que l'option appartient au cas |
 
 ### Modération
