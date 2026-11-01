@@ -95,6 +95,9 @@ export const LIMITES = {
   // RG-102 : ajustement de la réputation par un administrateur (fraude avérée), en points, dans un
   // sens ou dans l'autre ; garde-fou du seuil du plus haut niveau (aucune règle ne le borne).
   ajustementReputation: 5000,
+  // APP-03 : savoirs d'Apprendre suivis par un membre (une soixantaine publiés) : garde-fou de l'API,
+  // qui ne connaît pas la liste des savoirs (contenus éditoriaux du site).
+  savoirsSuivis: 300,
 } as const;
 
 /** RG-86 : objectif de chaque badge qui se gagne en avançant, et unité de son avancement, accordée

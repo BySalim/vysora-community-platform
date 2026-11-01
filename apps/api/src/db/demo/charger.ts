@@ -1368,7 +1368,8 @@ async function completerResultats(ctx: Contexte): Promise<void> {
 }
 
 /** Ce que les données ont gagné pour suivre le prototype (nom affiché, titres des moments et des échanges,
-    format, « À adapter », outil des sujets et des cas), ajouté aux lignes déjà en base qui ne l'ont pas. */
+    format, « À adapter », outil des sujets et des cas, domaine et durée des cas), ajouté aux lignes déjà
+    en base qui ne l'ont pas. */
 async function completerFidelite(ctx: Contexte): Promise<void> {
   const compter = (lignes: unknown[]) => {
     ctx.bilan.completes += lignes.length;
@@ -1460,12 +1461,27 @@ async function completerFidelite(ctx: Contexte): Promise<void> {
   }
   for (const c of CAS) {
     const id = ctx.cas.get(c.cle);
-    if (!id || !c.outil) continue;
+    if (!id) continue;
+    if (c.outil)
+      compter(
+        await ctx.tx
+          .update(casBonReflexe)
+          .set(outilEtModele(ctx, c.outil, c.modele))
+          .where(and(eq(casBonReflexe.id, id), isNull(casBonReflexe.outilId)))
+          .returning({ id: casBonReflexe.id }),
+      );
+    // Domaine et durée d'un cas (décision du 2026-10-30), absents des cas chargés avant elle.
     compter(
       await ctx.tx
         .update(casBonReflexe)
-        .set(outilEtModele(ctx, c.outil, c.modele))
-        .where(and(eq(casBonReflexe.id, id), isNull(casBonReflexe.outilId)))
+        .set({ categorieId: categorieDuCas(ctx, c.domaine), dureeMinutes: c.duree })
+        .where(
+          and(
+            eq(casBonReflexe.id, id),
+            isNull(casBonReflexe.categorieId),
+            isNull(casBonReflexe.dureeMinutes),
+          ),
+        )
         .returning({ id: casBonReflexe.id }),
     );
   }

@@ -175,6 +175,9 @@ export interface MonCasApi {
   slug: string;
   titre: string;
   difficulte: DifficulteCas;
+  /** Domaine et durée estimée, si l'auteur les a précisés. */
+  domaine: { libelle: string; slug: string } | null;
+  dureeMinutes: number | null;
   statut: StatutValidationCas;
   dateCreation: string;
   dateModification: string | null;
@@ -202,4 +205,13 @@ export interface ApprentissageApi {
   };
   /** Cas manqués, de la réponse la plus récente à la plus ancienne (« Réponse à revoir »). */
   aRevoir: { id: number; slug: string; titre: string; difficulte: DifficulteCas; date: string }[];
+}
+
+/** APP-03 : progression du membre sur les savoirs d'Apprendre (GET /api/v1/moi/savoirs), désignés par
+    leur identifiant ; dates AAAA-MM-JJ. */
+export interface ProgressionSavoirsApi {
+  /** Savoirs acquis et date où ils l'ont été. */
+  acquis: Record<string, string>;
+  /** Réponse à la question de vérification de chaque savoir. */
+  verifications: Record<string, { choix: number; correcte: boolean; date: string }>;
 }

@@ -31,6 +31,7 @@ import {
   media,
   notification,
   preferenceNotification,
+  progressionSavoir,
   propositionPiege,
   session,
   soutienDemande,
@@ -221,9 +222,9 @@ export class SuppressionService {
   }
 
   /** Ce qui ne concerne que le membre : sessions, liens, préférences, notifications, acceptations,
-      contenus enregistrés, comptes liés, tentatives de connexion, autres demandes, et dans Explorer
-      ses listes de contrôle, ses pièges signalés (un piège retenu a été réécrit dans le guide par
-      l'équipe) et les objectifs qu'il cherchait. */
+      contenus enregistrés, comptes liés, tentatives de connexion, autres demandes, sa progression
+      sur les savoirs d'Apprendre, et dans Explorer ses listes de contrôle, ses pièges signalés (un
+      piège retenu a été réécrit dans le guide par l'équipe) et les objectifs qu'il cherchait. */
   private async effacerDonneesPersonnelles(tx: Executeur, id: number): Promise<void> {
     await tx.delete(listeControle).where(eq(listeControle.utilisateurId, id));
     await tx.delete(propositionPiege).where(eq(propositionPiege.auteurId, id));
@@ -237,6 +238,7 @@ export class SuppressionService {
     await tx.delete(notification).where(eq(notification.destinataireId, id));
     await tx.delete(acceptationDocument).where(eq(acceptationDocument.utilisateurId, id));
     await tx.delete(enregistrement).where(eq(enregistrement.utilisateurId, id));
+    await tx.delete(progressionSavoir).where(eq(progressionSavoir.utilisateurId, id));
     await tx
       .delete(demandeDroit)
       .where(and(eq(demandeDroit.utilisateurId, id), eq(demandeDroit.type, 'EXPORT')));

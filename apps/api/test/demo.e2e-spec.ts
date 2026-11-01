@@ -453,7 +453,8 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
             (select count(*) from echange where titre is not null)::int as echanges,
             (select count(*) from moment_cle where titre is not null)::int as moments,
             (select count(*) from sujet where outil_id is not null)::int as sujets,
-            (select count(*) from cas_bon_reflexe where outil_id is not null)::int as cas`,
+            (select count(*) from cas_bon_reflexe where outil_id is not null)::int as cas,
+            (select count(*) from cas_bon_reflexe where categorie_id is not null and duree_minutes is not null)::int as domaines_cas`,
         )
       ).rows[0];
 
@@ -466,6 +467,7 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
         moments: 14,
         sujets: 17,
         cas: 8,
+        domaines_cas: 8,
       });
       const id = await valeur(
         sql`select id from creation where titre = 'Prise de rendez-vous pour un salon de coiffure'`,
@@ -513,7 +515,7 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
         sql`update sujet set outil_id = null, modele_id = null, modele_non_reference = null`,
       );
       await contexte.db.execute(
-        sql`update cas_bon_reflexe set outil_id = null, modele_id = null, modele_non_reference = null`,
+        sql`update cas_bon_reflexe set outil_id = null, modele_id = null, modele_non_reference = null, categorie_id = null, duree_minutes = null`,
       );
       const avant = await compter();
       const complement = await charger('test');

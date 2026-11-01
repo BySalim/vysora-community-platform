@@ -175,17 +175,25 @@ export class CasService {
         desc(sql`coalesce(${contenu.dateModification}, ${contenu.dateCreation})`),
         desc(casBonReflexe.id),
       );
-    const masquages = await lireMasquages(
-      this.db,
-      lignes.filter((l) => l.statutContenu === 'MASQUE').map((l) => l.id),
-      false,
-    );
+    const [masquages, domaines] = await Promise.all([
+      lireMasquages(
+        this.db,
+        lignes.filter((l) => l.statutContenu === 'MASQUE').map((l) => l.id),
+        false,
+      ),
+      domainesDes(
+        this.db,
+        lignes.map((l) => l.id),
+      ),
+    ]);
     return {
       elements: lignes.map((l) => ({
         id: l.id,
         slug: l.slug,
         titre: l.titre,
         difficulte: l.difficulte,
+        domaine: domaines.get(l.id)?.domaine ?? null,
+        dureeMinutes: domaines.get(l.id)?.dureeMinutes ?? null,
         statut: l.statut,
         dateCreation: l.dateCreation.toISOString(),
         dateModification: iso(l.dateModification),

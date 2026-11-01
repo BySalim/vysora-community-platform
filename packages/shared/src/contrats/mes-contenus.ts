@@ -116,6 +116,9 @@ export type EnregistrementListeApi =
   | (EnregistrementCommunApi & {
       genre: 'CAS';
       difficulte: DifficulteCas;
+      /** Domaine et durée estimée par l'auteur (« Code et scripts · 5 min »), si renseignés. */
+      domaine: { libelle: string; slug: string } | null;
+      dureeMinutes: number | null;
     });
 
 export interface MesEnregistrementsApi {

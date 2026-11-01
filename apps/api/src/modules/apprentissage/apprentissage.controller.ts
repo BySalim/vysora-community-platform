@@ -12,22 +12,29 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
+  MOTIF_SAVOIR,
   peut,
   schemaCas,
+  schemaEtatSavoir,
   schemaExamenCas,
   schemaFiltresCas,
+  schemaImportSavoirs,
   schemaReponseCas,
   type ApprentissageApi,
   type CasApi,
+  type EtatSavoir,
   type ExamenCas,
   type FiltresCas,
+  type ImportSavoirs,
   type ListeCasApi,
   type ListeCasAValiderApi,
   type MesCasApi,
+  type ProgressionSavoirsApi,
   type ReponseCasApi,
   type SaisieCas,
   type SaisieReponseCas,
 } from '@vysora/shared';
+import { introuvable } from '../../commun/erreurs.js';
 import { IdentifiantPipe } from '../../commun/http/identifiant.pipe.js';
 import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { Exige, SessionCourante } from '../auth/droits.js';
@@ -38,6 +45,7 @@ import { CasService } from './cas.service.js';
 import { EcritureCasService } from './ecriture-cas.service.js';
 import { ListeCasService } from './liste-cas.service.js';
 import { ReponsesCasService } from './reponses-cas.service.js';
+import { SavoirsService } from './savoirs.service.js';
 
 const intervenant = (session: SessionOuverte): Intervenant => ({
   id: session.utilisateur.id,
@@ -47,7 +55,7 @@ const intervenant = (session: SessionOuverte): Intervenant => ({
 /* Bon réflexe (F-60 à F-62) : liste et lecture des cas, réponse (visiteur compris), proposition et
    modification par l'auteur, examen par la modération, listes privées de l'auteur et de
    l'apprenant. Votes, enregistrements et signalements passent par les modules interactions et
-   moderation. */
+   moderation. Progression du membre sur les savoirs d'Apprendre (APP-03). */
 @Controller()
 export class ApprentissageController {
   constructor(
@@ -56,6 +64,7 @@ export class ApprentissageController {
     private readonly ecriture: EcritureCasService,
     private readonly reponses: ReponsesCasService,
     private readonly etatCompte: EtatCompteService,
+    private readonly savoirs: SavoirsService,
   ) {}
 
   /** GET /api/v1/cas : cas validés, filtrés, triés, par pages de vingt. */
@@ -163,5 +172,42 @@ export class ApprentissageController {
   @Exige('parametres')
   apprentissage(@SessionCourante() session: SessionOuverte): Promise<ApprentissageApi> {
     return this.lecture.apprentissage(session.utilisateur.id);
+  }
+
+  /** GET /api/v1/moi/savoirs : savoirs acquis et réponses aux questions de vérification (APP-03). */
+  @Get('moi/savoirs')
+  @Exige('parametres')
+  progressionSavoirs(@SessionCourante() session: SessionOuverte): Promise<ProgressionSavoirsApi> {
+    return this.savoirs.progression(session.utilisateur.id);
+  }
+
+  /** POST /api/v1/moi/savoirs : progression du navigateur versée au compte, à la connexion. */
+  @Post('moi/savoirs')
+  @HttpCode(200)
+  @Exige('contribuer')
+  importerSavoirs(
+    @Body(new ValidationZod(schemaImportSavoirs)) saisie: ImportSavoirs,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<ProgressionSavoirsApi> {
+    return this.savoirs.importer(session.utilisateur.id, saisie);
+  }
+
+  /** PUT /api/v1/moi/savoirs/:savoir : acquis ou non, et réponse à la question de vérification. */
+  @Put('moi/savoirs/:savoir')
+  @Exige('contribuer')
+  enregistrerSavoir(
+    @Param('savoir') savoir: string,
+    @Body(new ValidationZod(schemaEtatSavoir)) etat: EtatSavoir,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<ProgressionSavoirsApi> {
+    if (!MOTIF_SAVOIR.test(savoir)) throw introuvable('Ce savoir est introuvable.');
+    return this.savoirs.enregistrer(session.utilisateur.id, savoir, etat);
+  }
+
+  /** DELETE /api/v1/moi/savoirs : « Effacer ma progression » (les réponses aux cas restent, RG-72). */
+  @Delete('moi/savoirs')
+  @Exige('contribuer')
+  effacerSavoirs(@SessionCourante() session: SessionOuverte): Promise<ProgressionSavoirsApi> {
+    return this.savoirs.effacer(session.utilisateur.id);
   }
 }

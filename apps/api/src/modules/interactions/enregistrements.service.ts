@@ -5,6 +5,7 @@ import type {
   MesEnregistrementsApi,
 } from '@vysora/shared';
 import { and, count, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
 import {
@@ -21,6 +22,9 @@ import {
 import { apercusDesCreations } from '../creations/apercus.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
+
+/** Domaine d'un cas Bon réflexe, distinct de la catégorie d'une création dans la même requête. */
+const domaineCas = alias(categorie, 'domaine_cas');
 
 /* S-01 : liste « Enregistrés » du membre (F-34, RG-45), présentée par « Mes contenus » (CREA-04).
    Seuls les contenus visibles de tous y figurent (RG-30) : une création dépubliée ou masquée, un cas
@@ -57,7 +61,9 @@ export class EnregistrementsService {
           titre: casBonReflexe.titre,
           slug: casBonReflexe.slug,
           difficulte: casBonReflexe.difficulte,
+          dureeMinutes: casBonReflexe.dureeMinutes,
         },
+        domaine: { libelle: domaineCas.libelle, slug: domaineCas.slug },
       })
       .from(enregistrement)
       .innerJoin(contenu, eq(contenu.id, enregistrement.contenuId))
@@ -65,6 +71,7 @@ export class EnregistrementsService {
       .leftJoin(categorie, eq(categorie.id, creation.categorieId))
       .leftJoin(sujet, eq(sujet.id, contenu.id))
       .leftJoin(casBonReflexe, eq(casBonReflexe.id, contenu.id))
+      .leftJoin(domaineCas, eq(domaineCas.id, casBonReflexe.categorieId))
       .where(
         and(
           eq(enregistrement.utilisateurId, membreId),
@@ -169,6 +176,8 @@ export class EnregistrementsService {
             titre: l.cas.titre,
             slug: l.cas.slug,
             difficulte: l.cas.difficulte,
+            domaine: l.domaine,
+            dureeMinutes: l.cas.dureeMinutes,
           },
         ];
       return [];

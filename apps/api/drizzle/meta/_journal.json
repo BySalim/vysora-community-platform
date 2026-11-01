@@ -85,6 +85,13 @@
       "when": 1793527072070,
       "tag": "0011_editeurs-invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793540919605,
+      "tag": "0012_progression-savoirs",
+      "breakpoints": true
     }
   ]
 }

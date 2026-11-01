@@ -31,6 +31,7 @@ import {
   modele,
   mouvementReputation,
   obtentionBadge,
+  progressionSavoir,
   optionReponse,
   outil,
   propositionPiege,
@@ -269,7 +270,7 @@ export class ExportService implements OnModuleInit {
           .where(eq(vote.votantId, id))
           .orderBy(asc(vote.dateVote)),
       ]);
-    const [enregistrements, badges, mouvements] = await Promise.all([
+    const [enregistrements, badges, mouvements, savoirs] = await Promise.all([
       this.db
         .select({
           contenu: enregistrement.contenuId,
@@ -296,6 +297,12 @@ export class ExportService implements OnModuleInit {
         .from(mouvementReputation)
         .where(eq(mouvementReputation.beneficiaireId, id))
         .orderBy(asc(mouvementReputation.date), asc(mouvementReputation.id)),
+      // APP-03 : progression sur les savoirs d'Apprendre.
+      this.db
+        .select()
+        .from(progressionSavoir)
+        .where(eq(progressionSavoir.utilisateurId, id))
+        .orderBy(asc(progressionSavoir.savoir)),
     ]);
 
     return {
@@ -335,6 +342,14 @@ export class ExportService implements OnModuleInit {
       sujets_reponses_commentaires: messages,
       essais_declares: essais,
       cas_bon_reflexe: cas,
+      savoirs_apprendre: savoirs.map((p) => ({
+        savoir: p.savoir,
+        acquis_le: p.dateAcquis,
+        question_de_verification:
+          p.choix === null
+            ? null
+            : { option: p.choix + 1, juste: p.correcte, le: p.dateVerification },
+      })),
       votes_emis: votes.map((v) => ({ contenu: v.contenu, vote: v.vote, date: iso(v.date) })),
       enregistrements: enregistrements.map((e) => ({
         contenu: e.contenu,
@@ -629,10 +644,13 @@ export class ExportService implements OnModuleInit {
           question: casBonReflexe.question,
           explication: casBonReflexe.explication,
           difficulte: casBonReflexe.difficulte,
+          domaine: categorie.libelle,
+          dureeMinutes: casBonReflexe.dureeMinutes,
           validation: casBonReflexe.statutValidation,
         })
         .from(casBonReflexe)
         .innerJoin(contenu, eq(contenu.id, casBonReflexe.id))
+        .leftJoin(categorie, eq(categorie.id, casBonReflexe.categorieId))
         .where(eq(contenu.auteurId, id))
         .orderBy(asc(contenu.dateCreation)),
       this.db
@@ -657,6 +675,8 @@ export class ExportService implements OnModuleInit {
         date: iso(c.date),
         titre: c.titre,
         difficulte: c.difficulte,
+        domaine: c.domaine,
+        duree_minutes: c.dureeMinutes,
         contexte: c.contexte,
         question: c.question,
         explication: c.explication,

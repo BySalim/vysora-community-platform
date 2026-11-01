@@ -5,6 +5,7 @@ import type {
   ListeCasApi,
   ListeCasAValiderApi,
   MesCasApi,
+  MesEnregistrementsApi,
   NotificationsApi,
   ReponseCasApi,
 } from '@vysora/shared';
@@ -181,6 +182,26 @@ describe('Bon réflexe (APP-01)', () => {
       const liste = await lister();
       expect(liste.elements.find((c) => c.id === cas.id)).toMatchObject({
         domaine: { slug: 'analyse-de-donnees' },
+        dureeMinutes: 3,
+      });
+      // APP-03 : l'auteur les retrouve dans ses cas, un membre dans ses enregistrements.
+      const auteur = await lea();
+      const mesCas = (await auteur.get('/api/v1/moi/cas').expect(200)).body as MesCasApi;
+      expect(mesCas.elements.find((c) => c.id === cas.id)).toMatchObject({
+        domaine: { libelle: 'Analyse de données' },
+        dureeMinutes: 3,
+      });
+      const membre = await kofi();
+      await membre
+        .put(`/api/v1/contenus/${cas.id}/enregistrement`)
+        .set('Origin', ORIGINE_SITE)
+        .expect(200);
+      const [enregistre] = (
+        (await membre.get('/api/v1/moi/enregistrements').expect(200)).body as MesEnregistrementsApi
+      ).elements;
+      expect(enregistre).toMatchObject({
+        genre: 'CAS',
+        domaine: { libelle: 'Analyse de données', slug: 'analyse-de-donnees' },
         dureeMinutes: 3,
       });
       const tropLong = await proposer(await lea(), nouveauCas({ dureeMinutes: 90 })).expect(400);

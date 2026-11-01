@@ -225,3 +225,53 @@ export const schemaFiltresCas = z.object({
   page: parametrePage,
 });
 export type FiltresCas = z.output<typeof schemaFiltresCas>;
+
+/* Savoirs d'Apprendre (APP-03) : « Marquer comme acquis » et réponse à la question de vérification
+   d'un savoir, enregistrés dans le compte du membre. Les savoirs sont les contenus éditoriaux du
+   site, désignés par leur identifiant (« demande-claire »). */
+
+/** Identifiant d'un savoir : lettres minuscules, chiffres et tirets. */
+export const MOTIF_SAVOIR = /^[a-z0-9][a-z0-9-]{0,79}$/;
+
+const choixVerification = z
+  .number({ error: 'Choisissez une réponse.' })
+  .int({ error: 'Choisissez une réponse.' })
+  .min(0, { error: 'Choisissez une réponse.' })
+  .max(LIMITES.optionsParCas.max - 1, { error: 'Choisissez une réponse.' });
+const dateDuJour = z
+  .string({ error: 'Indiquez une date au format AAAA-MM-JJ.' })
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Indiquez une date au format AAAA-MM-JJ.' });
+
+/** PUT /api/v1/moi/savoirs/:savoir : état d'un savoir pour le membre ; datés du jour par l'API. */
+export const schemaEtatSavoir = z.object({
+  acquis: z.boolean({ error: 'Indiquez si le savoir est acquis.' }),
+  /** Réponse à la question de vérification, ou null pour la recommencer. */
+  verification: z
+    .object({ choix: choixVerification, correcte: z.boolean() })
+    .nullable()
+    .default(null),
+});
+export type EtatSavoir = z.output<typeof schemaEtatSavoir>;
+
+const idSavoir = z.string().regex(MOTIF_SAVOIR, { error: 'Ce savoir est introuvable.' });
+
+/** POST /api/v1/moi/savoirs : progression gardée dans le navigateur avant la connexion, versée au
+    compte ; ce que le compte connaît déjà l'emporte, sauf une date d'acquis plus ancienne. */
+export const schemaImportSavoirs = z.object({
+  acquis: z
+    .record(idSavoir, dateDuJour)
+    .default({})
+    .refine((acquis) => Object.keys(acquis).length <= LIMITES.savoirsSuivis, {
+      error: 'Trop de savoirs à reprendre.',
+    }),
+  verifications: z
+    .record(
+      idSavoir,
+      z.object({ choix: choixVerification, correcte: z.boolean(), date: dateDuJour }),
+    )
+    .default({})
+    .refine((verifications) => Object.keys(verifications).length <= LIMITES.savoirsSuivis, {
+      error: 'Trop de savoirs à reprendre.',
+    }),
+});
+export type ImportSavoirs = z.output<typeof schemaImportSavoirs>;

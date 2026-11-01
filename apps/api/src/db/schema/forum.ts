@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   foreignKey,
   index,
   pgTable,
@@ -181,6 +182,36 @@ export const optionReponse = pgTable(
 );
 
 /** CHOISIR : une réponse par membre et par cas, définitive (RG-72). */
+/** Extension (APP-03, prototype : « Ma progression » d'Apprendre) : savoirs acquis et réponse à la
+    question de vérification d'un savoir, pour le membre. Les savoirs sont des contenus éditoriaux du
+    site, désignés par leur identifiant ; une ligne sans acquis ni réponse est supprimée. */
+export const progressionSavoir = pgTable(
+  'progression_savoir',
+  {
+    utilisateurId: reference()
+      .notNull()
+      .references(() => utilisateur.id, { onDelete: 'cascade' }),
+    savoir: varchar({ length: 80 }).notNull(),
+    dateAcquis: date({ mode: 'string' }),
+    /** Option choisie à la question de vérification (0 à 4), et si elle est juste. */
+    choix: smallint(),
+    correcte: boolean(),
+    dateVerification: date({ mode: 'string' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.utilisateurId, t.savoir] }),
+    check('progression_savoir_choix_check', sql`${t.choix} is null or ${t.choix} between 0 and 4`),
+    check(
+      'progression_savoir_verification_check',
+      sql`(${t.choix} is null) = (${t.correcte} is null) and (${t.choix} is null) = (${t.dateVerification} is null)`,
+    ),
+    check(
+      'progression_savoir_contenu_check',
+      sql`${t.dateAcquis} is not null or ${t.choix} is not null`,
+    ),
+  ],
+);
+
 export const choixOption = pgTable(
   'choix_option',
   {
