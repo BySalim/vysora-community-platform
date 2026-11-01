@@ -539,3 +539,4 @@ export function creerPages(
     casHTML,
   };
 }
+export type Pages = ReturnType<typeof creerPages>;

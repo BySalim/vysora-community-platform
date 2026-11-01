@@ -2,9 +2,11 @@
 /* Apprendre (APP-02), porté de prototype/apprendre.html : barre locale des rubriques, recherche,
    lien « Ma progression » et zone des vues, que le script rend (scripts/apprendre.ts) à partir des
    contenus éditoriaux et des cas Bon réflexe de l'API, posés ici en JSON (#ap-donnees), avec la
-   progression du membre sur les savoirs (APP-03). La page d'un savoir et celle d'un cas arrivent
-   rendues par le serveur (référencement), avec les fonctions de lib/apprendre/pages.ts que le script
-   emploie ensuite : il reprend la main sur le même balisage. */
+   progression du membre sur les savoirs (APP-03). La vue d'ensemble, les rubriques, la page d'un
+   savoir et celle d'un cas arrivent rendues par le serveur (référencement), avec les fonctions de
+   lib/apprendre/pages.ts et lib/apprendre/vues.ts que le script emploie ensuite : il reprend la main
+   sur le même balisage. Seule la progression (personnelle, non indexée) attend le script ; l'ordre
+   des astuces selon « Mes outils », gardés dans le navigateur, aussi. */
 import {
   raisonRefus,
   type CasApi,
@@ -24,6 +26,7 @@ import {
   typographier,
 } from '../lib/apprendre/pages';
 import type { DonneesPageApprendre } from '../lib/apprendre/types';
+import { creerVues, filtresDeDepart } from '../lib/apprendre/vues';
 import { icone } from '../lib/explorer/elements';
 import { ROUTES } from '../lib/navigation';
 
@@ -88,16 +91,20 @@ const donnees: DonneesPageApprendre = {
   progression,
 };
 
-// Référencement : la page d'un savoir et celle d'un cas sont rendues ici, comme le script les rend.
+// Référencement : les vues sont rendues ici, comme le script les rend.
 const modele = creerModele(donnees);
 const vue = lireVue(modele, Astro.url.searchParams);
 const progres = progressionDuServeur(modele);
 const pages = creerPages(modele, { progress: () => progres, today: donnees.aujourdhui });
 const savoir = vue.view === 'savoir' ? modele.byId[vue.id] : undefined;
 const casVu = vue.view === 'cas' ? modele.caseById[vue.id] : undefined;
-// Une règle se met à l'épreuve d'un cas : il est lu ici et rendu avec ses options, puis le script le
-// trouve dans les données de la page sans le redemander.
-const situation = savoir ? modele.casDuPrototype(savoir.situation) : undefined;
+// Une règle se met à l'épreuve d'un cas, la vue d'ensemble présente le cas du jour : il est lu ici et
+// rendu avec ses options, puis le script le trouve dans les données de la page sans le redemander.
+const situation = savoir
+  ? modele.casDuPrototype(savoir.situation)
+  : vue.view === 'accueil'
+    ? modele.casDuJour
+    : undefined;
 if (situation && !situation.detail) {
   const complet = await appelerApi<CasApi>(`/api/v1/cas/${situation.id}`, options).catch(
     () => null,
@@ -108,15 +115,40 @@ if (situation && !situation.detail) {
     if (complet.correction) situation.correction = complet.correction;
   }
 }
-const rendu = typographier(savoir ? pages.savoirHTML(savoir) : casVu ? pages.casHTML(casVu) : '');
+const vues = creerVues(modele, pages, filtresDeDepart(), {
+  progress: () => progres,
+  today: donnees.aujourdhui,
+  mesOutils: () => [],
+  peutProposer: () => !raisonRefus('proposer-cas', Astro.locals.etat),
+});
+const rendu = typographier(
+  savoir
+    ? pages.savoirHTML(savoir)
+    : casVu
+      ? pages.casHTML(casVu)
+      : vue.view === 'accueil'
+        ? vues.accueilHTML()
+        : vue.view === 'rubrique'
+          ? vues.RUBRIQUES[vue.rubrique]()
+          : '',
+);
 ---
 
 <nav class="ap-local" aria-label="Rubriques d’Apprendre" data-ap-local>
   <div class="container ap-local-bar">
-    <a class="ap-local-title" href={ROUTES.apprendre} data-ap-nav>
+    <a
+      class="ap-local-title"
+      href={ROUTES.apprendre}
+      data-ap-nav
+      aria-current={vue.view === 'accueil' ? 'page' : undefined}
+    >
       Apprendre
     </a>
-    <ul class="ap-local-tabs" data-ap-tabs></ul>
+    <ul
+      class="ap-local-tabs"
+      data-ap-tabs
+      set:html={typographier(vues.onglets(vue.view, vue.rubrique))}
+    />
     <div class="ap-local-tools">
       <button
         class="ap-search-btn"
@@ -134,7 +166,9 @@ const rendu = typographier(savoir ? pages.savoirHTML(savoir) : casVu ? pages.cas
         href={`${ROUTES.apprendre}?vue=progression`}
         data-ap-nav
         data-ap-progress-link
-      ></a>
+        aria-current={vue.view === 'progression' ? 'page' : undefined}
+        set:html={vues.lienProgression()}
+      />
     </div>
   </div>
   <div class="ap-search" id="ap-search" hidden data-ap-search>
