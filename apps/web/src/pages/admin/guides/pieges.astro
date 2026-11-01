@@ -1,0 +1,175 @@
+---
+/* Pièges signalés par les membres (DEC-02, « Signaler un piège » d'Explorer) : du plus ancien au plus
+   récent, par pages de 20. Chacun se retient, réécrit par l'équipe (piège, ce qui a fonctionné,
+   étape) et ajouté aux pièges du guide, ou s'écarte, après confirmation. Écran sans maquette dans le
+   prototype, dans le style des écrans d'administration. Envois : scripts/guides-admin.ts. */
+import { LONGUEURS, raisonRefus, type PropositionsPiegeApi } from '@vysora/shared';
+import AvatarMembre from '../../../components/AvatarMembre.astro';
+import GuidesAdmin from '../../../components/GuidesAdmin.astro';
+import { appelerApi } from '../../../lib/api';
+import { ROUTES } from '../../../lib/navigation';
+import { dateLongue, pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const page = Math.min(1000, Math.max(1, Number(Astro.url.searchParams.get('page')) || 1));
+const donnees = raison
+  ? null
+  : await appelerApi<PropositionsPiegeApi>(`/api/v1/admin/propositions-pieges?page=${page}`, {
+      requete: Astro.request,
+    });
+---
+
+<GuidesAdmin
+  actif="pieges"
+  titre="Pièges signalés"
+  description="Relecture des pièges signalés par les membres dans les guides d’Explorer."
+  {raison}
+  icones={['flag']}
+>
+  {donnees && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {donnees.total
+          ? pluriel(donnees.total, 'piège à relire', 'pièges à relire')
+          : 'Aucun piège à relire'}
+      </span>
+      <span>Du plus ancien au plus récent</span>
+    </p>
+  )}
+
+  {donnees &&
+    (donnees.elements.length ? (
+      <>
+        <p class="md-regle">
+          {typo(
+            'Retenu, le piège rejoint les pièges du guide avec votre texte ; écarté, il quitte la relecture. Dans les deux cas, le membre ne le voit plus « en relecture ».',
+          )}
+        </p>
+        <ol class="ad-propositions">
+          {donnees.elements.map((p) => {
+            const etape = p.etapes.find((e) => e.id === p.etapeId);
+            return (
+              <li class="ad-proposition" id={`proposition-${p.id}`}>
+                <div class="md-ligne">
+                  <AvatarMembre membre={p.auteur} taille={32} />
+                  <div class="md-ligne-corps">
+                    <p class="md-ligne-haut">
+                      <b>{p.auteur.nom}</b>
+                      <span>
+                        {`Le ${dateLongue(p.date)} · `}
+                        {p.guide.publie ? (
+                          <a href={ROUTES.guide(p.guide.slug)}>{typo(p.guide.titreCourt)}</a>
+                        ) : (
+                          typo(`${p.guide.titreCourt} (en préparation)`)
+                        )}
+                      </span>
+                      <span class="md-ref">{`Piège signalé n° ${p.id}`}</span>
+                    </p>
+                    <p class="ad-proposition-titre">{typo(p.titre)}</p>
+                    <dl class="ad-proposition-faits">
+                      <div>
+                        <dt>Ce qui a fonctionné</dt>
+                        <dd>{p.solution ? typo(p.solution) : 'Non précisé'}</dd>
+                      </div>
+                      <div>
+                        <dt>Étape</dt>
+                        <dd>{etape ? typo(etape.titre) : 'Non précisée'}</dd>
+                      </div>
+                      <div>
+                        <dt>Outil et modèle</dt>
+                        <dd>{p.outil ? typo(p.outil) : 'Non précisés'}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+                <form
+                  class="ad-defi ad-relecture"
+                  novalidate
+                  autocomplete="off"
+                  data-ad-relecture={p.id}
+                  data-guide={p.guide.titreCourt}
+                >
+                  <h2>Écrire ce piège dans le guide</h2>
+                  <div class="ad-champ is-large">
+                    <label for={`ad-piege-${p.id}`}>Piège</label>
+                    <input
+                      id={`ad-piege-${p.id}`}
+                      name="titre"
+                      maxlength={LONGUEURS.guidePiegeTitre.max}
+                      value={p.titre}
+                      required
+                    />
+                    <p class="md-erreur" data-ad-erreur="titre" hidden />
+                  </div>
+                  <div class="ad-champ is-large">
+                    <label for={`ad-solution-${p.id}`}>Ce qui a fonctionné</label>
+                    <textarea
+                      id={`ad-solution-${p.id}`}
+                      name="solution"
+                      rows="3"
+                      maxlength={LONGUEURS.guideSolution.max}
+                      required
+                      set:text={p.solution ?? ''}
+                    />
+                    <p class="md-erreur" data-ad-erreur="solution" hidden />
+                  </div>
+                  <div class="ad-outils">
+                    <div class="ad-champ">
+                      <label for={`ad-etape-${p.id}`}>Étape de la méthode</label>
+                      <select id={`ad-etape-${p.id}`} name="etapeId" class="is-large">
+                        <option value="">Aucune étape</option>
+                        {p.etapes.map((e, i) => (
+                          <option value={e.id} selected={e.id === p.etapeId}>
+                            {typo(`${i + 1}. ${e.titre}`)}
+                          </option>
+                        ))}
+                      </select>
+                      <p class="md-erreur" data-ad-erreur="etapeId" hidden />
+                    </div>
+                    <div class="ad-actions-defi is-debut">
+                      <button class="btn btn-primary" type="submit">
+                        Retenir
+                      </button>
+                      <button class="btn btn-secondary" type="button" data-ad-ecarter>
+                        Écarter
+                      </button>
+                    </div>
+                  </div>
+                  <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+                </form>
+              </li>
+            );
+          })}
+        </ol>
+        {donnees.pages > 1 && (
+          <nav class="md-pages" aria-label="Pages des pièges signalés">
+            {page > 1 && (
+              <a class="btn btn-secondary" href={`?page=${page - 1}`}>
+                Pièges plus anciens
+              </a>
+            )}
+            {page < donnees.pages && (
+              <a class="btn btn-secondary" href={`?page=${page + 1}`}>
+                Pièges plus récents
+              </a>
+            )}
+          </nav>
+        )}
+      </>
+    ) : (
+      <div class="md-vide ad-vide-guides">
+        <span class="md-vide-icone" aria-hidden="true">
+          <svg class="icon">
+            <use href="#i-flag" />
+          </svg>
+        </span>
+        <h2>Aucun piège à relire</h2>
+        <p>
+          {typo(
+            'Les pièges que les membres signalent depuis un guide d’Explorer apparaîtront ici, du plus ancien au plus récent.',
+          )}
+        </p>
+      </div>
+    ))}
+</GuidesAdmin>

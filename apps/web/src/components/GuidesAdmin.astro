@@ -1,0 +1,100 @@
+---
+/* Gabarit des écrans des guides d'Explorer (DEC-02) : en-tête de l'administration, sous-onglets
+   (guides, pièges signalés, demandes), porte d'entrée rendue par le serveur et fenêtre de
+   confirmation commune. Écrans sans maquette dans le prototype, dans le style des écrans
+   d'administration validés. Envois : scripts/guides-admin.ts. La rédaction d'un guide a sa propre
+   page (pages/admin/guides/[id].astro). */
+import type { RaisonRefus } from '@vysora/shared';
+import AccesBloc from './AccesBloc.astro';
+import OngletsAdministration from './OngletsAdministration.astro';
+import Base from '../layouts/Base.astro';
+import { ROUTES } from '../lib/navigation';
+import '../styles/moderation.css';
+import '../styles/moderation-complements.css';
+
+export type OngletGuides = 'guides' | 'pieges' | 'demandes';
+
+interface Props {
+  actif: OngletGuides;
+  /** Nom de l'écran, en tête du titre de la page. */
+  titre: string;
+  description: string;
+  /** Refus de l'accès, calculé par la page avant de lire l'API. */
+  raison: RaisonRefus | null;
+  icones?: string[];
+}
+
+const { actif, titre, description, raison, icones = [] } = Astro.props;
+const ONGLETS = [
+  { cle: 'guides', libelle: 'Guides', href: ROUTES.guidesAdmin },
+  { cle: 'pieges', libelle: 'Pièges signalés', href: ROUTES.piegesAdmin },
+  { cle: 'demandes', libelle: 'Ce que la communauté cherche', href: ROUTES.demandesAdmin },
+] as const;
+---
+
+<Base
+  titre={`${titre} · Guides d’Explorer · Administration`}
+  {description}
+  classeCorps="md"
+  icones={['plus', 'compass', 'arrow-up-right', ...icones]}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Guides d’Explorer</h1>
+    {!raison && <slot name="statut" />}
+    {!raison && <OngletsAdministration actif="guides" />}
+    {!raison && (
+      <nav class="ad-sous-onglets" aria-label="Guides d’Explorer">
+        {ONGLETS.map((onglet) => (
+          <a href={onglet.href} aria-current={onglet.cle === actif ? 'page' : undefined}>
+            {onglet.libelle}
+          </a>
+        ))}
+      </nav>
+    )}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="gérer les guides d’Explorer" />
+    </div>
+  ) : (
+    <div class="container md-file">
+      <slot />
+    </div>
+  )}
+
+  <Fragment slot="fin">
+    {!raison && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="ad-dialogue-titre"
+        aria-describedby="ad-dialogue-texte"
+        data-ad-dialogue
+      >
+        <form method="dialog">
+          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Revenir
+            </button>
+            <button class="btn btn-primary" type="button" data-ad-confirmer>
+              Confirmer
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../scripts/guides-admin';
+</script>

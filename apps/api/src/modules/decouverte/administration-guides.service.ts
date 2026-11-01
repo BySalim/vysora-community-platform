@@ -369,7 +369,7 @@ export class AdministrationGuidesService {
       const idsEtapes: number[] = [];
       for (const [i, e] of saisie.etapes.entries()) {
         const valeurs = {
-          ordre: i + 1,
+          ordre: i,
           titre: e.titre,
           conseil: e.conseil,
           citationCreationId: e.citation?.parcoursId ?? null,
@@ -405,7 +405,7 @@ export class AdministrationGuidesService {
       const idsPieges: number[] = [];
       for (const [i, p] of saisie.pieges.entries()) {
         const valeurs = {
-          ordre: i + 1,
+          ordre: i,
           titre: p.titre,
           solution: p.solution,
           etapeId: p.etape === null ? null : (idsEtapes[p.etape] ?? null),

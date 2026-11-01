@@ -1,0 +1,162 @@
+---
+/* « Ce que la communauté cherche encore » (DEC-02) : objectifs sans guide, rédigés par l'équipe et
+   présentés dans Explorer, où les membres disent « Je le cherche aussi ». Nouvel objectif ; un
+   objectif se clôt quand un guide le couvre (il n'est plus présenté) et se rouvre, avec ses
+   soutiens, après confirmation. Écran sans maquette dans le prototype, dans le style des écrans
+   d'administration. Envois : scripts/guides-admin.ts. */
+import { DELAIS, LONGUEURS, raisonRefus, type DemandesAdministreesApi } from '@vysora/shared';
+import GuidesAdmin from '../../../components/GuidesAdmin.astro';
+import { appelerApi } from '../../../lib/api';
+import { dateCourte, fmt, pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const donnees = raison
+  ? null
+  : await appelerApi<DemandesAdministreesApi>('/api/v1/admin/demandes', {
+      requete: Astro.request,
+    });
+---
+
+<GuidesAdmin
+  actif="demandes"
+  titre="Ce que la communauté cherche"
+  description="Objectifs que la communauté cherche encore dans Explorer."
+  {raison}
+>
+  {donnees && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">
+        {pluriel(donnees.ouvertes.length, 'objectif ouvert', 'objectifs ouverts')}
+      </span>
+      <span>
+        {typo(
+          `Présentés dans Explorer sous « Ce que la communauté cherche encore », comptés sur ${DELAIS.demandesGuideJours} jours.`,
+        )}
+      </span>
+    </p>
+  )}
+
+  {donnees && (
+    <>
+      <form class="ad-outils" novalidate autocomplete="off" data-ad-demande>
+        <div class="ad-champ is-large">
+          <label for="ad-demande-libelle">Nouvel objectif cherché</label>
+          <input
+            id="ad-demande-libelle"
+            name="libelle"
+            maxlength={LONGUEURS.demandeGuide.max}
+            placeholder="Devis pour un artisan du bâtiment"
+            required
+          />
+        </div>
+        <div class="ad-champ">
+          <label for="ad-demande-domaine">Domaine</label>
+          <select id="ad-demande-domaine" name="categorieId">
+            <option value="">Aucun domaine</option>
+            {donnees.domaines.map((d) => (
+              <option value={d.id}>{d.libelle}</option>
+            ))}
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit">
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-plus" />
+          </svg>
+          Ajouter
+        </button>
+        <p class="md-erreur" data-ad-erreur="libelle" hidden />
+        <p class="md-erreur" data-ad-erreur="categorieId" hidden />
+        <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+      </form>
+
+      {donnees.ouvertes.length ? (
+        <table class="ad-table ad-demandes">
+          <thead>
+            <tr>
+              <th scope="col">Objectif</th>
+              <th scope="col">Domaine</th>
+              <th scope="col">Le cherchent</th>
+              <th scope="col">Depuis</th>
+              <th scope="col">
+                <span class="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {donnees.ouvertes.map((d) => (
+              <tr id={`demande-${d.id}`}>
+                <td>
+                  <b>{typo(d.libelle)}</b>
+                </td>
+                <td data-libelle="Domaine">{d.domaine ? typo(d.domaine.libelle) : 'Aucun'}</td>
+                <td data-libelle="Le cherchent">{pluriel(d.soutiens, 'membre', 'membres')}</td>
+                <td data-libelle="Depuis">{dateCourte(d.dateCreation)}</td>
+                <td>
+                  <div class="ad-actions-defi">
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      type="button"
+                      data-ad-demande-clore={d.id}
+                      data-libelle={d.libelle}
+                    >
+                      Clore
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p class="md-rien ad-vide">
+          {typo('Aucun objectif ouvert : Explorer n’affiche pas la rubrique.')}
+        </p>
+      )}
+
+      {donnees.closes.length > 0 && (
+        <section class="ad-famille" aria-labelledby="ad-closes-titre">
+          <h2 id="ad-closes-titre">
+            Clos
+            <span class="ad-famille-nb">{fmt(donnees.closes.length)}</span>
+          </h2>
+          <table class="ad-table ad-demandes">
+            <thead>
+              <tr>
+                <th scope="col">Objectif</th>
+                <th scope="col">Domaine</th>
+                <th scope="col">Le cherchaient</th>
+                <th scope="col">Clos le</th>
+                <th scope="col">
+                  <span class="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {donnees.closes.map((d) => (
+                <tr id={`demande-${d.id}`}>
+                  <td>{typo(d.libelle)}</td>
+                  <td data-libelle="Domaine">{d.domaine ? typo(d.domaine.libelle) : 'Aucun'}</td>
+                  <td data-libelle="Le cherchaient">{pluriel(d.soutiens, 'membre', 'membres')}</td>
+                  <td data-libelle="Clos le">{d.dateCloture ? dateCourte(d.dateCloture) : ''}</td>
+                  <td>
+                    <div class="ad-actions-defi">
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        type="button"
+                        data-ad-demande-rouvrir={d.id}
+                        data-libelle={d.libelle}
+                      >
+                        Rouvrir
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+    </>
+  )}
+</GuidesAdmin>

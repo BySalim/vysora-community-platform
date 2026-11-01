@@ -1,0 +1,524 @@
+---
+/* Rédaction d'un guide d'Explorer (DEC-02) : objectif, nom court, domaine, mots-clés et lacunes ;
+   « La méthode qui ressort » (étapes, parcours qui les suivent, prompt cité) ; « Les pièges à
+   anticiper » (étape, discussion, cas, parcours où ils ont été rencontrés) ; parcours, questions et
+   cas du guide, ajoutés par leur adresse ou retirés (un parcours retiré n'y revient plus par le
+   rapprochement). Écran sans maquette dans le prototype, conçu comme le dossier d'un membre : tête,
+   sections à filets, panneau clair des actions (enregistrer, publier, repasser en préparation,
+   supprimer). Rendu par le serveur depuis GET /api/v1/admin/guides/:id ; scripts/editeur-guide.ts
+   ajoute, déplace et retire les étapes et les pièges, puis envoie le guide après confirmation. */
+import { LIMITES, LONGUEURS, raisonRefus, type GuideAdministreApi } from '@vysora/shared';
+import AccesBloc from '../../../components/AccesBloc.astro';
+import AvatarMembre from '../../../components/AvatarMembre.astro';
+import BlocEtapeGuide from '../../../components/BlocEtapeGuide.astro';
+import BlocPiegeGuide from '../../../components/BlocPiegeGuide.astro';
+import OngletsAdministration from '../../../components/OngletsAdministration.astro';
+import Base from '../../../layouts/Base.astro';
+import { appelerApi, ErreurApi } from '../../../lib/api';
+import { adresseContenuGuide, etatContenuGuide } from '../../../lib/guides-admin';
+import { ROUTES } from '../../../lib/navigation';
+import { dateLongue, pluriel, typo } from '../../../lib/texte';
+import '../../../styles/moderation.css';
+import '../../../styles/moderation-complements.css';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+const id = /^\d{1,15}$/.test(Astro.params.id ?? '') ? Number(Astro.params.id) : null;
+let guide: GuideAdministreApi | null = null;
+let introuvable = false;
+if (raison === 'role') Astro.response.status = 403;
+else if (!raison && id === null) introuvable = true;
+else if (!raison) {
+  try {
+    guide = await appelerApi<GuideAdministreApi>(`/api/v1/admin/guides/${id}`, {
+      requete: Astro.request,
+    });
+  } catch (erreur) {
+    if (!(erreur instanceof ErreurApi) || erreur.probleme.status !== 404) throw erreur;
+    introuvable = true;
+  }
+}
+if (introuvable) Astro.response.status = 404;
+
+const parcours = guide?.contenus.filter((c) => c.type === 'CREATION') ?? [];
+const questions = guide?.contenus.filter((c) => c.type === 'SUJET') ?? [];
+const cas = guide?.contenus.filter((c) => c.type === 'CAS_BON_REFLEXE') ?? [];
+const groupes = [
+  { titre: 'Parcours', contenus: parcours },
+  { titre: 'Questions', contenus: questions },
+  { titre: 'Cas Bon réflexe', contenus: cas },
+].filter((g) => g.contenus.length > 0);
+const domaine = guide?.domaines.find((d) => d.id === guide?.categorieId);
+---
+
+<Base
+  titre={`${guide ? `${guide.titreCourt} · ` : ''}Guides d’Explorer · Administration`}
+  description="Rédaction d’un guide d’Explorer : objectif, méthode, pièges, parcours, questions et cas."
+  classeCorps="md"
+  icones={[
+    'compass',
+    'shield',
+    'plus',
+    'flag',
+    'arrow-up',
+    'arrow-down',
+    'arrow-up-right',
+    'trash',
+    'info',
+  ]}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <nav class="md-ariane" aria-label="Fil d’Ariane">
+      <ol>
+        <li>
+          <a href={ROUTES.guidesAdmin}>Guides d’Explorer</a>
+        </li>
+        <li>
+          <span aria-current="page">{guide ? typo(guide.titreCourt) : 'Guide'}</span>
+        </li>
+      </ol>
+    </nav>
+    {guide ? (
+      <>
+        <p class="md-rubrique">
+          <svg class="icon icon-sm" aria-hidden="true">
+            <use href="#i-compass" />
+          </svg>
+          Guide d’Explorer
+          <span class="md-sep" aria-hidden="true">
+            ·
+          </span>
+          {guide.datePublication ? (
+            <span class="md-etat">{`Publié le ${dateLongue(guide.datePublication)}`}</span>
+          ) : (
+            <span class="md-etat is-masque">En préparation</span>
+          )}
+        </p>
+        <h1 class="md-titre-dossier">{typo(guide.titre)}</h1>
+        <div class="md-meta">
+          <p class="ad-guide-adresse">
+            {`/explorer?guide=${guide.slug}`}
+            {domaine && <span>{` · ${domaine.libelle}`}</span>}
+          </p>
+          <div class="md-meta-actions">
+            {guide.datePublication && (
+              <a class="btn btn-secondary btn-sm" href={ROUTES.guide(guide.slug)}>
+                Voir dans Explorer
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-arrow-up-right" />
+                </svg>
+              </a>
+            )}
+            <a class="btn btn-primary btn-sm md-aller" href="#ad-enregistrer">
+              Enregistrer
+            </a>
+          </div>
+        </div>
+        {guide.aRelire > 0 && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-flag" />
+            </svg>
+            <span>
+              <b>
+                {pluriel(
+                  guide.aRelire,
+                  'piège signalé attend votre relecture.',
+                  'pièges signalés attendent votre relecture.',
+                )}
+              </b>{' '}
+              <a class="ad-lien" href={ROUTES.piegesAdmin}>
+                Les relire
+              </a>
+            </span>
+          </p>
+        )}
+      </>
+    ) : (
+      <h1>Guide d’Explorer</h1>
+    )}
+    {!raison && <OngletsAdministration actif="guides" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="rédiger un guide d’Explorer" />
+    </div>
+  ) : introuvable ? (
+    <div class="container md-file">
+      <div class="md-vide">
+        <span class="md-vide-icone" aria-hidden="true">
+          <svg class="icon">
+            <use href="#i-compass" />
+          </svg>
+        </span>
+        <h2>Ce guide est introuvable</h2>
+        <p>{typo('L’adresse ne correspond à aucun guide d’Explorer.')}</p>
+        <a class="btn btn-secondary" href={ROUTES.guidesAdmin}>
+          Revenir aux guides
+        </a>
+      </div>
+    </div>
+  ) : (
+    guide && (
+      <div class="container md-dossier ad-redaction">
+        <div class="md-principal">
+          <form
+            id="ad-guide"
+            novalidate
+            autocomplete="off"
+            data-ad-guide={guide.id}
+            data-version={guide.version}
+            data-publie={guide.datePublication ? 'oui' : ''}
+            data-titre={guide.titreCourt}
+          >
+            <section class="md-section" aria-labelledby="ad-g-guide">
+              <h2 id="ad-g-guide">Le guide</h2>
+              <div class="ad-redaction-champs">
+                <div class="ad-champ is-large">
+                  <label for="ad-g-titre">Objectif</label>
+                  <input
+                    id="ad-g-titre"
+                    name="titre"
+                    maxlength={LONGUEURS.guideTitre.max}
+                    value={guide.titre}
+                    required
+                  />
+                  <p class="md-erreur" data-ad-erreur="titre" hidden />
+                </div>
+                <div class="ad-outils">
+                  <div class="ad-champ is-large">
+                    <label for="ad-g-court">Nom court</label>
+                    <input
+                      id="ad-g-court"
+                      name="titreCourt"
+                      maxlength={LONGUEURS.guideTitreCourt.max}
+                      value={guide.titreCourt}
+                      required
+                    />
+                    <p class="md-erreur" data-ad-erreur="titreCourt" hidden />
+                  </div>
+                  <div class="ad-champ">
+                    <label for="ad-g-domaine">Domaine</label>
+                    <select id="ad-g-domaine" name="categorieId" class="is-large" required>
+                      {guide.domaines.map((d) => (
+                        <option value={d.id} selected={d.id === guide.categorieId}>
+                          {d.libelle}
+                        </option>
+                      ))}
+                    </select>
+                    <p class="md-erreur" data-ad-erreur="categorieId" hidden />
+                  </div>
+                </div>
+                <div class="ad-champ is-large">
+                  <label for="ad-g-mots">Mots-clés</label>
+                  <input
+                    id="ad-g-mots"
+                    name="motsCles"
+                    value={guide.motsCles.join(', ')}
+                    aria-describedby="ad-g-mots-aide"
+                  />
+                  <p class="md-aide" id="ad-g-mots-aide">
+                    {typo(
+                      `Ce qu’une personne peut taper pour trouver l’objectif, séparé par des virgules (${LIMITES.guide.motsCles} au plus) ; le premier compte dans « Souvent cherché ».`,
+                    )}
+                  </p>
+                  <p class="md-erreur" data-ad-erreur="motsCles" hidden />
+                </div>
+                <div class="ad-champ is-large">
+                  <label for="ad-g-lacunes">Ce que ce guide ne couvre pas encore</label>
+                  <textarea
+                    id="ad-g-lacunes"
+                    name="lacunes"
+                    rows="3"
+                    aria-describedby="ad-g-lacunes-aide"
+                    set:text={guide.lacunes.join('\n')}
+                  />
+                  <p class="md-aide" id="ad-g-lacunes-aide">
+                    {typo(`Une lacune par ligne (${LIMITES.guide.lacunes} au plus).`)}
+                  </p>
+                  <p class="md-erreur" data-ad-erreur="lacunes" hidden />
+                </div>
+              </div>
+            </section>
+
+            <section class="md-section" aria-labelledby="ad-g-methode">
+              <div class="md-section-tete">
+                <h2 id="ad-g-methode">La méthode qui ressort</h2>
+                <p>Étapes communes aux parcours, dans l’ordre où ils les suivent</p>
+              </div>
+              <p class="md-erreur ad-erreur-liste" data-ad-erreur="etapes" hidden />
+              <ol class="ad-blocs" data-ad-liste="etapes">
+                {guide.etapes.map((e, i) => (
+                  <BlocEtapeGuide etape={e} rang={i + 1} {parcours} />
+                ))}
+              </ol>
+              <p class="md-rien" data-ad-vide="etapes" hidden={guide.etapes.length > 0}>
+                {typo('Aucune étape pour l’instant : un guide se publie avec une étape au moins.')}
+              </p>
+              <button
+                class="btn btn-secondary btn-sm ad-ajouter"
+                type="button"
+                data-ad-ajouter="etapes"
+                data-max={LIMITES.guide.etapes}
+              >
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-plus" />
+                </svg>
+                Ajouter une étape
+              </button>
+            </section>
+
+            <section class="md-section" aria-labelledby="ad-g-pieges">
+              <div class="md-section-tete">
+                <h2 id="ad-g-pieges">Les pièges à anticiper</h2>
+                <p>{typo('Explorer les présente du plus rencontré au moins rencontré')}</p>
+              </div>
+              <p class="md-erreur ad-erreur-liste" data-ad-erreur="pieges" hidden />
+              <ol class="ad-blocs" data-ad-liste="pieges">
+                {guide.pieges.map((p, i) => (
+                  <BlocPiegeGuide
+                    piege={p}
+                    rang={i + 1}
+                    etapes={guide.etapes}
+                    {parcours}
+                    {questions}
+                    {cas}
+                  />
+                ))}
+              </ol>
+              <p class="md-rien" data-ad-vide="pieges" hidden={guide.pieges.length > 0}>
+                Aucun piège pour l’instant.
+              </p>
+              <button
+                class="btn btn-secondary btn-sm ad-ajouter"
+                type="button"
+                data-ad-ajouter="pieges"
+                data-max={LIMITES.guide.pieges}
+              >
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-plus" />
+                </svg>
+                Ajouter un piège
+              </button>
+            </section>
+          </form>
+
+          <section class="md-section" id="contenus" aria-labelledby="ad-g-contenus">
+            <div class="md-section-tete">
+              <h2 id="ad-g-contenus">Parcours, questions et cas</h2>
+              <p>
+                {[
+                  pluriel(parcours.length, 'parcours', 'parcours'),
+                  pluriel(questions.length, 'question', 'questions'),
+                  pluriel(cas.length, 'cas', 'cas'),
+                ].join(' · ')}
+              </p>
+            </div>
+            <form class="ad-outils ad-ajout-contenu" novalidate autocomplete="off" data-ad-contenu>
+              <div class="ad-champ is-large">
+                <label for="ad-g-contenu">Ajouter une création, une question ou un cas</label>
+                <input
+                  id="ad-g-contenu"
+                  name="adresse"
+                  placeholder="Adresse de sa page ou numéro"
+                  aria-describedby="ad-g-contenu-aide"
+                />
+              </div>
+              <button class="btn btn-secondary" type="submit">
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-plus" />
+                </svg>
+                Ajouter
+              </button>
+              <p class="md-erreur" data-ad-erreur="contenuId" role="alert" hidden />
+              <p class="md-aide" id="ad-g-contenu-aide">
+                {typo(
+                  'Une création publiée rejoint d’elle-même le guide le plus proche ; ajoutez ici celles que le rapprochement a manquées, et les questions et les cas qui éclairent les pièges.',
+                )}
+              </p>
+            </form>
+            {groupes.length ? (
+              groupes.map((groupe) => (
+                <div class="ad-groupe">
+                  <h3 class="ad-groupe-titre">{groupe.titre}</h3>
+                  <ul class="ad-refs">
+                    {groupe.contenus.map((c) => {
+                      const etat = etatContenuGuide(c);
+                      return (
+                        <li class="ad-membre" id={`contenu-${c.id}`}>
+                          <AvatarMembre membre={c.auteur} taille={40} />
+                          <span class="ad-membre-corps">
+                            <a class="ad-membre-nom ad-contenu-titre" href={adresseContenuGuide(c)}>
+                              {typo(c.titre)}
+                            </a>
+                            <span class="ad-membre-meta">
+                              <span>{c.auteur.nom}</span>
+                              <span>{`N° ${c.id}`}</span>
+                              {etat && (
+                                <span class="is-alerte">{`${etat} : absent d’Explorer`}</span>
+                              )}
+                            </span>
+                          </span>
+                          <span class="ad-membre-actions">
+                            <button
+                              class="btn btn-secondary btn-sm"
+                              type="button"
+                              data-ad-retirer-contenu={c.id}
+                              data-type={c.type}
+                              data-titre={c.titre}
+                            >
+                              Retirer
+                            </button>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))
+            ) : (
+              <p class="md-rien ad-vide">
+                {typo(
+                  'Aucun contenu pour l’instant : ajoutez les parcours qui suivent la méthode.',
+                )}
+              </p>
+            )}
+            {guide.retires.length > 0 && (
+              <div class="ad-groupe">
+                <h3 class="ad-groupe-titre">Parcours retirés</h3>
+                <p class="md-rien">{typo('Le rapprochement ne les range plus dans ce guide.')}</p>
+                <ul class="ad-refs">
+                  {guide.retires.map((c) => (
+                    <li class="ad-membre is-retire" id={`contenu-${c.id}`}>
+                      <AvatarMembre membre={c.auteur} taille={40} />
+                      <span class="ad-membre-corps">
+                        <a class="ad-membre-nom ad-contenu-titre" href={adresseContenuGuide(c)}>
+                          {typo(c.titre)}
+                        </a>
+                        <span class="ad-membre-meta">
+                          <span>{c.auteur.nom}</span>
+                          <span>{`N° ${c.id}`}</span>
+                        </span>
+                      </span>
+                      <span class="ad-membre-actions">
+                        <button
+                          class="btn btn-secondary btn-sm"
+                          type="button"
+                          data-ad-remettre={c.id}
+                          data-titre={c.titre}
+                        >
+                          Remettre
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        </div>
+
+        <aside
+          class="md-decision ad-guide-actions"
+          id="ad-enregistrer"
+          aria-labelledby="ad-g-actions"
+        >
+          <h2 id="ad-g-actions">
+            {guide.datePublication ? 'Guide publié' : 'Guide en préparation'}
+          </h2>
+          <p class="ad-guide-etat">
+            {typo(
+              guide.datePublication
+                ? 'Chaque enregistrement s’applique aussitôt dans Explorer.'
+                : 'Personne ne le voit avant sa publication.',
+            )}
+          </p>
+          <p class="md-erreur" data-ad-erreur-general role="alert" hidden />
+          <button class="btn btn-primary md-envoyer" type="submit" form="ad-guide">
+            Enregistrer le guide
+          </button>
+          <p class="md-note" data-ad-modifie hidden>
+            Modifications non enregistrées
+          </p>
+          <div class="ad-guide-publication">
+            {guide.datePublication ? (
+              <>
+                <button class="btn btn-secondary" type="button" data-ad-publication="retirer">
+                  Repasser en préparation
+                </button>
+                <p class="md-rien">
+                  {typo(
+                    'Le guide disparaît d’Explorer ; les listes de contrôle des membres sont gardées.',
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <button class="btn btn-secondary" type="button" data-ad-publication="publier">
+                  Publier le guide
+                </button>
+                <p class="md-rien">
+                  {typo(
+                    'Il apparaît dans Explorer, et les créations publiées ensuite peuvent le rejoindre.',
+                  )}
+                </p>
+              </>
+            )}
+            {guide.supprimable && (
+              <button class="ad-supprimer" type="button" data-ad-supprimer>
+                <svg class="icon icon-sm" aria-hidden="true">
+                  <use href="#i-trash" />
+                </svg>
+                Supprimer ce guide
+              </button>
+            )}
+          </div>
+        </aside>
+      </div>
+    )
+  )}
+
+  <Fragment slot="fin">
+    {guide && (
+      <>
+        <template data-ad-modele="etapes">
+          <BlocEtapeGuide etape={null} rang={0} {parcours} />
+        </template>
+        <template data-ad-modele="pieges">
+          <BlocPiegeGuide
+            piege={null}
+            rang={0}
+            etapes={guide.etapes}
+            {parcours}
+            {questions}
+            {cas}
+          />
+        </template>
+        <dialog
+          class="md-dialogue"
+          aria-labelledby="ad-dialogue-titre"
+          aria-describedby="ad-dialogue-texte"
+          data-ad-dialogue
+        >
+          <form method="dialog">
+            <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+            <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+            <div class="md-dialogue-actions">
+              <button class="btn btn-secondary" type="submit" value="annuler">
+                Revenir
+              </button>
+              <button class="btn btn-primary" type="button" data-ad-confirmer>
+                Confirmer
+              </button>
+            </div>
+          </form>
+        </dialog>
+      </>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../../../scripts/editeur-guide';
+</script>

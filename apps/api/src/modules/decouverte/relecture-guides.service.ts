@@ -145,7 +145,7 @@ export class RelectureGuidesService {
           if (!etape) throw erreurValidation({ etapeId: 'Choisissez une étape de ce guide.' });
         }
         const [{ n, dernier } = { n: 0, dernier: 0 }] = await tx
-          .select({ n: count(), dernier: sql<number>`coalesce(max(${guidePiege.ordre}), 0)::int` })
+          .select({ n: count(), dernier: sql<number>`coalesce(max(${guidePiege.ordre}), -1)::int` })
           .from(guidePiege)
           .where(eq(guidePiege.guideId, g.id));
         if (n >= LIMITES.guide.pieges)

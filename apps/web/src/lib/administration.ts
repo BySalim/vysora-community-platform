@@ -184,6 +184,18 @@ export function precisionAudit(entree: EntreeAuditApi): string {
       const participants = nombreDe(d?.participants);
       return participants === null ? '' : pluriel(participants, 'participant', 'participants');
     }
+    case 'GUIDE_CONTENU_AJOUTE':
+    case 'GUIDE_CONTENU_RETIRE': {
+      // « parcours », « question » ou « cas », inscrit avec le titre du contenu.
+      const type = texteDe(d?.type);
+      const titre = texteDe(d?.titre);
+      return type && titre ? `${type.charAt(0).toUpperCase()}${type.slice(1)} « ${titre} »` : '';
+    }
+    case 'PIEGE_RETENU':
+    case 'PIEGE_ECARTE': {
+      const guide = texteDe(d?.guide);
+      return guide ? `Guide « ${guide} »` : '';
+    }
     case 'LICENCE_PAR_DEFAUT': {
       const avant = texteDe(d?.avant);
       return avant ? `Auparavant : ${avant}` : '';

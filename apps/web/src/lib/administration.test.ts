@@ -118,6 +118,18 @@ describe('journal d’audit (ADM-02, ENF-09)', () => {
       '1 participant',
     );
     expect(precisionAudit(entree({ action: 'OUTIL_ARCHIVE' }))).toBe('');
+    // Guides d'Explorer (DEC-02).
+    expect(
+      precisionAudit(
+        entree({
+          action: 'GUIDE_CONTENU_RETIRE',
+          details: { nom: 'Photos réalistes', type: 'parcours', titre: 'Portrait au marché' },
+        }),
+      ),
+    ).toBe('Parcours « Portrait au marché »');
+    expect(
+      precisionAudit(entree({ action: 'PIEGE_ECARTE', details: { guide: 'Photos réalistes' } })),
+    ).toBe('Guide « Photos réalistes »');
   });
 
   it('nomme l’élément visé, une version de document légal par ses détails', () => {

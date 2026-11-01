@@ -1,0 +1,129 @@
+---
+/* Piège de « Les pièges à anticiper » dans la rédaction d'un guide (DEC-02) : le piège, ce qui a
+   fonctionné, l'étape où il se présente, la discussion du forum et le cas pour s'entraîner (une
+   question et un cas du guide), les parcours où il a été rencontré. Sans piège, le bloc sert de
+   modèle (<template>) aux pièges ajoutés. Les étapes proposées suivent la méthode en cours de
+   rédaction (scripts/editeur-guide.ts) : leur valeur est la clé de l'étape, pas sa place. */
+import { LONGUEURS, type ContenuGuideAdministreApi, type GuideAdministreApi } from '@vysora/shared';
+import { typo } from '../lib/texte';
+
+interface Props {
+  piege: GuideAdministreApi['pieges'][number] | null;
+  rang: number;
+  etapes: GuideAdministreApi['etapes'];
+  parcours: ContenuGuideAdministreApi[];
+  questions: ContenuGuideAdministreApi[];
+  cas: ContenuGuideAdministreApi[];
+}
+
+const { piege, rang, etapes, parcours, questions, cas } = Astro.props;
+const cle = piege ? `p${piege.id}` : '__cle__';
+const sources = new Set(piege?.sources ?? []);
+---
+
+<li class="ad-bloc" data-ad-piege data-id={piege?.id ?? ''}>
+  <div class="ad-bloc-tete">
+    <h3 data-ad-numero>{`Piège ${rang}`}</h3>
+    <div class="ad-bloc-actions">
+      <button class="ad-bouton-icone" type="button" data-ad-monter aria-label="Monter le piège">
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-arrow-up" />
+        </svg>
+      </button>
+      <button
+        class="ad-bouton-icone"
+        type="button"
+        data-ad-descendre
+        aria-label="Descendre le piège"
+      >
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-arrow-down" />
+        </svg>
+      </button>
+      <button class="ad-bouton-icone" type="button" data-ad-retirer aria-label="Retirer le piège">
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-trash" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="ad-champ is-large">
+    <label for={`ad-${cle}-titre`}>Le piège</label>
+    <input
+      id={`ad-${cle}-titre`}
+      data-champ="titre"
+      maxlength={LONGUEURS.guidePiegeTitre.max}
+      value={piege?.titre ?? ''}
+      placeholder="Le créneau restait réservable dans un autre onglet"
+    />
+    <p class="md-erreur" data-ad-erreur-champ="titre" hidden></p>
+  </div>
+  <div class="ad-champ is-large">
+    <label for={`ad-${cle}-solution`}>Ce qui a fonctionné</label>
+    <textarea
+      id={`ad-${cle}-solution`}
+      data-champ="solution"
+      rows="3"
+      maxlength={LONGUEURS.guideSolution.max}
+      set:text={piege?.solution ?? ''}
+    />
+    <p class="md-erreur" data-ad-erreur-champ="solution" hidden></p>
+  </div>
+  <div class="ad-outils ad-bloc-choix">
+    <div class="ad-champ">
+      <label for={`ad-${cle}-etape`}>Étape</label>
+      <select id={`ad-${cle}-etape`} data-champ="etape" class="is-large">
+        <option value="">Aucune étape</option>
+        {etapes.map((e, i) => (
+          <option value={`e${e.id}`} selected={piege?.etapeId === e.id}>
+            {typo(`${i + 1}. ${e.titre}`)}
+          </option>
+        ))}
+      </select>
+      <p class="md-erreur" data-ad-erreur-champ="etape" hidden></p>
+    </div>
+    <div class="ad-champ">
+      <label for={`ad-${cle}-sujet`}>Discussion</label>
+      <select id={`ad-${cle}-sujet`} data-champ="sujetId" class="is-large">
+        <option value="">Aucune discussion</option>
+        {questions.map((q) => (
+          <option value={q.id} selected={piege?.sujetId === q.id}>
+            {typo(q.titre)}
+          </option>
+        ))}
+      </select>
+      <p class="md-erreur" data-ad-erreur-champ="sujetId" hidden></p>
+    </div>
+    <div class="ad-champ">
+      <label for={`ad-${cle}-cas`}>Cas pour s’entraîner</label>
+      <select id={`ad-${cle}-cas`} data-champ="casId" class="is-large">
+        <option value="">Aucun cas</option>
+        {cas.map((c) => (
+          <option value={c.id} selected={piege?.casId === c.id}>
+            {typo(c.titre)}
+          </option>
+        ))}
+      </select>
+      <p class="md-erreur" data-ad-erreur-champ="casId" hidden></p>
+    </div>
+  </div>
+  <fieldset class="ad-sources">
+    <legend>Parcours où il a été rencontré</legend>
+    {parcours.length ? (
+      <div class="ad-sources-liste">
+        {parcours.map((p) => (
+          <label class="ad-case">
+            <input type="checkbox" data-champ="sources" value={p.id} checked={sources.has(p.id)} />
+            <span>
+              {typo(p.titre)}
+              <span class="ad-case-auteur">{` · ${p.auteur.nom}`}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    ) : (
+      <p class="md-rien">{typo('Ajoutez des parcours au guide pour y relier ses pièges.')}</p>
+    )}
+    <p class="md-erreur" data-ad-erreur-champ="sources" hidden></p>
+  </fieldset>
+</li>

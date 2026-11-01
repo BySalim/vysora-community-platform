@@ -1,0 +1,170 @@
+---
+/* Guides d'Explorer (DEC-02) : guides en préparation puis publiés, chacun avec son domaine, son état,
+   ses parcours, sa méthode et ses pièges signalés à relire ; nouveau guide en préparation. Écran
+   sans maquette dans le prototype, dans le style des écrans d'administration. L'adresse d'un guide
+   est proposée d'après son nom court et ne change plus ensuite. Envois : scripts/guides-admin.ts. */
+import { LONGUEURS, raisonRefus, type GuidesAdministresApi } from '@vysora/shared';
+import GuidesAdmin from '../../../components/GuidesAdmin.astro';
+import { appelerApi } from '../../../lib/api';
+import { ROUTES } from '../../../lib/navigation';
+import { dateCourte, fmt, pluriel, typo } from '../../../lib/texte';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const donnees = raison
+  ? null
+  : await appelerApi<GuidesAdministresApi>('/api/v1/admin/guides', { requete: Astro.request });
+const enPreparation = donnees?.elements.filter((g) => g.datePublication === null).length ?? 0;
+---
+
+<GuidesAdmin
+  actif="guides"
+  titre="Guides"
+  description="Rédaction et publication des guides d’Explorer."
+  {raison}
+>
+  {donnees && (
+    <p class="md-statut" slot="statut">
+      <span class="is-fort">{pluriel(donnees.elements.length, 'guide', 'guides')}</span>
+      {enPreparation > 0 && (
+        <span>{pluriel(enPreparation, 'en préparation', 'en préparation')}</span>
+      )}
+      {donnees.aRelire > 0 && (
+        <a class="ad-lien" href={ROUTES.piegesAdmin}>
+          {pluriel(donnees.aRelire, 'piège signalé à relire', 'pièges signalés à relire')}
+        </a>
+      )}
+    </p>
+  )}
+
+  {donnees && (
+    <>
+      <form class="ad-defi" novalidate autocomplete="off" data-ad-nouveau-guide>
+        <h2>Nouveau guide</h2>
+        <div class="ad-champ is-large">
+          <label for="ad-guide-titre">Objectif</label>
+          <input
+            id="ad-guide-titre"
+            name="titre"
+            maxlength={LONGUEURS.guideTitre.max}
+            placeholder="Mettre en place la prise de rendez-vous en ligne"
+            required
+          />
+          <p class="md-erreur" data-ad-erreur="titre" hidden />
+        </div>
+        <div class="ad-outils">
+          <div class="ad-champ is-large">
+            <label for="ad-guide-court">Nom court</label>
+            <input
+              id="ad-guide-court"
+              name="titreCourt"
+              maxlength={LONGUEURS.guideTitreCourt.max}
+              placeholder="Prise de rendez-vous en ligne"
+              required
+            />
+            <p class="md-erreur" data-ad-erreur="titreCourt" hidden />
+          </div>
+          <div class="ad-champ is-large">
+            <label for="ad-guide-adresse">Adresse</label>
+            <input
+              id="ad-guide-adresse"
+              name="slug"
+              maxlength="80"
+              placeholder="rendez-vous"
+              aria-describedby="ad-guide-adresse-aide"
+              required
+            />
+            <p class="md-erreur" data-ad-erreur="slug" hidden />
+          </div>
+          <div class="ad-champ">
+            <label for="ad-guide-domaine">Domaine</label>
+            <select id="ad-guide-domaine" name="categorieId" required>
+              <option value="">Choisissez un domaine</option>
+              {donnees.domaines.map((d) => (
+                <option value={d.id}>{d.libelle}</option>
+              ))}
+            </select>
+            <p class="md-erreur" data-ad-erreur="categorieId" hidden />
+          </div>
+          <button class="btn btn-primary" type="submit">
+            <svg class="icon icon-sm" aria-hidden="true">
+              <use href="#i-plus" />
+            </svg>
+            Créer le guide
+          </button>
+        </div>
+        <p class="md-rien" id="ad-guide-adresse-aide">
+          {typo(
+            'Le guide naît en préparation : personne ne le voit avant sa publication. Son adresse (/explorer?guide=…) ne change plus ensuite.',
+          )}
+        </p>
+        <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+      </form>
+
+      {donnees.elements.length ? (
+        <table class="ad-table ad-guides">
+          <thead>
+            <tr>
+              <th scope="col">Guide</th>
+              <th scope="col">Domaine</th>
+              <th scope="col">État</th>
+              <th scope="col">Parcours</th>
+              <th scope="col">Méthode</th>
+              <th scope="col">
+                <span class="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {donnees.elements.map((g) => (
+              <tr id={`guide-${g.id}`}>
+                <td>
+                  <a class="ad-guide-nom" href={ROUTES.guideAdmin(g.id)}>
+                    {typo(g.titreCourt)}
+                  </a>
+                  <span class="ad-guide-objectif">{typo(g.titre)}</span>
+                </td>
+                <td data-libelle="Domaine">{typo(g.domaine.libelle)}</td>
+                <td>
+                  {g.datePublication ? (
+                    <span class="ad-etat is-libre">{`Publié le ${dateCourte(g.datePublication)}`}</span>
+                  ) : (
+                    <span class="ad-etat is-avenir">En préparation</span>
+                  )}
+                </td>
+                <td data-libelle="Parcours">{fmt(g.parcours)}</td>
+                <td data-libelle="Méthode">
+                  {`${pluriel(g.etapes, 'étape', 'étapes')} · ${pluriel(g.pieges, 'piège', 'pièges')}`}
+                  {g.aRelire > 0 && (
+                    <a class="ad-guide-relire" href={ROUTES.piegesAdmin}>
+                      {pluriel(g.aRelire, 'signalé à relire', 'signalés à relire')}
+                    </a>
+                  )}
+                </td>
+                <td>
+                  <div class="ad-actions-defi">
+                    {g.datePublication && (
+                      <a class="btn btn-secondary btn-sm" href={ROUTES.guide(g.slug)}>
+                        Voir
+                        <svg class="icon icon-sm" aria-hidden="true">
+                          <use href="#i-arrow-up-right" />
+                        </svg>
+                      </a>
+                    )}
+                    <a class="btn btn-secondary btn-sm" href={ROUTES.guideAdmin(g.id)}>
+                      Rédiger
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p class="md-rien ad-vide">
+          {typo('Aucun guide pour l’instant : créez le premier ci-dessus.')}
+        </p>
+      )}
+    </>
+  )}
+</GuidesAdmin>

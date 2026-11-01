@@ -1,0 +1,111 @@
+---
+/* Étape de « La méthode qui ressort » dans la rédaction d'un guide (DEC-02) : titre, conseil de
+   l'équipe, parcours qui la suivent, prompt cité d'un parcours. Sans étape, le bloc sert de modèle
+   (<template>) aux étapes ajoutées : scripts/editeur-guide.ts remplace « __cle__ » dans ses
+   identifiants. */
+import { LONGUEURS, type ContenuGuideAdministreApi, type GuideAdministreApi } from '@vysora/shared';
+import { typo } from '../lib/texte';
+
+interface Props {
+  etape: GuideAdministreApi['etapes'][number] | null;
+  rang: number;
+  parcours: ContenuGuideAdministreApi[];
+}
+
+const { etape, rang, parcours } = Astro.props;
+const cle = etape ? `e${etape.id}` : '__cle__';
+const sources = new Set(etape?.sources ?? []);
+---
+
+<li class="ad-bloc" data-ad-etape data-id={etape?.id ?? ''} data-cle={etape ? cle : ''}>
+  <div class="ad-bloc-tete">
+    <h3 data-ad-numero>{`Étape ${rang}`}</h3>
+    <div class="ad-bloc-actions">
+      <button class="ad-bouton-icone" type="button" data-ad-monter aria-label="Monter l’étape">
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-arrow-up" />
+        </svg>
+      </button>
+      <button
+        class="ad-bouton-icone"
+        type="button"
+        data-ad-descendre
+        aria-label="Descendre l’étape"
+      >
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-arrow-down" />
+        </svg>
+      </button>
+      <button class="ad-bouton-icone" type="button" data-ad-retirer aria-label="Retirer l’étape">
+        <svg class="icon icon-sm" aria-hidden="true">
+          <use href="#i-trash" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="ad-champ is-large">
+    <label for={`ad-${cle}-titre`}>Titre</label>
+    <input
+      id={`ad-${cle}-titre`}
+      data-champ="titre"
+      maxlength={LONGUEURS.guideEtapeTitre.max}
+      value={etape?.titre ?? ''}
+      placeholder="Décrire les créneaux à l’IA"
+    />
+    <p class="md-erreur" data-ad-erreur-champ="titre" hidden></p>
+  </div>
+  <div class="ad-champ is-large">
+    <label for={`ad-${cle}-conseil`}>Conseil de l’équipe</label>
+    <textarea
+      id={`ad-${cle}-conseil`}
+      data-champ="conseil"
+      rows="3"
+      maxlength={LONGUEURS.guideConseil.max}
+      placeholder="Plus la description est précise, moins l’IA invente de créneaux."
+      set:text={etape?.conseil ?? ''}
+    />
+    <p class="md-erreur" data-ad-erreur-champ="conseil" hidden></p>
+  </div>
+  <fieldset class="ad-sources">
+    <legend>Parcours qui suivent cette étape</legend>
+    {parcours.length ? (
+      <div class="ad-sources-liste">
+        {parcours.map((p) => (
+          <label class="ad-case">
+            <input type="checkbox" data-champ="sources" value={p.id} checked={sources.has(p.id)} />
+            <span>
+              {typo(p.titre)}
+              <span class="ad-case-auteur">{` · ${p.auteur.nom}`}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    ) : (
+      <p class="md-rien">{typo('Ajoutez des parcours au guide pour les relier à sa méthode.')}</p>
+    )}
+    <p class="md-erreur" data-ad-erreur-champ="sources" hidden></p>
+  </fieldset>
+  <div class="ad-champ">
+    <label for={`ad-${cle}-cite`}>Prompt cité</label>
+    <select id={`ad-${cle}-cite`} data-champ="citation.parcoursId" class="is-large">
+      <option value="">Aucun prompt cité</option>
+      {parcours.map((p) => (
+        <option value={p.id} selected={etape?.citation?.parcoursId === p.id}>
+          {typo(`${p.titre} · ${p.auteur.nom}`)}
+        </option>
+      ))}
+    </select>
+    <p class="md-erreur" data-ad-erreur-champ="citation.parcoursId" hidden></p>
+  </div>
+  <div class="ad-champ is-large" data-ad-citation hidden={!etape?.citation}>
+    <label for={`ad-${cle}-texte`}>Texte exact du prompt</label>
+    <textarea
+      id={`ad-${cle}-texte`}
+      data-champ="citation.texte"
+      rows="3"
+      maxlength={LONGUEURS.guideCitation.max}
+      set:text={etape?.citation?.texte ?? ''}
+    />
+    <p class="md-erreur" data-ad-erreur-champ="citation.texte" hidden></p>
+  </div>
+</li>
