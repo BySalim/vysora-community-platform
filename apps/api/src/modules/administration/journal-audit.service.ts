@@ -11,6 +11,7 @@ import type { BaseDeDonnees } from '../../db/client.js';
 import {
   badge,
   categorie,
+  creation,
   defi,
   demandeGuide,
   editeur,
@@ -22,6 +23,7 @@ import {
   modele,
   outil,
   propositionPiege,
+  sujet,
   utilisateur,
 } from '../../db/schema/index.js';
 import { Stockage } from '../medias/stockage.js';
@@ -34,6 +36,15 @@ type Noms = (db: BaseDeDonnees, ids: number[]) => Promise<{ id: number; nom: str
 /** Nom actuel d'un élément visé, par type de cible ; une version d'un document légal se nomme par
     les détails inscrits (elle peut avoir été retirée). */
 const NOMS: Record<string, Noms> = {
+  creation: async (db, ids) =>
+    (
+      await db
+        .select({ id: creation.id, nom: creation.titre })
+        .from(creation)
+        .where(inArray(creation.id, ids))
+    ).map((c) => ({ id: c.id, nom: c.nom ?? '' })),
+  sujet: (db, ids) =>
+    db.select({ id: sujet.id, nom: sujet.titre }).from(sujet).where(inArray(sujet.id, ids)),
   invitation: (db, ids) =>
     db
       .select({ id: invitation.id, nom: invitation.code })

@@ -169,6 +169,15 @@ export interface SujetDemo {
   fermeture?: { par: string; date: string };
 }
 
+/** APP-03 : compléments d'un savoir d'Apprendre (contenu éditorial du site, désigné par son identifiant). */
+export interface ComplementSavoirDemo {
+  savoir: string;
+  /** Création (clé) et rang de son moment clé dans le parcours, ou note de l'équipe. */
+  exemples: [string, number | string][];
+  /** Sujet du forum (clé). */
+  sujet: string | null;
+}
+
 export interface CasDemo {
   cle: string;
   auteur: string;

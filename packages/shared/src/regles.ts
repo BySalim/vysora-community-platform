@@ -98,6 +98,8 @@ export const LIMITES = {
   // APP-03 : savoirs d'Apprendre suivis par un membre (une soixantaine publiés) : garde-fou de l'API,
   // qui ne connaît pas la liste des savoirs (contenus éditoriaux du site).
   savoirsSuivis: 300,
+  // APP-03 : moments clés qui illustrent un savoir (le prototype en montre trois au plus).
+  illustrationsParSavoir: 6,
 } as const;
 
 /** RG-86 : objectif de chaque badge qui se gagne en avançant, et unité de son avancement, accordée

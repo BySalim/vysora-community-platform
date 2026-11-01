@@ -14,7 +14,7 @@ import {
 import { horodatage, identifiant, reference, valeursPermises } from './_outils.js';
 import { utilisateur } from './comptes.js';
 import { contenu } from './contenus.js';
-import { creation } from './creations.js';
+import { creation, momentCle } from './creations.js';
 import { casBonReflexe, sujet } from './forum.js';
 import { categorie } from './referentiels.js';
 
@@ -242,3 +242,37 @@ export const listeControle = pgTable(
   },
   (t) => [primaryKey({ columns: [t.utilisateurId, t.guideId] })],
 );
+
+/** Extension (APP-03, prototype : « Vu dans la communauté » d'un savoir d'Apprendre) : moment clé d'une
+    création publiée, choisi par l'équipe pour illustrer un savoir (contenu éditorial du site, désigné
+    par son identifiant), ou la création seule avec une note de l'équipe. */
+export const illustrationSavoir = pgTable(
+  'illustration_savoir',
+  {
+    id: identifiant(),
+    savoir: varchar({ length: 80 }).notNull(),
+    creationId: reference()
+      .notNull()
+      .references(() => creation.id, { onDelete: 'cascade' }),
+    /** Moment clé de la création. L'auteur qui réécrit sa création recrée ses moments : le lien tombe
+        alors (jamais un autre moment montré à sa place) et l'écran de l'administration le signale. */
+    momentCleId: reference().references(() => momentCle.id, { onDelete: 'set null' }),
+    note: varchar({ length: 300 }),
+    ordre: smallint().notNull(),
+    dateAjout: horodatage().notNull().defaultNow(),
+  },
+  (t) => [
+    index('illustration_savoir_savoir_idx').on(t.savoir, t.ordre),
+    index('illustration_savoir_creation_idx').on(t.creationId),
+  ],
+);
+
+/** Extension (APP-03, prototype : sujet du forum de « Pour aller plus loin » d'un savoir) : un sujet
+    au plus par savoir, choisi par l'équipe. */
+export const sujetSavoir = pgTable('sujet_savoir', {
+  savoir: varchar({ length: 80 }).primaryKey(),
+  sujetId: reference()
+    .notNull()
+    .references(() => sujet.id, { onDelete: 'cascade' }),
+  dateAjout: horodatage().notNull().defaultNow(),
+});

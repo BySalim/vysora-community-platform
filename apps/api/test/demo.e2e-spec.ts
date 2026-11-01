@@ -26,6 +26,7 @@ import {
 } from '../src/db/demo/charger.js';
 import { CAS } from '../src/db/demo/donnees/bon-reflexe.js';
 import { CREATIONS } from '../src/db/demo/donnees/creations.js';
+import { COMPLEMENTS_SAVOIRS } from '../src/db/demo/donnees/apprendre.js';
 import { DEMANDES, GUIDES } from '../src/db/demo/donnees/guides.js';
 import { MEMBRES } from '../src/db/demo/donnees/membres.js';
 import { MOT_DE_PASSE_DEMO } from '../src/db/demo/identifiants.js';
@@ -172,6 +173,10 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
         // DEC-01 : guides et demandes d'Explorer.
         guides: GUIDES.length,
         demandes: DEMANDES.length,
+        // APP-03 : moments clés et sujets du forum des savoirs d'Apprendre.
+        savoirs:
+          COMPLEMENTS_SAVOIRS.reduce((n, c) => n + c.exemples.length, 0) +
+          COMPLEMENTS_SAVOIRS.filter((c) => c.sujet).length,
       });
       expect(bilan.reproductions).toBeGreaterThan(250);
       expect(bilan.votes).toBeGreaterThan(1500);

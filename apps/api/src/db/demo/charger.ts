@@ -9,7 +9,7 @@ import {
   type Role,
   type TypeContenu,
 } from '@vysora/shared';
-import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { indexerCas } from '../../modules/apprentissage/contenu-cas.js';
 import { DocumentsLegauxService } from '../../modules/auth/documents-legaux.service.js';
 import { hacherMotDePasse } from '../../modules/auth/mots-de-passe.service.js';
@@ -40,6 +40,7 @@ import {
   etape,
   etiquette,
   guide,
+  illustrationSavoir,
   guideContenu,
   guideEtape,
   guideEtapeSource,
@@ -61,9 +62,11 @@ import {
   signalementObsolescence,
   soutienDemande,
   sujet,
+  sujetSavoir,
   utilisateur,
   vote,
 } from '../schema/index.js';
+import { COMPLEMENTS_SAVOIRS } from './donnees/apprendre.js';
 import { CAS } from './donnees/bon-reflexe.js';
 import { CREATIONS, RETOURS_REPRODUCTION } from './donnees/creations.js';
 import { DEFIS } from './donnees/defis.js';
@@ -153,6 +156,8 @@ export interface BilanDemo {
   /** Guides d'Explorer et demandes de la communauté (DEC-01). */
   guides: number;
   demandes: number;
+  /** Moments clés et sujets du forum liés aux savoirs d'Apprendre (APP-03). */
+  savoirs: number;
 }
 
 export class DemoRefusee extends Error {}
@@ -177,6 +182,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     await completerRecherche(ctx);
     for (const g of GUIDES) await chargerGuide(ctx, g);
     await chargerDemandes(ctx);
+    await chargerComplementsSavoirs(ctx);
     chargerReputation(ctx);
     for (const lot of lots(ctx.votes)) await tx.insert(vote).values(lot);
     for (const lot of lots(ctx.mouvements)) await tx.insert(mouvementReputation).values(lot);
@@ -207,6 +213,7 @@ export function decrireBilan(bilan: BilanDemo): string {
     [bilan.documents, 'document de recherche', 'documents de recherche'],
     [bilan.guides, 'guide d’Explorer', 'guides d’Explorer'],
     [bilan.demandes, 'demande de guide', 'demandes de guide'],
+    [bilan.savoirs, 'complément d’un savoir', 'compléments des savoirs'],
   ];
   const ajoutes = parties.filter(([nombre]) => nombre > 0);
   if (!ajoutes.length) return 'Données de démonstration déjà chargées : rien à ajouter.';
@@ -325,6 +332,7 @@ async function preparer(tx: Transaction, maintenant: Date, motDePasse: string): 
       documents: 0,
       guides: 0,
       demandes: 0,
+      savoirs: 0,
     },
   };
 }
@@ -1484,6 +1492,59 @@ async function completerFidelite(ctx: Contexte): Promise<void> {
         )
         .returning({ id: casBonReflexe.id }),
     );
+  }
+}
+
+/* Savoirs d'Apprendre (APP-03) --------------------------------------------------- */
+
+/** Moments clés qui illustrent les savoirs et sujets du forum liés, ceux du prototype. Un savoir
+    déjà illustré, ou déjà lié à un sujet, garde ce que l'équipe a choisi. */
+async function chargerComplementsSavoirs(ctx: Contexte): Promise<void> {
+  const illustres = new Set(
+    (
+      await ctx.tx.selectDistinct({ savoir: illustrationSavoir.savoir }).from(illustrationSavoir)
+    ).map((l) => l.savoir),
+  );
+  for (const complement of COMPLEMENTS_SAVOIRS) {
+    if (!illustres.has(complement.savoir) && complement.exemples.length) {
+      const valeurs = [];
+      for (const [cle, ref] of complement.exemples) {
+        const creationId = cleConnue(ctx.creations, cle, 'Création');
+        let momentCleId: number | null = null;
+        if (typeof ref === 'number') {
+          // Rang du moment dans le parcours : étapes dans l'ordre, moments dans l'ordre d'écriture.
+          const moments = await ctx.tx
+            .select({ id: momentCle.id })
+            .from(momentCle)
+            .innerJoin(etape, eq(etape.id, momentCle.etapeId))
+            .where(eq(etape.creationId, creationId))
+            .orderBy(asc(etape.ordre), asc(momentCle.id));
+          const moment = moments[ref];
+          if (!moment) throw new Error(`Moment clé inconnu : ${cle} n° ${ref}`);
+          momentCleId = moment.id;
+        }
+        valeurs.push({
+          savoir: complement.savoir,
+          creationId,
+          momentCleId,
+          note: typeof ref === 'string' ? ref : null,
+          ordre: valeurs.length,
+        });
+      }
+      await ctx.tx.insert(illustrationSavoir).values(valeurs);
+      ctx.bilan.savoirs += valeurs.length;
+    }
+    if (complement.sujet) {
+      const ajoute = await ctx.tx
+        .insert(sujetSavoir)
+        .values({
+          savoir: complement.savoir,
+          sujetId: cleConnue(ctx.sujets, complement.sujet, 'Sujet'),
+        })
+        .onConflictDoNothing()
+        .returning({ savoir: sujetSavoir.savoir });
+      ctx.bilan.savoirs += ajoute.length;
+    }
   }
 }
 

@@ -47,6 +47,12 @@ export const ACTIONS_AUDIT = {
     'DEMANDE_CLOSE',
     'DEMANDE_ROUVERTE',
   ],
+  apprendre: [
+    'SAVOIR_ILLUSTRATION_AJOUTEE',
+    'SAVOIR_ILLUSTRATION_RETIREE',
+    'SAVOIR_SUJET_LIE',
+    'SAVOIR_SUJET_RETIRE',
+  ],
 } as const;
 
 export type DomaineAudit = keyof typeof ACTIONS_AUDIT;
@@ -61,6 +67,7 @@ export const LIBELLES_DOMAINE_AUDIT: Record<DomaineAudit, string> = {
   documents: 'Documents légaux',
   defis: 'Défis',
   guides: 'Guides d’Explorer',
+  apprendre: 'Savoirs d’Apprendre',
 };
 
 export const LIBELLES_ACTION_AUDIT: Record<ActionAudit, string> = {
@@ -110,4 +117,8 @@ export const LIBELLES_ACTION_AUDIT: Record<ActionAudit, string> = {
   DEMANDE_CREEE: 'Objectif cherché ajouté',
   DEMANDE_CLOSE: 'Objectif cherché clos',
   DEMANDE_ROUVERTE: 'Objectif cherché rouvert',
+  SAVOIR_ILLUSTRATION_AJOUTEE: 'Moment clé ajouté à un savoir',
+  SAVOIR_ILLUSTRATION_RETIREE: 'Moment clé retiré d’un savoir',
+  SAVOIR_SUJET_LIE: 'Sujet du forum lié à un savoir',
+  SAVOIR_SUJET_RETIRE: 'Sujet du forum retiré d’un savoir',
 };

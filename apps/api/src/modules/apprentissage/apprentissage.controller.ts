@@ -22,6 +22,7 @@ import {
   schemaReponseCas,
   type ApprentissageApi,
   type CasApi,
+  type ComplementsSavoirsApi,
   type EtatSavoir,
   type ExamenCas,
   type FiltresCas,
@@ -42,6 +43,7 @@ import { EtatCompteService } from '../auth/etat-compte.service.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import type { Intervenant } from '../forum/ecriture-sujets.service.js';
 import { CasService } from './cas.service.js';
+import { ComplementsSavoirsService } from './complements-savoirs.service.js';
 import { EcritureCasService } from './ecriture-cas.service.js';
 import { ListeCasService } from './liste-cas.service.js';
 import { ReponsesCasService } from './reponses-cas.service.js';
@@ -65,6 +67,7 @@ export class ApprentissageController {
     private readonly reponses: ReponsesCasService,
     private readonly etatCompte: EtatCompteService,
     private readonly savoirs: SavoirsService,
+    private readonly complements: ComplementsSavoirsService,
   ) {}
 
   /** GET /api/v1/cas : cas validés, filtrés, triés, par pages de vingt. */
@@ -172,6 +175,13 @@ export class ApprentissageController {
   @Exige('parametres')
   apprentissage(@SessionCourante() session: SessionOuverte): Promise<ApprentissageApi> {
     return this.lecture.apprentissage(session.utilisateur.id);
+  }
+
+  /** GET /api/v1/savoirs/complements : moments clés et sujets du forum choisis par l'équipe pour
+      chaque savoir d'Apprendre, visibles de tous (APP-03, RG-30). */
+  @Get('savoirs/complements')
+  complementsSavoirs(): Promise<ComplementsSavoirsApi> {
+    return this.complements.publics();
   }
 
   /** GET /api/v1/moi/savoirs : savoirs acquis et réponses aux questions de vérification (APP-03). */
