@@ -11,6 +11,7 @@ import {
   raisonRefus,
   type CasApi,
   type CasResumeApi,
+  type ComplementsSavoirsApi,
   type GuidesApi,
   type ListeCasApi,
   type ListeSujetsApi,
@@ -54,7 +55,7 @@ async function tousLesCas(): Promise<CasResumeApi[]> {
 
 // La progression d'un membre qui peut contribuer est gardée dans son compte ; sinon dans le navigateur.
 const enCompte = !raisonRefus('contribuer', Astro.locals.etat);
-const [cas, referentiels, guides, sujets, progression] = await Promise.all([
+const [cas, referentiels, guides, sujets, progression, complements] = await Promise.all([
   tousLesCas(),
   appelerApi<ReferentielsApi>('/api/v1/referentiels', options).catch(() => null),
   appelerApi<GuidesApi>('/api/v1/guides', options).catch(() => null),
@@ -62,6 +63,7 @@ const [cas, referentiels, guides, sujets, progression] = await Promise.all([
   enCompte
     ? appelerApi<ProgressionSavoirsApi>('/api/v1/moi/savoirs', options).catch(() => null)
     : null,
+  appelerApi<ComplementsSavoirsApi>('/api/v1/savoirs/complements', options).catch(() => null),
 ]);
 
 const donnees: DonneesPageApprendre = {
@@ -89,6 +91,7 @@ const donnees: DonneesPageApprendre = {
   aujourdhui: new Date().toISOString().slice(0, 10),
   chiffres: { sujets: sujets?.total ?? 0, outils: referentiels?.outils.length ?? 0 },
   progression,
+  complements,
 };
 
 // Référencement : les vues sont rendues ici, comme le script les rend.

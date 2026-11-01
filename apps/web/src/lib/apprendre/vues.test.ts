@@ -41,6 +41,7 @@ const donnees: DonneesPageApprendre = {
   aujourdhui: '2026-11-01',
   chiffres: { sujets: 17, outils: 64 },
   progression: null,
+  complements: null,
 };
 
 function vues(

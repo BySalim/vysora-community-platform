@@ -1,7 +1,12 @@
 /* Types des contenus éditoriaux d'Apprendre (prototype/apprendre-data.js) et des données que la page
    reçoit du serveur (cas Bon réflexe de l'API, outils, guides, domaines). */
 
-import type { CasApi, CasResumeApi, ProgressionSavoirsApi } from '@vysora/shared';
+import type {
+  CasApi,
+  CasResumeApi,
+  ComplementsSavoirsApi,
+  ProgressionSavoirsApi,
+} from '@vysora/shared';
 
 export type IdRubrique = 'bases' | 'notions' | 'regles' | 'astuces' | 'bon-reflexe';
 
@@ -23,13 +28,13 @@ export interface Savoir {
   title: string;
   short: string;
   body?: { h?: string; p?: string[]; steps?: string[] }[];
-  /** Moments clés de créations de la communauté (repris avec les pages de création, APP-03). */
-  examples?: [string, string | number][];
   check?: { q: string; choices: string[]; correct: number; why: string };
   related?: string[];
   history: [string, string][];
   prompt?: { before: string; after: string; notes: [string, string][] };
-  links?: { guide?: string; topic?: string; domain?: string; publish?: boolean };
+  /** Le sujet du forum lié et les moments clés de la communauté sont choisis par l'équipe dans
+      l'administration (APP-03, ComplementsSavoirsApi). */
+  links?: { guide?: string; domain?: string; publish?: boolean };
   tools?: string[];
   theme?: string;
   /** Cas Bon réflexe du prototype qui teste la règle (« cas-3 »). */
@@ -81,4 +86,6 @@ export interface DonneesPageApprendre {
   chiffres: { sujets: number; outils: number };
   /** APP-03 : progression du membre sur les savoirs, lue dans son compte ; null pour un visiteur. */
   progression: ProgressionSavoirsApi | null;
+  /** APP-03 : moments clés et sujets du forum choisis par l'équipe pour chaque savoir. */
+  complements: ComplementsSavoirsApi | null;
 }

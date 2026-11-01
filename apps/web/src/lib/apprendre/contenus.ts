@@ -87,12 +87,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        [
-          'lettre-motivation',
-          'Reproduite avec succès sur Mistral Large 2, Claude Sonnet 4.5 et GPT-5 : la méthode ne dépend pas d’un seul modèle.',
-        ],
-      ],
       check: {
         q: 'Une astuce fonctionne pour une collègue sur ChatGPT, mais pas pour vous, sur ChatGPT également. Que comparez-vous d’abord ?',
         choices: [
@@ -142,10 +136,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['lettre-motivation', 0],
-        ['avis-restaurant', 0],
-      ],
       check: {
         q: 'Quel ajout rend la demande « Résume ce rapport » la plus fiable ?',
         choices: [
@@ -159,7 +149,6 @@ export const APPRENDRE: DonneesApprendre = {
       related: ['prompt', 'contexte', 'ce-que-ia-ignore'],
       links: {
         guide: 'textes',
-        topic: 'sujet-6',
         domain: 'Texte et rédaction',
       },
       history: [
@@ -191,7 +180,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['affiche-alpes', 0]],
       check: {
         q: 'Vous relancez trois fois le même prompt et obtenez trois logos différents. Que faites-vous ?',
         choices: [
@@ -230,14 +218,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['traduction-glossaire', 0],
-        ['avis-restaurant', 0],
-      ],
       related: ['contexte', 'demande-claire', 'astuce-glossaire'],
       links: {
         guide: 'textes',
-        topic: 'sujet-11',
         domain: 'Texte et rédaction',
       },
       history: [
@@ -269,10 +252,6 @@ export const APPRENDRE: DonneesApprendre = {
             'Comparez, puis notez ce que la modification a produit.',
           ],
         },
-      ],
-      examples: [
-        ['portrait-gouache', 0],
-        ['facade-goree', 0],
       ],
       related: ['iteration', 'noter-moments-cles', 'graine'],
       links: {
@@ -306,14 +285,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['ventes-boutique', 0],
-        ['quiz-histoire', 0],
-      ],
       related: ['hallucination', 'recalculer-chiffre', 'retrouver-source'],
       links: {
         guide: 'donnees',
-        topic: 'sujet-4',
         domain: 'Analyse de données',
       },
       history: [
@@ -346,14 +320,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['relance-devis', 0],
-        ['factures-auto', 0],
-      ],
       related: ['agent', 'simulation-dabord', 'valider-avant-envoi'],
       links: {
         guide: 'automatiser',
-        topic: 'sujet-5',
         domain: 'Automatisation',
       },
       history: [
@@ -386,10 +355,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['keur-awa', 0],
-        ['keur-awa', 1],
-      ],
       related: ['moment-cle', 'reproduction'],
       links: {
         publish: true,
@@ -412,10 +377,8 @@ export const APPRENDRE: DonneesApprendre = {
         },
       ],
       tools: ['Cursor', 'Claude Code', 'Codex'],
-      examples: [['extension-navigateur', 0]],
       related: ['perimetre-agent', 'garder-la-main', 'astuce-cursor-fichiers'],
       links: {
-        topic: 'sujet-14',
         domain: 'Code et scripts',
       },
       history: [['2026-10-08', 'Publication']],
@@ -471,7 +434,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['agenda-kine', 1]],
       related: ['minimiser-donnees'],
       history: [['2026-09-27', 'Publication']],
     },
@@ -490,7 +452,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['avis-restaurant', 0]],
       related: ['demande-claire', 'astuce-detail-avis'],
       history: [['2026-10-02', 'Publication']],
     },
@@ -546,7 +507,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['resume-canal', 0]],
       related: ['retrouver-source', 'verifier-avant-reprendre', 'resume-fidele'],
       history: [
         ['2026-09-22', 'Publication'],
@@ -572,11 +532,7 @@ export const APPRENDRE: DonneesApprendre = {
         },
       ],
       tools: ['Midjourney', 'Flux', 'Ideogram'],
-      examples: [['icones-3d', 0]],
       related: ['astuce-reference-angle', 'astuce-sref', 'graine'],
-      links: {
-        topic: 'sujet-1',
-      },
       history: [
         ['2026-09-22', 'Publication'],
         ['2026-10-02', 'Exemple ajouté : une série d’icônes 3D'],
@@ -616,7 +572,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['portrait-gouache', 0]],
       related: ['une-chose-a-la-fois', 'moment-cle'],
       history: [['2026-09-22', 'Publication']],
     },
@@ -670,10 +625,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['renommer-photos', 0],
-        ['trier-telechargements', 0],
-      ],
       related: ['simulation-dabord', 'garder-la-main'],
       history: [['2026-09-30', 'Publication']],
     },
@@ -692,7 +643,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['keur-awa', 0]],
       related: ['noter-moments-cles', 'iteration'],
       history: [['2026-09-22', 'Publication']],
     },
@@ -796,15 +746,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['ventes-boutique', 0],
-        ['ventes-boutique', 1],
-        ['requete-sql', 0],
-      ],
       related: ['verifier-avant-reprendre', 'hallucination', 'astuce-ordre-mois'],
       links: {
         guide: 'donnees',
-        topic: 'sujet-8',
         domain: 'Analyse de données',
       },
       history: [
@@ -841,14 +785,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['quiz-histoire', 0],
-        ['fiches-revision', 0],
-      ],
       related: ['hallucination', 'astuce-notebooklm-pages', 'resume-fidele'],
       links: {
         guide: 'reviser',
-        topic: 'sujet-17',
         domain: 'Éducation',
       },
       history: [
@@ -882,14 +821,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['extension-navigateur', 1],
-        ['requete-sql', 0],
-      ],
       related: ['agent', 'perimetre-agent', 'verifier-avant-reprendre'],
       links: {
         guide: 'scripts',
-        topic: 'sujet-15',
         domain: 'Code et scripts',
       },
       history: [['2026-10-13', 'Publication']],
@@ -920,14 +854,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['resume-canal', 0],
-        ['fiches-revision', 0],
-      ],
       related: ['hallucination', 'retrouver-source'],
       links: {
         guide: 'automatiser',
-        topic: 'sujet-4',
         domain: 'Automatisation',
       },
       history: [
@@ -971,14 +900,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [
-        ['renommer-photos', 0],
-        ['trier-telechargements', 0],
-      ],
       related: ['mode-simulation', 'garder-la-main', 'perimetre-agent'],
       links: {
         guide: 'scripts',
-        topic: 'sujet-2',
         domain: 'Code et scripts',
       },
       history: [
@@ -1012,11 +936,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['extension-navigateur', 0]],
       related: ['agent', 'astuce-cursor-fichiers', 'simulation-dabord'],
       links: {
         guide: 'scripts',
-        topic: 'sujet-14',
         domain: 'Code et scripts',
       },
       history: [
@@ -1059,14 +981,9 @@ export const APPRENDRE: DonneesApprendre = {
         correct: 1,
         why: 'La copie vous informe après coup ; le brouillon vous laisse corriger avant que le client ne reçoive le message.',
       },
-      examples: [
-        ['relance-devis', 0],
-        ['factures-auto', 0],
-      ],
       related: ['garder-la-main', 'astuce-n8n-a-verifier'],
       links: {
         guide: 'automatiser',
-        topic: 'sujet-5',
         domain: 'Automatisation',
       },
       history: [
@@ -1109,10 +1026,6 @@ export const APPRENDRE: DonneesApprendre = {
         correct: 1,
         why: 'Le motif de consultation est une donnée de santé : il ne se collecte que s’il est nécessaire, et avec un consentement explicite.',
       },
-      examples: [
-        ['keur-awa', 1],
-        ['agenda-kine', 1],
-      ],
       related: ['donnee-personnelle', 'formulaire-serveur'],
       links: {
         guide: 'rendez-vous',
@@ -1221,10 +1134,6 @@ export const APPRENDRE: DonneesApprendre = {
         correct: 1,
         why: 'Le texte dit quoi corriger à tout le monde, y compris aux personnes qui ne distinguent pas le rouge et aux utilisateurs de lecteurs d’écran.',
       },
-      examples: [
-        ['formulaire-asso', 0],
-        ['marque-cosmetique', 0],
-      ],
       related: ['formulaire-serveur'],
       links: {
         guide: 'site-vitrine',
@@ -1271,11 +1180,9 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['affiche-alpes', 0]],
       related: ['image-reference', 'reponses-differentes', 'astuce-reference-angle'],
       links: {
         guide: 'serie-images',
-        topic: 'sujet-1',
         domain: 'Image et illustration',
       },
       history: [
@@ -1304,7 +1211,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['icones-3d', 0]],
       related: ['image-reference', 'astuce-sref'],
       links: {
         guide: 'serie-images',
@@ -1331,14 +1237,9 @@ export const APPRENDRE: DonneesApprendre = {
           ['une seule ligne de texte', 'Mise en page'],
         ],
       },
-      examples: [
-        ['logo-karite', 0],
-        ['logo-tontine', 0],
-      ],
       related: ['prompt'],
       links: {
         guide: 'identite',
-        topic: 'sujet-3',
         domain: 'Identité visuelle',
       },
       history: [['2026-10-03', 'Publication']],
@@ -1370,7 +1271,6 @@ export const APPRENDRE: DonneesApprendre = {
           ],
         },
       ],
-      examples: [['animation-logo', 0]],
       related: ['astuce-plans-courts'],
       links: {
         guide: 'audio-video',
@@ -1423,7 +1323,6 @@ export const APPRENDRE: DonneesApprendre = {
       related: ['astuce-musique-avant', 'astuce-camera-fixe'],
       links: {
         guide: 'audio-video',
-        topic: 'sujet-16',
         domain: 'Vidéo',
       },
       history: [['2026-10-07', 'Publication']],
@@ -1449,11 +1348,9 @@ export const APPRENDRE: DonneesApprendre = {
           ['sans fondu', 'Limite'],
         ],
       },
-      examples: [['jingle-podcast', 0]],
       related: ['astuce-musique-avant'],
       links: {
         guide: 'audio-video',
-        topic: 'sujet-13',
         domain: 'Musique et son',
       },
       history: [
@@ -1472,7 +1369,6 @@ export const APPRENDRE: DonneesApprendre = {
       title: 'Composer la musique avant le montage',
       short:
         'Générez d’abord la musique, puis calez la durée de chaque plan sur son tempo : le montage paraît pensé, pas assemblé.',
-      examples: [['teaser-festival', 0]],
       related: ['astuce-plans-courts', 'astuce-fin-franche'],
       links: {
         guide: 'audio-video',
@@ -1499,12 +1395,6 @@ export const APPRENDRE: DonneesApprendre = {
           ['Paramètres…', 'Pause longue'],
         ],
       },
-      examples: [
-        [
-          'voix-off',
-          'Un rythme posé sur trois minutes de tutoriel, réglé uniquement par la ponctuation du texte.',
-        ],
-      ],
       links: {
         guide: 'audio-video',
         domain: 'Musique et son',
@@ -1522,7 +1412,6 @@ export const APPRENDRE: DonneesApprendre = {
       title: 'Simplifier le premier plan pour éviter les objets déformés',
       short:
         'Plus le premier plan contient d’objets détaillés, plus ils risquent d’être déformés. Gardez-y un ou deux éléments, décrits précisément.',
-      examples: [['facade-goree', 0]],
       related: ['une-chose-a-la-fois'],
       links: {
         guide: 'photo',
@@ -1541,7 +1430,6 @@ export const APPRENDRE: DonneesApprendre = {
       title: 'Imposer l’ordre chronologique dans un graphique',
       short:
         'Sans consigne, les mois peuvent être triés par ordre alphabétique. Indiquez l’ordre attendu, de janvier à décembre.',
-      examples: [['pluie-bamako', 0]],
       related: ['recalculer-chiffre'],
       links: {
         guide: 'donnees',
@@ -1569,11 +1457,9 @@ export const APPRENDRE: DonneesApprendre = {
           ['Signale tout terme absent du glossaire', 'Contrôle'],
         ],
       },
-      examples: [['traduction-glossaire', 0]],
       related: ['ce-que-ia-ignore', 'exemple-demande'],
       links: {
         guide: 'textes',
-        topic: 'sujet-11',
         domain: 'Texte et rédaction',
       },
       history: [['2026-10-04', 'Publication']],
@@ -1589,11 +1475,9 @@ export const APPRENDRE: DonneesApprendre = {
       title: 'Reprendre un détail de chaque avis client',
       short:
         'Demandez de citer un élément précis de l’avis (un plat, une attente, un prénom) : les réponses cessent de se ressembler.',
-      examples: [['avis-restaurant', 0]],
       related: ['exemple-demande', 'demande-claire'],
       links: {
         guide: 'textes',
-        topic: 'sujet-6',
         domain: 'Texte et rédaction',
       },
       history: [['2026-10-02', 'Publication']],
@@ -1608,11 +1492,9 @@ export const APPRENDRE: DonneesApprendre = {
       title: 'Nommer les fichiers que l’agent peut modifier',
       short:
         'Ajoutez les fichiers concernés au contexte avec @ et précisez « ne modifie aucun autre fichier » : l’agent reste dans son périmètre.',
-      examples: [['extension-navigateur', 0]],
       related: ['perimetre-agent', 'agent'],
       links: {
         guide: 'scripts',
-        topic: 'sujet-14',
         domain: 'Code et scripts',
       },
       history: [['2026-10-10', 'Publication']],
@@ -1627,14 +1509,9 @@ export const APPRENDRE: DonneesApprendre = {
       title: 'Prévoir une branche « à vérifier » pour les cas ambigus',
       short:
         'Quand l’extraction est incertaine (montant illisible, expéditeur inconnu), envoyez le document dans un dossier à vérifier plutôt que de deviner.',
-      examples: [
-        ['factures-auto', 0],
-        ['factures-auto', 1],
-      ],
       related: ['valider-avant-envoi', 'garder-la-main'],
       links: {
         guide: 'automatiser',
-        topic: 'sujet-5',
         domain: 'Automatisation',
       },
       history: [['2026-09-28', 'Publication']],
@@ -1649,14 +1526,9 @@ export const APPRENDRE: DonneesApprendre = {
       title: 'Exiger la page source de chaque réponse',
       short:
         'Pour des fiches ou un quiz, demandez que chaque réponse cite le passage et la page du cours : les erreurs se repèrent en quelques secondes.',
-      examples: [
-        ['quiz-histoire', 0],
-        ['fiches-revision', 0],
-      ],
       related: ['retrouver-source', 'resume-fidele'],
       links: {
         guide: 'reviser',
-        topic: 'sujet-17',
         domain: 'Éducation',
       },
       history: [['2026-10-06', 'Publication']],

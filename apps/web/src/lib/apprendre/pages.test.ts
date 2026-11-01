@@ -41,6 +41,7 @@ const donnees = (valeurs: Partial<DonneesPageApprendre> = {}): DonneesPageAppren
   aujourdhui: '2026-11-01',
   chiffres: { sujets: 0, outils: 0 },
   progression: null,
+  complements: null,
   ...valeurs,
 });
 
@@ -127,6 +128,56 @@ describe('pages d’Apprendre rendues par le serveur (APP-03)', () => {
       checks: { agent: { choice: 1, right: true, date: '2026-10-20' } },
       cas: { '418': { choice: -1, right: true, date: '2026-11-01' } },
     });
+  });
+
+  it('montre les moments clés choisis par l’équipe et le sujet du forum lié', () => {
+    const m = creerModele(
+      donnees({
+        complements: {
+          illustrations: {
+            'demande-claire': [
+              {
+                id: 1,
+                creation: {
+                  id: 12,
+                  slug: 'lettre-de-motivation',
+                  titre: 'Lettre de motivation sans formules toutes faites',
+                  type: 'ITERATION',
+                  couverture: null,
+                  resultat: { nature: 'TEXTE', extrait: 'Madame, Monsieur,', nom: null },
+                  auteur: { id: 3, pseudo: 'yacine-benali', nom: 'Yacine Benali', avatar: null },
+                  outil: null,
+                } as never,
+                moment: { id: 7, type: 'CORRECTION', titre: null, texte: 'Des faits précis.' },
+                note: null,
+              },
+            ],
+          },
+          sujets: {
+            'demande-claire': {
+              id: 6,
+              slug: 'ton-naturel',
+              titre: 'Comment garder un ton naturel ?',
+              typeSujet: 'DISCUSSION',
+              etat: 'RESOLU',
+            },
+          },
+        },
+      }),
+    );
+    const progression = progressionVide();
+    const pages = creerPages(m, { progress: () => progression, today: '2026-11-01' });
+    const html = pages.savoirHTML(m.byId['demande-claire']!);
+    expect(html).toContain('Vu dans la communauté');
+    expect(html).toContain('Un moment clé publié par un membre');
+    expect(html).toContain(
+      'Correction<span aria-hidden="true">·</span><a href="/creations/12-lettre-de-motivation">',
+    );
+    expect(html).toContain('<div class="mock-paper"><p>Madame, Monsieur,</p></div>');
+    expect(html).toContain('href="/forum/6-ton-naturel"');
+    expect(html).toContain('Au forum · Discussion, résolue');
+    // Un savoir sans complément n'a ni le bloc ni le lien.
+    expect(pages.savoirHTML(m.byId.agent!)).not.toContain('Vu dans la communauté');
   });
 
   it('corrige la typographie du texte sans toucher aux balises', () => {

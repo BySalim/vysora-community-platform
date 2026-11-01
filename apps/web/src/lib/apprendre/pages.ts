@@ -3,7 +3,16 @@
    par le navigateur (scripts/apprendre.ts, qui reprend la main sur le même balisage). Fonctions pures :
    ni document ni stockage. Porté de prototype/apprendre.js. */
 
-import type { CasApi, CasResumeApi, CorrectionCasApi } from '@vysora/shared';
+import {
+  LIBELLES_TYPE_SUJET,
+  type CasApi,
+  type CasResumeApi,
+  type CorrectionCasApi,
+  type IllustrationSavoirApi,
+} from '@vysora/shared';
+import { vignette } from '../accueil/cartes';
+import { ICONES_TYPE, LIBELLES_TYPE, MOMENTS } from '../creations';
+import { avatar } from '../explorer/elements';
 import { ROUTES } from '../navigation';
 import { esc, fmt, t, typo } from '../texte';
 import { APPRENDRE as A } from './contenus';
@@ -402,6 +411,12 @@ export function creerPages(
       items.push(
         `<li><a href="${esc(ROUTES.domaine(domaine.slug))}">${icon(domaine.icone ?? 'compass')}<span><small>Domaine</small>${t(domaine.libelle)}</span></a></li>`,
       );
+    // Sujet du forum choisi par l'équipe (APP-03).
+    const sujet = D.complements?.sujets[s.id];
+    if (sujet)
+      items.push(
+        `<li><a href="${esc(ROUTES.sujet(sujet.id, sujet.slug))}">${icon('message')}<span><small>${t(`Au forum · ${LIBELLES_TYPE_SUJET[sujet.typeSujet]}${sujet.etat === 'RESOLU' ? ', résolue' : ''}`)}</small>${t(sujet.titre)}</span></a></li>`,
+      );
     if (l.publish)
       items.push(
         `<li><a href="${ROUTES.publier}">${icon('plus')}<span><small>Sur Vysora</small>Publier une création et ses moments clés</span></a></li>`,
@@ -436,6 +451,32 @@ export function creerPages(
       ${next ? `<a class="ap-pager-next" href="${next.href}" rel="next"><small>${t(`${unit.charAt(0).toUpperCase()}${unit.slice(1)} suivante`)}${icon('chevron-right')}</small><span>${t(next.title)}</span></a>` : `<a class="ap-pager-next" href="${ROUTES.apprendre}?rubrique=${s.kind}"><small>${t(`Toutes les ${kindOf(s).label.toLowerCase()}`)}${icon('chevron-right')}</small><span>${t(`${i + 1} sur ${list.length}, vous êtes à la fin`)}</span></a>`}
     </nav>`;
   }
+  /* « Vu dans la communauté » : moments clés choisis par l'équipe (APP-03) ------------ */
+
+  function momentHTML(i: IllustrationSavoirApi) {
+    const c = i.creation;
+    const href = esc(ROUTES.creation(c.id, c.slug));
+    const texte = i.moment?.texte || i.note || '';
+    const outil = c.outil ? toolRef(c.outil.outil.nom, c.outil.modeles[0] ?? '', 16) : '';
+    return `<li class="ap-moment">
+      <a class="ap-moment-media" href="${href}" tabindex="-1" aria-hidden="true">${vignette(c, '132px')}</a>
+      <div class="ap-moment-body">
+        <p class="ap-moment-type">${i.moment ? `${icon('moment')}${t(MOMENTS[i.moment.type].nature)}` : `${icon(ICONES_TYPE[c.type])}${t(LIBELLES_TYPE[c.type])}`}<span aria-hidden="true">·</span><a href="${href}">${t(c.titre)}</a></p>
+        ${texte ? `<p class="ap-moment-text">${t(texte)}</p>` : ''}
+        <p class="ap-moment-by">${avatar(c.auteur, 22)}<span>${t(c.auteur.nom)}</span>${outil ? `<span aria-hidden="true">·</span>${outil}` : ''}</p>
+      </div>
+    </li>`;
+  }
+  function examplesHTML(s: SavoirVue) {
+    const liste = D.complements?.illustrations[s.id] ?? [];
+    if (!liste.length) return '';
+    return `<section class="ap-block" aria-labelledby="ap-ex-title">
+      <h2 id="ap-ex-title" class="ap-block-title">Vu dans la communauté</h2>
+      <p class="ap-block-intro">${liste.length > 1 ? 'Des moments clés publiés par les membres, choisis par l’équipe pour illustrer ce savoir.' : 'Un moment clé publié par un membre, choisi par l’équipe pour illustrer ce savoir.'}</p>
+      <ul class="ap-moments">${liste.map(momentHTML).join('')}</ul>
+    </section>`;
+  }
+
   const byline = (texte: string) =>
     `<section class="ap-aside-block ap-byline"><img src="/assets/logos/vysora%20logo%20bleu.png" alt="" width="36" height="36"><p><b>Rédigé par l’équipe Vysora</b><span>${t(texte)}</span></p></section>`;
 
@@ -469,6 +510,7 @@ export function creerPages(
           ${s.prompt ? promptHTML(s) : ''}
           ${bodyHTML(s)}
           ${tools.length ? `<p class="ap-tools-line"><span>Outils concernés :</span>${tools.map((name) => toolRef(name, '', 18)).join('')}</p>` : ''}
+          ${examplesHTML(s)}
           ${
             c
               ? `<section class="ap-block ap-test" aria-labelledby="ap-test-title">

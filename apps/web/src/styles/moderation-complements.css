@@ -309,3 +309,19 @@
   .ad-table td.ad-cellule-action:empty { display: none; }
   .ad-ordre-liste li { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; }
 }
+
+/* Savoirs d'Apprendre (APP-03) : moments clés qui illustrent un savoir, sujet du forum lié */
+.ad-illustrations { display: grid; gap: 0; margin: 0 0 4px; padding: 0; list-style: none; }
+.ad-illustrations li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.ad-illustrations li > :not(button) { grid-column: 1; }
+.ad-illustrations li > button { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+.ad-illustration-type { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 0; color: var(--text-muted); font: 600 0.8125rem/1.45 var(--font-body); }
+.ad-illustration-type a { color: var(--text); text-decoration: none; overflow-wrap: anywhere; }
+.ad-illustration-type a:hover { color: var(--accent-text); text-decoration: underline; }
+.ad-illustration-texte { margin: 0; color: var(--text-body); font: 500 0.875rem/1.5 var(--font-body); overflow-wrap: anywhere; }
+.ad-illustrations .ad-etat { margin: 2px 0 0; font-size: 0.8125rem; }
+
+@media (max-width: 720px) {
+  .ad-illustrations li { grid-template-columns: minmax(0, 1fr); }
+  .ad-illustrations li > button { grid-column: 1; grid-row: auto; justify-self: start; }
+}

@@ -1,7 +1,7 @@
 ---
-/* Onglets des écrans d'administration (ADM-01, ADM-02, DEC-02) : rôles de l'équipe, codes
-   d'invitation, défis, guides d'Explorer, référentiels, documents légaux, journal des décisions de
-   modération, journal d'audit. */
+/* Onglets des écrans d'administration (ADM-01, ADM-02, DEC-02, APP-03) : rôles de l'équipe, codes
+   d'invitation, défis, guides d'Explorer, savoirs d'Apprendre, référentiels, documents légaux,
+   journal des décisions de modération, journal d'audit. */
 import { ROUTES } from '../lib/navigation';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
     | 'invitations'
     | 'defis'
     | 'guides'
+    | 'savoirs'
     | 'referentiels'
     | 'documents'
     | 'decisions'
@@ -22,6 +23,7 @@ const ONGLETS = [
   { cle: 'invitations', libelle: 'Invitations', href: ROUTES.invitationsAdmin },
   { cle: 'defis', libelle: 'Défis', href: ROUTES.defisAdmin },
   { cle: 'guides', libelle: 'Guides', href: ROUTES.guidesAdmin },
+  { cle: 'savoirs', libelle: 'Savoirs', href: ROUTES.savoirsAdmin },
   { cle: 'referentiels', libelle: 'Référentiels', href: ROUTES.referentielsAdmin },
   { cle: 'documents', libelle: 'Documents légaux', href: ROUTES.documentsLegauxAdmin },
   { cle: 'decisions', libelle: 'Journal des décisions', href: ROUTES.journalDecisions },

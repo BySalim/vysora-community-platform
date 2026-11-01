@@ -17,6 +17,7 @@ import {
   type TypeDocumentLegal,
   type TypeOutil,
 } from '@vysora/shared';
+import { APPRENDRE } from './apprendre/contenus';
 import { CLE_DOCUMENT, RESUMES_DOCUMENTS } from './documents-legaux';
 import { FAMILLES } from './publier/donnees';
 import { dateLongue, pluriel } from './texte';
@@ -220,6 +221,15 @@ export function precisionAudit(entree: EntreeAuditApi): string {
       ]
         .filter(Boolean)
         .join(', ');
+    }
+    case 'SAVOIR_ILLUSTRATION_AJOUTEE':
+    case 'SAVOIR_ILLUSTRATION_RETIREE':
+    case 'SAVOIR_SUJET_LIE':
+    case 'SAVOIR_SUJET_RETIRE': {
+      // APP-03 : le savoir, contenu éditorial du site, nommé par son titre.
+      const id = texteDe(d?.savoir);
+      const savoir = APPRENDRE.savoirs.find((s) => s.id === id);
+      return savoir ? `Savoir « ${savoir.title} »` : id ? `Savoir « ${id} »` : '';
     }
     case 'CATEGORIES_ORDONNEES':
     case 'LICENCES_ORDONNEES': {

@@ -1,0 +1,313 @@
+---
+/* Savoirs d'Apprendre (APP-03) : pour chaque savoir, les moments clés de la communauté qui
+   l'illustrent (« Vu dans la communauté ») et le sujet du forum de « Pour aller plus loin », choisis
+   par l'équipe parmi les contenus publiés. Les textes des savoirs restent ceux du site
+   (lib/apprendre/contenus.ts). Écran sans maquette dans le prototype, dans le style des
+   référentiels. Envois : scripts/savoirs-admin.ts. */
+import {
+  LIBELLES_TYPE_SUJET,
+  raisonRefus,
+  type IllustrationAdministreeApi,
+  type SavoirsAdministresApi,
+} from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { APPRENDRE } from '../../lib/apprendre/contenus';
+import { LIBELLES_TYPE, MOMENTS } from '../../lib/creations';
+import { ROUTES } from '../../lib/navigation';
+import { pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const donnees = raison
+  ? null
+  : await appelerApi<SavoirsAdministresApi>('/api/v1/admin/savoirs', { requete: Astro.request });
+
+const rubriques = APPRENDRE.rubriques
+  .filter((r) => r.id !== 'bon-reflexe')
+  .map((r) => ({
+    ...r,
+    savoirs: APPRENDRE.savoirs.filter((s) => s.kind === r.id),
+  }));
+const illustrations = (id: string) => donnees?.illustrations[id] ?? [];
+const toutes = Object.values(donnees?.illustrations ?? {}).flat();
+const cachees = toutes.filter((i) => i.etat !== 'MONTREE').length;
+const ETATS: Record<Exclude<IllustrationAdministreeApi['etat'], 'MONTREE'>, string> = {
+  CREATION_INVISIBLE: 'Non montrée : la création n’est plus publiée ou visible',
+  MOMENT_DISPARU: 'Non montrée : l’auteur a réécrit sa création, choisissez de nouveau le moment',
+};
+---
+
+<Base
+  titre="Savoirs d’Apprendre · Administration"
+  description="Moments clés de la communauté et sujets du forum liés aux savoirs d’Apprendre."
+  classeCorps="md"
+  icones={[
+    'plus',
+    'chevron-down',
+    'arrow-up-right',
+    'moment',
+    'message',
+    'type-prompt',
+    'type-iteration',
+    'type-projet',
+    ...new Set(APPRENDRE.rubriques.map((r) => r.icon)),
+  ]}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Savoirs d’Apprendre</h1>
+    {donnees && (
+      <p class="md-statut">
+        <span class="is-fort">
+          {pluriel(
+            Object.keys(donnees.illustrations).length,
+            'savoir illustré',
+            'savoirs illustrés',
+          )}
+        </span>
+        <span>{pluriel(Object.keys(donnees.sujets).length, 'sujet lié', 'sujets liés')}</span>
+        {cachees > 0 && (
+          <span>{pluriel(cachees, 'illustration à revoir', 'illustrations à revoir')}</span>
+        )}
+        <span>
+          {typo(
+            'Les moments clés illustrent un savoir dans « Vu dans la communauté » ; le sujet du forum apparaît dans « Pour aller plus loin ». Seuls les contenus visibles de tous sont montrés.',
+          )}
+        </span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="savoirs" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="gérer les savoirs d’Apprendre" />
+    </div>
+  ) : (
+    donnees && (
+      <div class="container md-file">
+        {rubriques.map((r) => (
+          <section class="ad-famille" aria-labelledby={`ad-rubrique-${r.id}`}>
+            <h2 id={`ad-rubrique-${r.id}`}>
+              {r.label}
+              <span class="ad-famille-nb">{r.savoirs.length}</span>
+            </h2>
+            <ul class="ad-refs">
+              {r.savoirs.map((s) => {
+                const liste = illustrations(s.id);
+                const sujet = donnees.sujets[s.id];
+                const aRevoir = liste.some((i) => i.etat !== 'MONTREE') || sujet?.visible === false;
+                return (
+                  <li>
+                    <details class="ad-ref" id={`savoir-${s.id}`} data-titre={s.title}>
+                      <summary>
+                        <span class="ad-ref-logo is-vide" aria-hidden="true">
+                          <svg class="icon icon-sm">
+                            <use href={`#i-${r.icon}`} />
+                          </svg>
+                        </span>
+                        <span class="ad-membre-corps">
+                          <span class="ad-membre-nom">{s.title}</span>
+                          <span class="ad-membre-meta">
+                            <span>
+                              {liste.length
+                                ? pluriel(liste.length, 'moment clé', 'moments clés')
+                                : 'Aucun moment clé'}
+                            </span>
+                            <span>{sujet ? 'Sujet du forum lié' : 'Aucun sujet lié'}</span>
+                          </span>
+                        </span>
+                        {aRevoir && <span class="ad-etat is-expire">À revoir</span>}
+                        <svg class="icon icon-sm ad-ref-chevron" aria-hidden="true">
+                          <use href="#i-chevron-down" />
+                        </svg>
+                      </summary>
+                      <div class="ad-ref-corps">
+                        <h3>Vu dans la communauté</h3>
+                        {liste.length ? (
+                          <ul class="ad-illustrations">
+                            {liste.map((i) => (
+                              <li>
+                                <p class="ad-illustration-type">
+                                  {i.moment
+                                    ? MOMENTS[i.moment.type].nature
+                                    : LIBELLES_TYPE[i.creation.type]}
+                                  <span aria-hidden="true">·</span>
+                                  <a href={ROUTES.creation(i.creation.id, i.creation.slug)}>
+                                    {i.creation.titre}
+                                  </a>
+                                  <span aria-hidden="true">·</span>
+                                  {i.creation.auteur.nom}
+                                </p>
+                                {(i.moment?.texte || i.note) && (
+                                  <p class="ad-illustration-texte">
+                                    {typo(i.moment?.texte || i.note || '')}
+                                  </p>
+                                )}
+                                {i.etat !== 'MONTREE' && (
+                                  <p class="ad-etat is-expire">{typo(ETATS[i.etat])}</p>
+                                )}
+                                <button
+                                  class="btn btn-secondary btn-sm"
+                                  type="button"
+                                  data-ad-illustration-retirer={i.id}
+                                  data-savoir={s.id}
+                                  data-nom={i.creation.titre}
+                                >
+                                  Retirer
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p class="md-rien">
+                            {typo('Aucun moment clé n’illustre encore ce savoir.')}
+                          </p>
+                        )}
+                        <form
+                          class="ad-outils ad-modele"
+                          novalidate
+                          autocomplete="off"
+                          data-ad-illustration={s.id}
+                        >
+                          <div class="ad-champ is-large">
+                            <label for={`ad-creation-${s.id}`}>Création : adresse ou numéro</label>
+                            <input
+                              id={`ad-creation-${s.id}`}
+                              name="creation"
+                              placeholder="/creations/12-…"
+                              data-ad-creation
+                            />
+                            <p class="md-erreur" data-ad-erreur="creationId" hidden />
+                          </div>
+                          <div class="ad-champ is-large" data-ad-moments hidden>
+                            <label for={`ad-moment-${s.id}`}>Moment clé</label>
+                            <select id={`ad-moment-${s.id}`} name="momentId" class="is-large" />
+                            <p class="md-erreur" data-ad-erreur="momentId" hidden />
+                          </div>
+                          <div class="ad-champ is-large">
+                            <label for={`ad-note-${s.id}`}>Note de l’équipe (facultative)</label>
+                            <input
+                              id={`ad-note-${s.id}`}
+                              name="note"
+                              maxlength="300"
+                              placeholder="Reproduite avec succès sur trois modèles."
+                            />
+                            <p class="md-erreur" data-ad-erreur="note" hidden />
+                          </div>
+                          <button class="btn btn-secondary" type="submit">
+                            <svg class="icon icon-sm" aria-hidden="true">
+                              <use href="#i-plus" />
+                            </svg>
+                            Ajouter
+                          </button>
+                          <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+                        </form>
+
+                        <h3>Sujet du forum</h3>
+                        {sujet ? (
+                          <p class="ad-illustration-type">
+                            {`${LIBELLES_TYPE_SUJET[sujet.typeSujet]}${sujet.etat === 'RESOLU' ? ', résolue' : ''}`}
+                            <span aria-hidden="true">·</span>
+                            <a href={ROUTES.sujet(sujet.id, sujet.slug)}>{sujet.titre}</a>
+                            {!sujet.visible && (
+                              <span class="ad-etat is-expire">
+                                Non montré : le sujet n’est plus visible
+                              </span>
+                            )}
+                          </p>
+                        ) : (
+                          <p class="md-rien">
+                            {typo('Aucun sujet du forum n’est lié à ce savoir.')}
+                          </p>
+                        )}
+                        <form
+                          class="ad-outils ad-modele"
+                          novalidate
+                          autocomplete="off"
+                          data-ad-sujet={s.id}
+                        >
+                          <div class="ad-champ is-large">
+                            <label for={`ad-sujet-${s.id}`}>
+                              {sujet
+                                ? 'Autre sujet : adresse ou numéro'
+                                : 'Sujet : adresse ou numéro'}
+                            </label>
+                            <input id={`ad-sujet-${s.id}`} name="sujet" placeholder="/forum/6-…" />
+                            <p class="md-erreur" data-ad-erreur="sujetId" hidden />
+                          </div>
+                          <button class="btn btn-secondary" type="submit">
+                            {sujet ? 'Remplacer le sujet' : 'Lier le sujet'}
+                          </button>
+                          <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+                        </form>
+
+                        <div class="ad-ref-pied">
+                          <a class="ad-lien" href={`${ROUTES.apprendre}?savoir=${s.id}`}>
+                            Voir le savoir
+                            <svg class="icon icon-sm" aria-hidden="true">
+                              <use href="#i-arrow-up-right" />
+                            </svg>
+                          </a>
+                          {sujet && (
+                            <button
+                              class="btn btn-secondary btn-sm"
+                              type="button"
+                              data-ad-sujet-retirer={s.id}
+                              data-nom={sujet.titre}
+                            >
+                              Retirer le sujet
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </details>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    )
+  )}
+
+  <Fragment slot="fin">
+    {!raison && (
+      <dialog
+        class="md-dialogue"
+        aria-labelledby="ad-dialogue-titre"
+        aria-describedby="ad-dialogue-texte"
+        data-ad-dialogue
+      >
+        <form method="dialog">
+          <h2 id="ad-dialogue-titre" data-ad-dialogue-titre />
+          <p id="ad-dialogue-texte" data-ad-dialogue-texte />
+          <div class="md-dialogue-actions">
+            <button class="btn btn-secondary" type="submit" value="annuler">
+              Revenir
+            </button>
+            <button class="btn btn-primary" type="button" data-ad-confirmer>
+              Confirmer
+            </button>
+          </div>
+        </form>
+      </dialog>
+    )}
+  </Fragment>
+</Base>
+
+<script>
+  import '../../scripts/savoirs-admin';
+</script>

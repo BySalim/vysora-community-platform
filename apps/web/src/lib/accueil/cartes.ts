@@ -41,9 +41,12 @@ export function traceSVG(etapes: boolean[]): string {
 }
 
 /** Vignette : l'image du résultat ; à défaut, le texte ou le code obtenu (comme la fiche) ; à
-    défaut, un cadre neutre. */
-function vignette(c: CarteCreationApi): string {
-  if (c.couverture) return image(c.couverture, TAILLES);
+    défaut, un cadre neutre. Aussi pour les moments clés d'un savoir d'Apprendre (APP-03). */
+export function vignette(
+  c: Pick<CarteCreationApi, 'couverture' | 'resultat' | 'titre'>,
+  tailles = TAILLES,
+): string {
+  if (c.couverture) return image(c.couverture, tailles);
   const ouverture = `<div class="mock" role="img" aria-label="${t(c.titre)}">`;
   if (c.resultat?.nature === 'CODE') {
     const lignes = c.resultat.extrait.split('\n').slice(0, 9).join('\n');
