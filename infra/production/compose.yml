@@ -1,6 +1,9 @@
 # Production et préproduction de Vysora (OPS-01, ADR-0008) : Caddy (HTTPS automatique), site, API,
 # PostgreSQL. Les secrets viennent de infra/production/.env (copie de .env.example, jamais commitée).
-#   docker compose -f infra/production/compose.yml --env-file infra/production/.env up -d --build
+# Images construites par GitHub (.github/workflows/images.yml), téléchargées par le serveur :
+#   docker compose -f infra/production/compose.yml --env-file infra/production/.env pull
+#   docker compose -f infra/production/compose.yml --env-file infra/production/.env up -d
+# Ou construites sur le serveur (4 Go de mémoire conseillés) : up -d --build.
 # La procédure complète est dans docs/deploiement.md.
 name: vysora-production
 
@@ -41,7 +44,7 @@ services:
   # Migrations puis référentiels, avant chaque démarrage de l'API (idempotents).
   migration:
     build: { context: ../.., target: api }
-    image: vysora-api
+    image: ${IMAGE_API:-vysora-api}
     environment: *environnement-api
     command: ['sh', '-c', 'node dist/db/migrer.js && node dist/db/seed/index.js']
     depends_on:
@@ -49,7 +52,7 @@ services:
     restart: 'no'
 
   api:
-    image: vysora-api
+    image: ${IMAGE_API:-vysora-api}
     restart: unless-stopped
     environment: *environnement-api
     volumes:
@@ -76,7 +79,7 @@ services:
       target: web
       args:
         SITE_URL: https://${DOMAINE:?DOMAINE est obligatoire}
-    image: vysora-web
+    image: ${IMAGE_WEB:-vysora-web}
     restart: unless-stopped
     environment:
       NODE_ENV: production

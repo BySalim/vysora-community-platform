@@ -2,7 +2,19 @@
 
 > Mise en ligne d'une préproduction ou de la production (OPS-01, ADR-0008) : un serveur virtuel,
 > Docker Compose, Caddy pour le HTTPS. Tout ce qu'il faut est dans le dépôt : `Dockerfile`,
-> `infra/production/compose.yml`, `infra/production/Caddyfile`, `infra/production/.env.example`.
+> `infra/production/compose.yml`, `infra/production/Caddyfile`, `infra/production/.env.example`,
+> `.github/workflows/images.yml`.
+
+## Images construites par GitHub
+
+Le serveur ne compile rien : après chaque vérification réussie de `main` (workflow « Vérification »), le workflow « Images » construit les images de l'API et du site et les publie dans le registre du dépôt, `ghcr.io/bysalim/vysora-api` et `ghcr.io/bysalim/vysora-web` (étiquettes `latest` et l'empreinte du commit). Le serveur les télécharge (`docker compose pull`). Installer les dépendances et compiler demande plus de 2 Go de mémoire ; faire tourner Vysora en demande environ 1,2 Go : un serveur de 2 Go suffit donc pour une démonstration ou une préproduction.
+
+Réglages, une fois :
+
+1. **Variable `DOMAINE` du dépôt** (GitHub, Settings › Secrets and variables › Actions › Variables) : le nom de domaine public sans `https://`, le même que dans le `.env` du serveur. Astro le grave dans l'image du site (liens absolus, adresse canonique) : en changer demande de relancer le workflow (onglet Actions › Images › Run workflow).
+2. **Accès du serveur au registre** : les images d'un dépôt privé sont privées. Créer un jeton GitHub (classic) avec la seule permission `read:packages`, puis sur le serveur : `docker login ghcr.io -u <compte-github>` (le jeton sert de mot de passe). Si les images sont rendues publiques (GitHub, Packages › Package settings), cette étape est inutile.
+
+Sans ces réglages, le serveur peut toujours construire lui-même les images (`IMAGE_API` et `IMAGE_WEB` vides, `up -d --build`), avec 4 Go de mémoire ou une mémoire d'échange.
 
 ## Ce qui tourne
 
@@ -18,14 +30,17 @@ Préproduction et production utilisent les mêmes fichiers ; seule la variable `
 
 ## Première mise en ligne
 
-1. **Serveur** : Debian ou Ubuntu récent, 4 Go de mémoire, chez un hébergeur européen (ADR-0008). Installer Docker Engine et le plugin Compose, ouvrir les ports 22, 80 et 443 (pare-feu).
+1. **Serveur** : Debian ou Ubuntu récent, 2 Go de mémoire avec les images de GitHub (4 Go pour les construire sur le serveur), chez un hébergeur européen (ADR-0008). Installer Docker Engine et le plugin Compose, ouvrir les ports 22, 80 et 443 (pare-feu).
 2. **Domaine** : faire pointer le nom choisi (enregistrements A et AAAA) vers l'adresse du serveur, avant le premier démarrage, pour que Caddy obtienne le certificat.
-3. **Code** : cloner le dépôt sur le serveur (`git clone`, branche `main`).
+3. **Code** : cloner le dépôt sur le serveur (`git clone`, branche `main`) : seuls `infra/production/` (composition, Caddyfile, `.env`) servent quand les images viennent de GitHub. Se connecter au registre (`docker login ghcr.io`, voir plus haut).
 4. **Secrets** : `cp infra/production/.env.example infra/production/.env`, puis remplacer chaque valeur. Générer `POSTGRES_MOT_DE_PASSE`, `SEL_EMPREINTES` et `CLE_CHIFFREMENT` avec la commande indiquée dans le fichier ; l'API refuse de démarrer avec les secrets de développement. `chmod 600 infra/production/.env`.
 5. **E-mails** : renseigner `SMTP_URL` avec les accès d'un service transactionnel (Brevo, Scaleway TEM, Mailjet) et déclarer le domaine d'envoi chez lui (SPF, DKIM).
-6. **Démarrage** :
+6. **Démarrage** : vérifier que le workflow « Images » a réussi (onglet Actions du dépôt), puis :
    ```bash
-   docker compose -f infra/production/compose.yml --env-file infra/production/.env up -d --build
+   docker compose -f infra/production/compose.yml --env-file infra/production/.env pull
+   ```
+   ```bash
+   docker compose -f infra/production/compose.yml --env-file infra/production/.env up -d
    ```
 7. **Vérification** : `https://<domaine>/api/health` répond `{"statut":"ok","baseDeDonnees":"ok"}`, la page d'accueil s'affiche, un e-mail de contact arrive.
 8. **Données de démonstration** (préproduction seulement) : renseigner d'abord `MOT_DE_PASSE_DEMO` (16 caractères au moins, propre au serveur). Le mot de passe écrit dans le dépôt est public : la commande le refuse en préproduction, car il ouvrirait les comptes de modération et d'administration de la démonstration.
@@ -50,10 +65,15 @@ docker compose -f infra/production/compose.yml --env-file infra/production/.env 
 
 ## Mise à jour
 
+Après l'envoi sur `main` et la réussite des workflows « Vérification » puis « Images » :
+
 ```bash
 git pull
-docker compose -f infra/production/compose.yml --env-file infra/production/.env up -d --build
+docker compose -f infra/production/compose.yml --env-file infra/production/.env pull
+docker compose -f infra/production/compose.yml --env-file infra/production/.env up -d
 ```
+
+Revenir à une version précédente : remplacer `latest` par l'empreinte du commit voulu dans `IMAGE_API` et `IMAGE_WEB`, puis `up -d` (une migration déjà passée ne se défait pas).
 
 Les migrations passent avant le redémarrage de l'API ; une migration qui échoue laisse l'ancienne API arrêtée et la nouvelle non démarrée (`docker compose … logs migration`).
 

@@ -69,6 +69,7 @@
 - [x] HTTPS partout (Caddy, certificats automatiques), HSTS : `infra/production/Caddyfile` (OPS-01) ; seul Caddy est exposé, PostgreSQL, l'API et le site restent sur le réseau interne ; secrets du serveur dans `infra/production/.env` (jamais commité, `chmod 600`), l'API refuse les secrets de développement en production.
 - [ ] Secrets hors du dépôt (variables d'environnement du serveur), rotation documentée. Changer `CLE_CHIFFREMENT` rend illisibles les e-mails encore en file (ils échouent puis sont abandonnés, journalisés) : attendre que la file soit vide, ou prévoir une clé précédente acceptée en lecture (et le secret TOTP chiffré de SEC-02 à rechiffrer).
 - [ ] Sauvegardes quotidiennes chiffrées, conservées 30 jours, restauration testée chaque trimestre (ENF-08).
+- [x] Images de production construites par GitHub au commit vérifié par la CI (`.github/workflows/images.yml`), publiées avec le jeton éphémère du workflow (seule permission d'écriture : `packages`) ; aucun secret dans les images (ils viennent du `.env` du serveur au démarrage) ; le serveur lit le registre avec un jeton limité à `read:packages` (OPS-01).
 - [ ] Mises à jour des dépendances (Renovate ou Dependabot) et audit (`pnpm audit`) en CI.
 - [ ] Journal d'audit des actions d'administration conservé 1 an (ENF-09).
 - [ ] Supervision : disponibilité, erreurs 5xx, alertes.
