@@ -12,18 +12,22 @@ import { DocumentsLegauxController } from './documents-legaux.controller.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
 import { DroitsGuard } from './droits.js';
 import { EtatCompteService } from './etat-compte.service.js';
+import { FournisseursOAuth } from './fournisseurs-oauth.js';
 import { InvitationsService } from './invitations.service.js';
 import { JetonsService } from './jetons.service.js';
 import { MotDePasseController } from './mot-de-passe.controller.js';
 import { MotsDePasseService } from './mots-de-passe.service.js';
 import { ReinitialisationService } from './reinitialisation.service.js';
+import { ServicesExternesController } from './services-externes.controller.js';
+import { ServicesExternesService } from './services-externes.service.js';
 import { SessionController } from './session.controller.js';
 import { SessionsService } from './sessions.service.js';
 import { TemporisationService } from './temporisation.service.js';
 import { VerificationEmailService } from './verification-email.service.js';
 
 /* Authentification (F-01 à F-04, ADR-0005) : comptes, sessions, mots de passe, documents légaux,
-   droits. La garde DroitsGuard est déclarée globale par AppModule, après l'origine et le débit. */
+   droits, connexion avec GitHub et Google (S-10, ADR-0009). La garde DroitsGuard est déclarée
+   globale par AppModule, après l'origine et le débit. */
 @Module({
   controllers: [
     SessionController,
@@ -31,6 +35,7 @@ import { VerificationEmailService } from './verification-email.service.js';
     MotDePasseController,
     DocumentsLegauxController,
     DeuxFacteursController,
+    ServicesExternesController,
   ],
   providers: [
     SessionsService,
@@ -48,9 +53,13 @@ import { VerificationEmailService } from './verification-email.service.js';
     ChangementMotDePasseService,
     InvitationsService,
     DeuxFacteursService,
+    FournisseursOAuth,
+    ServicesExternesService,
     DroitsGuard,
   ],
   exports: [
+    FournisseursOAuth,
+    ServicesExternesService,
     SessionsService,
     InvitationsService,
     EtatCompteService,

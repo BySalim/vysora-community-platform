@@ -1,5 +1,6 @@
 import type { TypeDocumentLegal } from '../enums';
 import type { EtatVisiteur } from '../permissions';
+import type { ServiceExterne } from '../services-externes';
 
 /* Contrats de la session (ADR-0005) : GET, POST et DELETE /api/v1/session, POST /api/v1/comptes,
    PATCH /api/v1/moi et les vérifications de disponibilité de l'inscription. */
@@ -79,6 +80,12 @@ export interface DocumentLegalApi {
 export interface ConditionsInscriptionApi {
   /** Bêta fermée : un code d'invitation est exigé. */
   surInvitation: boolean;
+}
+
+/** GET /api/v1/services-externes : services avec lesquels on se connecte sur ce serveur (F-02,
+    S-10) ; un service sans identifiants configurés n'y figure pas. */
+export interface ServicesExternesApi {
+  ouverts: ServiceExterne[];
 }
 
 /** GET /api/v1/invitations/:code : lien d'invitation reçu (« Claire Dubois vous invite »). */

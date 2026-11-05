@@ -8,6 +8,11 @@ import { BASE } from '../src/db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../src/db/client.js';
 import { contenu, creation, licence, session, utilisateur } from '../src/db/schema/index.js';
 import { DocumentsLegauxService } from '../src/modules/auth/documents-legaux.service.js';
+import {
+  FournisseursOAuth,
+  type ProfilExterne,
+  type SecretsAllerRetour,
+} from '../src/modules/auth/fournisseurs-oauth.js';
 import { MotsDePasseService } from '../src/modules/auth/mots-de-passe.service.js';
 import type { EmailAEnvoyer } from '../src/modules/email/email.service.js';
 import { TransportEmail } from '../src/modules/email/transport-email.js';
@@ -24,6 +29,37 @@ export interface ApplicationDeTest {
   emails: EmailAEnvoyer[];
   /** File des tâches exécutées aussitôt ; `taches.lancer(nom)` joue une tâche planifiée. */
   taches: FileTachesImmediate;
+  /** GitHub et Google simulés (S-10) : `services.profils.set(code, profil)` décide de l'identité
+      rendue pour un code d'autorisation. */
+  services: FauxServicesExternes;
+}
+
+/** Double de FournisseursOAuth : l'autorisation renvoie vers https://<service>.test/autoriser avec
+    le `state` du départ ; au retour, un code connu donne son profil, tout autre code est refusé. */
+export class FauxServicesExternes {
+  readonly profils = new Map<string, ProfilExterne>();
+  ouvertes: ('github' | 'google')[] = ['github', 'google'];
+
+  ouverts(): ('github' | 'google')[] {
+    return this.ouvertes;
+  }
+
+  async urlAutorisation(service: string, secrets: SecretsAllerRetour): Promise<URL> {
+    const url = new URL(`https://${service}.test/autoriser`);
+    url.searchParams.set('state', secrets.state);
+    return url;
+  }
+
+  async profil(
+    _service: string,
+    parametres: URLSearchParams,
+    secrets: SecretsAllerRetour,
+  ): Promise<ProfilExterne> {
+    if (parametres.get('state') !== secrets.state) throw new Error('state inattendu');
+    const profil = this.profils.get(parametres.get('code') ?? '');
+    if (!profil) throw new Error('code refusé par le service');
+    return profil;
+  }
 }
 
 /** L'API complète, avec la même configuration HTTP qu'en production. La file traite chaque tâche
@@ -31,11 +67,14 @@ export interface ApplicationDeTest {
     dans `emails` dès la réponse de l'API. */
 export async function demarrerApplication(): Promise<ApplicationDeTest> {
   const emails: EmailAEnvoyer[] = [];
+  const services = new FauxServicesExternes();
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(FileTaches)
     .useClass(FileTachesImmediate)
     .overrideProvider(TransportEmail)
     .useValue({ envoyer: async (email: EmailAEnvoyer) => void emails.push(email) })
+    .overrideProvider(FournisseursOAuth)
+    .useValue(services)
     .compile();
 
   const app = module.createNestApplication<NestExpressApplication>({ bufferLogs: true });
@@ -46,6 +85,7 @@ export async function demarrerApplication(): Promise<ApplicationDeTest> {
     db: app.get<BaseDeDonnees>(BASE),
     emails,
     taches: app.get<FileTachesImmediate>(FileTaches),
+    services,
   };
 }
 

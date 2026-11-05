@@ -6,6 +6,8 @@ export * from './texte';
 export * from './mots-de-passe';
 export * from './pseudos';
 export * from './recherche';
+export * from './services-externes';
+export * from './adresses';
 export * from './schemas/commun';
 export * from './schemas/contact';
 export * from './schemas/auth';

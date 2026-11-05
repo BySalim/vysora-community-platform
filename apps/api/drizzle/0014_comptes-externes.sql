@@ -1,0 +1,1 @@
+ALTER TABLE "compte_externe" ADD COLUMN "nom_compte" varchar(255);

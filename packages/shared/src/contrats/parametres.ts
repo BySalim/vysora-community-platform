@@ -1,5 +1,6 @@
 import type { CodeNiveau } from '../regles';
 import type { Role } from '../enums';
+import type { ServiceExterne } from '../services-externes';
 import type { PreferencesNotificationsApi } from './notifications';
 
 /* Contrats de la page Paramètres (PARAM-01, EC-17 ; F-06, F-07, F-08) : GET /api/v1/moi/parametres
@@ -51,6 +52,15 @@ export interface ExportApi {
   contenu: ContenuExportApi;
 }
 
+/** Compte GitHub ou Google lié pour la connexion (F-02, S-10). */
+export interface CompteExterneApi {
+  service: ServiceExterne;
+  /** Identifiant GitHub ou adresse Google, tels que le service les a donnés à la liaison. */
+  nom: string | null;
+  /** ISO 8601 */
+  dateLiaison: string;
+}
+
 /** Réponse de GET /api/v1/moi/parametres. */
 export interface ParametresApi {
   pseudo: string;
@@ -68,6 +78,11 @@ export interface ParametresApi {
   dateInscription: string;
   /** Dernier changement du mot de passe ; null s'il date de l'inscription. */
   motDePasseModifieLe: string | null;
+  /** Faux pour un compte créé avec GitHub ou Google qui n'a pas encore défini de mot de passe. */
+  motDePasse: boolean;
+  /** Services ouverts à la liaison (configurés sur ce serveur). */
+  servicesOuverts: ServiceExterne[];
+  comptesExternes: CompteExterneApi[];
   appareils: AppareilApi[];
   notifications: PreferencesNotificationsApi;
   export: ExportApi;

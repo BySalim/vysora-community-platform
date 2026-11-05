@@ -3,16 +3,21 @@
    conditions, mot de passe oublié, nouveau mot de passe, puis retour à la page d'origine.
    Chaque action appelle l'API ; un même message d'erreur, que l'adresse possède un compte ou non. */
 
-import type {
-  ActivationDeuxFacteursApi,
-  ConfigurationDeuxFacteursApi,
-  ConnexionReussie,
-  SessionApi,
+import {
+  NOMS_SERVICES,
+  estResultatService,
+  estServiceExterne,
+  type ActivationDeuxFacteursApi,
+  type ConfigurationDeuxFacteursApi,
+  type ConnexionReussie,
+  type ResultatService,
+  type ServiceExterne,
+  type SessionApi,
 } from '@vysora/shared';
 import creerQr from 'qrcode-generator';
 import { dateLongue } from '../lib/texte';
 import { api } from './commun/api';
-import { $, $$, corrigerTypographie, icon, t, toast, typo } from './commun/outils';
+import { $, $$, corrigerTypographie, esc, icon, t, toast, typo } from './commun/outils';
 import {
   aide,
   alerte,
@@ -35,7 +40,8 @@ import {
   premierInvalide,
   retablir,
   reussi,
-  servicesBientot,
+  services,
+  servicesOuverts,
   surveillerEmail,
   vues as creerVues,
 } from './auth/commun';
@@ -93,7 +99,8 @@ if (conteneur && carte) {
   /* Identifiants -------------------------------------------------------------- */
 
   logos();
-  servicesBientot(alerteEl);
+  const requete = carte.dataset.requete ?? '';
+  services(alerteEl, { ouverts: servicesOuverts(carte), intention: 'connexion', requete });
   motDePasse(conteneur);
   surveillerEmail(email, () => {
     if (!arreterAttente) alerte(alerteEl);
@@ -712,6 +719,69 @@ if (conteneur && carte) {
       aller('oubli');
     });
   });
+
+  /* Retour de Google ou GitHub (S-10) ------------------------------------------------ */
+
+  /** Pourquoi la connexion par le service n'a pas abouti (prototype/connexion.js). */
+  function messageService(service: ServiceExterne, resultat: ResultatService): void {
+    const nom = NOMS_SERVICES[service];
+    const versInscription = `/inscription?service=${service}${requete ? `&${requete}` : ''}`;
+    const messages: Partial<Record<ResultatService, [string, 'erreur' | 'info']>> = {
+      'email-pris': [
+        `<p><b>${t(`L’adresse de votre compte ${nom} appartient déjà à un compte Vysora.`)}</b> ${t(`Connectez-vous avec votre mot de passe, puis liez ${nom} depuis vos paramètres.`)}</p>`,
+        'info',
+      ],
+      inconnu: [
+        `<p><b>${t(`Aucun compte Vysora n’est associé à ce compte ${nom}.`)}</b></p><a class="action action-secondaire" href="${esc(versInscription)}">${t(`Créer un compte avec ${nom}`)}</a>`,
+        'info',
+      ],
+      'email-non-verifie': [
+        `<p><b>${t(`Votre compte ${nom} ne fournit aucune adresse e-mail vérifiée.`)}</b> ${t(`Vérifiez votre adresse chez ${nom}, ou utilisez votre adresse e-mail.`)}</p>`,
+        'erreur',
+      ],
+      ferme: [
+        `<p><b>${t('Ce compte a été fermé par la modération. Pour contester cette décision, écrivez-nous depuis la page Contact.')}</b></p>`,
+        'erreur',
+      ],
+    };
+    const [html, ton] = messages[resultat] ?? [
+      `<p><b>${t(`La connexion avec ${nom} n’a pas abouti.`)}</b> ${t('Réessayez, ou utilisez votre adresse e-mail.')}</p>`,
+      'erreur',
+    ];
+    alerte(alerteEl, html, ton);
+    if (resultat === 'email-pris') email.focus();
+  }
+
+  /** Connexion ouverte par le service : même fin qu'après le mot de passe (conditions à accepter,
+      suppression annulée, « Bon retour »). */
+  async function terminerService(suppression: string | null): Promise<void> {
+    const lue = await api<SessionApi>('GET', '/api/v1/session');
+    if (!lue.ok || !lue.donnees.membre) {
+      location.assign(destination);
+      return;
+    }
+    session = {
+      ...lue.donnees,
+      suppressionAnnulee:
+        suppression && /^\d{4}-\d{2}-\d{2}$/.test(suppression) ? suppression : null,
+    };
+    terminer(null);
+  }
+
+  const parametresRetour = new URLSearchParams(location.search);
+  const serviceRetour = parametresRetour.get('service');
+  if (estServiceExterne(serviceRetour)) {
+    const resultat = parametresRetour.get('resultat');
+    if (parametresRetour.get('etape') === 'connecte' && vues.actuelle() === 'succes')
+      void terminerService(parametresRetour.get('suppression'));
+    else if (estResultatService(resultat) && vues.actuelle() === 'identifiants')
+      messageService(serviceRetour, resultat);
+    // L'issue ne reste pas dans la barre d'adresse : recharger la page ne la rejoue pas.
+    const adresse = new URL(location.href);
+    for (const parametre of ['service', 'resultat', 'etape', 'suppression'])
+      adresse.searchParams.delete(parametre);
+    history.replaceState(null, '', adresse.pathname + adresse.search + adresse.hash);
+  }
 
   /* Démarrage --------------------------------------------------------------------- */
 

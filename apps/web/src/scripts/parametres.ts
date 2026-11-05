@@ -9,13 +9,19 @@
 import {
   DELAIS,
   FUSEAUX_HORAIRES,
+  NOMS_SERVICES,
   NOTIFICATIONS_EMAIL_IMPOSE,
+  SERVICES_EXTERNES,
+  estResultatService,
+  estServiceExterne,
   evaluerMotDePasse,
   type DisponibilitePseudo,
   type DocumentLegalApi,
   type ParametresApi,
   type PreferencesNotificationsApi,
   type ProblemeApi,
+  type ResultatService,
+  type ServiceExterne,
   type SessionApi,
   type SuppressionDemandeeApi,
   type TypeNotification,
@@ -24,12 +30,15 @@ import { RESUMES_DOCUMENTS, CLE_DOCUMENT } from '../lib/documents-legaux';
 import { ROUTES } from '../lib/navigation';
 import { dateLongue, masquerEmail } from '../lib/texte';
 import {
+  adresseDepart,
   alerte,
   erreur,
   jauge,
+  logoService,
   messageEmail,
   messageMotDePasse,
   motDePasse,
+  partirVers,
   passerEnVisiteur,
   premierInvalide,
   surveillerEmail,
@@ -170,7 +179,12 @@ const DOCUMENTS: { type: DocumentLegalApi['type']; href: string }[] = [
 ];
 
 const params = new URLSearchParams(location.search);
-const demandee = [params.get('rubrique'), location.hash.slice(1)]
+/** Retour d'une liaison avec Google ou GitHub (S-10) : ?service=…&resultat=…, rubrique Sécurité. */
+const serviceRetour = params.get('service');
+const liaison = estServiceExterne(serviceRetour)
+  ? { service: serviceRetour, resultat: params.get('resultat') }
+  : null;
+const demandee = [params.get('rubrique'), location.hash.slice(1), liaison ? 'securite' : null]
   .map((id) => (id === 'export' ? 'donnees' : id))
   .find((id): id is IdRubrique => RUBRIQUES.some((r) => r.id === id));
 
@@ -182,6 +196,8 @@ const ui: {
   sale: boolean;
   garde: (() => void) | null;
   flash: Cle | null;
+  /** Confirmation ouverte dans une ligne (« delier-github »). */
+  confirmer: string | null;
   minuteurFlash: ReturnType<typeof setTimeout> | undefined;
   suiviExport: ReturnType<typeof setTimeout> | undefined;
 } = {
@@ -190,6 +206,7 @@ const ui: {
   sale: false,
   garde: null,
   flash: null,
+  confirmer: null,
   minuteurFlash: undefined,
   suiviExport: undefined,
 };
@@ -473,22 +490,79 @@ function appareilsHTML(): string {
       ${autres.length > 1 ? `<div class="pa-groupe-pied"><button class="btn btn-secondary btn-sm" type="button" data-pa-sortir-tous>${icon('logout', 'icon-sm')}${t('Déconnecter les autres appareils')}</button></div>` : autres.length ? '' : `<p class="pa-groupe-note">${t('Votre compte n’est ouvert que sur cet appareil.')}</p>`}
     </section>`;
 }
+/* Google et GitHub (F-02, S-10) : comptes liés, lier (aller-retour vers le service), délier. */
+const logoPa = (s: ServiceExterne) =>
+  `<span class="pa-logo" data-service="${s}">${logoService(s)}</span>`;
+const compteLie = (s: ServiceExterne) => p?.comptesExternes.find((c) => c.service === s);
+/** « GitHub », « GitHub et Google » : les services liés, pour les textes. */
+const servicesLies = () =>
+  (p?.comptesExternes ?? []).map((c) => NOMS_SERVICES[c.service]).join(' et ');
+
+function serviceHTML(s: ServiceExterne): string {
+  if (!p) return '';
+  const nom = NOMS_SERVICES[s];
+  const compte = compteLie(s);
+  const seul = Boolean(compte) && !p.motDePasse && p.comptesExternes.length === 1;
+  let suite = '';
+  if (ui.confirmer === `delier-${s}`)
+    suite = seul
+      ? `<div class="pa-confirmer" role="alertdialog" aria-labelledby="pa-c-${s}" data-pa-confirmer><p id="pa-c-${s}">${t(`${nom} est votre seul moyen de connexion. Définissez d’abord un mot de passe pour pouvoir le délier.`)}</p><div><button class="btn btn-quiet btn-sm" type="button" data-pa-delier-non>Fermer</button><button class="btn btn-secondary btn-sm" type="button" data-pa-modifier="definir">${t('Définir un mot de passe')}</button></div></div>`
+      : `<div class="pa-confirmer" role="alertdialog" aria-labelledby="pa-c-${s}" data-pa-confirmer><p id="pa-c-${s}"><b>${t(`Délier ${nom} ?`)}</b> ${t(`Vous ne pourrez plus vous connecter avec ${nom}. Vous pourrez le lier de nouveau à tout moment.`)}</p><div><button class="btn btn-quiet btn-sm" type="button" data-pa-delier-non>Annuler</button><button class="btn btn-secondary btn-sm" type="button" data-pa-delier-oui="${s}">${t(`Délier ${nom}`)}</button></div></div>`;
+  return ligne({
+    cle: `service-${s}`,
+    niveau: 4,
+    classe: 'pa-service',
+    titre: `${logoPa(s)}<span>${t(nom)}</span>`,
+    valeur: compte
+      ? `<p class="pa-valeur">${t(compte.nom ?? nom)}</p>`
+      : `<p class="pa-valeur is-vide">${t('Non lié')}</p>`,
+    aide: compte
+      ? t(`Lié le ${dateLongue(compte.dateLiaison)}`)
+      : t(`Connectez-vous en un clic avec votre compte ${nom}.`),
+    action: compte
+      ? `<button class="btn btn-quiet btn-sm" type="button" data-pa-delier="${s}" aria-expanded="${ui.confirmer === `delier-${s}`}">Délier<span class="sr-only"> ${t(nom)}</span></button>`
+      : `<button class="btn btn-secondary btn-sm" type="button" data-pa-lier="${s}">${t(`Lier ${nom}`)}</button>`,
+    suite,
+  });
+}
+
 function securiteHTML(): string {
   if (!p) return '';
-  const intro = `<div class="pa-methodes"><p>${t('Vous vous connectez uniquement avec :')}</p><ul><li>${icon('mail', 'icon-sm')}${t('Adresse e-mail et mot de passe')}</li></ul></div>`;
-  const mdp = ligne({
-    cle: 'mdp',
-    titre: 'Mot de passe',
-    valeur:
-      '<p class="pa-valeur pa-secret"><span aria-hidden="true">••••••••••••</span><span class="sr-only">Mot de passe défini</span></p>',
-    aide: t(
-      p.motDePasseModifieLe
-        ? `Modifié le ${dateLongue(p.motDePasseModifieLe)}`
-        : `Défini à l’inscription, le ${dateLongue(p.dateInscription)}`,
-    ),
-    action: modifier('mdp', 'Modifier', 'le mot de passe'),
-  });
-  return `${intro}<div class="pa-lignes">${mdp}</div>${appareilsHTML()}`;
+  const methodes = [
+    p.motDePasse && `<li>${icon('mail', 'icon-sm')}${t('Adresse e-mail et mot de passe')}</li>`,
+    ...p.comptesExternes.map((c) => `<li>${logoPa(c.service)}${t(NOMS_SERVICES[c.service])}</li>`),
+  ].filter(Boolean);
+  const intro = `<div class="pa-methodes"><p>${t(methodes.length > 1 ? 'Vous vous connectez avec :' : 'Vous vous connectez uniquement avec :')}</p><ul>${methodes.join('')}</ul></div>`;
+  const mdp = p.motDePasse
+    ? ligne({
+        cle: 'mdp',
+        titre: 'Mot de passe',
+        valeur:
+          '<p class="pa-valeur pa-secret"><span aria-hidden="true">••••••••••••</span><span class="sr-only">Mot de passe défini</span></p>',
+        aide: t(
+          p.motDePasseModifieLe
+            ? `Modifié le ${dateLongue(p.motDePasseModifieLe)}`
+            : `Défini à l’inscription, le ${dateLongue(p.dateInscription)}`,
+        ),
+        action: modifier('mdp', 'Modifier', 'le mot de passe'),
+      })
+    : ligne({
+        cle: 'definir',
+        titre: 'Mot de passe',
+        valeur: `<p class="pa-valeur is-vide">${t('Aucun mot de passe')}</p>`,
+        aide: t(
+          'Avec un mot de passe, vous pourrez aussi vous connecter avec votre adresse e-mail.',
+        ),
+        action: modifier('definir', 'Définir un mot de passe'),
+      });
+  // Un service fermé sur ce serveur n'apparaît que s'il reste lié (on peut alors le délier).
+  const affiches = SERVICES_EXTERNES.filter(
+    (s) => p?.servicesOuverts.includes(s) || compteLie(s),
+  ).toSorted((a, b) => (a === 'google' ? -1 : b === 'google' ? 1 : 0));
+  const services = affiches.length
+    ? `<section class="pa-groupe" aria-labelledby="pa-g-services">${groupeTitre('services', 'link', 'Comptes liés')}<div class="pa-lignes">${affiches.map(serviceHTML).join('')}</div></section>`
+    : '';
+  return `${intro}<div class="pa-lignes">${mdp}</div>${services}${appareilsHTML()}`;
 }
 
 /* Rubrique Notifications -------------------------------------------------------------------------- */
@@ -652,12 +726,23 @@ function suppressionHTML(): string {
     valeur: `<p class="pa-valeur">${t('Gardez vos créations et votre activité avant de partir.')}</p>`,
     action: `<a class="btn btn-quiet btn-sm" href="#export" data-pa-vers-export>${t('Exporter mes données')}</a>`,
   });
-  const suppr = ligne({
-    cle: 'suppression',
-    titre: 'Supprimer mon compte',
-    valeur: `<p class="pa-valeur">${t('Vous confirmez avec votre mot de passe.')}</p>`,
-    action: modifier('suppression', 'Supprimer mon compte', '', 'btn-danger-contour'),
-  });
+  // Compte créé avec Google ou GitHub sans mot de passe : la confirmation par un lien envoyé par
+  // e-mail (prototype) viendra plus tard ; le mot de passe confirme la demande (S-10, registre).
+  const suppr =
+    p?.motDePasse === false
+      ? ligne({
+          cle: 'suppression',
+          titre: 'Supprimer mon compte',
+          valeur: `<p class="pa-valeur">${t('Vous confirmez avec un mot de passe.')}</p>`,
+          aide: t('Votre compte n’en a pas encore : définissez-en un d’abord.'),
+          action: modifier('definir', 'Définir un mot de passe'),
+        })
+      : ligne({
+          cle: 'suppression',
+          titre: 'Supprimer mon compte',
+          valeur: `<p class="pa-valeur">${t('Vous confirmez avec votre mot de passe.')}</p>`,
+          action: modifier('suppression', 'Supprimer mon compte', '', 'btn-danger-contour'),
+        });
   return `<p class="pa-intro">${t(`Après votre demande, votre compte reste récupérable pendant ${DELAIS.retractationSuppressionJours} jours.`)}</p>${friseSuppression(fin)}<div class="pa-lignes">${avant}${suppr}</div>`;
 }
 
@@ -850,19 +935,20 @@ const FORMS: Record<Cle, Formulaire> = {
           <p class="message is-erreur" id="pa-email-erreur" hidden></p>
           <p class="message" id="pa-email-suggestion" hidden></p>
         </div>
-        ${identifiant()}${champMdp('pa-email-mdp', 'Mot de passe actuel', 'current-password', { oubli: true, voir: 'le mot de passe actuel' })}
+        ${p?.motDePasse ? `${identifiant()}${champMdp('pa-email-mdp', 'Mot de passe actuel', 'current-password', { oubli: true, voir: 'le mot de passe actuel' })}` : ''}
         <p class="pa-note">${icon('info', 'icon-sm')}<span>${t(lectureSeuleEmail() ? 'Un lien de confirmation part vers la nouvelle adresse. Votre adresse actuelle reste celle du compte jusqu’à la confirmation.' : 'Un lien de confirmation part vers la nouvelle adresse. Votre adresse actuelle reste active jusqu’à la confirmation, et reçoit une alerte du changement.')}</span></p>
         ${pied('email', 'Envoyer le lien de confirmation')}
       </form>`,
     monter: (form) => surveillerEmail(champ(form, 'email')!),
     async envoyer(form, bouton) {
       const input = champ(form, 'email')!;
-      const mdp = champ(form, 'current-password')!;
+      // Un compte créé avec Google ou GitHub sans mot de passe confirme par le seul lien (S-10).
+      const mdp = champ(form, 'current-password');
       let message = messageEmail(input.value);
       if (!message && input.value.trim().toLowerCase() === p?.email.toLowerCase())
         message = 'C’est déjà l’adresse de votre compte.';
       erreur(input, message);
-      erreur(mdp, mdp.value ? '' : 'Saisissez votre mot de passe actuel.');
+      if (mdp) erreur(mdp, mdp.value ? '' : 'Saisissez votre mot de passe actuel.');
       if (premierInvalide(form)) return;
       const nouvelle = input.value.trim();
       const reponse = await enregistrer(
@@ -871,9 +957,12 @@ const FORMS: Record<Cle, Formulaire> = {
         () =>
           api<ParametresApi>('POST', '/api/v1/moi/email', {
             email: nouvelle,
-            motDePasse: mdp.value,
+            ...(mdp ? { motDePasse: mdp.value } : {}),
           }),
-        { texte: 'Envoi…', champs: { email: input, motDePasse: mdp } },
+        {
+          texte: 'Envoi…',
+          champs: { email: input, ...(mdp ? { motDePasse: mdp } : {}) },
+        },
       );
       if (!reponse) return;
       p = reponse;
@@ -925,6 +1014,41 @@ const FORMS: Record<Cle, Formulaire> = {
         deconnecter
           ? 'Mot de passe modifié. Vos autres appareils sont déconnectés.'
           : 'Mot de passe modifié.',
+        'lock',
+      );
+    },
+  },
+  definir: {
+    rubrique: 'securite',
+    html: () => `<form class="pa-form" data-pa-form="definir" novalidate>
+        ${identifiant()}
+        ${champMdp('pa-mdp-defini', 'Mot de passe', 'new-password', { jaugeMdp: true })}
+        <p class="pa-note">${icon('info', 'icon-sm')}<span>${t('Vous pourrez vous connecter avec')} <b>${t(p?.email ?? '')}</b> ${t(`et ce mot de passe, en plus de ${servicesLies() || 'votre compte lié'}.`)}</span></p>
+        ${pied('definir', 'Définir le mot de passe')}
+      </form>`,
+    monter: (form) => {
+      jauge(champ(form, 'new-password')!, () => ({ pseudo: p?.pseudo, email: p?.email }));
+    },
+    async envoyer(form, bouton) {
+      const nouveau = champ(form, 'new-password')!;
+      const evaluation = evaluerMotDePasse(nouveau.value, { pseudo: p?.pseudo, email: p?.email });
+      erreur(
+        nouveau,
+        evaluation.etat === 'vide' ? 'Choisissez un mot de passe.' : messageMotDePasse(evaluation),
+      );
+      if (premierInvalide(form)) return;
+      const reponse = await enregistrer(
+        form,
+        bouton,
+        () => api<ParametresApi>('POST', '/api/v1/moi/mot-de-passe', { nouveau: nouveau.value }),
+        { champs: { nouveau } },
+      );
+      if (!reponse) return;
+      p = reponse;
+      ui.confirmer = null;
+      terminer(
+        'mdp',
+        'Mot de passe défini. Vous pouvez aussi vous connecter avec votre adresse e-mail.',
         'lock',
       );
     },
@@ -1159,7 +1283,7 @@ async function enregistrerChoix<T>({
 const rubriqueDe = (cle: Cle): IdRubrique =>
   cle.startsWith('evt:') || cle === 'emails'
     ? 'notifications'
-    : cle === 'mdp'
+    : cle === 'mdp' || cle === 'definir' || cle.startsWith('service-')
       ? 'securite'
       : cle === 'suppression'
         ? 'suppression'
@@ -1468,6 +1592,54 @@ async function motDePasseOublie(): Promise<void> {
   );
 }
 
+/* Comptes liés (F-02, S-10) ------------------------------------------------------------------------ */
+
+/** Lier : aller-retour vers le service ; la page revient avec ?service=…&resultat=…. */
+function lier(service: ServiceExterne): void {
+  if (!membre()) return;
+  partirVers(service, adresseDepart(service, 'liaison'));
+}
+
+async function delier(service: ServiceExterne, bouton: HTMLButtonElement): Promise<void> {
+  bouton.disabled = true;
+  const reponse = await api<ParametresApi>(
+    'DELETE',
+    `/api/v1/moi/comptes-externes/${encodeURIComponent(service)}`,
+  );
+  if (!reponse.ok) {
+    if (sessionTerminee(reponse.probleme)) return;
+    if (bouton.isConnected) bouton.disabled = false;
+    toast(
+      reponse.probleme.status === 409
+        ? (reponse.probleme.detail ?? reponse.probleme.title)
+        : 'La modification n’a pas abouti. Réessayez dans un instant.',
+      'alert',
+    );
+    return;
+  }
+  p = reponse.donnees;
+  ui.confirmer = null;
+  rendreRubrique('securite');
+  $(`[data-pa-lier="${service}"]`)?.focus({ preventScroll: true });
+  toast(`Compte ${NOMS_SERVICES[service]} délié.`, 'link');
+}
+
+function basculerConfirmation(cle: string | null, focus: string): void {
+  ui.confirmer = ui.confirmer === cle ? null : cle;
+  rendreRubrique('securite');
+  ($('[data-pa-confirmer] button:last-child') ?? $(focus))?.focus({ preventScroll: true });
+}
+
+/** Issue d'une liaison, au retour du service. */
+const ISSUES_LIAISON: Partial<Record<ResultatService, (nom: string) => [string, string]>> = {
+  lie: (nom) => [`Compte ${nom} lié : vous pouvez vous connecter avec ${nom}.`, 'link'],
+  'lie-ailleurs': (nom) => [`Ce compte ${nom} est déjà lié à un autre compte Vysora.`, 'alert'],
+  'deja-lie': (nom) => [
+    `Un autre compte ${nom} est déjà lié au vôtre. Déliez-le d’abord pour lier celui-ci.`,
+    'alert',
+  ],
+};
+
 function basculer(bouton: HTMLButtonElement): void {
   if (!p) return;
   const id = bouton.dataset.paSwitch ?? '';
@@ -1535,12 +1707,21 @@ function choisirFuseau(id: string, cible: string): void {
 
 document.addEventListener('click', (evenement) => {
   const el = (evenement.target as Element).closest<HTMLElement>(
-    '[data-pa-modifier], [data-pa-annuler], [data-pa-aller], [data-pa-switch], [data-pa-sortir], [data-pa-sortir-tous], [data-pa-export-demander], [data-pa-telecharger], [data-pa-email-renvoyer], [data-pa-email-annuler], [data-pa-oubli], [data-pa-garde-oui], [data-pa-garde-non], [data-pa-vers-export], [data-pa-fuseau-appareil], [data-pa-recharger]',
+    '[data-pa-modifier], [data-pa-annuler], [data-pa-aller], [data-pa-switch], [data-pa-sortir], [data-pa-sortir-tous], [data-pa-export-demander], [data-pa-telecharger], [data-pa-email-renvoyer], [data-pa-email-annuler], [data-pa-oubli], [data-pa-garde-oui], [data-pa-garde-non], [data-pa-vers-export], [data-pa-fuseau-appareil], [data-pa-recharger], [data-pa-lier], [data-pa-delier], [data-pa-delier-oui], [data-pa-delier-non]',
   );
   if (!el) return;
   const d = el.dataset;
-  if (d.paModifier !== undefined) ouvrirEdition(d.paModifier);
-  else if (d.paAnnuler !== undefined) fermerEdition();
+  if (d.paModifier !== undefined) {
+    if (d.paModifier === 'definir') ui.confirmer = null;
+    ouvrirEdition(d.paModifier);
+  } else if (estServiceExterne(d.paLier)) lier(d.paLier);
+  else if (estServiceExterne(d.paDelier))
+    basculerConfirmation(`delier-${d.paDelier}`, `[data-pa-delier="${d.paDelier}"]`);
+  else if (estServiceExterne(d.paDelierOui)) void delier(d.paDelierOui, el as HTMLButtonElement);
+  else if (d.paDelierNon !== undefined) {
+    const service = ui.confirmer?.replace('delier-', '') ?? '';
+    basculerConfirmation(null, `[data-pa-delier="${service}"]`);
+  } else if (d.paAnnuler !== undefined) fermerEdition();
   else if (d.paAller !== undefined) {
     if (
       (evenement as MouseEvent).button !== 0 ||
@@ -1625,9 +1806,18 @@ const ISSUES_ADRESSE: Record<string, [string, string]> = {
   ],
   prise: ['Cette adresse est déjà associée à un compte Vysora.', 'alert'],
 };
-const issue = ISSUES_ADRESSE[params.get('adresse') ?? ''];
-if (issue) {
-  params.delete('adresse');
+const issue =
+  ISSUES_ADRESSE[params.get('adresse') ?? ''] ??
+  (liaison
+    ? ((estResultatService(liaison.resultat) ? ISSUES_LIAISON[liaison.resultat] : undefined)?.(
+        NOMS_SERVICES[liaison.service],
+      ) ?? [
+        `La liaison avec ${NOMS_SERVICES[liaison.service]} n’a pas abouti. Réessayez dans quelques instants.`,
+        'alert',
+      ])
+    : undefined);
+if (issue || liaison) {
+  for (const cle of ['adresse', 'service', 'resultat']) params.delete(cle);
   history.replaceState(
     null,
     '',

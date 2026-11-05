@@ -3,12 +3,18 @@
    adresse e-mail, mot de passe, pseudo proposé, confirmation de l'adresse, session déjà ouverte.
    Le lien de vérification reçu par e-mail (?verifier=…) est lu ici par le serveur.
    Bêta fermée (INV-01) : le code d'invitation est demandé (champ), ou repris d'un lien
-   d'invitation (?invitation=…, « Claire Dubois vous invite »). Reste à brancher : Google et GitHub (S-10). */
+   d'invitation (?invitation=…, « Claire Dubois vous invite »).
+   Google et GitHub (S-10) : les boutons partent vers l'API ; au retour d'une inscription réussie
+   (?service=…&etape=pseudo), le compte est créé et l'écran du pseudo montre l'identité fournie par
+   le service ; sinon `?resultat=…` dit pourquoi (inscription.ts). */
 import {
   MOTIF_CODE_INVITATION,
+  estServiceExterne,
   type ConditionsInscriptionApi,
   type DocumentLegalApi,
   type InvitationApi,
+  type ParametresApi,
+  type ServicesExternesApi,
 } from '@vysora/shared';
 import { avatar } from '../lib/explorer/elements';
 import { t } from '../lib/texte';
@@ -52,6 +58,37 @@ if (verifier) {
     if (erreur instanceof ErreurApi && ['LIEN_EXPIRE', 'VALIDATION'].includes(erreur.probleme.code))
       ecran = 'lien-expire';
     else console.error('Lien de vérification non lu :', erreur);
+  }
+}
+
+/** S-10 : services configurés sur ce serveur ; les autres boutons le disent au clic. */
+const servicesOuverts = await appelerApi<ServicesExternesApi>('/api/v1/services-externes', {
+  adresseClient,
+})
+  .then((reponse) => reponse.ouverts)
+  .catch(() => []);
+
+/** Compte tout juste créé avec Google ou GitHub : l'écran du pseudo, avec l'identité du service. */
+const serviceCree = Astro.url.searchParams.get('service');
+let compteService: { service: string; pseudo: string; email: string; compte: string } | null = null;
+if (
+  etat.session === 'membre' &&
+  Astro.url.searchParams.get('etape') === 'pseudo' &&
+  estServiceExterne(serviceCree)
+) {
+  const parametres = await appelerApi<ParametresApi>('/api/v1/moi/parametres', {
+    requete: Astro.request,
+    adresseClient,
+  }).catch(() => null);
+  const lie = parametres?.comptesExternes.find((compte) => compte.service === serviceCree);
+  if (parametres && lie) {
+    compteService = {
+      service: serviceCree,
+      pseudo: parametres.pseudo,
+      email: parametres.email,
+      compte: serviceCree === 'github' ? (lie.nom ?? '') : '',
+    };
+    ecran = 'pseudo';
   }
 }
 
@@ -120,6 +157,12 @@ const visible = (nom: string) => nom === ecran;
     data-carte
     data-destination={contexte.destination}
     data-contexte-actif={contexte.actif ? 'oui' : undefined}
+    data-services={servicesOuverts.join(' ')}
+    data-requete={contexte.requete || undefined}
+    data-service-cree={compteService?.service}
+    data-pseudo-cree={compteService?.pseudo}
+    data-email-cree={compteService?.email}
+    data-compte-cree={compteService?.compte}
   >
     <div class="carte-contenu" data-carte-contenu data-vues>
       <section
@@ -337,7 +380,12 @@ const visible = (nom: string) => nom === ecran;
         </form>
       </section>
 
-      <section class="auth-vue" data-vue="pseudo" aria-labelledby="t-pseudo" hidden>
+      <section
+        class="auth-vue"
+        data-vue="pseudo"
+        aria-labelledby="t-pseudo"
+        hidden={!visible('pseudo')}
+      >
         <p class="auth-repere is-ok" data-repere-cree>
           <svg class="icon" aria-hidden="true">
             <use href="#i-check"></use>

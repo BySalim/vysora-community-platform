@@ -41,8 +41,25 @@ const schemaEnvironnement = z
     VERIFIER_FUITES: z.stringbool().default(true),
     /** INV-01 : pendant la bêta fermée, l'inscription exige un code d'invitation à usage unique. */
     INSCRIPTION_SUR_INVITATION: z.stringbool().default(false),
+    /** F-02, S-10 : identifiants des applications OAuth. Un service sans identifiants reste fermé
+        (le bouton le dit). Adresse de retour à déclarer : <SITE_URL>/api/v1/auth/<service>/retour. */
+    GITHUB_CLIENT_ID: z.string().trim().optional(),
+    GITHUB_CLIENT_SECRET: z.string().trim().optional(),
+    GOOGLE_CLIENT_ID: z.string().trim().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().trim().optional(),
   })
   .superRefine((env, ctx) => {
+    // Un identifiant sans son secret (ou l'inverse) est une erreur de configuration, pas un service fermé.
+    for (const service of ['GITHUB', 'GOOGLE'] as const) {
+      const id = env[`${service}_CLIENT_ID`];
+      const secret = env[`${service}_CLIENT_SECRET`];
+      if (Boolean(id) !== Boolean(secret))
+        ctx.addIssue({
+          code: 'custom',
+          path: [id ? `${service}_CLIENT_SECRET` : `${service}_CLIENT_ID`],
+          message: `${service}_CLIENT_ID et ${service}_CLIENT_SECRET vont ensemble`,
+        });
+    }
     if (env.NODE_ENV !== 'production') return;
     // En production, aucun secret de développement ne doit subsister.
     if (env.SEL_EMPREINTES.startsWith('dev-'))

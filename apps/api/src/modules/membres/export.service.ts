@@ -13,6 +13,7 @@ import {
   categorie,
   choixOption,
   commentaire,
+  compteExterne,
   configurationIa,
   contenu,
   creation,
@@ -237,6 +238,17 @@ export class ExportService implements OnModuleInit {
   async composer(id: number): Promise<Record<string, unknown>> {
     const [compte] = await this.db.select().from(utilisateur).where(eq(utilisateur.id, id));
     if (!compte) throw introuvable();
+    // S-10 : comptes GitHub et Google liés pour la connexion.
+    const comptesLies = await this.db
+      .select({
+        service: compteExterne.fournisseur,
+        identifiant: compteExterne.identifiantFournisseur,
+        nom: compteExterne.nomCompte,
+        le: compteExterne.dateLiaison,
+      })
+      .from(compteExterne)
+      .where(eq(compteExterne.utilisateurId, id))
+      .orderBy(asc(compteExterne.dateLiaison));
     const [preferences, sessions, documents, creations, messages, essais, cas, votes] =
       await Promise.all([
         this.notifications.preferences(id),
@@ -322,6 +334,13 @@ export class ExportService implements OnModuleInit {
         inscription: iso(compte.dateInscription),
         derniere_connexion: iso(compte.dateDerniereConnexion),
         mot_de_passe_modifie_le: iso(compte.dateMotDePasse),
+        mot_de_passe_defini: Boolean(compte.empreinteMotDePasse),
+        comptes_lies: comptesLies.map((lien) => ({
+          service: lien.service,
+          identifiant_chez_le_service: lien.identifiant,
+          compte: lien.nom,
+          lie_le: iso(lien.le),
+        })),
         reputation: mouvements.reduce((total, mouvement) => total + mouvement.points, 0),
         notifications_email: preferences.email,
         notifications_email_par_evenement: preferences.evenements,

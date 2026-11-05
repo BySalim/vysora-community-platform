@@ -22,10 +22,11 @@ const motDePasseSaisi = (message: string) =>
     .min(1, { error: message })
     .max(LONGUEURS.motDePasse.max, { error: MESSAGES_PARAMETRES.motDePasseIncorrect });
 
-/** F-06, WF-02 : la nouvelle adresse est vérifiée par un lien ; le mot de passe actuel est exigé. */
+/** F-06, WF-02 : la nouvelle adresse est vérifiée par un lien ; le mot de passe actuel est exigé,
+    sauf pour un compte créé avec GitHub ou Google qui n'en a pas (l'API en décide). */
 export const schemaChangementEmail = z.object({
   email: champEmail,
-  motDePasse: motDePasseSaisi(MESSAGES_PARAMETRES.motDePasseActuel),
+  motDePasse: motDePasseSaisi(MESSAGES_PARAMETRES.motDePasseActuel).optional(),
 });
 export type ChangementEmail = z.output<typeof schemaChangementEmail>;
 
@@ -46,6 +47,16 @@ export const schemaChangementMotDePasse = z
     message: MESSAGES_PARAMETRES.memeMotDePasse,
   });
 export type ChangementMotDePasse = z.output<typeof schemaChangementMotDePasse>;
+
+/** S-10 : un compte créé avec GitHub ou Google définit un mot de passe (RG-04, comme à
+    l'inscription) pour se connecter aussi avec son adresse e-mail. */
+export const schemaDefinitionMotDePasse = z.object({
+  nouveau: z
+    .string({ error: MESSAGES_PARAMETRES.nouveauMotDePasse })
+    .min(1, { error: MESSAGES_PARAMETRES.nouveauMotDePasse })
+    .pipe(champMotDePasse),
+});
+export type DefinitionMotDePasse = z.output<typeof schemaDefinitionMotDePasse>;
 
 /** F-08, RG-05 : demande confirmée par le mot de passe ; les créations sont gardées sous un pseudo
     anonyme, sauf demande expresse de leur suppression. */

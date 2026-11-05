@@ -1,7 +1,11 @@
 /* Contexte d'arrivée sur la connexion et l'inscription (prototype/auth.js, `contexte`) :
    « retour » désigne la page d'origine, « pour » l'action réservée qui a mené ici (« enregistrer
    cette création »). Seule une adresse interne au site est acceptée comme retour : jamais de
-   redirection vers un autre site. */
+   redirection vers un autre site (`cheminInterne`, partagé avec l'API). */
+
+import { cheminInterne, motifArrivee } from '@vysora/shared';
+
+export { cheminInterne };
 
 /** Libellé du lien de retour selon la page d'origine (prototype/auth-data.js, `pages`). */
 const PAGES: [prefixe: string, libelle: string][] = [
@@ -19,9 +23,6 @@ const PAGES: [prefixe: string, libelle: string][] = [
 ];
 const RETOUR_ACCUEIL = 'Retour à l’accueil';
 const RETOUR_AUTRE = 'Retour à la page précédente';
-
-/** Pages vers lesquelles le retour n'a pas de sens. */
-const EXCLUES = ['/connexion', '/inscription', '/api'];
 
 /** Icône associée à l'action demandée (prototype/auth-data.js, `actions`). */
 const ACTIONS: [motif: RegExp, icone: string][] = [
@@ -50,22 +51,6 @@ export interface ContexteArrivee {
   requete: string;
 }
 
-/** Chemin interne sûr (« /forum?type=question ») ou null. */
-export function cheminInterne(brut: string | null | undefined): string | null {
-  if (!brut || !brut.startsWith('/') || brut.startsWith('//') || brut.startsWith('/\\'))
-    return null;
-  try {
-    const base = 'https://vysora.invalid';
-    const url = new URL(brut, base);
-    if (url.origin !== base) return null;
-    if (EXCLUES.some((exclue) => url.pathname === exclue || url.pathname.startsWith(`${exclue}/`)))
-      return null;
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return null;
-  }
-}
-
 function libelleDe(chemin: string | null): string {
   if (!chemin) return RETOUR_ACCUEIL;
   const pathname = chemin.split(/[?#]/)[0] ?? '/';
@@ -74,7 +59,7 @@ function libelleDe(chemin: string | null): string {
 }
 
 export function contexteArrivee(parametres: URLSearchParams): ContexteArrivee {
-  const pour = (parametres.get('pour') ?? '').replace(/\s+/g, ' ').trim().slice(0, 90);
+  const pour = motifArrivee(parametres.get('pour'));
   const cible = cheminInterne(parametres.get('retour'));
   const icone = ACTIONS.find(([motif]) => motif.test(pour))?.[1] ?? 'arrow';
   const requete = cible

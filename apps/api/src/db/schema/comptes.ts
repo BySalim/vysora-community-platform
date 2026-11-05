@@ -82,6 +82,9 @@ export const compteExterne = pgTable(
       .references(() => utilisateur.id, { onDelete: 'cascade' }),
     fournisseur: text({ enum: FOURNISSEURS_EXTERNES }).notNull(),
     identifiantFournisseur: varchar({ length: 255 }).notNull(),
+    /** S-10 (extension) : identifiant GitHub ou adresse Google, montré dans les paramètres ;
+        mis à jour à chaque connexion. */
+    nomCompte: varchar({ length: 255 }),
     dateLiaison: horodatage().notNull().defaultNow(),
   },
   (t) => [

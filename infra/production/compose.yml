@@ -23,6 +23,11 @@ x-environnement-api: &environnement-api
   STOCKAGE_DOSSIER: /donnees/stockage
   VERIFIER_FUITES: ${VERIFIER_FUITES:-true}
   INSCRIPTION_SUR_INVITATION: ${INSCRIPTION_SUR_INVITATION:-true}
+  # Connexion avec GitHub et Google (S-10) : vides, le service reste fermé.
+  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+  GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
 
 services:
   postgres:

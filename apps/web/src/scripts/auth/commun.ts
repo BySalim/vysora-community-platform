@@ -3,7 +3,15 @@
    Les parcours propres à chaque page sont dans connexion.ts et inscription.ts ; le fond animé
    dans fond.ts. Les données affichées viennent du serveur ; rien n'est simulé. */
 
-import { champEmail, evaluerMotDePasse, type EvaluationMotDePasse } from '@vysora/shared';
+import {
+  NOMS_SERVICES,
+  champEmail,
+  estServiceExterne,
+  evaluerMotDePasse,
+  type EvaluationMotDePasse,
+  type IntentionService,
+  type ServiceExterne,
+} from '@vysora/shared';
 import { $, $$, animations, esc, icon, pluriel, t, typo } from '../commun/outils';
 
 const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
@@ -28,20 +36,91 @@ export function logos(zone: ParentNode = document): void {
   for (const el of $$('[data-logo]', zone)) el.innerHTML = LOGOS[el.dataset.logo ?? ''] ?? '';
 }
 
-const NOMS_SERVICES: Record<string, string> = { google: 'Google', github: 'GitHub' };
+/** Logo d'un service (paramètres, comptes liés). */
+export const logoService = (service: ServiceExterne): string => LOGOS[service] ?? '';
 
-/** F-02 (S-10, AUTH-08) : la connexion par Google et GitHub ouvre plus tard ; le bouton le dit. */
-export function servicesBientot(alerteEl: HTMLElement | null, zone: ParentNode = document): void {
-  for (const bouton of $$<HTMLButtonElement>('[data-service]', zone)) {
-    bouton.addEventListener('click', () => {
-      const nom = NOMS_SERVICES[bouton.dataset.service ?? ''] ?? 'ce service';
-      alerte(
-        alerteEl,
-        `<p><b>${t(`La connexion avec ${nom} n’est pas encore ouverte.`)}</b> ${t('Utilisez votre adresse e-mail.')}</p>`,
-        'info',
-      );
+/* Google et GitHub (F-02, S-10) ---------------------------------------------- */
+
+const nomService = (service: string | undefined): string =>
+  estServiceExterne(service) ? NOMS_SERVICES[service] : 'ce service';
+
+let voile: HTMLElement | null = null;
+
+/** Voile « Redirection vers GitHub… » (prototype/auth.js, `redirection`), le temps que le service
+    réponde. Retiré si le navigateur revient sur la page par son historique. */
+function redirection(service: ServiceExterne): void {
+  if (!voile) {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<div class="redirection" role="status" aria-live="polite" data-redirection hidden></div>',
+    );
+    voile = $('[data-redirection]');
+    window.addEventListener('pageshow', () => {
+      if (voile) voile.hidden = true;
     });
   }
+  if (!voile) return;
+  voile.innerHTML = `<div class="redirection-boite"><span class="redirection-logo">${LOGOS[service] ?? ''}</span><span class="roue" aria-hidden="true"></span><p>${t(`Redirection vers ${NOMS_SERVICES[service]}…`)}</p></div>`;
+  voile.hidden = false;
+}
+
+/** Adresse de départ vers le service, à l'API (même origine, ADR-0007). */
+export function adresseDepart(
+  service: ServiceExterne,
+  intention: IntentionService,
+  complement: Record<string, string> = {},
+  requete = '',
+): string {
+  const parametres = new URLSearchParams({ intention, ...complement });
+  for (const [cle, valeur] of new URLSearchParams(requete)) parametres.set(cle, valeur);
+  return `/api/v1/auth/${service}?${parametres.toString()}`;
+}
+
+/** Part vers le service, voile affiché. */
+export function partirVers(service: ServiceExterne, adresse: string): void {
+  redirection(service);
+  location.assign(adresse);
+}
+
+/** Boutons Google et GitHub de la connexion et de l'inscription. Un service ouvert sur ce serveur
+    (`ouverts`, lu dans l'API) part vers l'API, qui renvoie chez lui ; un service fermé le dit au
+    clic. `avant` peut compléter le départ (code d'invitation) ou l'empêcher (renvoie null). */
+export function services(
+  alerteEl: HTMLElement | null,
+  options: {
+    ouverts: readonly string[];
+    intention: IntentionService;
+    requete?: string;
+    avant?: () => Record<string, string> | null;
+  },
+  zone: ParentNode = document,
+): void {
+  for (const bouton of $$<HTMLButtonElement>('[data-service]', zone)) {
+    bouton.addEventListener('click', () => {
+      const service = bouton.dataset.service;
+      alerte(alerteEl);
+      if (!estServiceExterne(service) || !options.ouverts.includes(service)) {
+        alerte(
+          alerteEl,
+          `<p><b>${t(`La connexion avec ${nomService(service)} n’est pas encore ouverte.`)}</b> ${t('Utilisez votre adresse e-mail.')}</p>`,
+          'info',
+        );
+        return;
+      }
+      const complement = options.avant ? options.avant() : {};
+      if (!complement) return;
+      partirVers(service, adresseDepart(service, options.intention, complement, options.requete));
+    });
+  }
+}
+
+/** Services ouverts, rendus par le serveur sur le cadre (`data-services`). */
+export const servicesOuverts = (carte: HTMLElement): string[] =>
+  (carte.dataset.services ?? '').split(' ').filter(Boolean);
+
+/** Identité fournie par le service (écran du pseudo de l'inscription, prototype/inscription.js). */
+export function identiteService(service: ServiceExterne, email: string, nomCompte: string): string {
+  return `<span class="identite-logo" aria-hidden="true">${LOGOS[service] ?? ''}</span><span class="identite-texte"><b>${t(email)}</b><span>${t(`Compte ${NOMS_SERVICES[service]}${nomCompte ? ` · ${nomCompte}` : ''}`)}</span></span><span class="identite-ok">${icon('check')}Vérifiée</span>`;
 }
 
 /** Session fermée sans recharger la page : l'en-tête redevient celui d'une visiteuse (etats.css). */

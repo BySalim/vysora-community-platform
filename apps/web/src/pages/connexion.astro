@@ -4,8 +4,9 @@
    session déjà ouverte. Le serveur choisit l'écran de départ (lien de réinitialisation lu ici).
    Comptes de modération et d'administration (SEC-02, ENF-05) : code de l'application ou code de
    secours, ou, la première fois, activation (clé, code QR) et codes de secours.
-   Reste à brancher : Google et GitHub (S-10). */
-import type { DocumentLegalApi, LienReinitialisation } from '@vysora/shared';
+   Google et GitHub (S-10) : les boutons partent vers l'API ; au retour, `?etape=connecte` termine
+   la connexion (« Bon retour »), `?resultat=…` dit pourquoi elle n'a pas abouti (connexion.ts). */
+import type { DocumentLegalApi, LienReinitialisation, ServicesExternesApi } from '@vysora/shared';
 import DocumentsDialogue from '../components/DocumentsDialogue.astro';
 import MembreConnecte from '../components/MembreConnecte.astro';
 import Base from '../layouts/Base.astro';
@@ -34,6 +35,12 @@ try {
 } catch {
   // Sans l'API, la fenêtre des documents s'affiche sans dates.
 }
+/** S-10 : services configurés sur ce serveur ; les autres boutons le disent au clic. */
+const servicesOuverts = await appelerApi<ServicesExternesApi>('/api/v1/services-externes', {
+  adresseClient,
+})
+  .then((reponse) => reponse.ouverts)
+  .catch(() => []);
 
 /** Lien de réinitialisation (F-03) : valable, l'écran du nouveau mot de passe ; sinon « Lien expiré ». */
 let lien: LienReinitialisation | null = null;
@@ -44,7 +51,9 @@ let ecran =
       ? 'deux-facteurs'
       : deuxFacteurs
         ? 'deux-facteurs-config'
-        : 'deja';
+        : Astro.url.searchParams.get('etape') === 'connecte'
+          ? 'succes'
+          : 'deja';
 const libelleRole =
   deuxFacteurs?.role === 'admin' ? 'Compte d’administration' : 'Compte de modération';
 const accesRole = deuxFacteurs?.role === 'admin' ? 'à l’administration' : 'à la modération';
@@ -127,6 +136,8 @@ const visible = (nom: string) => nom === ecran;
     data-carte
     data-destination={contexte.destination}
     data-contexte-actif={contexte.actif ? 'oui' : undefined}
+    data-services={servicesOuverts.join(' ')}
+    data-requete={contexte.requete || undefined}
   >
     <div class="carte-contenu" data-carte-contenu data-vues>
       <section
@@ -672,7 +683,12 @@ const visible = (nom: string) => nom === ecran;
         </p>
       </section>
 
-      <section class="auth-vue" data-vue="succes" aria-labelledby="t-succes" hidden>
+      <section
+        class="auth-vue"
+        data-vue="succes"
+        aria-labelledby="t-succes"
+        hidden={!visible('succes')}
+      >
         <svg class="moment" viewBox="0 0 108 76" aria-hidden="true" focusable="false">
           <path class="m-ligne" pathLength="1" d="M4 56H32"></path>
           <circle class="m-etape" cx="14" cy="56" r="4"></circle>

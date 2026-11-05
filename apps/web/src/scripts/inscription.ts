@@ -1,18 +1,25 @@
 /* Inscription (portée de prototype/inscription.js) : adresse e-mail, puis mot de passe ; le compte
    reçoit un pseudo tiré au hasard, que le membre garde ou modifie ; confirmation de l'adresse.
    Chaque étape appelle l'API : disponibilité de l'adresse et du pseudo, création du compte, renvoi
-   du lien. Le code d'invitation de la bêta (INV-01) et Google et GitHub (S-10) restent à brancher. */
+   du lien. Bêta fermée : code d'invitation (INV-01). Google et GitHub (S-10) : le compte est créé
+   au retour du service, l'écran du pseudo montre l'identité fournie, puis « Bienvenue ». */
 
 import {
   MOTIF_PSEUDO,
+  NOMS_SERVICES,
+  estResultatService,
+  estServiceExterne,
   tirerPseudo,
   type DisponibiliteEmail,
   type DisponibilitePseudo,
   type LienEnvoye,
+  type ResultatService,
+  type ServiceExterne,
   type SessionApi,
 } from '@vysora/shared';
+import { ROUTES } from '../lib/navigation';
 import { api } from './commun/api';
-import { $, animations, corrigerTypographie, esc, icon, t, toast } from './commun/outils';
+import { $, animations, corrigerTypographie, esc, icon, t, toast, typo } from './commun/outils';
 import {
   aide,
   alerte,
@@ -27,12 +34,16 @@ import {
   messageEmail,
   messageMotDePasse,
   motDePasse,
+  adresseDepart,
+  identiteService,
   occupe,
+  partirVers,
   passerEnVisiteur,
   premierInvalide,
   retablir,
   reussi,
-  servicesBientot,
+  services,
+  servicesOuverts,
   surveillerEmail,
   vues as creerVues,
 } from './auth/commun';
@@ -64,8 +75,21 @@ if (conteneur && carte) {
   const blocCode = $('[data-champ-code]');
   const versConnexion = $<HTMLAnchorElement>('[data-auth-lien="connexion"]')?.href ?? '/connexion';
 
-  /** Compte créé pendant cette visite : son pseudo tiré et son adresse. */
-  let compteCree: { pseudo: string; email: string } | null = null;
+  /** Compte créé pendant cette visite : son pseudo tiré, son adresse et, avec Google ou GitHub,
+      le service et le compte utilisé (rendus par le serveur au retour du service). */
+  let compteCree: {
+    pseudo: string;
+    email: string;
+    service?: ServiceExterne;
+    compte?: string;
+  } | null = estServiceExterne(carte.dataset.serviceCree)
+    ? {
+        pseudo: carte.dataset.pseudoCree ?? '',
+        email: carte.dataset.emailCree ?? '',
+        service: carte.dataset.serviceCree,
+        compte: carte.dataset.compteCree ?? '',
+      }
+    : null;
   let arreterRenvoi: (() => void) | null = null;
 
   const fond = creerFond();
@@ -259,7 +283,8 @@ if (conteneur && carte) {
   /* Étape 1 : l'adresse e-mail (F-01). Le compte n'est créé qu'avec le mot de passe. */
 
   logos();
-  servicesBientot($('[data-alerte]', form));
+  const requete = carte.dataset.requete ?? '';
+  const ouverts = servicesOuverts(carte);
   motDePasse(conteneur);
   surveillerEmail(email, () => alerte($('[data-alerte]', form)));
   const jaugeMdp = jauge(mdp, () => ({ email: email.value }));
@@ -289,6 +314,19 @@ if (conteneur && carte) {
     if (!ok) champCode.focus();
     return ok;
   }
+
+  /* Google et GitHub (F-02) : le code d'invitation se vérifie avant de partir vers le service. */
+  const departService = (): Record<string, string> | null => {
+    if (!codeValide()) return null;
+    const code = codeInvitation();
+    return code ? { invitation: code } : {};
+  };
+  services($('[data-alerte]', form), {
+    ouverts,
+    intention: 'inscription',
+    requete,
+    avant: departService,
+  });
 
   form.addEventListener('submit', async (evenement) => {
     evenement.preventDefault();
@@ -419,8 +457,13 @@ if (conteneur && carte) {
   /* Pseudo du nouveau compte --------------------------------------------------------- */
 
   function rendrePseudo(): void {
-    $('[data-identite]')!.hidden = true;
-    $('[data-repere-cree]')!.hidden = false;
+    const identite = $('[data-identite]')!;
+    const service = compteCree?.service;
+    identite.hidden = !service;
+    identite.innerHTML = service
+      ? identiteService(service, compteCree?.email ?? '', compteCree?.compte ?? '')
+      : '';
+    $('[data-repere-cree]')!.hidden = Boolean(service);
     pseudoInput.value = compteCree?.pseudo ?? '';
     alerte($('[data-alerte]', formPseudo));
     void pseudo.verifier({ immediat: true });
@@ -462,8 +505,17 @@ if (conteneur && carte) {
       if (compteCree) compteCree.pseudo = choisi;
     }
     occupe(bouton, false);
-    aller('verification');
+    // L'adresse fournie par Google ou GitHub est déjà vérifiée : le compte est prêt.
+    aller(compteCree?.service ? 'pret' : 'verification');
   });
+
+  /* Compte prêt (Google et GitHub) ----------------------------------------------------- */
+
+  function rendrePret(): void {
+    const pseudoChoisi = compteCree?.pseudo ?? '';
+    $('[data-pret-titre]')!.textContent = typo(`Bienvenue, ${pseudoChoisi}`);
+    $<HTMLAnchorElement>('[data-profil-lien]')!.href = ROUTES.profil(pseudoChoisi);
+  }
 
   /* Confirmation de l'adresse ------------------------------------------------------- */
 
@@ -613,6 +665,7 @@ if (conteneur && carte) {
       return;
     }
     if (nom === 'pseudo') rendrePseudo();
+    if (nom === 'pret') rendrePret();
     if (nom === 'verification') {
       rendreVerification();
       delaiRenvoi();
@@ -651,6 +704,74 @@ if (conteneur && carte) {
       `<a class="action action-secondaire" href="${esc(versConnexion)}">${t('J’ai déjà un compte')}</a>`,
     );
   });
+
+  /* Retour de Google ou GitHub (S-10) --------------------------------------------------- */
+
+  /** Pourquoi l'inscription par le service n'a pas abouti (prototype/inscription.js). */
+  function messageService(service: ServiceExterne, resultat: ResultatService): void {
+    const alerteEl = $('[data-alerte]', form);
+    const nom = NOMS_SERVICES[service];
+    if (resultat === 'invitation') {
+      // Code du lien déjà utilisé, ou code saisi qui n'est plus valable : le champ le dit.
+      if (blocCode?.hidden) {
+        codeDuLien = '';
+        blocCode.hidden = false;
+        $('[data-invitation]')?.setAttribute('hidden', '');
+      }
+      erreur(
+        champCode,
+        'Ce code n’est pas valable. Vérifiez-le, ou demandez une nouvelle invitation.',
+      );
+      champCode.focus();
+      return;
+    }
+    if (resultat === 'email-pris') {
+      alerte(
+        alerteEl,
+        `<p><b>${t(`L’adresse de votre compte ${nom} appartient déjà à un compte Vysora.`)}</b> ${t(`Connectez-vous, puis liez ${nom} depuis vos paramètres.`)}</p><a class="action action-secondaire" href="${esc(versConnexion)}">${t('Se connecter')}</a>`,
+        'info',
+      );
+      return;
+    }
+    if (resultat === 'email-non-verifie') {
+      alerte(
+        alerteEl,
+        `<p><b>${t(`Votre compte ${nom} ne fournit aucune adresse e-mail vérifiée.`)}</b> ${t(`Vérifiez votre adresse chez ${nom}, ou utilisez votre adresse e-mail.`)}</p>`,
+      );
+      return;
+    }
+    alerte(
+      alerteEl,
+      `<p><b>${t(`L’inscription avec ${nom} n’a pas abouti.`)}</b> ${t('Réessayez, ou utilisez votre adresse e-mail.')}</p>`,
+    );
+  }
+
+  const parametresRetour = new URLSearchParams(location.search);
+  const serviceRetour = parametresRetour.get('service');
+  if (estServiceExterne(serviceRetour)) {
+    const resultat = parametresRetour.get('resultat');
+    if (vues.actuelle() === 'pseudo' && compteCree) rendrePseudo();
+    else if (vues.actuelle() === 'compte') {
+      if (estResultatService(resultat)) messageService(serviceRetour, resultat);
+      // « Créer un compte avec GitHub » depuis la connexion : départ direct, sauf si le code
+      // d'invitation reste à saisir.
+      else if (ouverts.includes(serviceRetour) && !parametresRetour.has('etape')) {
+        if (blocCode && !blocCode.hidden) champCode.focus();
+        else {
+          const complement = departService();
+          if (complement)
+            partirVers(
+              serviceRetour,
+              adresseDepart(serviceRetour, 'inscription', complement, requete),
+            );
+        }
+      }
+    }
+    // L'issue ne reste pas dans la barre d'adresse : recharger la page ne la rejoue pas.
+    const adresse = new URL(location.href);
+    for (const cle of ['service', 'resultat', 'etape']) adresse.searchParams.delete(cle);
+    history.replaceState(null, '', adresse.pathname + adresse.search + adresse.hash);
+  }
 
   /* Démarrage ----------------------------------------------------------------------------- */
 

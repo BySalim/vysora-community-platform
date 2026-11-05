@@ -13,11 +13,14 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
+  estServiceExterne,
   schemaChangementEmail,
   schemaChangementMotDePasse,
+  schemaDefinitionMotDePasse,
   schemaSuppressionCompte,
   type ChangementEmail,
   type ChangementMotDePasse,
+  type DefinitionMotDePasse,
   type ParametresApi,
   type SuppressionCompte,
   type SuppressionDemandeeApi,
@@ -32,6 +35,7 @@ import { ChangementEmailService } from '../auth/changement-email.service.js';
 import { ChangementMotDePasseService } from '../auth/changement-mot-de-passe.service.js';
 import { Exige, SessionCourante } from '../auth/droits.js';
 import type { SessionOuverte } from '../auth/requete.js';
+import { ServicesExternesService } from '../auth/services-externes.service.js';
 import { SessionsService } from '../auth/sessions.service.js';
 import { ExportService } from './export.service.js';
 import { ParametresService } from './parametres.service.js';
@@ -51,6 +55,7 @@ export class ParametresController {
     private readonly sessions: SessionsService,
     private readonly exports: ExportService,
     private readonly suppression: SuppressionService,
+    private readonly servicesExternes: ServicesExternesService,
     @Inject(CONFIG) private readonly config: Configuration,
   ) {}
 
@@ -96,6 +101,31 @@ export class ParametresController {
     @Body(new ValidationZod(schemaChangementMotDePasse)) saisie: ChangementMotDePasse,
   ): Promise<ParametresApi> {
     await this.motDePasse.modifier(session, saisie);
+    return this.parametres.lire(session);
+  }
+
+  /** POST /api/v1/moi/mot-de-passe : un compte créé avec GitHub ou Google définit son mot de passe
+      (S-10) ; refusé si le compte en a déjà un. */
+  @Post('mot-de-passe')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 15 * 60_000 } })
+  async definirMotDePasse(
+    @SessionCourante() session: SessionOuverte,
+    @Body(new ValidationZod(schemaDefinitionMotDePasse)) saisie: DefinitionMotDePasse,
+  ): Promise<ParametresApi> {
+    await this.motDePasse.definir(session, saisie);
+    return this.parametres.lire(session);
+  }
+
+  /** DELETE /api/v1/moi/comptes-externes/:service : délie GitHub ou Google (F-02) ; refusé si
+      c'est le dernier moyen de connexion. La liaison passe par GET /api/v1/auth/:service. */
+  @Delete('comptes-externes/:service')
+  async delier(
+    @SessionCourante() session: SessionOuverte,
+    @Param('service') service: string,
+  ): Promise<ParametresApi> {
+    if (!estServiceExterne(service)) throw introuvable();
+    await this.servicesExternes.delier(session.utilisateur.id, service);
     return this.parametres.lire(session);
   }
 

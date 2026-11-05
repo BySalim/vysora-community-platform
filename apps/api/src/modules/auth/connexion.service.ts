@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Connexion } from '@vysora/shared';
+import type { Connexion, StatutCompte } from '@vysora/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { ErreurApplication, interdit } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
@@ -9,6 +9,9 @@ import { MotsDePasseService } from './mots-de-passe.service.js';
 import type { ContexteConnexion } from './requete.js';
 import { SessionsService } from './sessions.service.js';
 import { TemporisationService } from './temporisation.service.js';
+
+export const MESSAGE_COMPTE_FERME =
+  'Ce compte a été fermé par la modération. Pour contester cette décision, écrivez-nous depuis la page Contact.';
 
 const tropDeTentatives = (secondes: number) =>
   new ErreurApplication(
@@ -65,12 +68,26 @@ export class ConnexionService {
     }
 
     // Vérifié après le mot de passe : sans lui, rien ne distingue un compte banni.
-    if (compte.statutCompte === 'BANNI')
-      throw interdit(
-        'Ce compte a été fermé par la modération. Pour contester cette décision, écrivez-nous depuis la page Contact.',
-      );
+    const resultat = await this.ouvrirPour(compte, contexte, jetonActuel);
+    await this.temporisation.enregistrer({
+      empreinteIdentifiant: identifiant,
+      utilisateurId: compte.id,
+      ip: contexte.ip,
+      reussie: true,
+    });
+    return resultat;
+  }
 
-    const resultat = await this.db.transaction(async (tx) => {
+  /** Session ouverte pour un compte dont l'identité est établie (mot de passe, ou GitHub et Google,
+      S-10) : un compte banni est refusé ; la reconnexion d'un compte en suppression l'annule. */
+  async ouvrirPour(
+    compte: { id: number; statutCompte: StatutCompte },
+    contexte: ContexteConnexion,
+    jetonActuel?: string,
+  ): Promise<{ jeton: string; expiration: Date; suppressionAnnulee: Date | null }> {
+    if (compte.statutCompte === 'BANNI') throw interdit(MESSAGE_COMPTE_FERME);
+    if (compte.statutCompte === 'SUPPRIME') throw new ErreurApplication('IDENTIFIANTS_INCORRECTS');
+    return this.db.transaction(async (tx) => {
       const suppressionAnnulee =
         compte.statutCompte === 'EN_SUPPRESSION'
           ? await this.annulerSuppression(compte.id, tx)
@@ -83,13 +100,6 @@ export class ConnexionService {
       const session = await this.sessions.ouvrir(compte.id, contexte, tx);
       return { ...session, suppressionAnnulee };
     });
-    await this.temporisation.enregistrer({
-      empreinteIdentifiant: identifiant,
-      utilisateurId: compte.id,
-      ip: contexte.ip,
-      reussie: true,
-    });
-    return resultat;
   }
 
   /** WF-23 : la reconnexion pendant le délai de 30 jours annule la suppression ; renvoie la date de la demande. */

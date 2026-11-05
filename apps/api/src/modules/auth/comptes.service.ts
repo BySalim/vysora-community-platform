@@ -7,6 +7,7 @@ import {
   variantesPseudo,
   type DisponibiliteEmail,
   type DisponibilitePseudo,
+  type FournisseurExterne,
   type Inscription,
   type ModificationMembre,
 } from '@vysora/shared';
@@ -16,7 +17,7 @@ import { CONFIG } from '../../config/configuration.module.js';
 import type { Configuration } from '../../config/env.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
-import { utilisateur } from '../../db/schema/index.js';
+import { compteExterne, utilisateur } from '../../db/schema/index.js';
 import { DocumentsLegauxService } from './documents-legaux.service.js';
 import { CODE_INVALIDE, InvitationsService } from './invitations.service.js';
 import { MotsDePasseService } from './mots-de-passe.service.js';
@@ -99,6 +100,58 @@ export class ComptesService {
           throw conflit(undefined, { email: MESSAGES_COMPTE.emailPris });
         if (!estViolationUnicite(erreur, 'utilisateur_pseudo_unique')) throw erreur;
         if (saisie.pseudo) throw conflit(undefined, { pseudo: MESSAGES_COMPTE.pseudoPris });
+      }
+    }
+    throw new Error('Impossible d’attribuer un pseudo libre au nouveau compte');
+  }
+
+  /** S-10 (F-02, WF-01 1a) : compte créé au retour de GitHub ou Google. L'adresse fournie par le
+      service compte comme vérifiée ; aucun mot de passe (le membre pourra en définir un) ; pseudo
+      proposé, modifiable à l'écran suivant comme pour l'inscription par e-mail ; documents en
+      vigueur acceptés (RG-03) ; code d'invitation consommé pendant la bêta (INV-01) ; compte
+      externe lié ; session ouverte (celle déjà présente sur l'appareil est fermée). */
+  async inscrireAvecService(
+    lien: { fournisseur: FournisseurExterne; identifiant: string; nomCompte: string | null },
+    email: string,
+    codeInvitation: string | undefined,
+    contexte: ContexteConnexion,
+    jetonActuel?: string,
+  ): Promise<
+    { utilisateurId: number; jeton: string; expiration: Date } | 'invitation' | 'email-pris'
+  > {
+    const code = codeInvitation?.trim().toUpperCase() || null;
+    if (this.config.INSCRIPTION_SUR_INVITATION && !code) return 'invitation';
+    if (code && !(await this.invitations.estLibre(code))) return 'invitation';
+    if (await this.emailPris(email)) return 'email-pris';
+
+    const invitationPrise = new Error('Code d’invitation déjà utilisé');
+    for (let essai = 0; essai < 5; essai += 1) {
+      const pseudo = await this.pseudoLibre();
+      try {
+        return await this.db.transaction(async (tx) => {
+          const [nouveau] = await tx
+            .insert(utilisateur)
+            .values({ pseudo, email, emailVerifie: true, dateDerniereConnexion: new Date() })
+            .returning({ id: utilisateur.id });
+          if (!nouveau) throw new Error('Compte non créé');
+          await this.documents.accepterEnVigueur(nouveau.id, tx);
+          if (code && !(await this.invitations.utiliser(tx, code, nouveau.id)))
+            throw invitationPrise;
+          await tx.insert(compteExterne).values({
+            utilisateurId: nouveau.id,
+            fournisseur: lien.fournisseur,
+            identifiantFournisseur: lien.identifiant,
+            nomCompte: lien.nomCompte?.slice(0, 255) ?? null,
+          });
+          if (jetonActuel) await this.sessions.fermer(jetonActuel, tx);
+          const session = await this.sessions.ouvrir(nouveau.id, contexte, tx);
+          return { utilisateurId: nouveau.id, ...session };
+        });
+      } catch (erreur) {
+        if (erreur === invitationPrise) return 'invitation';
+        // Inscriptions simultanées : l'unicité est garantie par la base (RG-01, RG-02).
+        if (estViolationUnicite(erreur, 'utilisateur_email_unique')) return 'email-pris';
+        if (!estViolationUnicite(erreur, 'utilisateur_pseudo_unique')) throw erreur;
       }
     }
     throw new Error('Impossible d’attribuer un pseudo libre au nouveau compte');

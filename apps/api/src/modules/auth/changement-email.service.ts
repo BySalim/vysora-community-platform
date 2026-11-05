@@ -71,8 +71,14 @@ export class ChangementEmailService {
       .from(utilisateur)
       .where(eq(utilisateur.id, utilisateurId));
     if (!compte?.email) throw lienExpire();
-    if (!(await this.motsDePasse.verifier(compte.empreinte, saisie.motDePasse)))
-      throw erreurValidation({ motDePasse: MESSAGES_PARAMETRES.motDePasseIncorrect });
+    // Un compte créé avec GitHub ou Google sans mot de passe (S-10) confirme par le lien envoyé à
+    // la nouvelle adresse, et l'actuelle est prévenue, comme pour les autres comptes.
+    if (compte.empreinte) {
+      if (!saisie.motDePasse)
+        throw erreurValidation({ motDePasse: MESSAGES_PARAMETRES.motDePasseActuel });
+      if (!(await this.motsDePasse.verifier(compte.empreinte, saisie.motDePasse)))
+        throw erreurValidation({ motDePasse: MESSAGES_PARAMETRES.motDePasseIncorrect });
+    }
     if (compte.email.toLowerCase() === saisie.email.toLowerCase())
       throw erreurValidation({ email: MESSAGES_PARAMETRES.memeAdresse });
     if (await this.emailPris(saisie.email))
