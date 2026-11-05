@@ -12,7 +12,7 @@ Il faut pouvoir fermer une session à distance (liste des appareils du prototype
 - En base (`session`) : seulement l'empreinte SHA-256 du jeton, l'utilisateur, l'expiration glissante (30 jours), l'appareil résumé, le lieu approximatif, l'empreinte de l'IP, la double authentification validée.
 - Chaque requête : l'API retrouve la session par l'empreinte ; `GET /api/v1/session` renvoie au site l'état à afficher (`EtatVisiteur`, membre, notifications non lues).
 - Protection CSRF : `SameSite=Lax` + vérification de l'origine (déjà en place).
-- Mots de passe Argon2id ; comptes GitHub et Google par OAuth (bibliothèque `arctic`), sans fusion automatique (F-02).
+- Mots de passe Argon2id ; comptes GitHub et Google par OAuth, sans fusion automatique (F-02). La bibliothèque prévue, `arctic`, n'est plus maintenue : remplacée par `openid-client` (ADR-0009).
 
 ## Conséquences
 

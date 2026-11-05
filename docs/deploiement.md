@@ -55,9 +55,17 @@ Préproduction et production utilisent les mêmes fichiers ; seule la variable `
    ```
    L'administration (`/admin/roles`) donne ensuite les autres rôles. La double authentification est demandée à la première connexion.
 
+## Connexion avec GitHub et Google
+
+Facultative : sans identifiants, le service reste fermé et son bouton le dit. Chaque serveur (développement, préproduction, production) a ses propres applications, car l'adresse de retour change. Les identifiants vont dans le `.env` (racine du dépôt en développement, `infra/production/.env` sur un serveur), puis l'API est relancée (`docker compose … up -d`).
+
+- **GitHub** : Settings › Developer settings › OAuth Apps › New OAuth App. *Homepage URL* : `https://<domaine>` ; *Authorization callback URL* : `https://<domaine>/api/v1/auth/github/retour` (en développement : `http://localhost:4321/api/v1/auth/github/retour`). Puis « Generate a new client secret » : `GITHUB_CLIENT_ID` et `GITHUB_CLIENT_SECRET`. Une application GitHub n'accepte qu'une adresse de retour : une par serveur.
+- **Google** : Google Cloud Console › API et services. D'abord l'écran de consentement (nom « Vysora », adresse de contact, liens vers `/cgu` et `/confidentialite`, domaine autorisé, portées `openid` et `email` seulement), puis Identifiants › ID client OAuth › Application Web, avec comme URI de redirection autorisé `https://<domaine>/api/v1/auth/google/retour` (un même client peut aussi déclarer celui du développement, `http://localhost:4321/…`). `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Tant que Google n'a pas validé l'application, elle reste « en test » : seuls les comptes Gmail ajoutés à la liste des testeurs (100 au plus) peuvent se connecter.
+- Vérification : `https://<domaine>/api/v1/services-externes` cite les services ouverts ; le bouton part vers le service et revient sur la page d'inscription (écran du pseudo) ou de connexion.
+
 ## Bêta fermée : codes d'invitation
 
-Avec `INSCRIPTION_SUR_INVITATION=true`, l'inscription demande un code. Les administrateurs les créent dans `/admin/invitations` ; le tout premier se crée en ligne de commande :
+Avec `INSCRIPTION_SUR_INVITATION=true`, l'inscription demande un code, y compris avec GitHub ou Google (il se saisit avant de choisir le service). Les administrateurs les créent dans `/admin/invitations` ; le tout premier se crée en ligne de commande :
 
 ```bash
 docker compose -f infra/production/compose.yml --env-file infra/production/.env run --rm api node dist/db/invitations.js 5

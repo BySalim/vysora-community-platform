@@ -12,6 +12,7 @@ Une décision structurante = une note courte : contexte, décision, conséquence
 | [0006](0006-vocabulaire-francais.md) | Vocabulaire du domaine en français dans le code | Acceptée |
 | [0007](0007-relais-api-meme-origine.md) | Relais `/api` par le site : une seule origine | Acceptée |
 | [0008](0008-hebergement.md) | Hébergement : un serveur en Europe, Docker Compose | Proposée |
+| [0009](0009-oauth-openid-client.md) | Connexion avec GitHub et Google par `openid-client` (remplace `arctic`) | Acceptée |
 
 Modèle :
 
