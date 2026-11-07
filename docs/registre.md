@@ -324,6 +324,7 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - Sommaire, « L’essentiel », numéros de section, boutons « Copier le lien » et typographie sont rendus par le serveur (le prototype les construisait dans le navigateur) : même résultat, lisible sans script.
 - Les documents « À accepter » sont ceux que le membre n’a pas encore acceptés selon l’API, que son compte soit en lecture seule pour ce motif ou non (le prototype les déduisait de l’état « conditions ») ; la mention « lecture seule » n’apparaît que si l’acceptation lève effectivement la lecture seule.
 - Le refus de la mesure d’audience est retenu par un cookie (`vysora_audience`, 13 mois), comme l’annonce la liste des cookies, et non dans le stockage local du navigateur.
+- Éditeur renommé : « NeoCoders » devient « 3kS_ItUs », équipe de développeurs de HaTlaCha (décision du porteur du projet, 2026-11-07), dans les mentions légales, les CGU, la politique de confidentialité et les cookies. Aucune nouvelle version des documents légaux n’a été créée.
 
 ## Écarts au prototype (connexion et inscription)
 
@@ -404,6 +405,10 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - La photo est envoyée à l’API (carré de 256 px recadré par le serveur, MEDIA-01) au lieu d’être recadrée dans le navigateur ; « Complétez votre profil » fermé reste fermé sur l’appareil.
 
 ## Journal
+
+### 2026-11-07 — Éditeur renommé 3kS_ItUs
+
+- Branche `feat/nom-editeur` : « NeoCoders » remplacé par « 3kS_ItUs, équipe de développeurs de HaTlaCha, établie au Sénégal » dans les quatre pages légales concernées (10 occurrences, accords ajustés). Le pied de page « © … Vysora » est inchangé. Une nouvelle version des documents légaux peut être publiée depuis l’administration pour en informer les membres.
 
 ### 2026-11-05 — Connexion avec GitHub et Google (S-10)
 
