@@ -406,6 +406,12 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 
 ## Journal
 
+### 2026-11-07 — Documents du hackathon
+
+- Branche `docs/hackathon`. Dossier `hackathon/` créé pour les documents remis au jury (thème : « Construire la plateforme d'échange africaine, pour les devs, par les devs ») : fiche projet, dossier de présentation, gestion de projet, note technique, guide de démonstration, en Markdown et versionnés ; mise en forme à la fin. Le `README.md` du dossier fixe le cadre commun (objectifs, frontières, exclusions, versions, journal des envois).
+- Deux agents dans `.claude/agents/` : `hackathon-presentation` (fiche, dossier, guide) et `hackathon-technique` (gestion de projet, note technique, chiffres de référence), chacun limité aux sources dont il a besoin. Règles consignées dans `AGENTS.md` (section « Documents du hackathon »).
+- Documents créés vides (en-tête seul, version 0.0) : leur rédaction revient aux agents. Pas de `pnpm verifier` (aucun code modifié ; les fichiers Markdown ne passent pas par Prettier).
+
 ### 2026-11-07 — Éditeur renommé 3kS_ItUs
 
 - Branche `feat/nom-editeur` : « NeoCoders » remplacé par « 3kS_ItUs, équipe de développeurs de HaTlaCha, établie au Sénégal » dans les quatre pages légales concernées (10 occurrences, accords ajustés). Le pied de page « © … Vysora » est inchangé. Une nouvelle version des documents légaux peut être publiée depuis l’administration pour en informer les membres.
