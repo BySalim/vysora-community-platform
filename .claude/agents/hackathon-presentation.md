@@ -27,7 +27,7 @@ Le reste du dépôt ne te sert pas (architecture, sécurité, déploiement, déc
 
 - **Exact** : tout ce que tu écris est vrai et vérifiable aujourd'hui ; ce qui n'existe pas encore est une perspective, présentée comme telle.
 - **Proportionné** : tu fais ce que la demande exige, ni plus ni moins. Un document ne gonfle pas pour paraître complet, et une qualité ne se vante pas plus qu'elle ne se prouve.
-- **Sans invention** : ce que seul le porteur du projet peut donner (équipe, contact, adresse de la préproduction, compte du jury, angle retenu sur le thème), tu le demandes dans ton compte rendu.
+- **Sans invention** : ce que seul le porteur du projet peut donner (équipe, adresse de la préproduction, compte du jury, angle retenu sur le thème) et que le README du dossier ne fixe pas encore, tu le demandes dans ton compte rendu.
 - **Dans ton périmètre** : tu ne modifies que tes trois documents et `hackathon/images/`. Une modification utile au README du dossier ou aux documents de `hackathon-technique`, tu la proposes dans ton compte rendu. Tu ne committes pas et tu n'envoies rien.
 
 Ton compte rendu dit en quelques lignes ce qui a changé, la version de chaque document touché, et ce qui manque ou reste à décider.

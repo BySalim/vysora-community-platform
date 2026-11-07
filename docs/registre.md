@@ -406,6 +406,12 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 
 ## Journal
 
+### 2026-11-07 — Dossier du hackathon retiré du dépôt
+
+- Décision du porteur du projet : le dossier `hackathon/` n'est plus versionné. Retiré du suivi (`git rm --cached`, fichiers conservés en local) et ajouté à `.gitignore` ; il n'existe que dans la copie de travail principale. Les versions envoyées se conservent dans `hackathon/envois/` au lieu d'étiquettes Git. `AGENTS.md` mis à jour ; les agents `.claude/agents/hackathon-*` restent versionnés.
+- Le commit `20e89b4` (dossier créé, documents vides) reste dans l'historique de `main` sur GitHub.
+- Pas de `pnpm verifier` (aucun code modifié).
+
 ### 2026-11-07 — Documents du hackathon
 
 - Branche `docs/hackathon`. Dossier `hackathon/` créé pour les documents remis au jury (thème : « Construire la plateforme d'échange africaine, pour les devs, par les devs ») : fiche projet, dossier de présentation, gestion de projet, note technique, guide de démonstration, en Markdown et versionnés ; mise en forme à la fin. Le `README.md` du dossier fixe le cadre commun (objectifs, frontières, exclusions, versions, journal des envois).

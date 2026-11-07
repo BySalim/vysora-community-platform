@@ -26,3 +26,6 @@ Thumbs.db
 .claude/worktrees/
 .claude/settings.local.json
 .playwright-mcp/
+
+# Documents du hackathon : copie locale du porteur du projet, jamais versionnée
+/hackathon/
