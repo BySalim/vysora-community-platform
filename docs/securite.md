@@ -48,6 +48,7 @@
 | Durées de conservation de la politique de confidentialité appliquées chaque jour : sessions expirées supprimées, tentatives et dates de connexion gardées un an, notifications 12 mois ; images abandonnées supprimées après 24 h | `ConservationService`, `TachesPlanifiees` (EMAIL-01) |
 | Nouvelle version d'un document légal annoncée par e-mail aux seuls comptes actifs d'adresse vérifiée (RG-90), une seule fois | `AnnonceDocumentsService` (EMAIL-01) |
 | Données de démonstration refusées en production (la fonction et la commande vérifient `NODE_ENV` ; une préproduction se déclare par `ENVIRONNEMENT=preproduction` et doit alors fournir son propre `MOT_DE_PASSE_DEMO`, le mot de passe du dépôt étant refusé, OPS-01) ; comptes en `@example.test` (domaine réservé), mot de passe de développement commun consigné dans le dépôt et haché en Argon2id comme les vrais ; deux comptes d'équipe (modération, administration) qui ne doivent exister que hors production | `db/demo/` (DEMO-01) |
+| En production, aucun e-mail vers un domaine réservé (RFC 2606, RFC 6761 : `.test`, `.example`, `.invalid`, `.localhost`, `example.com`, `example.net`, `example.org`) : il n'entre pas dans la file, le journal (niveau `debug`) ne garde que le domaine ; les membres de la démonstration d'une préproduction ne consomment ni le quota ni la réputation du service d'envoi. Développement et test inchangés (Mailpit) | `EmailService`, `modules/email/domaines-reserves.ts` (DEMO-04) |
 
 ## 2. À mettre en place (par ordre d'arrivée)
 

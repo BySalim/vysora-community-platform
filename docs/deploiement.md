@@ -40,6 +40,7 @@ Préproduction et production utilisent les mêmes fichiers ; seule la variable `
    - avec un DMARC strict (`p=reject`, `adkim=s`), seuls les envois signés DKIM au nom du domaine arrivent : les CNAME DKIM du service (chez Brevo, `brevo1._domainkey` et `brevo2._domainkey`) sont indispensables ;
    - l'expéditeur (`EMAIL_EXPEDITEUR`) n'a pas besoin d'une boîte réelle ; l'adresse de l'équipe (`EMAIL_EQUIPE`) en demande une, car elle reçoit le formulaire de contact et les réponses ;
    - couper dans le service le suivi des ouvertures et des clics : il réécrirait les liens de confirmation et de réinitialisation, et la politique de confidentialité ne l'annonce pas.
+   - l'API n'écrit jamais en production à une adresse d'un domaine réservé (`@example.test` des membres de la démonstration, `example.com`…) : ces e-mails reviendraient en erreur, consommeraient le quota et abîmeraient la réputation de l'expéditeur.
 6. **Démarrage** : vérifier que le workflow « Images » a réussi (onglet Actions du dépôt), puis :
    ```bash
    docker compose -f infra/production/compose.yml --env-file infra/production/.env pull
