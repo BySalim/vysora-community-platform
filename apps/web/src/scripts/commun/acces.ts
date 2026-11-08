@@ -17,6 +17,7 @@ import { ROUTES } from '../../lib/navigation';
 import { api } from './api';
 import { etats } from './etats';
 import { $, messageApresChargement, toast } from './outils';
+import { annoncerChangementCompte } from './suivi-compte';
 
 const contexte = (): ContexteAcces => ({
   page: `${location.pathname}${location.search}${location.hash}`,
@@ -103,6 +104,8 @@ export async function accepterDocuments(message: string): Promise<boolean> {
     return false;
   }
   const session = reponse.donnees;
+  // Les autres onglets ouverts sur Vysora sortent aussi de la lecture seule.
+  annoncerChangementCompte();
   // Une version entrée en vigueur entre-temps, ou un bloc d'accès rendu par le serveur à la place
   // du contenu : seule une nouvelle page montre le bon état.
   if (session.etat.compte === 'conditions' || $('[data-acces-bloc]')) {

@@ -48,6 +48,7 @@ import {
   vues as creerVues,
 } from './auth/commun';
 import { fond as creerFond } from './auth/fond';
+import { annoncerChangementCompte, surChangementCompte } from './commun/suivi-compte';
 
 const ORDRE = [
   'compte',
@@ -606,6 +607,10 @@ if (conteneur && carte) {
   }
   document.addEventListener('visibilitychange', () => void verifierConfirmationAdresse());
   window.addEventListener('focus', () => void verifierConfirmationAdresse());
+  // Confirmée dans un autre onglet de ce navigateur : l'écran suit aussitôt, sans attendre le retour.
+  surChangementCompte(() => void verifierConfirmationAdresse());
+  // Cet onglet vient de confirmer l'adresse (lien reçu par e-mail) : les autres onglets suivent.
+  if (vues.actuelle() === 'lien') annoncerChangementCompte();
 
   /* Lien expiré : un nouveau lien part à l'adresse du compte. */
   $('[data-nouveau-lien]')?.addEventListener('click', async () => {
