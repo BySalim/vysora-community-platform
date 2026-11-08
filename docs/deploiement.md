@@ -34,7 +34,12 @@ Préproduction et production utilisent les mêmes fichiers ; seule la variable `
 2. **Domaine** : faire pointer le nom choisi (enregistrements A et AAAA) vers l'adresse du serveur, avant le premier démarrage, pour que Caddy obtienne le certificat.
 3. **Code** : cloner le dépôt sur le serveur (`git clone`, branche `main`) : seuls `infra/production/` (composition, Caddyfile, `.env`) servent quand les images viennent de GitHub. Se connecter au registre (`docker login ghcr.io`, voir plus haut).
 4. **Secrets** : `cp infra/production/.env.example infra/production/.env`, puis remplacer chaque valeur. Générer `POSTGRES_MOT_DE_PASSE`, `SEL_EMPREINTES` et `CLE_CHIFFREMENT` avec la commande indiquée dans le fichier ; l'API refuse de démarrer avec les secrets de développement. `chmod 600 infra/production/.env`.
-5. **E-mails** : renseigner `SMTP_URL` avec les accès d'un service transactionnel (Brevo, Scaleway TEM, Mailjet) et déclarer le domaine d'envoi chez lui (SPF, DKIM).
+5. **E-mails** : renseigner `SMTP_URL` avec les accès d'un service transactionnel (Brevo, Scaleway TEM, Mailjet) et déclarer le domaine d'envoi chez lui (SPF, DKIM). Pièges rencontrés (préproduction, novembre 2026) :
+   - l'identifiant SMTP de Brevo est une adresse (`1234567@smtp-brevo.com`), pas le nom du serveur ; dans `SMTP_URL`, son `@` s'écrit `%40` (de même `/`, `:` ou `@` dans la clé) : `smtps://1234567%40smtp-brevo.com:<clé>@smtp-relay.brevo.com:465` (port 465 chiffré) ;
+   - un domaine n'a qu'**un** enregistrement SPF : on modifie la ligne `v=spf1 …` existante, on n'en ajoute pas ; de même un seul `_dmarc` ;
+   - avec un DMARC strict (`p=reject`, `adkim=s`), seuls les envois signés DKIM au nom du domaine arrivent : les CNAME DKIM du service (chez Brevo, `brevo1._domainkey` et `brevo2._domainkey`) sont indispensables ;
+   - l'expéditeur (`EMAIL_EXPEDITEUR`) n'a pas besoin d'une boîte réelle ; l'adresse de l'équipe (`EMAIL_EQUIPE`) en demande une, car elle reçoit le formulaire de contact et les réponses ;
+   - couper dans le service le suivi des ouvertures et des clics : il réécrirait les liens de confirmation et de réinitialisation, et la politique de confidentialité ne l'annonce pas.
 6. **Démarrage** : vérifier que le workflow « Images » a réussi (onglet Actions du dépôt), puis :
    ```bash
    docker compose -f infra/production/compose.yml --env-file infra/production/.env pull
