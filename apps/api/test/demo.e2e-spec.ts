@@ -610,6 +610,16 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
   });
 
   describe('Explorer (DEC-01)', () => {
+    // Les données sont chargées au 23 octobre : les chiffres « des 30 derniers jours » (soutiens des
+    // demandes) se lisent à cette date. Lus à la date réelle, les soutiens les plus anciens sortaient
+    // de la fenêtre un à un à partir du 8 novembre 2026.
+    beforeAll(() => {
+      vi.useFakeTimers({ now: maintenant, toFake: ['Date'], shouldAdvanceTime: true });
+    });
+    afterAll(() => {
+      vi.useRealTimers();
+    });
+
     const lire = (adresse: string) =>
       request(contexte.app.getHttpServer())
         .get(adresse)
