@@ -7,7 +7,7 @@ import { ROUTES } from '../lib/navigation';
 
 <PageLegale
   cle="cookies"
-  description="Cookies déposés par Vysora, mesure d’audience sans cookie et refus de la mesure d’audience."
+  description="Cookies déposés par Vysora, données gardées dans votre navigateur, mesure d’audience sans cookie et refus de la mesure d’audience."
   renvois={['liste', 'audience', 'liste']}
 >
   <section class="lg-article" id="principe">
@@ -15,8 +15,9 @@ import { ROUTES } from '../lib/navigation';
     <p>
       Un cookie est un petit fichier enregistré par votre navigateur lorsque vous consultez un site.
       Vysora n’en dépose que lorsqu’ils sont strictement nécessaires au service que vous demandez :
-      rester connecté, sécuriser les formulaires, retenir votre choix sur la mesure d’audience. Ces
-      cookies ne demandent pas votre accord, et c’est pourquoi aucun bandeau ne s’affiche.
+      rester connecté, vous connecter avec GitHub ou Google, retenir votre choix sur la mesure
+      d’audience. Ces cookies ne demandent pas votre accord, et c’est pourquoi aucun bandeau ne
+      s’affiche.
     </p>
   </section>
 
@@ -35,22 +36,29 @@ import { ROUTES } from '../lib/navigation';
         <tbody>
           <tr>
             <th scope="row">Session</th>
-            <td>Garder votre connexion active pendant votre visite</td>
-            <td>Jusqu’à la déconnexion ou la fin de la session</td>
+            <td>Garder votre connexion active</td>
+            <td>30 jours, prolongés à chaque visite ; effacé à la déconnexion</td>
           </tr>
           <tr>
-            <th scope="row">Sécurité</th>
-            <td>Protéger les formulaires contre les envois frauduleux</td>
-            <td>Fin de la session</td>
+            <th scope="row">Connexion avec un service</th>
+            <td>
+              Relier le retour de GitHub ou de Google à votre demande et la protéger contre les
+              détournements ; déposé seulement si vous choisissez l’un de ces services
+            </td>
+            <td>10 minutes</td>
           </tr>
           <tr>
             <th scope="row">Choix sur la mesure d’audience</th>
-            <td>Retenir votre refus d’être compté dans les statistiques, si vous l’exprimez</td>
+            <td>Retenir votre refus d’être compté dans les vues, si vous l’exprimez</td>
             <td>13 mois</td>
           </tr>
         </tbody>
       </table>
     </div>
+    <p>
+      Dans les réglages de votre navigateur, ils portent les noms __Host-vysora_session,
+      __Secure-vysora_oauth et vysora_audience.
+    </p>
     <p>
       Vysora ne dépose aucun cookie publicitaire et n’intègre ni bouton de réseau social, ni outil
       de mesure d’un tiers. Si vous vous connectez avec GitHub ou Google, ces services déposent
@@ -58,33 +66,109 @@ import { ROUTES } from '../lib/navigation';
     </p>
   </section>
 
-  <section class="lg-article" id="audience">
-    <h2>3. Mesure d’audience</h2>
+  <section class="lg-article" id="stockage">
+    <h2>3. Données gardées dans votre navigateur</h2>
     <p>
-      Pour savoir quelles pages sont consultées et améliorer Vysora, nous comptons les visites sans
-      cookie, à partir des données de navigation transmises par votre navigateur : page consultée,
-      page de provenance, type d’appareil. Ces données sont rendues anonymes et ne servent qu’à
-      produire des statistiques pour 3kS_ItUs ; elles ne sont ni croisées avec votre compte ni
-      transmises à des tiers. Les statistiques sont conservées 25 mois.
+      Pour vous éviter de recommencer ce que vous avez déjà fait, le site garde aussi quelques
+      éléments dans le stockage de votre navigateur. Ils restent sur votre appareil et ne nous sont
+      pas transmis, sauf la progression d’Apprendre, qui rejoint votre compte quand vous êtes
+      connecté. Ils s’effacent avec les données du site dans les réglages de votre navigateur.
+    </p>
+    <div class="lg-defile" role="region" aria-labelledby="stockage-liste" tabindex="0">
+      <table class="lg-tableau lg-tableau-compact lg-tableau-empile">
+        <caption id="stockage-liste">Éléments gardés dans votre navigateur</caption>
+        <thead>
+          <tr>
+            <th scope="col">Élément</th>
+            <th scope="col">Rôle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Recherches récentes</th>
+            <td>Vous proposer vos dernières recherches dans la recherche du site</td>
+          </tr>
+          <tr>
+            <th scope="row">Mes outils</th>
+            <td>Retenir les outils que vous utilisez, pour le filtre « Avec mes outils »</td>
+          </tr>
+          <tr>
+            <th scope="row">Listes de contrôle d’Explorer</th>
+            <td>Garder les étapes cochées dans un guide lorsque vous n’êtes pas connecté</td>
+          </tr>
+          <tr>
+            <th scope="row">Progression d’Apprendre</th>
+            <td>
+              Garder vos savoirs acquis, vos vérifications et vos réponses aux cas lorsque vous
+              n’êtes pas connecté ; à votre première visite d’Apprendre avec votre compte, savoirs
+              et vérifications le rejoignent, puis le navigateur n’en garde rien
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Brouillon d’un sujet du forum</th>
+            <td>Garder le sujet que vous rédigez jusqu’à sa publication</td>
+          </tr>
+          <tr>
+            <th scope="row">Passages conservés dans l’éditeur</th>
+            <td>
+              Ne plus vous signaler un passage sensible que vous avez choisi de garder dans une
+              création
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Guide du profil</th>
+            <td>Ne plus afficher « Complétez votre profil » une fois fermé</td>
+          </tr>
+          <tr>
+            <th scope="row">Suivi du compte</th>
+            <td>
+              Prévenir vos autres onglets de Vysora quand vous confirmez votre adresse ou acceptez
+              les conditions ; seule la date du changement est gardée
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Message en attente</th>
+            <td>
+              Afficher un message sur la page suivante, par exemple après une déconnexion ; effacé
+              dès qu’il est lu ou à la fermeture de l’onglet
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="lg-article" id="audience">
+    <h2>4. Mesure d’audience</h2>
+    <p>
+      Pour faire connaître les contenus qui intéressent la communauté, nous comptons les vues des
+      créations et des sujets du forum, sans cookie : une vue par visiteur et par jour. Pour ne pas
+      compter deux fois la même personne, nous calculons une empreinte du jour à partir de votre
+      compte, ou de votre adresse IP et de votre navigateur ; elle ne permet pas de vous retrouver
+      et elle est effacée au bout de 2 jours. Seul le nombre de vues de chaque contenu est conservé
+      et affiché ; il n’est ni croisé avec votre compte ni transmis à des tiers. L’auteur qui relit
+      son contenu n’est pas compté.
     </p>
     <p>
-      Cette mesure repose sur notre intérêt légitime à améliorer le service. Vous pouvez vous y
-      opposer à tout moment, sans conséquence sur votre utilisation de Vysora.
+      Cette mesure repose sur notre intérêt légitime à faire connaître les contenus utiles. Vous
+      pouvez vous y opposer à tout moment, sans conséquence sur votre utilisation de Vysora : vos
+      visites ne sont alors plus comptées sur cet appareil.
     </p>
     <div class="lg-choix" data-lg-audience></div>
   </section>
 
   <section class="lg-article" id="navigateur">
-    <h2>4. Gérer les cookies dans votre navigateur</h2>
+    <h2>5. Gérer les cookies dans votre navigateur</h2>
     <p>
       Les réglages de votre navigateur vous permettent de consulter, de supprimer ou de bloquer les
-      cookies. Si vous bloquez le cookie de session, vous ne pourrez plus vous connecter à votre
-      compte ; la consultation des contenus publiés reste possible.
+      cookies et les données que le site garde sur votre appareil. Si vous bloquez le cookie de
+      session, vous ne pourrez plus vous connecter à votre compte ; la consultation des contenus
+      publiés reste possible.
     </p>
   </section>
 
   <section class="lg-article" id="evolution">
-    <h2>5. Évolution de cette page</h2>
+    <h2>6. Évolution de cette page</h2>
     <p>
       Si Vysora devait un jour utiliser un cookie qui n’est pas strictement nécessaire, nous vous
       demanderions votre accord avant de le déposer, avec la possibilité de refuser aussi simplement

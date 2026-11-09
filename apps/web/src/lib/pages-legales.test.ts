@@ -53,13 +53,13 @@ describe('etatDocuments', () => {
     });
     // La politique de confidentialité informe : elle ne « change » pas au sens de l'acceptation.
     expect(etat.confidentialite).toMatchObject({ modifie: false, aAccepter: false });
-    expect(etat.cookies).toMatchObject({ date: '2026-10-19', miseAJour: true });
+    expect(etat.cookies).toMatchObject({ date: '2026-11-09', miseAJour: true });
   });
 
   it('affiche les pages sans dates quand l’API n’a pas répondu', () => {
     const etat = etatDocuments([]);
     expect(etat.cgu).toMatchObject({ date: null, modifie: false, aAccepter: false });
-    expect(etat.mentions.date).toBe('2026-10-19');
+    expect(etat.mentions.date).toBe('2026-11-09');
   });
 });
 

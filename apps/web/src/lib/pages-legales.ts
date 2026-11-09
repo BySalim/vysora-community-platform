@@ -11,6 +11,9 @@ import { dateLongue, t, typo } from './texte';
 
 export type CleDocumentLegal = CleDocument | 'cookies' | 'mentions';
 
+/** Adresse de l'équipe publiée dans les documents (boîte qui reçoit aussi le formulaire de contact). */
+export const EMAIL_CONTACT = 'contact@vysora.site';
+
 interface PageLegale {
   route: string;
   titre: string;
@@ -38,10 +41,10 @@ export const PAGES_LEGALES: Record<CleDocumentLegal, PageLegale> = {
     route: ROUTES.cookies,
     titre: 'Politique relative aux cookies',
     onglet: 'Cookies',
-    miseAJour: '2026-10-19',
+    miseAJour: '2026-11-09',
     points: [
       'Seuls des cookies strictement nécessaires sont déposés : ils ne demandent pas votre accord.',
-      'La fréquentation est mesurée sans cookie, et vous pouvez refuser d’y être compté.',
+      'Les vues des contenus sont comptées sans cookie, et vous pouvez refuser d’y être compté.',
       'Vysora ne dépose aucun cookie publicitaire et n’intègre aucun outil de mesure d’un tiers.',
     ],
   },
@@ -49,7 +52,7 @@ export const PAGES_LEGALES: Record<CleDocumentLegal, PageLegale> = {
     route: ROUTES.mentionsLegales,
     titre: 'Mentions légales',
     onglet: 'Mentions légales',
-    miseAJour: '2026-10-19',
+    miseAJour: '2026-11-09',
   },
 };
 

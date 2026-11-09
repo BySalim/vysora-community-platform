@@ -3,6 +3,7 @@
    « L'essentiel » et l'acceptation sont rendus par PageLegale (versions lues dans l'API). */
 import PageLegale from '../components/PageLegale.astro';
 import { ROUTES } from '../lib/navigation';
+import { EMAIL_CONTACT } from '../lib/pages-legales';
 ---
 
 <PageLegale
@@ -16,19 +17,25 @@ import { ROUTES } from '../lib/navigation';
       Sénégal, qui en assure la publication.
     </p>
     <p>
-      Contact : <a href={ROUTES.contact}>formulaire de contact</a>.
+      Contact : <a href={`mailto:${EMAIL_CONTACT}`}>{EMAIL_CONTACT}</a>, ou le{' '}
+      <a href={ROUTES.contact}>formulaire de contact</a>.
     </p>
   </section>
 
   <section class="lg-article" id="hebergement">
     <h2>Hébergement</h2>
     <p>
-      <strong>OVH SARL</strong>, société à responsabilité limitée au capital de 8 000 000 FCFA,
-      immatriculée au registre du commerce de Dakar sous le numéro SN DKR 2006 B 7407.
+      <strong>UpCloud Oy</strong>, société de droit finlandais immatriculée sous le numéro
+      d’entreprise 2431560-5.
       <br />
-      Siège social : avenue Abdoulaye Fadiga, immeuble Lahad Mbacké, BP 50505, Dakar, Sénégal.
+      Siège social : Aleksanterinkatu 15 B, 00100 Helsinki, Finlande. Téléphone : +358 9 3158 4810.
     </p>
-    <p>Les données sont stockées dans des centres de données situés en France.</p>
+    <p>
+      Le site, sa base de données et les images publiées sont stockés dans le centre de données
+      d’UpCloud à Francfort, en Allemagne. Les autres prestataires qui traitent des données pour
+      Vysora sont présentés dans la{' '}
+      <a href={`${ROUTES.confidentialite}#destinataires`}>politique de confidentialité</a>.
+    </p>
   </section>
 
   <section class="lg-article" id="propriete">

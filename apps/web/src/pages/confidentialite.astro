@@ -3,19 +3,21 @@
    « L'essentiel » et l'acceptation sont rendus par PageLegale (versions lues dans l'API). */
 import PageLegale from '../components/PageLegale.astro';
 import { ROUTES } from '../lib/navigation';
+import { EMAIL_CONTACT } from '../lib/pages-legales';
 ---
 
 <PageLegale
   cle="confidentialite"
   description="Politique de confidentialité de Vysora : données traitées, usages et durées, destinataires, hébergement, cookies, sécurité et droits."
-  renvois={['traitements', 'public', 'cookies', 'destinataires', 'droits']}
+  renvois={['traitements', 'public', 'cookies', 'transferts', 'droits']}
 >
   <section class="lg-article" id="responsable">
     <h2>1. Qui traite vos données</h2>
     <p>
       Vos données sont traitées par 3kS_ItUs, équipe de développeurs de HaTlaCha, établie au
       Sénégal, qui édite Vysora (<a href={ROUTES.mentionsLegales}>mentions légales</a>). Pour toute
-      question sur vos données, écrivez-nous depuis le{' '}
+      question sur vos données, écrivez-nous à{' '}
+      <a href={`mailto:${EMAIL_CONTACT}`}>{EMAIL_CONTACT}</a> ou depuis le{' '}
       <a href={`${ROUTES.contact}?motif=donnees`}>formulaire de contact</a>, motif « Données
       personnelles ».
     </p>
@@ -30,8 +32,9 @@ import { ROUTES } from '../lib/navigation';
     <h2>2. Données, usages et durées</h2>
     <p>
       Nous ne traitons que les données utiles au fonctionnement de Vysora. Le pseudo, l’adresse
-      e-mail et le mot de passe sont nécessaires pour créer un compte ; sans eux, l’inscription
-      n’est pas possible. Les autres informations du profil sont facultatives.
+      e-mail et un mot de passe, ou un compte GitHub ou Google, sont nécessaires pour créer un
+      compte ; sans eux, l’inscription n’est pas possible. Les autres informations du profil sont
+      facultatives.
     </p>
     <div class="lg-defile" role="region" aria-labelledby="traitements-tableau" tabindex="0">
       <table class="lg-tableau lg-tableau-empile lg-tableau-traitements">
@@ -48,8 +51,10 @@ import { ROUTES } from '../lib/navigation';
           <tr>
             <th scope="row">Créer et gérer votre compte</th>
             <td>
-              Pseudo, adresse e-mail, empreinte du mot de passe, langue, préférences de
-              notification, dates d’inscription et de connexion, compte GitHub ou Google lié
+              Pseudo, adresse e-mail, empreinte du mot de passe, langue, fuseau horaire, préférences
+              de notification, dates d’inscription et de dernière connexion ; si vous en liez un,
+              l’identifiant de votre compte GitHub ou Google et son nom (identifiant GitHub ou
+              adresse Google)
             </td>
             <td>Exécution des conditions d’utilisation</td>
             <td>
@@ -60,8 +65,8 @@ import { ROUTES } from '../lib/navigation';
           <tr>
             <th scope="row">Publier vos contributions et votre profil</th>
             <td>
-              Contributions, avatar, biographie, lien personnel, niveau, badges, statistiques
-              publiques
+              Contributions, nom affiché, photo de profil, biographie, lien personnel, niveau,
+              badges, statistiques publiques
             </td>
             <td>Exécution des conditions d’utilisation</td>
             <td>
@@ -71,7 +76,8 @@ import { ROUTES } from '../lib/navigation';
           <tr>
             <th scope="row">Faire fonctionner la progression et vos listes</th>
             <td>
-              Votes émis, enregistrements, réponses aux cas Bon réflexe, mouvements de réputation
+              Votes émis, enregistrements, réponses aux cas Bon réflexe, progression dans Apprendre,
+              listes de contrôle d’Explorer, mouvements de réputation
             </td>
             <td>Exécution des conditions d’utilisation</td>
             <td>Tant que le compte existe</td>
@@ -80,7 +86,10 @@ import { ROUTES } from '../lib/navigation';
             <th scope="row">Vous informer</th>
             <td>Notifications, e-mails liés au compte</td>
             <td>Exécution des conditions d’utilisation</td>
-            <td>Notifications : 12 mois</td>
+            <td>
+              Notifications : 12 mois ; e-mails : effacés de la file d’envoi un jour après leur
+              envoi
+            </td>
           </tr>
           <tr>
             <th scope="row">Traiter les signalements et les contestations</th>
@@ -94,27 +103,33 @@ import { ROUTES } from '../lib/navigation';
           <tr>
             <th scope="row">Sécuriser le service et répondre aux autorités judiciaires</th>
             <td>
-              Adresse IP, dates et heures de connexion et de publication, tentatives de connexion
-              échouées
+              Empreinte de l’adresse IP, appareil et navigateur, dates et heures de connexion et de
+              publication, tentatives de connexion échouées
             </td>
             <td>
               Obligation légale de conserver les données d’identification des auteurs de contenus et
               obligation de sécurité
             </td>
-            <td>1 an</td>
+            <td>1 an au plus ; effacées avec le compte</td>
+          </tr>
+          <tr>
+            <th scope="row">Contrôler les actions de l’équipe</th>
+            <td>
+              Actions d’administration (auteur, compte ou contenu concerné, date et heure) et
+              empreinte de l’adresse IP de leur auteur
+            </td>
+            <td>Obligation de sécurité</td>
+            <td>1 an après l’action</td>
           </tr>
           <tr>
             <th scope="row">Prouver l’acceptation des conditions</th>
             <td>Version acceptée, date et heure</td>
             <td>Obligation de preuve</td>
-            <td>
-              Tant que le compte existe, puis 10 ans en archive, durée de la prescription de droit
-              commun au Sénégal
-            </td>
+            <td>Tant que le compte existe</td>
           </tr>
           <tr>
             <th scope="row">Répondre à vos messages et demandes</th>
-            <td>Nom, adresse e-mail, motif, message</td>
+            <td>Nom, adresse e-mail, motif, message, adresse du contenu concerné</td>
             <td>
               Exécution des conditions d’utilisation et obligation légale pour les demandes
               relatives aux données
@@ -122,23 +137,25 @@ import { ROUTES } from '../lib/navigation';
             <td>1 an après la réponse</td>
           </tr>
           <tr>
-            <th scope="row">Mesurer la fréquentation</th>
+            <th scope="row">Compter les vues des contenus</th>
             <td>
-              Page consultée, page de provenance, type d’appareil, collectés sans cookie et rendus
-              anonymes
+              Empreinte du jour, calculée à partir de votre compte, ou de l’adresse IP et du
+              navigateur, qui ne permet pas de vous retrouver
             </td>
             <td>
-              Intérêt légitime à améliorer le service ; vous pouvez vous y opposer depuis la{' '}
-              <a href={`${ROUTES.cookies}#audience`}>page Cookies</a>
+              Intérêt légitime à faire connaître les contenus utiles ; vous pouvez vous y opposer
+              depuis la <a href={`${ROUTES.cookies}#audience`}>page Cookies</a>
             </td>
-            <td>Statistiques : 25 mois</td>
+            <td>Empreintes : 2 jours ; seul le nombre de vues de chaque contenu reste</td>
           </tr>
         </tbody>
       </table>
     </div>
     <p>
-      Les sauvegardes quotidiennes sont conservées 30 jours : une donnée effacée disparaît des
-      sauvegardes au plus tard à ce terme.
+      Le serveur tient aussi un journal technique des pages demandées, avec le navigateur, la date
+      et l’heure, pour détecter les pannes et les attaques ; l’adresse IP n’y figure que tronquée,
+      ce qui ne permet pas de vous identifier. Les sauvegardes de la base de données sont conservées
+      30 jours au plus : une donnée effacée en disparaît au plus tard à ce terme.
     </p>
   </section>
 
@@ -170,40 +187,73 @@ import { ROUTES } from '../lib/navigation';
         pour les seuls contenus et comptes signalés.
       </li>
       <li>
-        <strong>Notre hébergeur</strong>, OVH (
-        <a href={`${ROUTES.mentionsLegales}#hebergement`}>mentions légales</a>), et notre
-        prestataire d’envoi d’e-mails, qui agissent uniquement sur nos instructions et sont tenus à
-        la confidentialité.
+        <strong>Nos prestataires</strong>, qui agissent uniquement sur nos instructions et sont
+        tenus à la confidentialité :
+        <ul>
+          <li>
+            UpCloud, notre hébergeur, présenté dans les{' '}
+            <a href={`${ROUTES.mentionsLegales}#hebergement`}>mentions légales</a>, qui stocke le
+            site, sa base de données et les images publiées ;
+          </li>
+          <li>
+            Brevo, qui envoie les e-mails du site : votre adresse e-mail et le contenu des messages
+            qui vous sont adressés ;
+          </li>
+          <li>
+            Zoho Mail, qui héberge la boîte {EMAIL_CONTACT} : les messages envoyés depuis le
+            formulaire de contact (nom, adresse e-mail, message) et les réponses que vous adressez
+            aux e-mails du site.
+          </li>
+        </ul>
       </li>
       <li>
-        <strong>GitHub ou Google</strong>, si vous choisissez de vous connecter avec leur compte :
-        ils nous transmettent votre adresse e-mail vérifiée et l’identifiant de votre compte, selon
-        leurs propres conditions.
+        <strong>GitHub ou Google</strong>, si vous choisissez de vous connecter avec leur compte : à
+        votre demande, ils nous transmettent l’identifiant de votre compte et votre adresse e-mail
+        vérifiée, ainsi que votre identifiant public pour GitHub. Nous ne demandons accès ni à vos
+        dépôts, ni à vos contacts, ni à vos fichiers, et ne gardons aucun jeton d’accès. Ces
+        services traitent vos données selon leurs propres conditions.
       </li>
       <li>
         <strong>Les autorités judiciaires</strong>, sur réquisition et dans les conditions prévues
         par la loi.
       </li>
     </ul>
+    <p>
+      Lorsque vous choisissez un mot de passe, nous vérifions qu’il ne figure pas dans une fuite
+      connue auprès du service Have I Been Pwned : seuls les 5 premiers caractères de son empreinte
+      lui sont envoyés, jamais le mot de passe lui-même ni rien qui vous identifie.
+    </p>
     <p>Vos données ne sont ni vendues ni louées, et ne servent à aucune publicité.</p>
   </section>
 
   <section class="lg-article" id="transferts">
     <h2>5. Lieu d’hébergement</h2>
     <p>
-      Vos données sont hébergées dans l’Union européenne, en France, qui assure un niveau de
-      protection suffisant au sens de l’article 49 de la loi n° 2008-12. Si vous vous connectez avec
-      GitHub ou Google, ces services peuvent traiter vos données hors de l’Union européenne, selon
-      leurs propres conditions.
+      Vos données sont hébergées dans l’Union européenne : le site, sa base de données et les images
+      publiées en Allemagne, chez UpCloud, et les e-mails du site chez Brevo, qui conserve ses
+      données dans l’Union européenne. L’Union européenne assure un niveau de protection suffisant
+      au sens de l’article 49 de la loi n° 2008-12.
     </p>
+    <p>Deux traitements ont lieu hors de l’Union européenne :</p>
+    <ul>
+      <li>
+        les messages adressés à {EMAIL_CONTACT}, y compris ceux du formulaire de contact, sont
+        conservés par Zoho Mail aux États-Unis ;
+      </li>
+      <li>
+        si vous vous connectez avec GitHub ou Google, ces services, établis aux États-Unis, traitent
+        vos données selon leurs propres conditions.
+      </li>
+    </ul>
   </section>
 
   <section class="lg-article" id="cookies">
-    <h2>6. Cookies</h2>
+    <h2>6. Cookies et stockage du navigateur</h2>
     <p>
-      Vysora ne dépose que des cookies strictement nécessaires : la session, la sécurité des
-      formulaires et, si vous refusez la mesure d’audience, le cookie qui retient ce choix. Ils ne
-      demandent pas votre consentement. La{' '}
+      Vysora ne dépose que des cookies strictement nécessaires : la session, l’aller-retour de la
+      connexion avec GitHub ou Google et, si vous refusez la mesure d’audience, le cookie qui
+      retient ce choix. Ils ne demandent pas votre consentement. Le site garde aussi dans votre
+      navigateur quelques préférences et travaux en cours, comme vos recherches récentes. La{' '}
       <a href={ROUTES.cookies}>politique relative aux cookies</a> les détaille et vous permet de
       refuser d’être compté dans la mesure d’audience.
     </p>
@@ -213,10 +263,12 @@ import { ROUTES } from '../lib/navigation';
     <h2>7. Sécurité</h2>
     <p>
       Toutes les pages sont servies en connexion chiffrée (HTTPS). Les mots de passe sont
-      enregistrés sous forme d’empreinte, jamais en clair. L’accès aux données est réservé aux
-      personnes habilitées, et l’équipe comme les modérateurs se connectent avec une double
-      authentification. En cas de violation de données susceptible de vous exposer, nous vous en
-      informons dans les meilleurs délais.
+      enregistrés sous forme d’empreinte, jamais en clair. Votre adresse IP n’est jamais conservée
+      en entier, et les e-mails en attente d’envoi sont chiffrés. L’accès aux données est réservé
+      aux personnes habilitées : les comptes de l’équipe sont créés par un administrateur, les
+      administrateurs et les modérateurs se connectent avec une double authentification, et chaque
+      action d’administration est inscrite dans un journal. En cas de violation de données
+      susceptible de vous exposer, nous vous en informons dans les meilleurs délais.
     </p>
   </section>
 
@@ -244,7 +296,8 @@ import { ROUTES } from '../lib/navigation';
     </ul>
     <p>
       Depuis vos paramètres, vous modifiez vos informations, téléchargez vos données au format JSON
-      et supprimez votre compte. Pour toute autre demande, utilisez le{' '}
+      et supprimez votre compte. Pour toute autre demande, écrivez à{' '}
+      <a href={`mailto:${EMAIL_CONTACT}`}>{EMAIL_CONTACT}</a> ou utilisez le{' '}
       <a href={`${ROUTES.contact}?motif=donnees`}>formulaire de contact</a> ; nous pouvons vous
       demander de justifier de votre identité. Ces démarches sont gratuites et reçoivent une réponse
       sous un mois.
@@ -275,11 +328,11 @@ import { ROUTES } from '../lib/navigation';
     <h2>10. Traitements automatisés</h2>
     <p>
       Votre niveau et vos limites de publication sont calculés automatiquement à partir de votre
-      réputation. Un contenu signalé par trois membres est masqué automatiquement à titre
-      provisoire, puis examiné par un modérateur. Aucune décision qui vous affecte n’est prise sur
-      le seul fondement d’un traitement automatisé : vous pouvez toujours présenter vos observations
-      et contester une décision (
-      <a href={`${ROUTES.cgu}#contestation`}>article 7 des conditions d’utilisation</a>).
+      réputation. Avant la publication d’une création, l’éditeur repère les clés d’API, jetons
+      d’accès, adresses e-mail et numéros de téléphone et vous les signale, sans bloquer la
+      publication. Aucune décision qui vous affecte n’est prise sur le seul fondement d’un
+      traitement automatisé : vous pouvez toujours présenter vos observations et contester une
+      décision (<a href={`${ROUTES.cgu}#contestation`}>article 7 des conditions d’utilisation</a>).
     </p>
   </section>
 
@@ -295,9 +348,8 @@ import { ROUTES } from '../lib/navigation';
   <section class="lg-article" id="evolution">
     <h2>12. Mise à jour de la politique</h2>
     <p>
-      Lorsque nous modifions la présente politique, nous vous en informons par e-mail et sur Vysora
-      avant l’entrée en vigueur des changements. La date de la version en vigueur figure en haut de
-      cette page.
+      Lorsque nous modifions la présente politique, nous vous en informons par e-mail le jour où la
+      nouvelle version s’applique. La date de la version en vigueur figure en haut de cette page.
     </p>
   </section>
 </PageLegale>
