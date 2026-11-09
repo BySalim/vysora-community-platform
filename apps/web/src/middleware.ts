@@ -2,6 +2,7 @@ import type { APIContext } from 'astro';
 import { defineMiddleware } from 'astro:middleware';
 import { ROUTES } from './lib/navigation';
 import { chargerSession } from './lib/session';
+import { accueilZone, zoneReservee, zoneVisible } from './lib/zones-reservees';
 
 /* Pour chaque page : personne qui consulte (Astro.locals) et en-têtes de sécurité.
    La politique de sécurité du contenu (CSP) est produite par Astro (astro.config.mjs, security.csp). */
@@ -17,11 +18,27 @@ export const onRequest = defineMiddleware(async (contexte, suite) => {
   contexte.locals.conditionsDepuis = session.conditionsDepuis;
   contexte.locals.deuxFacteurs = session.deuxFacteurs ?? null;
 
-  // SEC-02 : la modération et l'administration attendent la vérification en deux étapes.
-  const reservee = /^\/(moderation|admin)(\/|$)/.test(contexte.url.pathname);
-  if (reservee && session.deuxFacteurs) {
+  const zone = zoneReservee(contexte.url.pathname);
+  // SEC-02 : la modération et l'administration attendent la vérification en deux étapes, pour
+  // le rôle que la vérification donnera (un modérateur n'est pas mené vers l'administration).
+  const attente = session.deuxFacteurs;
+  if (zone && attente && zoneVisible(zone, { ...session.etat, role: attente.role })) {
     const retour = encodeURIComponent(contexte.url.pathname + contexte.url.search);
     const redirection = contexte.redirect(`${ROUTES.connexion}?retour=${retour}`, 302);
+    for (const cookie of session.cookies) redirection.headers.append('Set-Cookie', cookie);
+    return redirection;
+  }
+  // Pages de l'équipe : introuvables pour qui n'en a pas le rôle ; « /admin » et « /moderation »
+  // mènent à l'accueil de la zone.
+  if (zone && !zoneVisible(zone, session.etat)) {
+    const introuvable = await contexte.rewrite('/404');
+    for (const cookie of session.cookies) introuvable.headers.append('Set-Cookie', cookie);
+    return introuvable;
+  }
+  const accueil = accueilZone(contexte.url.pathname);
+  if (accueil) {
+    const cible = accueil === 'administration' ? ROUTES.administration : ROUTES.moderation;
+    const redirection = contexte.redirect(cible, 302);
     for (const cookie of session.cookies) redirection.headers.append('Set-Cookie', cookie);
     return redirection;
   }
