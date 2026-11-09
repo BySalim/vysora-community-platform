@@ -13,6 +13,12 @@ Coûts minimaux (C-03, ENF-10), données personnelles protégées (C-05 : RGPD s
 - E-mails par un service transactionnel européen (Brevo, Scaleway TEM, Mailjet) ; images sur disque puis stockage objet.
 - Une préproduction identique, plus petite, pour la bêta et les vérifications.
 
+## Choix réels de la préproduction (constat du 2026-11-09)
+
+- Serveur virtuel chez **UpCloud** (UpCloud Oy, Finlande), centre de données de **Francfort** (Allemagne) : hébergeur européen, comme proposé. Identifié par l'adresse IP du domaine (réseau `UPCLOUD-DE-FRA1-NET` du registre RIPE).
+- E-mails : **Brevo** (France, données dans l'Union européenne), offre gratuite. Boîte de l'équipe : **Zoho Mail**, offre gratuite, sur le centre de données américain de Zoho : seul traitement hors de l'Union, annoncé par la politique de confidentialité (voir le registre, « Points à trancher »).
+- Ces prestataires sont nommés dans les mentions légales et la politique de confidentialité : un changement d'hébergeur ou de service d'e-mail demande de mettre ces pages à jour (et une nouvelle version de la politique depuis l'administration).
+
 ## Conséquences
 
 - Coût de l'ordre de 10 à 25 € par mois au démarrage.
