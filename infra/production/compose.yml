@@ -108,6 +108,12 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-donnees:/data
       - caddy-configuration:/config
+    # Journal des accès borné sur le disque (5 fichiers de 10 Mo, les plus anciens supprimés).
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
     depends_on:
       - web
       - api

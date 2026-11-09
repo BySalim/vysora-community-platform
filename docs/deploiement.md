@@ -116,6 +116,12 @@ docker compose -f infra/production/compose.yml --env-file infra/production/.env 
 docker compose -f infra/production/compose.yml --env-file infra/production/.env up -d
 ```
 
+Le `Caddyfile` et `compose.yml` sont lus dans le dossier du serveur, pas dans les images : quand un commit les modifie, les copier sur le serveur avant `up -d`. Un changement de `compose.yml` recrée les services concernés ; un changement du seul `Caddyfile` se recharge sans coupure :
+
+```bash
+docker compose -f infra/production/compose.yml --env-file infra/production/.env exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
 Revenir à une version précédente : remplacer `latest` par l'empreinte du commit voulu dans `IMAGE_API` et `IMAGE_WEB`, puis `up -d` (une migration déjà passée ne se défait pas).
 
 Les migrations passent avant le redémarrage de l'API ; une migration qui échoue laisse l'ancienne API arrêtée et la nouvelle non démarrée (`docker compose … logs migration`).
@@ -126,6 +132,6 @@ Les migrations passent avant le redémarrage de l'API ; une migration qui échou
 
 ## Exploitation
 
-- Journaux : `docker compose … logs -f api` (JSON, niveau `LOG_LEVEL`), `logs -f caddy` pour les accès.
+- Journaux : `docker compose … logs -f api` (JSON, niveau `LOG_LEVEL`), `logs -f caddy` pour les accès. Le journal de Caddy ne garde qu'une adresse IP tronquée et masque les jetons des liens envoyés par e-mail, comme l'annonce la politique de confidentialité ; il est limité à 5 fichiers de 10 Mo. Ne pas rétablir l'adresse complète sans mettre la politique à jour.
 - Sauvegardes : à mettre en place avec OPS-02 (base **et** volume `stockage`). En attendant, `docker compose … exec postgres pg_dump -U vysora vysora > sauvegarde.sql`.
 - Supervision : OPS-03.
