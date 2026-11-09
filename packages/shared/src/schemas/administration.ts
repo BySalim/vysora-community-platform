@@ -7,13 +7,36 @@ import {
   TYPES_DOCUMENT_LEGAL,
   TYPES_OUTIL,
 } from '../enums';
-import { DELAIS } from '../regles';
+import { DELAIS, LONGUEURS } from '../regles';
+import { MOTIF_EMAIL } from './commun';
 
 /** PUT /api/v1/admin/membres/:id/role (F-96, RG-111). */
 export const schemaChangementRole = z.object({
   role: z.enum(ROLES, { error: 'Choisissez un rôle.' }),
 });
 export type ChangementRole = z.output<typeof schemaChangementRole>;
+
+/** POST /api/v1/admin/equipe (ADM-03) : compte de l'équipe créé par un administrateur, activé par la
+    personne elle-même depuis le lien reçu à son adresse. */
+export const schemaAjoutEquipe = z.object({
+  email: z
+    .string({ error: 'Indiquez l’adresse e-mail de la personne.' })
+    .trim()
+    .min(1, { error: 'Indiquez l’adresse e-mail de la personne.' })
+    .max(LONGUEURS.email.max, { error: 'Cette adresse e-mail est trop longue.' })
+    .regex(MOTIF_EMAIL, { error: 'Cette adresse e-mail est incomplète. Vérifiez-la.' }),
+  nom: z
+    .string({ error: 'Indiquez le nom de la personne.' })
+    .trim()
+    .min(1, { error: 'Indiquez le nom de la personne.' })
+    .max(LONGUEURS.nomAffiche.max, {
+      error: `Le nom compte ${LONGUEURS.nomAffiche.max} caractères au plus.`,
+    })
+    .regex(/^[^\p{Cc}\p{Cf}]*$/u, { error: 'Retirez les caractères invisibles du nom.' })
+    .transform((nom) => nom.replace(/\s+/g, ' ')),
+  role: z.enum(['MODERATEUR', 'ADMINISTRATEUR'], { error: 'Choisissez un rôle.' }),
+});
+export type AjoutEquipe = z.output<typeof schemaAjoutEquipe>;
 
 /** POST /api/v1/admin/invitations (INV-01) : nombre de codes et durée de validité. */
 export const schemaCreationInvitations = z.object({

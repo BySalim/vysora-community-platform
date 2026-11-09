@@ -281,6 +281,7 @@ export const TYPES_JETON = valeurs(
   'REINITIALISATION_MOT_DE_PASSE',
   'CHANGEMENT_EMAIL',
   'CONFIRMATION_SUPPRESSION',
+  'ACTIVATION_COMPTE',
 );
 export type TypeJeton = (typeof TYPES_JETON)[number];
 

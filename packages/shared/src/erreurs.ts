@@ -30,6 +30,8 @@ export interface ProblemeApi {
   raison?: string;
   /** Tentatives temporisées : secondes à attendre avant de réessayer (F-03). */
   reessayerDans?: number;
+  /** Lien expiré : c'était un lien d'activation d'un compte de l'équipe (ADM-03). */
+  activation?: boolean;
 }
 
 export const typeProbleme = (code: CodeErreur) => `urn:vysora:probleme:${code.toLowerCase()}`;

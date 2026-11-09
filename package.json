@@ -28,6 +28,7 @@
     "db:demo": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run db:demo",
     "db:reset": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run db:reset",
     "invitations:creer": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run invitations:creer",
+    "administrateur:nommer": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run administrateur:nommer",
     "db:studio": "pnpm --filter @vysora/api run db:studio",
     "medias:nettoyer": "pnpm --filter @vysora/shared build && pnpm --filter @vysora/api run medias:nettoyer",
     "prototype": "node scripts/serveur-prototype.mjs --port 5173"

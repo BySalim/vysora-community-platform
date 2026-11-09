@@ -1,4 +1,5 @@
 import { Module, RequestMethod, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
+import { ActivationService } from './activation.service.js';
 import { AnnonceDocumentsService } from './annonce-documents.service.js';
 import { ChangementEmailService } from './changement-email.service.js';
 import { ChangementMotDePasseService } from './changement-mot-de-passe.service.js';
@@ -46,6 +47,7 @@ import { VerificationEmailService } from './verification-email.service.js';
     ComptesService,
     ConnexionService,
     JetonsService,
+    ActivationService,
     VerificationEmailService,
     ReinitialisationService,
     AnnonceDocumentsService,
@@ -58,6 +60,7 @@ import { VerificationEmailService } from './verification-email.service.js';
     DroitsGuard,
   ],
   exports: [
+    ActivationService,
     FournisseursOAuth,
     ServicesExternesService,
     SessionsService,

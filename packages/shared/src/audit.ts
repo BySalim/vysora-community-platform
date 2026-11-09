@@ -3,7 +3,12 @@
    filtre à sa consultation (ADM-02). */
 
 export const ACTIONS_AUDIT = {
-  equipe: ['ROLE_MODIFIE', 'DEUX_FACTEURS_REINITIALISEE'],
+  equipe: [
+    'ROLE_MODIFIE',
+    'DEUX_FACTEURS_REINITIALISEE',
+    'MEMBRE_EQUIPE_AJOUTE',
+    'ACTIVATION_RENVOYEE',
+  ],
   invitations: ['INVITATIONS_CREEES', 'INVITATION_DESACTIVEE'],
   referentiels: [
     'EDITEUR_RENOMME',
@@ -73,6 +78,8 @@ export const LIBELLES_DOMAINE_AUDIT: Record<DomaineAudit, string> = {
 export const LIBELLES_ACTION_AUDIT: Record<ActionAudit, string> = {
   ROLE_MODIFIE: 'Rôle modifié',
   DEUX_FACTEURS_REINITIALISEE: 'Vérification en deux étapes réinitialisée',
+  MEMBRE_EQUIPE_AJOUTE: 'Compte de l’équipe créé',
+  ACTIVATION_RENVOYEE: 'Lien d’activation renvoyé',
   INVITATIONS_CREEES: 'Codes d’invitation créés',
   INVITATION_DESACTIVEE: 'Code d’invitation désactivé',
   EDITEUR_RENOMME: 'Éditeur renommé',

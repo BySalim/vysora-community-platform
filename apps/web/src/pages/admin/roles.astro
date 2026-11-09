@@ -2,9 +2,16 @@
 /* Rôles de l'équipe (ADM-01, EC-23, F-96, RG-111). Écran sans maquette dans le prototype, conçu dans
    le style des écrans de modération : l'équipe par défaut, ou les membres trouvés ; pour chacun, son
    rôle et l'état de sa double authentification (SEC-02), et un lien vers son dossier (décisions
-   réservées aux administrateurs). Les changements partent de scripts/administration.ts, après
-   confirmation. */
-import { raisonRefus, type ListeMembresAdministresApi, type Role } from '@vysora/shared';
+   réservées aux administrateurs). ADM-03 : « Ajouter à l'équipe » crée le compte d'une personne
+   (adresse, nom, rôle), qui l'active depuis le lien reçu ; tant qu'elle ne l'a pas fait, le lien
+   peut être renvoyé. Les changements partent de scripts/administration.ts, après confirmation. */
+import {
+  DELAIS,
+  LONGUEURS,
+  raisonRefus,
+  type ListeMembresAdministresApi,
+  type Role,
+} from '@vysora/shared';
 import AccesBloc from '../../components/AccesBloc.astro';
 import AvatarMembre from '../../components/AvatarMembre.astro';
 import OngletsAdministration from '../../components/OngletsAdministration.astro';
@@ -41,7 +48,7 @@ const ROLES = Object.entries(LIBELLES_ROLE) as [Role, string][];
   titre="Rôles de l’équipe"
   description="Rôles de modération et d’administration des membres de Vysora."
   classeCorps="md"
-  icones={['search', 'user']}
+  icones={['search', 'user', 'plus', 'mail']}
   nonIndexee
 >
   <div class="container md-tete">
@@ -70,6 +77,58 @@ const ROLES = Object.entries(LIBELLES_ROLE) as [Role, string][];
   ) : (
     liste && (
       <div class="container md-file" data-ad-roles>
+        <form class="ad-defi" novalidate data-ad-equipe>
+          <h2>Ajouter à l’équipe</h2>
+          <p class="md-regle">
+            {typo(
+              `La personne reçoit à cette adresse un lien d’activation, valable ${DELAIS.lienActivationJours} jours. Elle choisit son mot de passe, puis configure la vérification en deux étapes à sa première connexion.`,
+            )}
+          </p>
+          <div class="ad-outils">
+            <div class="ad-champ is-large">
+              <label for="ad-equipe-email">Adresse e-mail</label>
+              <input
+                id="ad-equipe-email"
+                name="email"
+                type="email"
+                inputmode="email"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                maxlength={LONGUEURS.email.max}
+                required
+              />
+              <p class="md-erreur" data-ad-erreur="email" hidden />
+            </div>
+            <div class="ad-champ is-large">
+              <label for="ad-equipe-nom">Nom</label>
+              <input
+                id="ad-equipe-nom"
+                name="nom"
+                autocomplete="off"
+                maxlength={LONGUEURS.nomAffiche.max}
+                placeholder="Prénom Nom"
+                required
+              />
+              <p class="md-erreur" data-ad-erreur="nom" hidden />
+            </div>
+            <div class="ad-champ">
+              <label for="ad-equipe-role">Rôle</label>
+              <select id="ad-equipe-role" name="role">
+                <option value="MODERATEUR">{LIBELLES_ROLE.MODERATEUR}</option>
+                <option value="ADMINISTRATEUR">{LIBELLES_ROLE.ADMINISTRATEUR}</option>
+              </select>
+              <p class="md-erreur" data-ad-erreur="role" hidden />
+            </div>
+            <button class="btn btn-primary" type="submit">
+              <svg class="icon icon-sm" aria-hidden="true">
+                <use href="#i-plus" />
+              </svg>
+              Ajouter
+            </button>
+          </div>
+          <p class="md-erreur" data-ad-erreur="general" role="alert" hidden />
+        </form>
         <form class="ad-outils" method="get" role="search">
           <div class="ad-champ is-large">
             <label for="ad-q">Trouver un membre</label>
@@ -116,8 +175,12 @@ const ROLES = Object.entries(LIBELLES_ROLE) as [Role, string][];
                     </span>
                     <span class="ad-membre-meta">
                       <span>{`@${m.membre.pseudo} · inscrit le ${dateCourte(m.dateInscription)}`}</span>
-                      {(m.role !== 'MEMBRE' || m.deuxFacteurs !== 'absente') && (
-                        <span class={classe2fa}>{typo(texte2fa)}</span>
+                      {m.activationEnAttente ? (
+                        <span class="is-alerte">{typo('Compte pas encore activé')}</span>
+                      ) : (
+                        (m.role !== 'MEMBRE' || m.deuxFacteurs !== 'absente') && (
+                          <span class={classe2fa}>{typo(texte2fa)}</span>
+                        )
                       )}
                       {LIBELLES_STATUT_COMPTE[m.statutCompte] && (
                         <span class="is-alerte">{LIBELLES_STATUT_COMPTE[m.statutCompte]}</span>
@@ -147,6 +210,16 @@ const ROLES = Object.entries(LIBELLES_ROLE) as [Role, string][];
                         </option>
                       ))}
                     </select>
+                    {m.activationEnAttente && (
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        type="button"
+                        data-ad-activation
+                        data-nom={m.membre.nom}
+                      >
+                        Renvoyer le lien d’activation
+                      </button>
+                    )}
                     {m.deuxFacteurs !== 'absente' && (
                       <button
                         class="btn btn-secondary btn-sm"

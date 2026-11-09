@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { erreursParChamp } from './commun';
 import {
+  schemaAjoutEquipe,
   schemaCategorie,
   schemaLicence,
   schemaModificationLicence,
@@ -92,5 +93,32 @@ describe('Versions des documents légaux (ADM-02, EC-25, RG-112)', () => {
         resumeChangements: '',
       }),
     ).toEqual({ type: 'CONFIDENTIALITE', dateEffet: '2026-12-01', resumeChangements: null });
+  });
+});
+
+describe('Comptes de l’équipe (ADM-03)', () => {
+  it('demande une adresse, un nom et un rôle de l’équipe', () => {
+    const ajout = schemaAjoutEquipe.safeParse({
+      email: ' kine.lame@exemple.sn ',
+      nom: '  Kiné   Lame ',
+      role: 'ADMINISTRATEUR',
+    });
+    expect(ajout.success && ajout.data).toEqual({
+      email: 'kine.lame@exemple.sn',
+      nom: 'Kiné Lame',
+      role: 'ADMINISTRATEUR',
+    });
+    expect(
+      erreurs(schemaAjoutEquipe.safeParse({ email: 'kine', nom: ' ', role: 'MEMBRE' })),
+    ).toEqual({
+      email: 'Cette adresse e-mail est incomplète. Vérifiez-la.',
+      nom: 'Indiquez le nom de la personne.',
+      role: 'Choisissez un rôle.',
+    });
+    expect(erreurs(schemaAjoutEquipe.safeParse({}))).toEqual({
+      email: 'Indiquez l’adresse e-mail de la personne.',
+      nom: 'Indiquez le nom de la personne.',
+      role: 'Choisissez un rôle.',
+    });
   });
 });

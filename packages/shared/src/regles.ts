@@ -162,6 +162,7 @@ export const BAREME_REPUTATION = {
 export const DELAIS = {
   lienVerificationEmailHeures: 24, // F-01
   lienReinitialisationMinutes: 60, // F-03
+  lienActivationJours: 7, // ADM-03 : compte de l'équipe créé par un administrateur
   echecsConnexionAvantTemporisation: 5, // F-03
   temporisationConnexionSecondes: { initiale: 30, maximale: 15 * 60 }, // F-03, doublée à chaque nouvel échec
   retractationSuppressionJours: 30, // RG-05

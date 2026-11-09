@@ -11,9 +11,13 @@ import {
   Put,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import type { Response } from 'express';
 import {
   MOTIF_CODE_INVITATION,
+  schemaAjoutEquipe,
   schemaChangementRole,
   schemaCreationInvitations,
   schemaDecisionAdministrateur,
@@ -25,6 +29,7 @@ import {
   schemaOutil,
   schemaStatutModele,
   schemaStatutOutil,
+  type AjoutEquipe,
   type ChangementRole,
   type CreationInvitations,
   type DecisionAdministrateur,
@@ -52,6 +57,7 @@ import { Exige, SessionCourante } from '../auth/droits.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { AdministrationService, type Acteur } from './administration.service.js';
 import { DecisionsMembresService } from './decisions-membres.service.js';
+import { EquipeService } from './equipe.service.js';
 import { JournalAuditService } from './journal-audit.service.js';
 import { ReferentielsAdminService } from './referentiels-admin.service.js';
 
@@ -68,6 +74,7 @@ export class AdministrationController {
   constructor(
     private readonly administration: AdministrationService,
     private readonly decisionsMembres: DecisionsMembresService,
+    private readonly equipe: EquipeService,
     private readonly journalAudit: JournalAuditService,
     private readonly referentiels: ReferentielsAdminService,
   ) {}
@@ -119,6 +126,35 @@ export class AdministrationController {
     @Req() requete: RequeteVysora,
   ): Promise<MembreAdministreApi> {
     return this.administration.reinitialiserDeuxFacteurs(acteur(session, requete), id);
+  }
+
+  /** POST /api/v1/admin/equipe : compte de l'équipe créé avec son rôle, lien d'activation envoyé à
+      son adresse (ADM-03). Une adresse dont le compte attend encore son activation reçoit un nouveau
+      lien (200) ; une adresse déjà inscrite est refusée (409). */
+  @Post('equipe')
+  @HttpCode(201)
+  @Throttle({ default: { limit: 20, ttl: 15 * 60_000 } })
+  async ajouterEquipe(
+    @Body(new ValidationZod(schemaAjoutEquipe)) saisie: AjoutEquipe,
+    @SessionCourante() session: SessionOuverte,
+    @Req() requete: RequeteVysora,
+    @Res({ passthrough: true }) reponse: Response,
+  ): Promise<MembreAdministreApi> {
+    const ajout = await this.equipe.ajouter(acteur(session, requete), saisie);
+    if (ajout.issue === 'lien-renvoye') reponse.status(200);
+    return this.administration.membre(ajout.id);
+  }
+
+  /** POST /api/v1/admin/membres/:id/activation : nouveau lien d'activation (ADM-03). */
+  @Post('membres/:id/activation')
+  @HttpCode(204)
+  @Throttle({ default: { limit: 20, ttl: 15 * 60_000 } })
+  async renvoyerActivation(
+    @Param('id', ParseIntPipe) id: number,
+    @SessionCourante() session: SessionOuverte,
+    @Req() requete: RequeteVysora,
+  ): Promise<void> {
+    await this.equipe.renvoyerActivation(acteur(session, requete), id);
   }
 
   /** GET /api/v1/admin/invitations?page= (INV-01). */

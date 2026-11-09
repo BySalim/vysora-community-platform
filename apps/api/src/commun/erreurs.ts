@@ -38,6 +38,8 @@ export interface ExtensionsProbleme {
   raison?: RaisonRefus;
   /** Tentatives temporisées : secondes à attendre (repris dans l'en-tête Retry-After). */
   reessayerDans?: number;
+  /** Lien expiré : c'était un lien d'activation d'un compte de l'équipe (ADM-03). */
+  activation?: boolean;
 }
 
 export class ErreurApplication extends Error {

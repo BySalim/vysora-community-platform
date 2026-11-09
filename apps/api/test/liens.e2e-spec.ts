@@ -219,7 +219,7 @@ describe('Liens envoyés par e-mail et documents légaux', () => {
       const lien = await envoyer('post', '/api/v1/mot-de-passe/lien', { jeton: valeur }).expect(
         200,
       );
-      expect(lien.body).toEqual({ email: 'awa.sarr@example.com' });
+      expect(lien.body).toEqual({ email: 'awa.sarr@example.com', activation: false });
 
       const nouveau = 'meridien cobalt sahel';
       await envoyer('put', '/api/v1/mot-de-passe', { jeton: valeur, motDePasse: nouveau }).expect(

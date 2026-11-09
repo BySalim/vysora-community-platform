@@ -61,6 +61,8 @@ export interface LienEnvoye {
 /** Réponse de POST /api/v1/mot-de-passe/lien : compte concerné par un lien de réinitialisation valable. */
 export interface LienReinitialisation {
   email: string;
+  /** ADM-03 : lien d'activation d'un compte de l'équipe (premier mot de passe, documents acceptés). */
+  activation: boolean;
 }
 
 /** Version en vigueur d'un document légal (GET /api/v1/documents-legaux). */

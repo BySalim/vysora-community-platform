@@ -1,10 +1,12 @@
 /* Administration (ADM-01, ADM-02) : changement de rôle et réinitialisation de la double
-   authentification après confirmation (F-96, RG-111, SEC-02), création et désactivation de codes
+   authentification après confirmation (F-96, RG-111, SEC-02), comptes de l'équipe et lien
+   d'activation (ADM-03), création et désactivation de codes
    d'invitation (INV-01), défis (EC-24), versions des documents légaux (EC-25, RG-112).
    Référentiels : scripts/referentiels.ts. */
 
 import {
   erreursParChamp,
+  schemaAjoutEquipe,
   schemaCreationInvitations,
   schemaDefi,
   schemaVersionDocumentLegal,
@@ -82,6 +84,43 @@ for (const bouton of $$<HTMLButtonElement>('[data-ad-reinitialiser]')) {
         window.location.reload();
       },
     );
+  });
+}
+
+/* Comptes de l'équipe (ADM-03) ---------------------------------------------------------- */
+
+const formEquipe = $<HTMLFormElement>('[data-ad-equipe]');
+formEquipe?.addEventListener('submit', (evenement) => {
+  evenement.preventDefault();
+  const afficher = (erreurs: Record<string, string>) => afficherErreurs(formEquipe, erreurs);
+  const resultat = schemaAjoutEquipe.safeParse(Object.fromEntries(new FormData(formEquipe)));
+  if (!resultat.success) return afficher(erreursParChamp(resultat.error));
+  afficher({});
+  const { email, nom, role } = resultat.data;
+  confirmer(
+    `Ajouter ${nom} à l’équipe ?`,
+    `Un compte « ${LIBELLES_ROLE[role]} » est créé et un lien d’activation part à ${email}. Vérifiez l’adresse : c’est elle qui donnera accès au compte.`,
+    'Ajouter et envoyer le lien',
+    async () => {
+      const envoyer = $<HTMLButtonElement>('button[type="submit"]', formEquipe);
+      if (envoyer) envoyer.disabled = true;
+      const reponse = await api<MembreAdministreApi>('POST', '/api/v1/admin/equipe', resultat.data);
+      if (envoyer) envoyer.disabled = false;
+      if (!reponse.ok) return afficher(erreursDuRefus(reponse.probleme));
+      messageApresChargement(`Lien d’activation envoyé à ${nom}.`);
+      window.location.reload();
+    },
+  );
+});
+
+for (const bouton of $$<HTMLButtonElement>('[data-ad-activation]')) {
+  bouton.addEventListener('click', async () => {
+    const membreId = Number(bouton.closest<HTMLElement>('[data-ad-membre]')?.dataset.adMembre);
+    bouton.disabled = true;
+    const reponse = await api('POST', `/api/v1/admin/membres/${membreId}/activation`);
+    bouton.disabled = false;
+    if (!reponse.ok) return signalerRefus(reponse.probleme);
+    toast(`Nouveau lien d’activation envoyé à ${bouton.dataset.nom ?? ''}.`, 'mail');
   });
 }
 

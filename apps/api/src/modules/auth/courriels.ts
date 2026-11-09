@@ -1,4 +1,4 @@
-import type { TypeDocumentLegal } from '@vysora/shared';
+import type { Role, TypeDocumentLegal } from '@vysora/shared';
 import type { EmailAEnvoyer } from '../email/email.service.js';
 import { miseEnForme } from '../email/gabarit.js';
 import type { DocumentLegal } from './documents-legaux.service.js';
@@ -32,6 +32,37 @@ export function emailReinitialisation(a: string, lien: string): EmailAEnvoyer {
         'Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe reste inchangé.',
       ],
       action: { libelle: 'Choisir un nouveau mot de passe', url: lien },
+    }),
+  };
+}
+
+/** ADM-03 : compte de l'équipe créé par un administrateur ; la personne choisit elle-même son mot de
+    passe, ce qui confirme son adresse et active le compte. */
+export function emailActivation(
+  a: string,
+  { nom, role, lien, jours }: { nom: string; role: Role; lien: string; jours: number },
+): EmailAEnvoyer {
+  const compte =
+    role === 'ADMINISTRATEUR'
+      ? 'un compte d’administration'
+      : role === 'MODERATEUR'
+        ? 'un compte de modération'
+        : 'un compte';
+  return {
+    a,
+    sujet: 'Activez votre compte Vysora',
+    ...miseEnForme({
+      titre: 'Activez votre compte Vysora',
+      paragraphes: [
+        `Bonjour ${nom}, ${compte} a été créé pour vous sur Vysora. Choisissez votre mot de passe pour l’activer. Ce lien reste valable ${jours} jours et ne sert qu’une fois.`,
+        ...(role === 'MEMBRE'
+          ? []
+          : [
+              'À votre première connexion, la vérification en deux étapes vous sera demandée : gardez à portée de main votre téléphone et une application d’authentification.',
+            ]),
+        'Si vous n’attendiez pas ce message, ignorez-le : le compte restera inactif.',
+      ],
+      action: { libelle: 'Activer mon compte', url: lien },
     }),
   };
 }

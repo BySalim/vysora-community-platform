@@ -54,12 +54,10 @@ Préproduction et production utilisent les mêmes fichiers ; seule la variable `
    docker compose -f infra/production/compose.yml --env-file infra/production/.env run --rm api node dist/db/demo/index.js
    ```
    Les comptes sont `<pseudo>@example.test` (par exemple `clarisse-mendy@example.test`) avec ce mot de passe.
-9. **Premier administrateur** : s'inscrire sur le site (avec un code d'invitation pendant la bêta, voir ci-dessous), puis donner le rôle dans la base :
+9. **Premier administrateur** : une commande sur le serveur, jamais l'inscription publique (voir « Équipe : administrateurs et modérateurs ») :
    ```bash
-   docker compose -f infra/production/compose.yml --env-file infra/production/.env exec postgres \
-     psql -U vysora -d vysora -c "update utilisateur set role = 'ADMINISTRATEUR' where pseudo = 'votre-pseudo'"
+   docker compose -f infra/production/compose.yml --env-file infra/production/.env run --rm api node dist/db/administrateur.js <adresse> <Prénom Nom>
    ```
-   L'administration (`/admin/roles`) donne ensuite les autres rôles. La double authentification est demandée à la première connexion.
 
 ## Connexion avec GitHub et Google
 
@@ -68,6 +66,37 @@ Facultative : sans identifiants, le service reste fermé et son bouton le dit. C
 - **GitHub** : Settings › Developer settings › OAuth Apps › New OAuth App. *Homepage URL* : `https://<domaine>` ; *Authorization callback URL* : `https://<domaine>/api/v1/auth/github/retour` (en développement : `http://localhost:4321/api/v1/auth/github/retour`). Puis « Generate a new client secret » : `GITHUB_CLIENT_ID` et `GITHUB_CLIENT_SECRET`. Une application GitHub n'accepte qu'une adresse de retour : une par serveur.
 - **Google** : Google Cloud Console › API et services. D'abord l'écran de consentement (nom « Vysora », adresse de contact, liens vers `/cgu` et `/confidentialite`, domaine autorisé, portées `openid` et `email` seulement), puis Identifiants › ID client OAuth › Application Web, avec comme URI de redirection autorisé `https://<domaine>/api/v1/auth/google/retour` (un même client peut aussi déclarer celui du développement, `http://localhost:4321/…`). `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`. Tant que Google n'a pas validé l'application, elle reste « en test » : seuls les comptes Gmail ajoutés à la liste des testeurs (100 au plus) peuvent se connecter.
 - Vérification : `https://<domaine>/api/v1/services-externes` cite les services ouverts ; le bouton part vers le service et revient sur la page d'inscription (écran du pseudo) ou de connexion.
+
+## Équipe : administrateurs et modérateurs
+
+Un compte de l'équipe ne passe jamais par l'inscription publique (ADM-03). Il est créé avec son adresse, son nom et son rôle ; la personne reçoit à cette adresse un lien d'activation (usage unique, 7 jours), choisit son mot de passe (ce qui confirme l'adresse et vaut acceptation des conditions d'utilisation et de la charte), puis configure la vérification en deux étapes à sa première connexion (SEC-02 : application d'authentification, huit codes de secours à garder hors du téléphone). L'adresse conseillée est une adresse professionnelle du domaine, propre à la personne : c'est elle qui donne accès au compte.
+
+**Premier administrateur, ou plus aucun administrateur joignable** : depuis le dossier du dépôt sur le serveur, l'API en marche (c'est elle qui envoie l'e-mail).
+
+```bash
+docker compose -f infra/production/compose.yml --env-file infra/production/.env run --rm api node dist/db/administrateur.js <adresse> <Prénom Nom>
+```
+
+| Situation de l'adresse | Effet de la commande |
+|---|---|
+| Aucun compte | Compte créé avec le rôle Administrateur, lien d'activation envoyé. |
+| Compte qui attend son activation | Nouveau lien (le précédent cesse de fonctionner). |
+| Compte actif, adresse confirmée | Nommé administrateur. |
+| Adresse pas encore confirmée, compte banni ou en cours de suppression | Refus expliqué, rien ne change. |
+
+La commande ne demande aucun mot de passe et n'en affiche aucun. Le journal d'audit l'inscrit comme « commande sur le serveur ».
+
+**Les suivants** : un administrateur ouvre **Administration › Rôles de l'équipe** (`/admin/roles`).
+
+| Besoin | Geste dans « Rôles de l'équipe » |
+|---|---|
+| Ajouter une personne | Bloc « Ajouter à l'équipe » : adresse e-mail, nom, rôle (Modérateur ou Administrateur), « Ajouter », puis « Ajouter et envoyer le lien ». |
+| Le lien n'est pas arrivé ou a expiré | « Renvoyer le lien d'activation » sur la ligne de la personne (« Compte pas encore activé »). La personne peut aussi utiliser « Mot de passe oublié » : un compte jamais activé reçoit un nouveau lien d'activation. |
+| Changer un rôle ou retirer quelqu'un de l'équipe | Liste déroulante du rôle (« Membre » retire l'accès), puis confirmer. Un compte se cherche dans « Trouver un membre » (pseudo, nom ou adresse exacte). |
+| Appareil perdu, codes de secours perdus | Vérifier l'identité de la personne par un autre canal, puis « Réinitialiser la vérification » : sa clé et ses codes sont effacés, ses sessions redemandent la vérification, elle en configure une nouvelle à sa prochaine connexion. |
+| Exclure quelqu'un de la plateforme | Passer son rôle à « Membre », puis « Dossier » › décision « Bannir » si le compte ne doit plus servir. |
+
+La plateforme garde toujours au moins un administrateur actif (RG-111) ; un compte qui attend son activation ne compte pas. Deux administrateurs au moins évitent qu'un appareil perdu bloque l'administration ; sinon, la commande ci-dessus reste le dernier recours. Tout ajout, renvoi de lien, changement de rôle et réinitialisation est inscrit au journal d'audit (`/admin/journal-audit`).
 
 ## Bêta fermée : codes d'invitation
 

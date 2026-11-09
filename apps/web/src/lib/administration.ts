@@ -180,6 +180,11 @@ export function precisionAudit(entree: EntreeAuditApi): string {
         ? `${LIBELLES_ROLE[avant]} → ${LIBELLES_ROLE[apres]}`
         : '';
     }
+    case 'MEMBRE_EQUIPE_AJOUTE':
+    case 'ACTIVATION_RENVOYEE': {
+      const role = texteDe(d?.role) as Role | null;
+      return role && role in LIBELLES_ROLE ? `Rôle : ${LIBELLES_ROLE[role]}` : '';
+    }
     case 'INVITATIONS_CREEES': {
       const nombre = nombreDe(d?.nombre) ?? 0;
       const jours = nombreDe(d?.joursValidite);

@@ -20,6 +20,9 @@ export interface MembreAdministreApi {
   dateInscription: string;
   /** SEC-02 : double authentification activée, commencée (clé affichée, jamais confirmée) ou absente. */
   deuxFacteurs: 'active' | 'en-attente' | 'absente';
+  /** ADM-03 : compte créé par l'administration dont le lien d'activation n'a pas encore servi
+      (ni mot de passe, ni adresse confirmée). */
+  activationEnAttente: boolean;
 }
 
 /** GET /api/v1/admin/membres : l'équipe par défaut, ou les membres trouvés (vingt au plus). */

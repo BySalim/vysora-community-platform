@@ -164,7 +164,7 @@ const quand = (valeur: string) => {
                     <p class="md-ligne-haut">
                       <b>{typo(libelleAudit(e.action))}</b>
                       <span>
-                        {`Par ${e.acteur?.nom ?? 'un compte supprimé'}, le ${quand(e.date)}`}
+                        {`Par ${e.acteur?.nom ?? (e.details?.origine === 'serveur' ? 'une commande sur le serveur' : 'un compte supprimé')}, le ${quand(e.date)}`}
                       </span>
                     </p>
                     {e.cible?.membre ? (

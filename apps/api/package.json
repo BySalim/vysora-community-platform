@@ -20,6 +20,7 @@
     "db:migrate": "tsx src/db/migrer.ts",
     "db:seed": "tsx src/db/seed/index.ts",
     "invitations:creer": "tsx src/db/invitations.ts",
+    "administrateur:nommer": "tsx src/db/administrateur.ts",
     "db:demo": "tsx src/db/demo/index.ts",
     "db:reset": "tsx src/db/reinitialiser.ts",
     "medias:nettoyer": "tsx src/taches/nettoyer-medias.ts",

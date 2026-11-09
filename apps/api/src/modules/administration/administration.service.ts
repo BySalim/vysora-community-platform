@@ -20,6 +20,7 @@ import {
   gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lt,
   ne,
@@ -42,6 +43,7 @@ import {
   session,
   utilisateur,
 } from '../../db/schema/index.js';
+import { activationEnAttente } from '../auth/activation.service.js';
 import { InvitationsService } from '../auth/invitations.service.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
@@ -67,6 +69,9 @@ const estLibre = (
   !code.dateUtilisation &&
   !code.dateDesactivation &&
   (!code.dateExpiration || code.dateExpiration > maintenant);
+
+/** Compte activé (ADM-03) : un mot de passe ou une adresse confirmée. */
+const ACTIVE = or(isNotNull(utilisateur.empreinteMotDePasse), eq(utilisateur.emailVerifie, true));
 
 /** Échappe % et _ d'une recherche LIKE. */
 const motif = (texte: string) => `%${texte.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -108,7 +113,13 @@ export class AdministrationService {
       this.db
         .select({ n: count() })
         .from(utilisateur)
-        .where(and(eq(utilisateur.role, 'ADMINISTRATEUR'), eq(utilisateur.statutCompte, 'ACTIF'))),
+        .where(
+          and(
+            eq(utilisateur.role, 'ADMINISTRATEUR'),
+            eq(utilisateur.statutCompte, 'ACTIF'),
+            ACTIVE,
+          ),
+        ),
     ]);
     return {
       elements: await this.presenter(lignes.map((l) => l.id)),
@@ -126,7 +137,13 @@ export class AdministrationService {
       // Les administrateurs sont verrouillés ensemble : deux retraits simultanés ne laissent pas la
       // plateforme sans administrateur.
       const equipe = await tx
-        .select({ id: utilisateur.id, role: utilisateur.role, statut: utilisateur.statutCompte })
+        .select({
+          id: utilisateur.id,
+          role: utilisateur.role,
+          statut: utilisateur.statutCompte,
+          empreinteMotDePasse: utilisateur.empreinteMotDePasse,
+          emailVerifie: utilisateur.emailVerifie,
+        })
         .from(utilisateur)
         .where(or(eq(utilisateur.id, membreId), eq(utilisateur.role, 'ADMINISTRATEUR')))
         .for('update');
@@ -135,8 +152,13 @@ export class AdministrationService {
       if (membre.role === role) return;
       if (role !== 'MEMBRE' && membre.statut === 'BANNI')
         throw conflit('Un compte banni ne reçoit pas de rôle.');
+      // Un administrateur dont le compte attend son activation (ADM-03) ne compte pas encore.
       const autresAdmins = equipe.filter(
-        (m) => m.id !== membreId && m.role === 'ADMINISTRATEUR' && m.statut === 'ACTIF',
+        (m) =>
+          m.id !== membreId &&
+          m.role === 'ADMINISTRATEUR' &&
+          m.statut === 'ACTIF' &&
+          !activationEnAttente(m),
       );
       if (membre.role === 'ADMINISTRATEUR' && autresAdmins.length === 0)
         throw conflit(
@@ -342,6 +364,8 @@ export class AdministrationService {
           dateInscription: utilisateur.dateInscription,
           activation: doubleAuthentification.dateActivation,
           configuree: doubleAuthentification.utilisateurId,
+          empreinteMotDePasse: utilisateur.empreinteMotDePasse,
+          emailVerifie: utilisateur.emailVerifie,
         })
         .from(utilisateur)
         .leftJoin(doubleAuthentification, eq(doubleAuthentification.utilisateurId, utilisateur.id))
@@ -360,6 +384,7 @@ export class AdministrationService {
           statutCompte: l.statutCompte,
           dateInscription: l.dateInscription.toISOString(),
           deuxFacteurs: l.activation ? 'active' : l.configuree ? 'en-attente' : 'absente',
+          activationEnAttente: activationEnAttente(l),
         },
       ];
     });

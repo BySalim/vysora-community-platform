@@ -2,11 +2,18 @@
 /* Page Connexion, portée de prototype/connexion.html (connexion.js, auth.js, auth.css) : identifiants,
    nouvelles conditions, mot de passe oublié, lien envoyé, nouveau mot de passe, lien expiré, réussite,
    session déjà ouverte. Le serveur choisit l'écran de départ (lien de réinitialisation lu ici).
+   Le même écran active un compte de l'équipe créé par l'administration (ADM-03, lien d'activation) :
+   premier mot de passe et acceptation des documents en vigueur, comme à l'inscription.
    Comptes de modération et d'administration (SEC-02, ENF-05) : code de l'application ou code de
    secours, ou, la première fois, activation (clé, code QR) et codes de secours.
    Google et GitHub (S-10) : les boutons partent vers l'API ; au retour, `?etape=connecte` termine
    la connexion (« Bon retour »), `?resultat=…` dit pourquoi elle n'a pas abouti (connexion.ts). */
-import type { DocumentLegalApi, LienReinitialisation, ServicesExternesApi } from '@vysora/shared';
+import {
+  DELAIS,
+  type DocumentLegalApi,
+  type LienReinitialisation,
+  type ServicesExternesApi,
+} from '@vysora/shared';
 import DocumentsDialogue from '../components/DocumentsDialogue.astro';
 import MembreConnecte from '../components/MembreConnecte.astro';
 import Base from '../layouts/Base.astro';
@@ -42,8 +49,10 @@ const servicesOuverts = await appelerApi<ServicesExternesApi>('/api/v1/services-
   .then((reponse) => reponse.ouverts)
   .catch(() => []);
 
-/** Lien de réinitialisation (F-03) : valable, l'écran du nouveau mot de passe ; sinon « Lien expiré ». */
+/** Lien de réinitialisation (F-03) : valable, l'écran du nouveau mot de passe ; sinon « Lien expiré ».
+    Lien d'activation (ADM-03) : le même écran, avec ses propres textes. */
 let lien: LienReinitialisation | null = null;
+let activationExpiree = false;
 let ecran =
   etat.session !== 'membre'
     ? 'identifiants'
@@ -69,9 +78,11 @@ if (jeton) {
     const expire =
       erreur instanceof ErreurApi && ['LIEN_EXPIRE', 'VALIDATION'].includes(erreur.probleme.code);
     if (!expire) console.error('Lien de réinitialisation non lu :', erreur);
+    activationExpiree = erreur instanceof ErreurApi && erreur.probleme.activation === true;
     ecran = expire ? 'lien-expire' : 'nouveau-mdp';
   }
 }
+const activation = lien?.activation ?? activationExpiree;
 
 const aAccepter = documents.filter((document) => document.acceptationRequise);
 const miseAJour = aAccepter
@@ -573,7 +584,7 @@ const visible = (nom: string) => nom === ecran;
         hidden={!visible('nouveau-mdp')}
       >
         <h1 id="t-nouveau" tabindex="-1">
-          Nouveau mot de passe
+          {activation ? 'Activez votre compte' : 'Nouveau mot de passe'}
         </h1>
         {lien && (
           <p class="auth-intro">
@@ -634,9 +645,26 @@ const visible = (nom: string) => nom === ecran;
           </div>
           <div class="alerte" role="alert" data-alerte hidden></div>
           <button class="action action-principale" type="submit">
-            <span class="action-libelle">Enregistrer</span>
+            <span class="action-libelle">{activation ? 'Activer mon compte' : 'Enregistrer'}</span>
           </button>
         </form>
+        {activation && (
+          <p class="consentement">
+            En activant votre compte, vous acceptez les{' '}
+            <a href={ROUTES.cgu} data-document="cgu">
+              conditions d’utilisation
+            </a>{' '}
+            et la{' '}
+            <a href={ROUTES.charte} data-document="charte">
+              charte communautaire
+            </a>
+            . La{' '}
+            <a href={ROUTES.confidentialite} data-document="confidentialite">
+              politique de confidentialité
+            </a>{' '}
+            explique comment vos données sont traitées.
+          </p>
+        )}
       </section>
 
       <section class="auth-vue" data-vue="nouveau-ok" aria-labelledby="t-nouveau-ok" hidden>
@@ -646,9 +674,13 @@ const visible = (nom: string) => nom === ecran;
           </svg>
         </span>
         <h1 id="t-nouveau-ok" tabindex="-1">
-          Mot de passe modifié
+          {activation ? 'Compte activé' : 'Mot de passe modifié'}
         </h1>
-        <p class="auth-intro">Connectez-vous avec votre nouveau mot de passe.</p>
+        <p class="auth-intro">
+          {activation
+            ? 'Connectez-vous avec votre adresse e-mail et ce mot de passe.'
+            : 'Connectez-vous avec votre nouveau mot de passe.'}
+        </p>
         <button class="action action-principale" type="button" data-aller="identifiants">
           <span class="action-libelle">Se connecter</span>
         </button>
@@ -672,7 +704,13 @@ const visible = (nom: string) => nom === ecran;
         <h1 id="t-expire" tabindex="-1">
           Lien expiré
         </h1>
-        <p class="auth-intro">Les liens de réinitialisation restent valables une heure.</p>
+        <p class="auth-intro">
+          {activation
+            ? typo(
+                `Les liens d’activation restent valables ${DELAIS.lienActivationJours} jours et ne servent qu’une fois.`,
+              )
+            : 'Les liens de réinitialisation restent valables une heure.'}
+        </p>
         <button class="action action-principale" type="button" data-aller="oubli">
           <span class="action-libelle">Recevoir un nouveau lien</span>
         </button>
