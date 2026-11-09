@@ -2,6 +2,7 @@
    impression, choix sur la mesure d'audience (page Cookies) et acceptation des nouvelles versions
    (conditions et charte). Le contenu (sommaire, « L'essentiel », versions) est rendu par le serveur. */
 
+import { COOKIE_REFUS_AUDIENCE } from '@vysora/shared';
 import { DOCUMENTS_ACCEPTES, accepterDocuments } from './commun/acces';
 import { $, $$, icon, toast } from './commun/outils';
 
@@ -118,18 +119,19 @@ for (const tableau of $$('.lg-tableau-empile')) {
 }
 
 /* Mesure d'audience (page Cookies) : le refus est retenu 13 mois par un cookie, comme l'annonce
-   la liste des cookies ; sans refus, aucun cookie n'est déposé. */
+   la liste des cookies ; sans refus, aucun cookie n'est déposé. L'API le lit avant de compter une
+   vue (F-23) : un appareil qui a refusé n'est plus compté. */
 
-const COOKIE_AUDIENCE = 'vysora_audience';
+const { nom: COOKIE_AUDIENCE, valeur: REFUS } = COOKIE_REFUS_AUDIENCE;
 const TREIZE_MOIS = 13 * 30 * 24 * 60 * 60;
 
 const audienceRefusee = () =>
-  document.cookie.split('; ').some((c) => c === `${COOKIE_AUDIENCE}=refusee`);
+  document.cookie.split('; ').some((c) => c === `${COOKIE_AUDIENCE}=${REFUS}`);
 
 function retenirAudience(refusee: boolean): void {
   const securise = location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = refusee
-    ? `${COOKIE_AUDIENCE}=refusee; Max-Age=${TREIZE_MOIS}; Path=/; SameSite=Lax${securise}`
+    ? `${COOKIE_AUDIENCE}=${REFUS}; Max-Age=${TREIZE_MOIS}; Path=/; SameSite=Lax${securise}`
     : `${COOKIE_AUDIENCE}=; Max-Age=0; Path=/; SameSite=Lax${securise}`;
 }
 

@@ -14,6 +14,8 @@ export interface Visiteur {
   membreId: number | null;
   ip?: string;
   userAgent?: string;
+  /** Refus de la mesure d'audience exprimé sur la page Cookies (COOKIE_REFUS_AUDIENCE). */
+  refusAudience?: boolean;
 }
 
 /** Contenus qui ont une page à eux et dont les vues se comptent. */
@@ -29,7 +31,8 @@ const jourUtc = (date: Date): string => date.toISOString().slice(0, 10);
    salée qui change chaque jour (membre, ou adresse IP et navigateur) : elle ne permet ni de
    retrouver la personne ni de suivre ses visites d'un jour à l'autre, et la tâche de conservation
    l'efface au bout de deux jours (DELAIS.conservationVuesJours). Seul le compteur du contenu reste.
-   L'auteur qui relit son contenu ne compte pas, ni un contenu que tous ne voient pas (RG-30). */
+   L'auteur qui relit son contenu ne compte pas, ni un contenu que tous ne voient pas (RG-30), ni
+   un appareil qui a refusé la mesure d'audience depuis la page Cookies : rien n'est alors calculé. */
 @Injectable()
 export class VuesService {
   constructor(
@@ -39,6 +42,7 @@ export class VuesService {
 
   /** Compte la vue si c'est la première du jour pour ce visiteur ; ne dit jamais si elle a compté. */
   async compter(contenuId: number, visiteur: Visiteur, maintenant = new Date()): Promise<void> {
+    if (visiteur.refusAudience) return;
     if (visiteur.userAgent && ROBOT.test(visiteur.userAgent)) return;
     if (visiteur.membreId === null && !visiteur.ip) return;
     const cible = await lireCible(this.db, contenuId);

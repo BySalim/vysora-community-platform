@@ -11,6 +11,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import {
   CODES_TYPE_VOTE,
+  COOKIE_REFUS_AUDIENCE,
   type CodeTypeVote,
   type EnregistrementApi,
   type VoteApi,
@@ -48,10 +49,12 @@ export class InteractionsController {
     @Param('id', IdentifiantPipe) id: number,
     @Req() requete: RequeteVysora,
   ): Promise<void> {
+    const refus: unknown = requete.cookies?.[COOKIE_REFUS_AUDIENCE.nom];
     await this.vues.compter(id, {
       membreId: requete.sessionOuverte?.utilisateur.id ?? null,
       ip: requete.ip,
       userAgent: requete.headers['user-agent'],
+      refusAudience: refus === COOKIE_REFUS_AUDIENCE.valeur,
     });
   }
 

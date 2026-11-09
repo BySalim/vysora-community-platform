@@ -22,6 +22,10 @@ export const IDS_FUSEAUX = FUSEAUX_HORAIRES.map((fuseau) => fuseau.id) as [
   ...FuseauHoraire[],
 ];
 
+/** Page Cookies, « Mesure d'audience » : refus d'être compté dans les vues des contenus (F-23),
+    retenu 13 mois sur l'appareil par ce cookie. Le site le pose ; l'API le lit avant de compter. */
+export const COOKIE_REFUS_AUDIENCE = { nom: 'vysora_audience', valeur: 'refusee' } as const;
+
 /** WF-25 : seules les réponses à ses sujets et les réponses acceptées partent par défaut par e-mail. */
 const EMAIL_PAR_DEFAUT: readonly TypeNotification[] = ['REPONSE_SUJET', 'REPONSE_ACCEPTEE'];
 

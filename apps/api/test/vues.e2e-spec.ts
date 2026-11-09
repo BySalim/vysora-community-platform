@@ -1,3 +1,4 @@
+import { COOKIE_REFUS_AUDIENCE } from '@vysora/shared';
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { contenu, vueContenu } from '../src/db/schema/index.js';
@@ -86,6 +87,30 @@ describe('Vues (INT-04, F-23)', () => {
 
     const auteur = await agentConnecte('lea@example.com', ipDeTest());
     await voir(id, ipDeTest(), NAVIGATEUR, auteur);
+    expect(await vues(id)).toBe(1);
+  });
+
+  it('ne compte pas un appareil qui a refusé la mesure d’audience (page Cookies)', async () => {
+    const id = await creerCreation(contexte, auteurId);
+    const refus = `${COOKIE_REFUS_AUDIENCE.nom}=${COOKIE_REFUS_AUDIENCE.valeur}`;
+    await request(serveur())
+      .post(`/api/v1/contenus/${id}/vues`)
+      .set('Origin', ORIGINE_SITE)
+      .set('X-Forwarded-For', ipDeTest())
+      .set('User-Agent', NAVIGATEUR)
+      .set('Cookie', refus)
+      .expect(204);
+    expect(await vues(id)).toBe(0);
+    expect(await contexte.db.$count(vueContenu)).toBe(0);
+
+    // Une autre valeur ne vaut pas refus.
+    await request(serveur())
+      .post(`/api/v1/contenus/${id}/vues`)
+      .set('Origin', ORIGINE_SITE)
+      .set('X-Forwarded-For', ipDeTest())
+      .set('User-Agent', NAVIGATEUR)
+      .set('Cookie', `${COOKIE_REFUS_AUDIENCE.nom}=oui`)
+      .expect(204);
     expect(await vues(id)).toBe(1);
   });
 
