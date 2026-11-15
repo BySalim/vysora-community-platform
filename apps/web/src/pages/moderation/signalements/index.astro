@@ -109,7 +109,9 @@ const icones = [
   ) : file && file.elements.length ? (
     <div class="container md-file">
       <p class="md-regle">
-        {typo(`Du plus ancien au plus récent. Délai cible de traitement : ${DELAI_CIBLE}.`)}
+        {typo(
+          `${file.elements.some((e) => e.contenu.masquageAutomatique) ? 'Les contenus masqués automatiquement en tête, puis du plus ancien au plus récent.' : 'Du plus ancien au plus récent.'} Délai cible de traitement : ${DELAI_CIBLE}.`,
+        )}
       </p>
       <ol class="md-liste">
         {file.elements.map((element) => {
@@ -145,6 +147,16 @@ const icones = [
                   </span>
                   {(element.nouvelExamen || contenu.statut === 'MASQUE' || derniere) && (
                     <span class="md-item-marques">
+                      {contenu.masquageAutomatique && (
+                        <span class="md-marque is-accent">
+                          <svg class="icon icon-xs" aria-hidden="true">
+                            <use href="#i-eye-off" />
+                          </svg>
+                          {typo(
+                            `Masqué automatiquement le ${dateCourte(contenu.masquageAutomatique)} : à examiner en priorité`,
+                          )}
+                        </span>
+                      )}
                       {element.nouvelExamen ? (
                         <span class="md-marque is-accent">
                           <svg class="icon icon-xs" aria-hidden="true">
@@ -153,7 +165,8 @@ const icones = [
                           {typo('Modifié après le masquage : nouvel examen')}
                         </span>
                       ) : (
-                        contenu.statut === 'MASQUE' && (
+                        contenu.statut === 'MASQUE' &&
+                        !contenu.masquageAutomatique && (
                           <span class="md-marque">
                             <svg class="icon icon-xs" aria-hidden="true">
                               <use href="#i-eye-off" />

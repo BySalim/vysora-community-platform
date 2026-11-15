@@ -114,6 +114,14 @@ export const GROUPES_ACTIONS: { titre: string; actions: ActionDecisionModerateur
 ];
 
 /** Titre de la fenêtre de confirmation (une décision se confirme, plan du site, section 13). */
+/** F-93 : « masquer » un contenu masqué automatiquement confirme le masquage provisoire. */
+export const CONFIRMER_MASQUAGE = {
+  libelle: 'Confirmer le masquage',
+  question: 'Confirmer le masquage ?',
+  effet:
+    'Le contenu reste masqué et les signalements sont jugés fondés. L’auteur reçoit la décision et peut corriger le contenu pour demander un nouvel examen.',
+} as const;
+
 export const QUESTIONS_ACTION: Record<ActionDecisionModerateur, string> = {
   AUCUNE: 'Ne prendre aucune mesure ?',
   MASQUER: 'Masquer ce contenu ?',

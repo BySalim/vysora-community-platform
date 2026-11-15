@@ -96,11 +96,15 @@ const statut = !fiche
         : 'publiee';
 
 /* Masquage par la modération (MOD-01) : date et motif de la décision ; nombre de signalements
-   qu'elle a clos, pour la modération seulement. */
+   qu'elle a clos, pour la modération seulement. F-93 : un masquage automatique, provisoire, attend
+   l'examen d'un modérateur (la modération y lit les signalements ouverts). */
 const masquage = fiche?.masquage ?? null;
 const masqueeLe = masquage?.date ? ` le ${dateLongue(masquage.date)}` : '';
 const motifMasquage = masquage?.motif ? `Motif : ${enPhrase(masquage.motif)}` : null;
 const signalementsClos = masquage?.signalements ?? 0;
+const masqueePar = masquage?.automatique
+  ? 'Masquée à titre provisoire'
+  : 'Masquée par la modération';
 // Signaler (F-90) : une création visible de tous, que la personne n'a pas écrite (RG-100).
 const signalable = ACTIONS_OUVERTES.signaler && statut === 'publiee' && !auteur && !modeApercu;
 
@@ -298,9 +302,17 @@ const icones = [
             )}
             {statut === 'masquee' && (
               <>
-                <b>{`Masquée par la modération${masqueeLe}.`}</b>{' '}
-                {motifMasquage && <>{typo(motifMasquage)} </>}
-                Modifiez la création pour demander un nouvel examen.
+                <b>{`${masqueePar}${masqueeLe}.`}</b>{' '}
+                {masquage?.automatique ? (
+                  typo(
+                    'Signalée par plusieurs membres, elle a été masquée par un outil automatisé en attendant l’examen d’un modérateur. Vous pouvez la modifier dès maintenant.',
+                  )
+                ) : (
+                  <>
+                    {motifMasquage && <>{typo(motifMasquage)} </>}
+                    Modifiez la création pour demander un nouvel examen.
+                  </>
+                )}
               </>
             )}
           </p>
@@ -332,10 +344,14 @@ const icones = [
         moderation && (
           <div class="creation-status" data-status>
             <p>
-              <b>{`Masquée par la modération${masqueeLe}`}</b>
+              <b>{`${masquage?.automatique ? 'Masquée automatiquement' : 'Masquée par la modération'}${masqueeLe}`}</b>
               {signalementsClos > 0 &&
                 ` · ${signalementsClos} ${signalementsClos > 1 ? 'signalements' : 'signalement'}`}
-              {motifMasquage ? ` · ${typo(motifMasquage)}` : '.'}
+              {masquage?.automatique
+                ? typo(' · en attente d’examen.')
+                : motifMasquage
+                  ? ` · ${typo(motifMasquage)}`
+                  : '.'}
             </p>
             <div class="creation-status-actions">
               <a class="btn btn-secondary btn-sm" href={ROUTES.dossierModeration(fiche.id)}>

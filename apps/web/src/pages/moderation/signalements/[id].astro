@@ -10,6 +10,7 @@ import {
   LIBELLES_ACTION_DECISION,
   LIBELLES_MOTIF_SIGNALEMENT,
   LONGUEURS,
+  SEUILS,
   raisonRefus,
   type DecisionApi,
   type DossierModerationApi,
@@ -19,6 +20,7 @@ import AvatarMembre from '../../../components/AvatarMembre.astro';
 import Base from '../../../layouts/Base.astro';
 import { appelerApi, ErreurApi } from '../../../lib/api';
 import {
+  CONFIRMER_MASQUAGE,
   EFFETS_ACTION,
   GROUPES_ACTIONS,
   ICONES_TYPE_CONTENU,
@@ -191,6 +193,19 @@ const resumeDecision = (d: DecisionApi) =>
             )}
           </div>
         </div>
+        {contenu.masquageAutomatique && (
+          <p class="md-alerte">
+            <svg class="icon" aria-hidden="true">
+              <use href="#i-flag" />
+            </svg>
+            <span>
+              <b>{`Masqué automatiquement le ${dateLongue(contenu.masquageAutomatique)}.`}</b>
+              {typo(
+                ` Le masquage est provisoire : le contenu a atteint le seuil de ${SEUILS.signalementsPourMasquageAutomatique} signalements de membres de niveau Apprenti ou plus. Confirmez le masquage, rétablissez ou supprimez le contenu ; les autres mesures viennent ensuite.`,
+              )}
+            </span>
+          </p>
+        )}
         {dossier?.nouvelExamen && contenu.dateModification && (
           <p class="md-alerte">
             <svg class="icon" aria-hidden="true">
@@ -398,6 +413,7 @@ const resumeDecision = (d: DecisionApi) =>
               data-md-form
               data-contenu={contenu.id}
               data-ouverts={ouverts}
+              data-masquage-automatique={contenu.masquageAutomatique ? '' : undefined}
             >
               <fieldset class="md-actions">
                 <legend class="sr-only">Décision</legend>
@@ -410,8 +426,20 @@ const resumeDecision = (d: DecisionApi) =>
                       <label class="md-choix">
                         <input type="radio" name="action" value={action} required />
                         <span>
-                          <b>{typo(LIBELLES_ACTION_DECISION[action])}</b>
-                          <span>{typo(EFFETS_ACTION[action])}</span>
+                          <b>
+                            {typo(
+                              action === 'MASQUER' && contenu.masquageAutomatique
+                                ? CONFIRMER_MASQUAGE.libelle
+                                : LIBELLES_ACTION_DECISION[action],
+                            )}
+                          </b>
+                          <span>
+                            {typo(
+                              action === 'MASQUER' && contenu.masquageAutomatique
+                                ? CONFIRMER_MASQUAGE.effet
+                                : EFFETS_ACTION[action],
+                            )}
+                          </span>
                         </span>
                       </label>
                     ))}

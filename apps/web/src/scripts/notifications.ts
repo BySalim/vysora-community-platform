@@ -299,7 +299,9 @@ function entete(n: NotificationApi): { quoi: string; titre: string; extrait: str
     case 'CONTENU_MASQUE': {
       const vise = contenuVise(n);
       return {
-        quoi: `Masqué${vise.e} par la modération`,
+        quoi: n.decision?.automatique
+          ? `Masqué${vise.e} à titre provisoire`
+          : `Masqué${vise.e} par la modération`,
         titre: vise.intitule,
         extrait: t(n.motif ?? ''),
       };
@@ -610,21 +612,37 @@ function corps(n: NotificationApi): string {
           <p class="nt-texte-detail">${t('Le seuil de trois signalements est atteint : un bandeau prévient désormais les lecteurs. Refaites l’essai avec ce modèle, puis mettez à jour la création ou ses limites constatées.')}</p>`;
     case 'CONTENU_MASQUE': {
       const vise = contenuVise(n);
-      const effets =
-        vise.type === 'CREATION'
+      const automatique = n.decision?.automatique === true;
+      const effets = [
+        // F-93 : l'auteur apprend le recours à l'outil automatisé et l'examen à venir (CGU, article 6).
+        ...(automatique
+          ? [
+              [
+                'flag',
+                `Signalé${vise.e} par plusieurs membres de niveau Apprenti ou plus, ${vise.ce.toLowerCase()} ${vise.nom} a été masqué${vise.e} par un outil automatisé, en attendant l’examen d’un modérateur. Aucune sanction n’est décidée sans examen humain.`,
+              ],
+            ]
+          : []),
+        ...(vise.type === 'CREATION'
           ? [
               [
                 'eye-off',
                 'La création n’est plus visible des autres membres ; ses votes et ses commentaires sont suspendus.',
               ],
-              ['pen', 'Modifiez-la : la modération l’examinera de nouveau.'],
+              [
+                'pen',
+                automatique
+                  ? 'Vous pouvez la modifier dès maintenant : le modérateur examinera la version corrigée.'
+                  : 'Modifiez-la : la modération l’examinera de nouveau.',
+              ],
             ]
           : [
               [
                 'eye-off',
                 `${vise.ce} ${vise.nom} n’est plus visible des autres membres ; les points de réputation liés sont suspendus.`,
               ],
-            ];
+            ]),
+      ];
       return `${n.motif ? `<div class="nt-motif"><p><b>Motif</b>${t(n.motif)}</p></div>` : ''}
           <ul class="nt-effets">${effets.map(([i, texte]) => `<li>${icon(i as string)}<span>${t(texte)}</span></li>`).join('')}</ul>`;
     }

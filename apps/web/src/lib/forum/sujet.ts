@@ -211,8 +211,9 @@ function reponseHTML(r: MessageApi, c: ContexteSujet): string {
     r.auteur.id !== sujet.auteur.id &&
     !ferme;
   const parQui = sujet.moi?.auteur ? 'vous' : prenom(sujet.auteur.nom);
+  // F-93 : un masquage automatique est provisoire, en attente de l'examen d'un modérateur.
   const masquee = r.masquee
-    ? `<p class="qa-closed">${icone('lock')}Masquée par la modération : vous seul et l’équipe de modération la voyez.</p>`
+    ? `<p class="qa-closed">${icone('lock')}${r.masquage?.automatique ? t('Masquée à titre provisoire, en attendant l’examen d’un modérateur : vous seul et l’équipe de modération la voyez.') : 'Masquée par la modération : vous seul et l’équipe de modération la voyez.'}</p>`
     : '';
   return `<li class="qa-answer${r.acceptee ? ' is-accepted' : ''}${r.moi?.auteur ? ' is-you' : ''}" id="reponse-${r.id}" tabindex="-1" data-reponse="${r.id}" data-utiles="${r.utiles}" data-date="${esc(r.date)}"${r.acceptee ? ' data-acceptee' : ''}>
       ${colonneVote(r.id, r.utiles, Boolean(r.moi?.utile), { acceptee: Boolean(r.acceptee), peutAccepter })}
@@ -283,7 +284,7 @@ export function sujetHTML(c: ContexteSujet): string {
   const n = sujet.reponses.elements.length;
   const ferme = sujet.etat === 'FERME';
   const masquage = sujet.masquee
-    ? `<p class="qa-closed">${icone('lock')}Ce sujet est masqué par la modération : seuls vous et l’équipe de modération le voyez.</p>`
+    ? `<p class="qa-closed">${icone('lock')}${sujet.masquage?.automatique ? t('Ce sujet est masqué à titre provisoire, en attendant l’examen d’un modérateur : seuls vous et l’équipe de modération le voyez.') : 'Ce sujet est masqué par la modération : seuls vous et l’équipe de modération le voyez.'}</p>`
     : '';
   const peutFermer = sujet.moi?.peutFermer && !ferme;
   const peutRouvrir = sujet.moi?.peutRouvrir && ferme;

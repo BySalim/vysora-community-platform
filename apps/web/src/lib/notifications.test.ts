@@ -139,7 +139,12 @@ describe('Ce qui reste « À traiter »', () => {
   it('épingle une suspension, range chaque type dans sa catégorie', () => {
     const suspension = notification({
       type: 'DECISION_MODERATION',
-      decision: { action: 'SUSPENDRE', finSuspension: '2026-10-20T00:00:00Z', contenu: null },
+      decision: {
+        action: 'SUSPENDRE',
+        finSuspension: '2026-10-20T00:00:00Z',
+        contenu: null,
+        automatique: false,
+      },
     });
     expect(epinglee(suspension)).toBe(true);
     expect(titreDetail(suspension)).toBe('Votre compte est suspendu jusqu’au 20 octobre 2026');
@@ -151,7 +156,12 @@ describe('Ce qui reste « À traiter »', () => {
     const ajustement = notification({
       type: 'DECISION_MODERATION',
       points: -30,
-      decision: { action: 'AJUSTER_REPUTATION', finSuspension: null, contenu: null },
+      decision: {
+        action: 'AJUSTER_REPUTATION',
+        finSuspension: null,
+        contenu: null,
+        automatique: false,
+      },
     });
     expect(titreDetail(ajustement)).toBe('Votre réputation a été corrigée');
     expect(epinglee(ajustement)).toBe(false);
@@ -165,7 +175,7 @@ describe('Ce qui reste « À traiter »', () => {
         icone: 'podium',
         ton: 'AMBRE',
       },
-      decision: { action: 'RETIRER_BADGE', finSuspension: null, contenu: null },
+      decision: { action: 'RETIRER_BADGE', finSuspension: null, contenu: null, automatique: false },
     });
     expect(resume(retrait)).toBe('le badge « Podium » vous a été retiré');
   });
@@ -175,7 +185,13 @@ describe('Ce qui reste « À traiter »', () => {
       type: NotificationApi['type'],
       action: 'MASQUER' | 'RETABLIR' | 'SUPPRIMER' | 'AJOUTER_AVERTISSEMENT_AGENT',
       contenu: { type: 'CREATION' | 'MESSAGE' | 'COMMENTAIRE'; intitule: string } | null,
-    ) => notification({ type, par: null, decision: { action, finSuspension: null, contenu } });
+      automatique = false,
+    ) =>
+      notification({
+        type,
+        par: null,
+        decision: { action, finSuspension: null, contenu, automatique },
+      });
     const reponse = { type: 'MESSAGE', intitule: 'Demandez une exécution à blanc.' } as const;
     expect(titreDetail(decision('CONTENU_MASQUE', 'MASQUER', reponse))).toBe(
       'Votre réponse a été masquée par la modération',
@@ -204,6 +220,13 @@ describe('Ce qui reste « À traiter »', () => {
     );
     expect(contenuVise(decision('CONTENU_MASQUE', 'MASQUER', null)).intitule).toBe(
       'Affiche touristique de Ziguinchor',
+    );
+    // F-93 : le masquage de l'outil automatisé est provisoire ; la modération ne l'a pas décidé.
+    expect(titreDetail(decision('CONTENU_MASQUE', 'MASQUER', reponse, true))).toBe(
+      'Votre réponse a été masquée à titre provisoire',
+    );
+    expect(resume(decision('CONTENU_MASQUE', 'MASQUER', commentaire, true))).toBe(
+      '« Merci pour le prompt » a été masqué à titre provisoire',
     );
   });
 });

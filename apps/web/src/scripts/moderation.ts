@@ -13,6 +13,7 @@ import {
   type DecisionApi,
 } from '@vysora/shared';
 import {
+  CONFIRMER_MASQUAGE,
   QUESTIONS_ACTION,
   confirmationDecision,
   finSuspension,
@@ -29,6 +30,8 @@ const dialogue = $<HTMLDialogElement>('[data-md-dialogue]');
 if (formulaire && dialogue) {
   const contenuId = Number(formulaire.dataset.contenu);
   const ouverts = Number(formulaire.dataset.ouverts ?? 0);
+  // F-93 : « masquer » confirme alors le masquage automatique.
+  const confirmeMasquage = formulaire.dataset.masquageAutomatique !== undefined;
   const zoneDuree = $('[data-md-duree]', formulaire);
   const champDuree = $<HTMLInputElement>('#md-duree', formulaire);
   const aideDuree = $('[data-md-fin]', formulaire);
@@ -118,13 +121,19 @@ if (formulaire && dialogue) {
     const resultat = schemaDecisionModeration.safeParse(saisie);
     if (!resultat.success) return afficherErreurs(erreursParChamp(resultat.error));
     const { action: choisie, dureeJours } = resultat.data;
-    if (titreDialogue) titreDialogue.textContent = typo(QUESTIONS_ACTION[choisie]);
+    const confirmation = confirmeMasquage && choisie === 'MASQUER';
+    if (titreDialogue)
+      titreDialogue.textContent = typo(
+        confirmation ? CONFIRMER_MASQUAGE.question : QUESTIONS_ACTION[choisie],
+      );
     if (texteDialogue)
       texteDialogue.textContent = typo(
         confirmationDecision(choisie, ouverts, dureeJours ? finSuspension(dureeJours) : null),
       );
     if (confirmer) {
-      confirmer.textContent = typo(LIBELLES_ACTION_DECISION[choisie]);
+      confirmer.textContent = typo(
+        confirmation ? CONFIRMER_MASQUAGE.libelle : LIBELLES_ACTION_DECISION[choisie],
+      );
       confirmer.classList.toggle('is-danger', choisie === 'SUPPRIMER');
     }
     dialogue.showModal();

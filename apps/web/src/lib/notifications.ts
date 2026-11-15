@@ -208,7 +208,10 @@ export function titreDetail(n: NotificationApi): string {
       return `Votre création est signalée comme ne fonctionnant plus avec ${n.obsolescence?.modele ?? 'un modèle'}`;
     case 'CONTENU_MASQUE': {
       const { nom, e } = contenuVise(n);
-      return `Votre ${nom} a été masqué${e} par la modération`;
+      // F-93 : masquage provisoire de l'outil automatisé, que la modération examinera.
+      return n.decision?.automatique
+        ? `Votre ${nom} a été masqué${e} à titre provisoire`
+        : `Votre ${nom} a été masqué${e} par la modération`;
     }
     case 'CONTENU_RETABLI':
       return `Votre ${contenuVise(n).nom} est de nouveau visible`;
@@ -250,7 +253,9 @@ export function resume(n: NotificationApi): string {
       return `${nom} est signalée comme ne fonctionnant plus avec ${n.obsolescence?.modele ?? 'un modèle'}`;
     case 'CONTENU_MASQUE': {
       const { e, intitule } = contenuVise(n);
-      return `« ${intitule} » a été masqué${e} par la modération`;
+      return n.decision?.automatique
+        ? `« ${intitule} » a été masqué${e} à titre provisoire`
+        : `« ${intitule} » a été masqué${e} par la modération`;
     }
     case 'CONTENU_RETABLI':
       return `« ${contenuVise(n).intitule} » est de nouveau visible`;

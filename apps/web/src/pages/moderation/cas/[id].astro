@@ -62,7 +62,9 @@ const nonExaminable = !cas
     : cas.moi?.auteur
       ? 'C’est votre cas : un autre membre de l’équipe de modération l’examinera.'
       : cas.masquee
-        ? 'Ce cas est masqué par la modération : rétablissez-le avant de l’examiner.'
+        ? cas.masquage?.automatique
+          ? 'Ce cas est masqué à titre provisoire après des signalements : rétablissez-le depuis son dossier de modération avant de l’examiner.'
+          : 'Ce cas est masqué par la modération : rétablissez-le avant de l’examiner.'
         : cas.statut === 'VALIDE'
           ? 'Ce cas est validé et publié dans Bon réflexe.'
           : cas.statut === 'REFUSE'
