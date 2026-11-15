@@ -72,7 +72,6 @@ Adresses en développement : site http://localhost:4321 · API http://localhost:
 | Modules de l'API | `apps/api/src/modules/<domaine>/` |
 | Pages, gabarit, composants, scripts, styles du site | `apps/web/src/` |
 | Pages du prototype et leurs données simulées | `prototype/` (lecture seule) |
-| Documents remis au jury du hackathon | `hackathon/`, non versionné (son `README.md` d'abord) |
 
 ## Pièges connus
 
@@ -86,13 +85,3 @@ Adresses en développement : site http://localhost:4321 · API http://localhost:
 - `pnpm test:e2e` efface et recrée la base de test : deux sessions qui partagent le même PostgreSQL doivent avoir chacune leur base (`DATABASE_URL_TEST=postgres://…/vysora_test_<sujet>` dans le `.env` du worktree, le nom doit contenir « test »). Un worktree neuf demande `pnpm install` puis `pnpm --filter @vysora/shared build`.
 - La CSP du site n'est appliquée qu'en production : un script ou un style en ligne se vérifie avec `astro build` puis `node dist/server/entry.mjs` (variables `PORT`, `API_URL_INTERNE`, `SITE_URL`). Deux `astro dev` ne tournent pas dans le même dossier.
 - Les images sont écrites dans `STOCKAGE_DOSSIER`, relatif au dossier de lancement de l'API (`apps/api/stockage/` en développement, ignoré par Git). `pnpm db:demo` y écrit les avatars et images du prototype ; `pnpm db:reset` ne vide pas ce dossier (`pnpm medias:nettoyer` le fera après 24 h).
-
-## Documents du hackathon
-
-Le dossier `hackathon/` réunit les documents remis au jury du hackathon. Son `README.md` en est la référence : objectif de chaque document, frontières entre eux, ce qu'aucun ne contient, versions, chiffres de référence et journal des envois.
-
-- **Le dossier n'est pas versionné** (`.gitignore`) : il n'existe que dans la copie de travail principale du porteur du projet. Une session ouverte dans un worktree ou dans le nuage ne le voit pas ; on ne l'ajoute jamais à un commit. Revenir à un commit antérieur à `7c9c51b` (où il était encore suivi), puis en repartir, efface ses fichiers : en garder une copie hors du dépôt avant de le faire.
-- Deux agents (`.claude/agents/`, eux versionnés) rédigent et mettent à jour ces documents : `hackathon-presentation` (fiche projet, dossier de présentation, guide de démonstration) et `hackathon-technique` (gestion de projet, note technique, chiffres de référence). Tout travail sur un document passe par l'agent qui le tient ; la session qui les appelle relit leur travail et tient le README du dossier.
-- Une session de travail sur le produit ne modifie pas ce dossier. Quand elle change ce que les documents affirment (fonctionnalité visible, architecture, étape franchie), elle le signale au porteur du projet, qui décide de la mise à jour.
-- Un changement limité à ce dossier ne passe pas par Git ; un changement des agents ne touche pas au code : `pnpm verifier` n'est pas nécessaire, commit au format `docs(hackathon): …`.
-- Un document envoyé ne se modifie plus : tout changement ouvre sa version suivante (voir le README du dossier).
