@@ -18,6 +18,7 @@ import {
 } from '../../db/schema/index.js';
 import type { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
+import { dateDuMasquageProvisoire } from './masquages.js';
 
 const LONGUEUR_INTITULE = 140;
 
@@ -55,6 +56,7 @@ export async function presenterContenus(
       auteurId: contenu.auteurId,
       dateCreation: contenu.dateCreation,
       dateModification: contenu.dateModification,
+      masquageAutomatique: dateDuMasquageProvisoire,
       creation: { titre: creation.titre, slug: creation.slug },
       sujet: { titre: sujet.titre, slug: sujet.slug },
       cas: { titre: casBonReflexe.titre, slug: casBonReflexe.slug },
@@ -132,6 +134,7 @@ export async function presenterContenus(
           auteur,
           dateCreation: l.dateCreation.toISOString(),
           dateModification: l.dateModification?.toISOString() ?? null,
+          masquageAutomatique: l.masquageAutomatique?.toISOString() ?? null,
         },
       ];
     }),
@@ -144,10 +147,15 @@ export async function presenterContenus(
 export async function detailsDuContenu(
   db: BaseDeDonnees,
   id: number,
-): Promise<{ texte: string | null; avertissementAgent: AvertissementAgent | null }> {
+): Promise<{
+  texte: string | null;
+  avertissementAgent: AvertissementAgent | null;
+  dateMasquageAutomatique: Date | null;
+}> {
   const [ligne] = await db
     .select({
       avertissementAgent: creation.avertissementAgent,
+      dateMasquageAutomatique: contenu.dateMasquageAutomatique,
       commentaire: commentaire.corps,
       message: message.corps,
       sujet: sujet.corps,
@@ -163,6 +171,7 @@ export async function detailsDuContenu(
   return {
     texte: ligne?.commentaire ?? ligne?.message ?? ligne?.sujet ?? ligne?.retour ?? null,
     avertissementAgent: ligne?.avertissementAgent ?? null,
+    dateMasquageAutomatique: ligne?.dateMasquageAutomatique ?? null,
   };
 }
 

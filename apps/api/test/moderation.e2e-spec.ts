@@ -320,6 +320,7 @@ describe('Signalements et décisions (MOD-01)', () => {
         date: decision.date,
         motif: 'Une capture d’écran laisse lire le numéro de téléphone d’une cliente.',
         signalements: null,
+        automatique: false,
       });
       const vueModeration = (await moderation.get(`/api/v1/creations/${id}`).expect(200))
         .body as CreationFicheApi;
@@ -330,6 +331,7 @@ describe('Signalements et décisions (MOD-01)', () => {
         date: decision.date,
         motif: 'Une capture d’écran laisse lire le numéro de téléphone d’une cliente.',
         signalements: null,
+        automatique: false,
       });
 
       // Plus rien d'ouvert : la file est vide ; masquer de nouveau est refusé.
@@ -568,6 +570,7 @@ describe('Signalements et décisions (MOD-01)', () => {
         action,
         finSuspension,
         contenu: vise,
+        automatique: false,
       });
       // Le commentaire est supprimé : plus disponible, mais chaque décision se lit encore.
       expect(
@@ -678,6 +681,262 @@ describe('Signalements et décisions (MOD-01)', () => {
       actions: ['AUCUNE', 'RETABLIR', 'SUPPRIMER', 'AVERTIR', 'SUSPENDRE'],
     });
     expect(dossier.decisions[0]?.intituleContenu).toBe('Le prompt ne donne pas le format attendu.');
+  });
+
+  describe('masquage automatique au seuil de signalements (F-93, RG-101)', () => {
+    /** Membre dont la réputation atteint ce nombre de points (Apprenti dès 50, RG-84). */
+    async function membreAvecPoints(pseudo: string, points: number) {
+      const membre = await creerMembre(contexte, { pseudo, email: `${pseudo}@example.com` });
+      if (points)
+        await contexte.db
+          .insert(mouvementReputation)
+          .values({ beneficiaireId: membre.id, points, motif: 'VOTE_UTILE_RECU' });
+      return membre;
+    }
+    const apprentis = async () => ({
+      ibrahima: await membreAvecPoints('ibrahima-sow', 60),
+      nadia: await membreAvecPoints('nadia-kone', 300),
+      karim: await membreAvecPoints('karim-ba', 50),
+    });
+    const signalementOuvert = (signaleurId: number, contenuId: number) =>
+      contexte.db.insert(signalement).values({ signaleurId, contenuId, motif: 'SPAM' });
+    const etat = async (id: number) =>
+      (
+        await contexte.db
+          .select({ statut: contenu.statut, date: contenu.dateMasquageAutomatique })
+          .from(contenu)
+          .where(eq(contenu.id, id))
+      )[0];
+    const voter = (agent: Agent, id: number) =>
+      agent.put(`/api/v1/contenus/${id}/votes/UTILE`).set('Origin', ORIGINE_SITE).expect(200);
+
+    it('masque au troisième signalement d’un membre de niveau Apprenti ou plus, à titre provisoire', async () => {
+      const id = await creerCreation(contexte, auteurId);
+      await voter(await awa(), id);
+      expect(await reputation(auteurId)).toBe(10);
+      const { ibrahima, nadia, karim } = await apprentis();
+
+      // Awa est au niveau Curieux : son signalement ne compte pas pour le seuil.
+      await signaler(await awa(), id, { motif: 'SPAM' }).expect(201);
+      await signaler(await agentConnecte(ibrahima.email ?? ''), id).expect(201);
+      await signaler(await agentConnecte(nadia.email ?? ''), id).expect(201);
+      expect(await etat(id)).toEqual({ statut: 'VISIBLE', date: null });
+      expect(contexte.emails).toEqual([]);
+
+      await signaler(await agentConnecte(karim.email ?? ''), id, { motif: 'PLAGIAT' }).expect(201);
+      const masque = await etat(id);
+      expect(masque?.statut).toBe('MASQUE');
+      expect(masque?.date).toBeInstanceOf(Date);
+      // Aucune décision : les signalements restent ouverts pour la modération.
+      expect(await contexte.db.$count(decisionModeration)).toBe(0);
+      const ouverts = await contexte.db.select({ statut: signalement.statut }).from(signalement);
+      expect(ouverts.map((s) => s.statut)).toEqual(['OUVERT', 'OUVERT', 'OUVERT', 'OUVERT']);
+      // RG-82 : les points nés du contenu sont annulés à la date du masquage.
+      expect(await reputation(auteurId)).toBe(0);
+      const [annulation] = await contexte.db
+        .select({ date: mouvementReputation.date })
+        .from(mouvementReputation)
+        .where(eq(mouvementReputation.motif, 'ANNULATION'));
+      expect(annulation?.date).toEqual(masque?.date);
+
+      // L'auteur est prévenu de l'outil automatisé, sans apprendre qui a signalé.
+      const recues = (await (await lea()).get('/api/v1/notifications').expect(200))
+        .body as NotificationsApi;
+      expect(recues.elements[0]).toMatchObject({
+        type: 'CONTENU_MASQUE',
+        par: null,
+        motif: null,
+        decision: {
+          action: 'MASQUER',
+          finSuspension: null,
+          automatique: true,
+          contenu: { type: 'CREATION', intitule: 'Cité imaginaire entre ciel et mer' },
+        },
+      });
+      expect(contexte.emails.map((e) => [e.a, e.sujet])).toEqual([
+        ['lea@example.com', 'Votre création a été masquée à titre provisoire'],
+      ]);
+      const [email] = contexte.emails;
+      expect(email?.texte).toContain('un outil automatisé l’a masquée à titre provisoire');
+      expect(email?.texte).toContain(`Masquage automatique, contenu n° ${id}`);
+      for (const signaleur of ['awa-sarr', 'ibrahima-sow', 'nadia-kone', 'karim-ba'])
+        expect(email?.texte).not.toContain(signaleur);
+
+      // RG-30 : l'auteur la voit, masquée automatiquement ; les autres, non.
+      const vueAuteur = (await (await lea()).get(`/api/v1/creations/${id}`).expect(200))
+        .body as CreationFicheApi;
+      expect(vueAuteur.masquage).toEqual({
+        date: masque?.date?.toISOString(),
+        motif: null,
+        signalements: null,
+        automatique: true,
+      });
+      await (await awa()).get(`/api/v1/creations/${id}`).expect(404);
+      await signaler(await awa(), id).expect(404);
+    });
+
+    it('compte un signalement ouvert par membre distinct, ni les signalements clos ni les comptes fermés', async () => {
+      const id = await creerCreation(contexte, auteurId);
+      const { ibrahima, nadia } = await apprentis();
+      const ferme = await membreAvecPoints('compte-ferme', 1500);
+      await contexte.db
+        .update(utilisateur)
+        .set({ statutCompte: 'BANNI' })
+        .where(eq(utilisateur.id, ferme.id));
+      await signalementOuvert(ferme.id, id);
+      const moderation = await thomas();
+      const agentIbrahima = await agentConnecte(ibrahima.email ?? '');
+      const agentNadia = await agentConnecte(nadia.email ?? '');
+
+      // Un signalement clos par une décision ne compte plus ; un nouveau signalement compte.
+      await signaler(agentIbrahima, id).expect(201);
+      await decider(moderation, id, { action: 'AUCUNE', motif: 'Rien à redire.' }).expect(201);
+      await signaler(agentIbrahima, id, { motif: 'HORS_SUJET' }).expect(201);
+      await signalementOuvert(ferme.id, id);
+      await signaler(agentNadia, id).expect(201);
+      // CI-21 : un même membre ne signale pas deux fois le même contenu.
+      await signaler(agentNadia, id, { motif: 'PLAGIAT' }).expect(409);
+      expect(await etat(id)).toEqual({ statut: 'VISIBLE', date: null });
+
+      // RG-85 : un modérateur compte, quel que soit son niveau.
+      await signaler(moderation, id).expect(201);
+      expect((await etat(id))?.statut).toBe('MASQUE');
+    });
+
+    it('passe en tête de la file : la modération confirme, rétablit ou supprime d’abord (RG-104)', async () => {
+      const ancienne = await creerCreation(contexte, auteurId);
+      const id = await creerCreation(contexte, auteurId);
+      const { ibrahima, nadia, karim } = await apprentis();
+      await contexte.db.insert(signalement).values({
+        signaleurId: awaId,
+        contenuId: ancienne,
+        motif: 'SPAM',
+        date: new Date(Date.now() - 80 * 3_600_000),
+      });
+      await signalementOuvert(ibrahima.id, id);
+      await signalementOuvert(nadia.id, id);
+      await signaler(await agentConnecte(karim.email ?? ''), id).expect(201);
+
+      const moderation = await thomas();
+      const file = (await moderation.get('/api/v1/moderation/file').expect(200))
+        .body as FileModerationApi;
+      expect(file.elements.map((e) => e.contenu.id)).toEqual([id, ancienne]);
+      expect(file.elements[0]?.contenu.masquageAutomatique).toEqual(expect.any(String));
+      expect(file.elements[0]?.signalements.nombre).toBe(3);
+      expect(file.elements[1]?.contenu.masquageAutomatique).toBeNull();
+
+      const dossier = (await moderation.get(`/api/v1/moderation/contenus/${id}`).expect(200))
+        .body as DossierModerationApi;
+      expect(dossier.contenu).toMatchObject({ statut: 'MASQUE' });
+      expect(dossier.actions).toEqual(['MASQUER', 'RETABLIR', 'SUPPRIMER']);
+      const vueModeration = (await moderation.get(`/api/v1/creations/${id}`).expect(200))
+        .body as CreationFicheApi;
+      expect(vueModeration.masquage).toMatchObject({ automatique: true, signalements: 3 });
+      for (const action of ['AUCUNE', 'AVERTIR'])
+        expect(
+          (await decider(moderation, id, { action, motif: 'Examen.' }).expect(409)).body.detail,
+        ).toBe(
+          'Ce contenu a été masqué automatiquement : confirmez le masquage, rétablissez ou supprimez le contenu avant toute autre mesure.',
+        );
+
+      // RG-104 : l'auteur, s'il est de l'équipe, ne le voit pas dans sa file et n'en décide pas.
+      await contexte.db
+        .update(utilisateur)
+        .set({ role: 'MODERATEUR' })
+        .where(eq(utilisateur.id, auteurId));
+      const auteurModerateur = await lea();
+      const saFile = (await auteurModerateur.get('/api/v1/moderation/file').expect(200))
+        .body as FileModerationApi;
+      expect(saFile.elements.map((e) => e.contenu.id)).toEqual([]);
+      await decider(auteurModerateur, id, { action: 'RETABLIR', motif: 'Le mien.' }).expect(403);
+
+      // La modération confirme le masquage : il devient une décision, la file reprend son ordre.
+      contexte.emails.length = 0;
+      const confirmee = (
+        await decider(moderation, id, { action: 'MASQUER', motif: 'Publicité répétée.' }).expect(
+          201,
+        )
+      ).body as DecisionApi;
+      expect(confirmee.signalementsClos).toBe(3);
+      expect(contexte.emails[0]?.sujet).toBe('Votre création a été masquée par la modération');
+      const apres = (await moderation.get('/api/v1/moderation/file').expect(200))
+        .body as FileModerationApi;
+      expect(apres.elements.map((e) => e.contenu.id)).toEqual([ancienne]);
+      const confirme = (await moderation.get(`/api/v1/moderation/contenus/${id}`).expect(200))
+        .body as DossierModerationApi;
+      expect(confirme.contenu.masquageAutomatique).toBeNull();
+      expect(confirme.actions).toContain('AVERTIR');
+      expect(
+        (await (await lea()).get(`/api/v1/creations/${id}`).expect(200)).body.masquage,
+      ).toEqual({
+        date: confirmee.date,
+        motif: 'Publicité répétée.',
+        signalements: null,
+        automatique: false,
+      });
+    });
+
+    it('rétablit le contenu et ses points, ceux du seul masquage en cours (RG-82)', async () => {
+      const id = await creerCreation(contexte, auteurId);
+      await voter(await awa(), id);
+      const { ibrahima, nadia, karim } = await apprentis();
+      const moderation = await thomas();
+      const agentKarim = await agentConnecte(karim.email ?? '');
+      const masquerAutomatiquement = async () => {
+        await signalementOuvert(ibrahima.id, id);
+        await signalementOuvert(nadia.id, id);
+        await signaler(agentKarim, id).expect(201);
+        expect((await etat(id))?.statut).toBe('MASQUE');
+      };
+
+      // Un premier masquage, par décision, puis le rétablissement.
+      await decider(moderation, id, { action: 'MASQUER', motif: 'Spam.' }).expect(201);
+      await decider(moderation, id, { action: 'RETABLIR', motif: 'Corrigé.' }).expect(201);
+      expect(await reputation(auteurId)).toBe(10);
+
+      // Masquage automatique : les points sont annulés, le rétablissement les rend une seule fois.
+      await masquerAutomatiquement();
+      expect(await reputation(auteurId)).toBe(0);
+      contexte.emails.length = 0;
+      const retablie = (
+        await decider(moderation, id, {
+          action: 'RETABLIR',
+          motif: 'Signalements infondés.',
+        }).expect(201)
+      ).body as DecisionApi;
+      expect(retablie.signalementsClos).toBe(3);
+      expect(await etat(id)).toMatchObject({ statut: 'VISIBLE' });
+      expect(await reputation(auteurId)).toBe(10);
+      expect(contexte.emails[0]?.sujet).toBe('Votre création est de nouveau visible');
+      const clos = await contexte.db
+        .select({ statut: signalement.statut })
+        .from(signalement)
+        .where(eq(signalement.decisionId, retablie.id));
+      expect(clos.map((s) => s.statut)).toEqual(['NON_FONDE', 'NON_FONDE', 'NON_FONDE']);
+      await (await awa()).get(`/api/v1/creations/${id}`).expect(200);
+
+      // De nouveaux signalements le masquent de nouveau ; une confirmation puis un rétablissement
+      // rendent encore les points une seule fois.
+      await masquerAutomatiquement();
+      expect(await reputation(auteurId)).toBe(0);
+      await decider(moderation, id, { action: 'MASQUER', motif: 'Spam confirmé.' }).expect(201);
+      await decider(moderation, id, { action: 'RETABLIR', motif: 'Corrigé.' }).expect(201);
+      expect(await reputation(auteurId)).toBe(10);
+      const mouvements = await contexte.db
+        .select({ motif: mouvementReputation.motif, points: mouvementReputation.points })
+        .from(mouvementReputation)
+        .where(eq(mouvementReputation.beneficiaireId, auteurId))
+        .orderBy(mouvementReputation.id);
+      expect(mouvements.map((m) => [m.motif, m.points])).toEqual([
+        ['VOTE_UTILE_RECU', 10],
+        ['ANNULATION', -10],
+        ['VOTE_UTILE_RECU', 10],
+        ['ANNULATION', -10],
+        ['VOTE_UTILE_RECU', 10],
+        ['ANNULATION', -10],
+        ['VOTE_UTILE_RECU', 10],
+      ]);
+    });
   });
 
   /** Commentaire visible d'un membre sur une création. */

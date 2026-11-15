@@ -10,8 +10,11 @@ import {
   LIBELLES_MOTIF_SIGNALEMENT,
   actionsAdministrateurPossibles,
   actionsPossibles,
+  compteDansMasquageAutomatique,
+  masquageAutomatiqueAtteint,
   issueDesSignalements,
 } from './moderation';
+import { NIVEAUX, SEUILS } from './regles';
 import { erreursParChamp } from './schemas/commun';
 import {
   schemaDecisionAdministrateur,
@@ -205,6 +208,58 @@ describe('actionsPossibles (RG-102, RG-23)', () => {
       actionsPossibles({ type: 'COMMENTAIRE', statut: 'VISIBLE', avertissementAgent: null }),
     ).toEqual(['AUCUNE', 'MASQUER', 'SUPPRIMER', 'AVERTIR', 'SUSPENDRE']);
     expect(actionsPossibles({ ...creation, statut: 'SUPPRIME' })).toEqual([]);
+  });
+
+  it('fait d’abord confirmer, rétablir ou supprimer un contenu masqué automatiquement (F-93)', () => {
+    const date = '2026-11-15T10:00:00.000Z';
+    expect(actionsPossibles({ ...creation, statut: 'MASQUE', masquageAutomatique: date })).toEqual([
+      'MASQUER',
+      'RETABLIR',
+      'SUPPRIMER',
+    ]);
+    expect(
+      actionsPossibles({ ...creation, statut: 'MASQUE', masquageAutomatique: null }),
+    ).toContain('AUCUNE');
+    expect(
+      actionsPossibles({ ...creation, statut: 'SUPPRIME', masquageAutomatique: date }),
+    ).toEqual([]);
+  });
+});
+
+describe('masquage automatique (RG-101, RG-85)', () => {
+  const membre = (reputation: number) => ({ role: 'MEMBRE' as const, reputation });
+
+  it('compte les membres de niveau Apprenti ou plus, et l’équipe quel que soit son niveau', () => {
+    expect(compteDansMasquageAutomatique(membre(0))).toBe(false);
+    expect(compteDansMasquageAutomatique(membre(49))).toBe(false);
+    expect(compteDansMasquageAutomatique(membre(50))).toBe(true);
+    expect(compteDansMasquageAutomatique(membre(5000))).toBe(true);
+    expect(compteDansMasquageAutomatique(membre(-20))).toBe(false);
+    expect(compteDansMasquageAutomatique({ role: 'MODERATEUR', reputation: 0 })).toBe(true);
+    expect(compteDansMasquageAutomatique({ role: 'ADMINISTRATEUR', reputation: 0 })).toBe(true);
+  });
+
+  it('suit les niveaux enregistrés par l’administration', () => {
+    const niveaux = NIVEAUX.map((n) =>
+      n.code === 'apprenti' ? { ...n, compteDansMasquageAutomatique: false } : n,
+    );
+    expect(compteDansMasquageAutomatique(membre(60), niveaux)).toBe(false);
+    expect(compteDansMasquageAutomatique(membre(300), niveaux)).toBe(true);
+  });
+
+  it('masque à partir de trois signalements qui comptent', () => {
+    expect(SEUILS.signalementsPourMasquageAutomatique).toBe(3);
+    expect(masquageAutomatiqueAtteint([membre(50), membre(300)])).toBe(false);
+    expect(masquageAutomatiqueAtteint([membre(50), membre(300), membre(10)])).toBe(false);
+    expect(masquageAutomatiqueAtteint([membre(50), membre(300), membre(10), membre(1500)])).toBe(
+      true,
+    );
+    expect(
+      masquageAutomatiqueAtteint([membre(50), membre(0), { role: 'MODERATEUR', reputation: 0 }]),
+    ).toBe(false);
+    expect(
+      masquageAutomatiqueAtteint([membre(50), membre(60), { role: 'MODERATEUR', reputation: 0 }]),
+    ).toBe(true);
   });
 });
 

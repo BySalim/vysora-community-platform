@@ -40,9 +40,12 @@ export interface ContenuModereApi {
   auteur: MembreResumeApi;
   dateCreation: string;
   dateModification: string | null;
+  /** F-93 : date du masquage automatique qui attend l'examen d'un modérateur (le contenu est alors
+      en tête de la file) ; null pour un contenu visible, supprimé ou masqué par une décision. */
+  masquageAutomatique: string | null;
 }
 
-/** Contenu de la file de modération (F-91). */
+/** Contenu de la file de modération (F-91), les contenus masqués automatiquement en tête (F-93). */
 export interface ElementFileModerationApi {
   contenu: ContenuModereApi;
   /** Date qui range le contenu dans la file : premier signalement ouvert, ou modification par son
@@ -61,7 +64,8 @@ export interface ElementFileModerationApi {
   };
 }
 
-/** File de modération : du plus ancien au plus récent (F-91). */
+/** File de modération : les contenus masqués automatiquement d'abord (F-93), puis du plus ancien
+    au plus récent (F-91). */
 export interface FileModerationApi {
   elements: ElementFileModerationApi[];
   suivant: string | null;
@@ -131,4 +135,7 @@ export interface MasquageApi {
   date: string | null;
   motif: string | null;
   signalements: number | null;
+  /** F-93 : masquage provisoire de l'outil automatisé, en attente de l'examen d'un modérateur (date
+      du masquage, aucun motif). */
+  automatique: boolean;
 }

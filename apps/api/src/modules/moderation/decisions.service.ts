@@ -39,7 +39,7 @@ import { ReputationService } from '../progression/reputation.service.js';
 import { contenusLies, presenterContenus } from './contenus-moderes.js';
 import { emailDecision, referenceDecision } from './courriels.js';
 import { DossiersService } from './dossiers.service.js';
-import { derniersMasquages } from './masquages.js';
+import { dateDuMasquageProvisoire, datesDuMasquageEnCours } from './masquages.js';
 
 /** Contenu visé, verrouillé pour la durée de la décision. */
 interface Cible {
@@ -49,6 +49,8 @@ interface Cible {
   statut: StatutContenu;
   publication: StatutPublication | null;
   avertissementAgent: AvertissementAgent | null;
+  /** F-93 : date du masquage automatique qui attend l'examen d'un modérateur ; null sinon. */
+  masquageAutomatique: string | null;
 }
 
 const JOUR_MS = 86_400_000;
@@ -70,8 +72,10 @@ const NOTIFICATION_DE: Partial<Record<ActionDecision, TypeNotification>> = {
    et « rétablir », comme fondés sinon (CI-20). « Avertir » et « suspendre » visent l'auteur du
    contenu (CI-19) ; la suspension dure de 1 à 90 jours (RG-103). RG-104 : jamais sur son propre
    contenu. Points de réputation : annulés au masquage et à la suppression, générés de nouveau au
-   rétablissement (RG-82). L'auteur est notifié (RG-91 : contenu masqué ou rétabli, décision le
-   concernant, sans que le modérateur soit nommé) et informé par e-mail (F-92, RG-90). */
+   rétablissement (RG-82) : ceux du masquage en cours, par décision ou automatique (F-93). Un contenu
+   masqué automatiquement se confirme (« masquer »), se rétablit ou se supprime d'abord. L'auteur
+   est notifié (RG-91 : contenu masqué ou rétabli, décision le concernant, sans que le modérateur
+   soit nommé) et informé par e-mail (F-92, RG-90). */
 @Injectable()
 export class DecisionsService {
   private readonly journal = new Logger(DecisionsService.name);
@@ -101,6 +105,9 @@ export class DecisionsService {
           'Ce contenu est le vôtre : un autre membre de l’équipe de modération prendra la décision.',
         );
       verifierEtat(saisie.action, cible);
+      // Lues avant d'enregistrer la décision : celle-ci peut être le rétablissement.
+      const masquages =
+        saisie.action === 'RETABLIR' ? await datesDuMasquageEnCours(tx, contenuId) : [];
 
       const [enregistree] = await tx
         .insert(decisionModeration)
@@ -136,15 +143,9 @@ export class DecisionsService {
           break;
         }
         case 'RETABLIR': {
-          // La décision qui vient d'être enregistrée n'est pas un masquage : la dernière l'est.
-          const [masquage] = await derniersMasquages(tx, [contenuId]);
           await tx.update(contenu).set({ statut: 'VISIBLE' }).where(eq(contenu.id, contenuId));
-          if (masquage)
-            await this.reputation.retablirContenus(
-              tx,
-              await contenusLies(tx, contenuId, cible.type),
-              masquage.date,
-            );
+          const lies = masquages.length ? await contenusLies(tx, contenuId, cible.type) : [];
+          for (const date of masquages) await this.reputation.retablirContenus(tx, lies, date);
           if (cible.type === 'CREATION' && cible.publication === 'PUBLIEE')
             await indexer(tx, contenuId);
           if (cible.type === 'SUJET') await indexerSujet(tx, contenuId);
@@ -227,13 +228,14 @@ export class DecisionsService {
         statut: contenu.statut,
         publication: creation.statutPublication,
         avertissementAgent: creation.avertissementAgent,
+        masquageAutomatique: dateDuMasquageProvisoire,
       })
       .from(contenu)
       .leftJoin(creation, eq(creation.id, contenu.id))
       .where(eq(contenu.id, id))
       .for('update', { of: contenu });
     if (!ligne || ligne.statut === 'SUPPRIME') throw introuvable('Ce contenu est introuvable.');
-    return ligne;
+    return { ...ligne, masquageAutomatique: ligne.masquageAutomatique?.toISOString() ?? null };
   }
 
   /** F-92, RG-90 : e-mail à l'auteur du contenu, après l'enregistrement de la décision, quelles que
@@ -283,6 +285,10 @@ export class DecisionsService {
     à la modération) ; un refus dit pourquoi. */
 function verifierEtat(action: DecisionModeration['action'], cible: Cible): void {
   if (actionsPossibles(cible).includes(action)) return;
+  if (cible.statut === 'MASQUE' && cible.masquageAutomatique)
+    throw conflit(
+      'Ce contenu a été masqué automatiquement : confirmez le masquage, rétablissez ou supprimez le contenu avant toute autre mesure.',
+    );
   switch (action) {
     case 'MASQUER':
       throw conflit('Ce contenu est déjà masqué.');

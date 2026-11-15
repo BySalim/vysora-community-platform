@@ -147,6 +147,56 @@ export function emailDecision(d: DecisionACommuniquer): EmailAEnvoyer {
   };
 }
 
+/** Référence d'un masquage automatique, à rappeler dans des observations (« Masquage automatique,
+    contenu n° 12 ») : la modération retrouve le dossier par l'identifiant du contenu. */
+export const referenceMasquageAutomatique = (contenuId: number): string =>
+  `Masquage automatique, contenu n° ${contenuId}`;
+
+export interface MasquageAutomatiqueACommuniquer {
+  a: string;
+  /** Identifiant du contenu masqué. */
+  id: number;
+  contenu: { type: TypeContenu; intitule: string };
+  /** Éditeur de la création, sur le site ; null pour un autre contenu. */
+  modifier: string | null;
+  /** Formulaire de contact, motif « Contester une décision », référence remplie. */
+  observations: string;
+}
+
+/** F-93, RG-101 : e-mail à l'auteur d'un contenu masqué par l'outil automatisé au seuil des
+    signalements. Les conditions d'utilisation (article 6) exigent d'y dire le recours à l'outil, le
+    caractère provisoire de la mesure, l'examen humain à venir et la façon de présenter ses
+    observations ; qui a signalé n'est jamais dit. */
+export function emailMasquageAutomatique(m: MasquageAutomatiqueACommuniquer): EmailAEnvoyer {
+  const { nom, feminin } = DESIGNATIONS[m.contenu.type];
+  const e = feminin ? 'e' : '';
+  const titre = `Votre ${nom} a été masqué${e} à titre provisoire`;
+  const paragraphes = [
+    `« ${m.contenu.intitule} » a été signalé${e} par plusieurs membres de niveau Apprenti ou plus. Comme le prévoient les conditions d’utilisation, un outil automatisé l’a masqué${e} à titre provisoire, en attendant l’examen d’un modérateur. ${feminin ? 'Elle' : 'Il'} reste visible de vous et de la modération ; les points de réputation liés sont suspendus.`,
+    `Aucune sanction n’est décidée sans examen humain. Le modérateur confirmera le masquage, rétablira votre ${nom} ou ${feminin ? 'la' : 'le'} supprimera ; sa décision vous sera communiquée.`,
+    ...(m.modifier
+      ? ['Vous pouvez la modifier dès maintenant : le modérateur examinera la version corrigée.']
+      : []),
+    'Vous pouvez aussi présenter vos observations depuis le formulaire de contact de Vysora (« Contester une décision »), en indiquant la référence ci-dessous.',
+  ];
+  return {
+    a: m.a,
+    sujet: typo(titre),
+    ...miseEnForme({
+      titre: typo(titre),
+      paragraphes: paragraphes.map(typo),
+      details: [
+        ['Mesure', 'Masquage provisoire par un outil automatisé'],
+        ['Règle', 'Conditions d’utilisation, article 6'],
+        ['Référence', referenceMasquageAutomatique(m.id)],
+      ],
+      action: m.modifier
+        ? { libelle: 'Modifier la création', url: m.modifier }
+        : { libelle: 'Présenter vos observations', url: m.observations },
+    }),
+  };
+}
+
 export interface DecisionSurMembre {
   a: string;
   id: number;

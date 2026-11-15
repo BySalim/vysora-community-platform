@@ -1,4 +1,10 @@
-import { emailDecision, emailDecisionMembre, type DecisionACommuniquer } from './courriels.js';
+import {
+  emailDecision,
+  emailDecisionMembre,
+  emailMasquageAutomatique,
+  referenceMasquageAutomatique,
+  type DecisionACommuniquer,
+} from './courriels.js';
 
 const base: DecisionACommuniquer = {
   a: 'lea@example.com',
@@ -109,5 +115,48 @@ describe('emailDecisionMembre (F-92, RG-102)', () => {
     );
     expect(email.sujet).toBe('Le badge « Podium » vous a été retiré');
     expect(email.texte).toContain('Il ne vous sera plus attribué.');
+  });
+});
+
+describe('emailMasquageAutomatique (F-93, RG-101)', () => {
+  const masquage = {
+    a: 'lea@example.com',
+    id: 4,
+    contenu: { type: 'CREATION' as const, intitule: 'Cité imaginaire' },
+    modifier: 'https://vysora.example/creations/4/modifier',
+    observations: 'https://vysora.example/contact?motif=contestation',
+  };
+
+  it('dit le recours à l’outil automatisé, le caractère provisoire et l’examen humain à venir', () => {
+    const email = lire(emailMasquageAutomatique(masquage));
+    expect(email.sujet).toBe('Votre création a été masquée à titre provisoire');
+    expect(email.texte).toContain('un outil automatisé l’a masquée à titre provisoire');
+    expect(email.texte).toContain('Aucune sanction n’est décidée sans examen humain.');
+    expect(email.texte).toContain('Mesure : Masquage provisoire par un outil automatisé');
+    expect(email.texte).toContain('Règle : Conditions d’utilisation, article 6');
+    expect(email.texte).toContain('Référence : Masquage automatique, contenu n° 4');
+    expect(email.texte).toContain(
+      'Modifier la création : https://vysora.example/creations/4/modifier',
+    );
+    expect(email.texte).toContain('présenter vos observations');
+    expect(email.texte).not.toContain('Motif');
+  });
+
+  it('accorde le contenu et propose de présenter ses observations hors création', () => {
+    const email = lire(
+      emailMasquageAutomatique({
+        ...masquage,
+        id: 9,
+        contenu: { type: 'COMMENTAIRE', intitule: 'Le prompt ne marche pas.' },
+        modifier: null,
+      }),
+    );
+    expect(email.sujet).toBe('Votre commentaire a été masqué à titre provisoire');
+    expect(email.texte).toContain('Il reste visible de vous et de la modération');
+    expect(email.texte).toContain(
+      'Présenter vos observations : https://vysora.example/contact?motif=contestation',
+    );
+    expect(email.texte).not.toContain('Vous pouvez la modifier');
+    expect(referenceMasquageAutomatique(9)).toBe('Masquage automatique, contenu n° 9');
   });
 });

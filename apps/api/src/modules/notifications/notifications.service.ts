@@ -86,6 +86,8 @@ export interface DonneesNotification {
   /** Contenu masqué ou rétabli, décision de modération : l'action et le contenu visé (type et
       intitulé, qui restent lisibles si le contenu est supprimé). */
   action?: ActionDecision;
+  /** F-93 : masquage provisoire de l'outil automatisé (aucune décision, aucun motif). */
+  automatique?: boolean;
   finSuspension?: string;
   typeContenu?: TypeContenu;
   intitule?: string;
@@ -719,6 +721,7 @@ export class NotificationsService implements OnModuleInit {
               finSuspension: d.finSuspension ?? null,
               contenu:
                 d.typeContenu && d.intitule ? { type: d.typeContenu, intitule: d.intitule } : null,
+              automatique: d.automatique === true,
             }
           : null,
         obsolescence: d.modele && d.membres ? { modele: d.modele, membres: d.membres } : null,

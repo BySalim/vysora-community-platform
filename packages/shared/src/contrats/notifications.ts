@@ -93,6 +93,9 @@ export interface NotificationApi {
     action: ActionDecision;
     finSuspension: string | null;
     contenu: { type: TypeContenu; intitule: string } | null;
+    /** F-93 : masquage provisoire de l'outil automatisé, au seuil des signalements, que la
+        modération examinera (aucun motif). */
+    automatique: boolean;
   } | null;
   /** Obsolescence au-delà du seuil (RG-44). */
   obsolescence: { modele: string; membres: number } | null;

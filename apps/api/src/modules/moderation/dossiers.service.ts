@@ -45,22 +45,31 @@ const SANS_SUITE: ActionDecision[] = ['AUCUNE', 'RETABLIR'];
 
 type LigneDecision = typeof decisionModeration.$inferSelect;
 
-/** Curseur de la file : date de rangement et identifiant du dernier contenu de la page. */
-const ecrireCurseur = (depuis: Date, id: number) =>
-  Buffer.from(`${depuis.toISOString()}|${id}`).toString('base64url');
-function lireCurseur(curseur: string | undefined): { depuis: Date; id: number } | null {
+/** Curseur de la file : rang (0 pour un masquage automatique en attente, 1 sinon), date de rangement
+    et identifiant du dernier contenu de la page. */
+const ecrireCurseur = (rang: number, depuis: Date, id: number) =>
+  Buffer.from(`${rang}|${depuis.toISOString()}|${id}`).toString('base64url');
+function lireCurseur(
+  curseur: string | undefined,
+): { rang: number; depuis: Date; id: number } | null {
   if (!curseur) return null;
-  const [date, id] = Buffer.from(curseur, 'base64url').toString().split('|');
+  const [rang, date, id] = Buffer.from(curseur, 'base64url').toString().split('|');
   const depuis = new Date(date ?? '');
   const identifiant = Number(id);
-  if (Number.isNaN(depuis.getTime()) || !Number.isSafeInteger(identifiant) || identifiant < 1)
+  if (
+    (rang !== '0' && rang !== '1') ||
+    Number.isNaN(depuis.getTime()) ||
+    !Number.isSafeInteger(identifiant) ||
+    identifiant < 1
+  )
     throw erreurValidation({ apres: 'Cette page de la file n’existe pas.' });
-  return { depuis, id: identifiant };
+  return { rang: Number(rang), depuis, id: identifiant };
 }
 
 /* F-91 : ce que la modération examine. La file range les contenus du plus ancien au plus récent :
    date du premier signalement ouvert, ou date à laquelle l'auteur a modifié un contenu masqué depuis
-   la dernière décision (nouvel examen demandé). Les contenus supprimés n'y figurent plus. RG-104 : un
+   la dernière décision (nouvel examen demandé). F-93 : un contenu masqué automatiquement passe en
+   tête tant qu'aucune décision ne l'a examiné. Les contenus supprimés n'y figurent plus. RG-104 : un
    modérateur ne voit dans la file ni ne consulte le dossier de ses propres contenus, que traite un
    autre membre de l'équipe (il n'y apprend pas qui l'a signalé). */
 @Injectable()
@@ -87,21 +96,31 @@ export class DossiersService {
           where contenu_id is not null group by contenu_id
         ), file as (
           select c.id,
-            coalesce(c.statut = 'MASQUE' and c.date_modification > d.date, false) as nouvel_examen,
-            least(o.premier, case when c.statut = 'MASQUE' and c.date_modification > d.date
-              then c.date_modification end) as depuis
+            coalesce(c.statut = 'MASQUE'
+              and c.date_modification > greatest(d.date, c.date_masquage_automatique), false)
+              as nouvel_examen,
+            least(o.premier, case when c.statut = 'MASQUE'
+              and c.date_modification > greatest(d.date, c.date_masquage_automatique)
+              then c.date_modification end) as depuis,
+            case when c.statut = 'MASQUE' and c.date_masquage_automatique is not null
+              and (d.date is null or d.date < c.date_masquage_automatique) then 0 else 1 end as rang
           from contenu c
           left join ouverts o on o.contenu_id = c.id
           left join dernieres d on d.contenu_id = c.id
           where c.statut <> 'SUPPRIME' and c.auteur_id <> ${moderateurId}
         )
-        select id, depuis, nouvel_examen from file where depuis is not null`;
+        select id, rang, depuis, nouvel_examen from file where depuis is not null`;
     const [resultat, comptes] = await Promise.all([
-      this.db.execute<{ id: string; depuis: Date | string; nouvel_examen: boolean }>(sql`
+      this.db.execute<{
+        id: string;
+        rang: number;
+        depuis: Date | string;
+        nouvel_examen: boolean;
+      }>(sql`
         select * from (${file}) f
         where ${curseur?.depuis.toISOString() ?? null}::timestamptz is null
-          or (depuis, id) > (${curseur?.depuis.toISOString() ?? null}::timestamptz, ${curseur?.id ?? 0}::bigint)
-        order by depuis, id
+          or (rang, depuis, id) > (${curseur?.rang ?? 0}::int, ${curseur?.depuis.toISOString() ?? null}::timestamptz, ${curseur?.id ?? 0}::bigint)
+        order by rang, depuis, id
         limit ${PAR_PAGE + 1}
       `),
       this.db.execute<{ total: number; en_retard: number }>(sql`
@@ -113,6 +132,7 @@ export class DossiersService {
     const lignes = resultat.rows.map((l) => ({
       ...l,
       id: Number(l.id),
+      rang: Number(l.rang),
       depuis: new Date(l.depuis),
     }));
     const page = lignes.slice(0, PAR_PAGE);
@@ -161,7 +181,9 @@ export class DossiersService {
     return {
       elements,
       suivant:
-        lignes.length > PAR_PAGE && dernier ? ecrireCurseur(dernier.depuis, dernier.id) : null,
+        lignes.length > PAR_PAGE && dernier
+          ? ecrireCurseur(dernier.rang, dernier.depuis, dernier.id)
+          : null,
       ...totaux,
     };
   }
@@ -223,7 +245,10 @@ export class DossiersService {
       this.presenter(surLeContenu),
       this.presenter(historique.map((l) => l.decision)),
     ]);
-    const derniere = surLeContenu[0];
+    // Nouvel examen : modification postérieure au masquage, par décision ou automatique (F-93).
+    const masqueLe = [surLeContenu[0]?.date, details.dateMasquageAutomatique]
+      .filter((d): d is Date => d instanceof Date)
+      .toSorted((a, b) => b.getTime() - a.getTime())[0];
     return {
       contenu: presente,
       texte: details.texte,
@@ -248,8 +273,8 @@ export class DossiersService {
       nouvelExamen:
         presente.statut === 'MASQUE' &&
         presente.dateModification !== null &&
-        derniere !== undefined &&
-        new Date(presente.dateModification) > derniere.date,
+        masqueLe !== undefined &&
+        new Date(presente.dateModification) > masqueLe,
     };
   }
 
