@@ -1,5 +1,6 @@
 import type { APIContext } from 'astro';
 import { defineMiddleware } from 'astro:middleware';
+import { signalerPassageAssistant } from './lib/assistants-ia';
 import { ROUTES } from './lib/navigation';
 import { chargerSession } from './lib/session';
 import { accueilZone, zoneReservee, zoneVisible } from './lib/zones-reservees';
@@ -44,6 +45,9 @@ export const onRequest = defineMiddleware(async (contexte, suite) => {
   }
 
   const reponse = await suite();
+  // REF-03 : pages lues par les assistants d'IA et visites qu'ils envoient.
+  if (contexte.request.method === 'GET' && reponse.status === 200)
+    signalerPassageAssistant(contexte.request, contexte.url);
   const entetes = reponse.headers;
   // Échéance de la session repoussée ou cookie périmé effacé par l'API : le navigateur en est informé.
   for (const cookie of session.cookies) entetes.append('Set-Cookie', cookie);

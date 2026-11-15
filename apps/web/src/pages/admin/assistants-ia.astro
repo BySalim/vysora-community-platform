@@ -1,0 +1,202 @@
+---
+/* Assistants d'IA (REF-03) : ce que ChatGPT, Claude, Perplexity et les autres lisent de Vysora, et
+   les visites qu'ils envoient. Écran sans maquette dans le prototype, dans le style des écrans
+   d'administration : période en tête, quatre chiffres, puis le détail par assistant et par page.
+   Rendu par le serveur depuis GET /api/v1/admin/assistants-ia. */
+import {
+  DELAIS,
+  LIBELLES_NATURE_PASSAGE,
+  PERIODES_MESURE_ASSISTANTS,
+  raisonRefus,
+  type MesureAssistantsApi,
+  type NaturePassage,
+} from '@vysora/shared';
+import AccesBloc from '../../components/AccesBloc.astro';
+import OngletsAdministration from '../../components/OngletsAdministration.astro';
+import Base from '../../layouts/Base.astro';
+import { appelerApi } from '../../lib/api';
+import { ROUTES } from '../../lib/navigation';
+import { dateLongue, fmt, pluriel, typo } from '../../lib/texte';
+import '../../styles/moderation.css';
+import '../../styles/moderation-complements.css';
+
+let adresseClient: string | undefined;
+try {
+  adresseClient = Astro.clientAddress;
+} catch {
+  adresseClient = undefined;
+}
+
+const raison = raisonRefus('administrer', Astro.locals.etat);
+if (raison === 'role') Astro.response.status = 403;
+const demandee = Number(Astro.url.searchParams.get('jours'));
+const jours = (PERIODES_MESURE_ASSISTANTS as readonly number[]).includes(demandee) ? demandee : 30;
+const mesure = raison
+  ? null
+  : await appelerApi<MesureAssistantsApi>(`/api/v1/admin/assistants-ia?jours=${jours}`, {
+      requete: Astro.request,
+      adresseClient,
+    });
+
+const CHIFFRES: { nature: NaturePassage; aide: string }[] = [
+  {
+    nature: 'VISITE',
+    aide: 'Personnes arrivées sur Vysora depuis un lien cité dans une réponse.',
+  },
+  {
+    nature: 'LECTURE',
+    aide: 'Pages qu’un assistant a ouvertes pour répondre à une question.',
+  },
+  {
+    nature: 'EXPLORATION',
+    aide: 'Pages parcourues par les robots de recherche des assistants.',
+  },
+  {
+    nature: 'ENTRAINEMENT',
+    aide: 'Collecte pour entraîner des modèles, que robots.txt refuse.',
+  },
+];
+const total = mesure ? Object.values(mesure.totaux).reduce((s, n) => s + n, 0) : 0;
+const nombre = (n: number) => (n ? fmt(n) : '–');
+---
+
+<Base
+  titre="Assistants d’IA"
+  description="Pages de Vysora lues par les assistants d’IA et visites qu’ils envoient."
+  classeCorps="md"
+  icones={['shield']}
+  nonIndexee
+>
+  <div class="container md-tete">
+    <p class="md-rubrique">
+      <svg class="icon icon-sm" aria-hidden="true">
+        <use href="#i-shield"></use>
+      </svg>
+      Administration
+    </p>
+    <h1>Assistants d’IA</h1>
+    {mesure && (
+      <p class="md-statut">
+        <span class="is-fort">
+          {total ? pluriel(total, 'passage', 'passages') : 'Aucun passage'}
+          {` du ${dateLongue(mesure.du)} au ${dateLongue(mesure.au)}`}
+        </span>
+        <span>
+          {typo(
+            'ChatGPT, Claude, Perplexity et les autres assistants : ce qu’ils lisent de Vysora et les visites qu’ils envoient.',
+          )}
+        </span>
+      </p>
+    )}
+    {!raison && <OngletsAdministration actif="assistants" />}
+  </div>
+
+  {raison ? (
+    <div class="container md-acces">
+      <AccesBloc action="administrer" quoi="consulter la mesure des assistants d’IA" />
+    </div>
+  ) : (
+    mesure && (
+      <div class="container md-file">
+        <nav class="ad-sous-onglets" aria-label="Période">
+          {PERIODES_MESURE_ASSISTANTS.map((n) => (
+            <a
+              href={`${ROUTES.assistantsIaAdmin}?jours=${n}`}
+              aria-current={n === jours ? 'page' : undefined}
+            >
+              {`${n} derniers jours`}
+            </a>
+          ))}
+        </nav>
+
+        <ul class="ad-chiffres">
+          {CHIFFRES.map(({ nature, aide }) => (
+            <li class:list={['ad-chiffre', { 'is-discret': nature === 'ENTRAINEMENT' }]}>
+              <b>{fmt(mesure.totaux[nature])}</b>
+              <span class="ad-chiffre-nom">{typo(LIBELLES_NATURE_PASSAGE[nature])}</span>
+              <span class="ad-chiffre-aide">{typo(aide)}</span>
+            </li>
+          ))}
+        </ul>
+
+        {mesure.assistants.length ? (
+          <>
+            <section class="ad-famille" aria-labelledby="ad-assistants-titre">
+              <h2 id="ad-assistants-titre">
+                Par assistant
+                <span class="ad-famille-nb">{fmt(mesure.assistants.length)}</span>
+              </h2>
+              <table class="ad-table ad-mesure">
+                <thead>
+                  <tr>
+                    <th scope="col">Assistant</th>
+                    <th scope="col">Visites envoyées</th>
+                    <th scope="col">Pages lues</th>
+                    <th scope="col">Pages explorées</th>
+                    <th scope="col">Entraînement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mesure.assistants.map((a) => (
+                    <tr>
+                      <td>
+                        <b>{typo(a.nom)}</b>
+                      </td>
+                      <td data-libelle="Visites envoyées">{nombre(a.VISITE)}</td>
+                      <td data-libelle="Pages lues">{nombre(a.LECTURE)}</td>
+                      <td data-libelle="Pages explorées">{nombre(a.EXPLORATION)}</td>
+                      <td data-libelle="Entraînement">{nombre(a.ENTRAINEMENT)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+
+            {mesure.pages.length > 0 && (
+              <section class="ad-famille" aria-labelledby="ad-pages-titre">
+                <h2 id="ad-pages-titre">
+                  Pages les plus consultées
+                  <span class="ad-famille-nb">{fmt(mesure.pages.length)}</span>
+                </h2>
+                <table class="ad-table ad-mesure">
+                  <thead>
+                    <tr>
+                      <th scope="col">Page</th>
+                      <th scope="col">Visites envoyées</th>
+                      <th scope="col">Pages lues</th>
+                      <th scope="col">Pages explorées</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mesure.pages.map((p) => (
+                      <tr>
+                        <td>
+                          <a class="ad-lien" href={p.chemin}>
+                            <code>{p.chemin}</code>
+                          </a>
+                        </td>
+                        <td data-libelle="Visites envoyées">{nombre(p.VISITE)}</td>
+                        <td data-libelle="Pages lues">{nombre(p.LECTURE)}</td>
+                        <td data-libelle="Pages explorées">{nombre(p.EXPLORATION)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            )}
+          </>
+        ) : (
+          <p class="md-rien ad-vide">
+            {typo('Aucun assistant d’IA n’est passé sur Vysora pendant cette période.')}
+          </p>
+        )}
+
+        <p class="ad-mesure-note">
+          {typo(
+            `Les assistants se reconnaissent au nom de leurs robots et à l’adresse d’où viennent les visites ; un programme peut imiter ce nom : ces chiffres donnent un ordre de grandeur. Vysora ne garde qu’un compteur par jour et par page, sans rien sur les personnes ni sur les appareils, pendant ${DELAIS.conservationPassagesAssistantsMois} mois.`,
+          )}
+        </p>
+      </div>
+    )
+  )}
+</Base>

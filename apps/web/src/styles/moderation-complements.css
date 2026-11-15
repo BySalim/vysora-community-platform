@@ -326,3 +326,25 @@
   .ad-illustrations li { grid-template-columns: minmax(0, 1fr); }
   .ad-illustrations li > button { grid-column: 1; grid-row: auto; justify-self: start; }
 }
+
+/* Assistants d'IA (REF-03) */
+.ad-chiffres { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0 0; padding: 0; list-style: none; }
+.ad-chiffre { display: grid; align-content: start; gap: 4px; padding: 18px 20px; border-radius: var(--r-card); background: var(--panel); }
+.ad-chiffre b { color: var(--text); font: 700 1.75rem/1.15 var(--font-heading); font-variant-numeric: tabular-nums; }
+.ad-chiffre-nom { color: var(--text); font: 600 0.875rem/1.35 var(--font-body); }
+.ad-chiffre-aide { color: var(--text-muted); font: 500 0.8125rem/1.45 var(--font-body); }
+.ad-chiffre.is-discret b { color: var(--text-body); }
+.ad-mesure th:not(:first-child), .ad-mesure td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.ad-mesure td:first-child { overflow-wrap: anywhere; }
+.ad-mesure-note { margin: 28px 0 0; padding: 14px 0 0; border-top: 1px solid var(--border); color: var(--text-muted); font: 500 0.8125rem/1.5 var(--font-body); }
+
+@media (max-width: 900px) {
+  .ad-chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .ad-mesure td:not(:first-child) { text-align: left; }
+  .ad-mesure td[data-libelle]::before { content: attr(data-libelle) " : "; color: var(--text-muted); }
+}
+@media (max-width: 420px) {
+  .ad-chiffres { grid-template-columns: minmax(0, 1fr); }
+}

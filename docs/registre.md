@@ -140,6 +140,7 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 | S-14 | Tableau de bord des indicateurs (EC-26) | ⬜ | F-97 |
 | S-15 | Interface en anglais | ⬜ | D-06, ENF-11 |
 | REF-01 | Référencement et assistants d'IA | ✅ 2026-11-15 | **Fait** (`docs/referencement.md`) : variable `INDEXATION` du site (`aucune`, `pages`, `complete` ; `pages` en préproduction : pages de l'équipe indexées, contenus des membres en `noindex, follow` tant que la démonstration est en ligne) ; `/robots.txt` (robots de citation admis, robots d'entraînement refusés, espaces personnels exclus, zones de l'équipe non citées), `/sitemap.xml` (92 adresses en développement : rubriques, guides, domaines, savoirs, pages légales), `/llms.txt` ; `og:type`, `twitter:card`, carte de partage par défaut (1200 × 630) ; données structurées : `Organization` et `WebSite` (accueil), `CreativeWork` (création), `DiscussionForumPosting` (sujet), `ProfilePage` (profil), `Article` (savoir), fils d'Ariane. 12 tests unitaires. **Reste au porteur du projet** : Google Search Console et Bing Webmaster Tools (déclarer le domaine et le plan du site). ENF-04, F-26 |
+| REF-03 | Mesure des assistants d'IA | ✅ 2026-11-15 | **Fait** (`docs/referencement.md`, « Mesure ») : le serveur du site reconnaît les robots des assistants (ChatGPT-User, Claude-User, Perplexity-User, OAI-SearchBot, PerplexityBot, robots d'entraînement…) et les personnes venues d'un assistant (provenance `chatgpt.com`, `claude.ai`, `perplexity.ai`, `gemini.google.com`, `copilot.microsoft.com`… ou `utm_source`), et le signale à l'API sans retarder la page ; l'API reconnaît de nouveau le passage et n'en garde qu'un compteur par jour, assistant, nature et page (table `passage_assistant`, 13 mois). Écran « Assistants d'IA » de l'administration (`/admin/assistants-ia`, sans maquette, à valider) : 7, 30 ou 90 jours, quatre chiffres, détail par assistant et pages les plus consultées. Tests unitaires et de bout en bout. Ce que Google (aperçus IA) et Bing (Copilot) mesurent reste dans leurs consoles. ENF-04 |
 | REF-02 | Contenus des membres dans le plan du site | ⬜ | Avant de passer `INDEXATION` à `complete` (ouverture publique) : `GET /api/v1/plan-du-site` (créations publiées et visibles, sujets non masqués, cas validés, profils des membres actifs qui ont publié, défis publiés ; adresse et date de modification ; l'API décide de ce qui est indexable, RG-30), lu par `/sitemap.xml` (index de plusieurs fichiers au-delà de 50 000 adresses). Données structurées des cas Bon réflexe et des défis. ENF-04 |
 
 ## Industrialisation (à mener en parallèle, sans attendre la fin)
@@ -412,6 +413,13 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - La photo est envoyée à l’API (carré de 256 px recadré par le serveur, MEDIA-01) au lieu d’être recadrée dans le navigateur ; « Complétez votre profil » fermé reste fermé sur l’appareil.
 
 ## Journal
+
+### 2026-11-15 — Mesure des assistants d'IA (REF-03)
+
+- Demande du porteur du projet, après la mise en place de Google Search Console et de Bing Webmaster Tools : savoir quand les assistants d'IA (ChatGPT, Claude, Perplexity…) lisent Vysora ou y envoient des visiteurs, ce qu'aucune console ne montre hors de Google et de Microsoft.
+- Mesure côté serveur, sans traceur ni cookie : les robots n'exécutent pas de script, et le site n'a pas d'outil de mesure d'audience. Le serveur du site ne signale que les pages servies (200) à un assistant ou à une personne venue de l'un d'eux ; les autres visites ne font aucun appel. Aucune donnée personnelle gardée (ni adresse IP ni navigateur), d'où aucun consentement à demander.
+- Limite connue : un nom de robot (User-Agent) s'imite ; les chiffres sont des ordres de grandeur (vérifier les adresses IP publiées par chaque éditeur serait un approfondissement). Le point d'entrée est ouvert, comme celui des vues (INT-04), limité à 300 appels par minute et par adresse.
+- Mise en production : la migration `0016` passe au déploiement, sans réglage nouveau.
 
 ### 2026-11-15 — Référencement et assistants d'IA (REF-01)
 

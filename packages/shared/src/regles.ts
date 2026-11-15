@@ -179,6 +179,8 @@ export const DELAIS = {
   conservationNotificationsMois: 12, // « Vous informer »
   conservationConnexionsJours: 365, // « Sécuriser le service » : tentatives et dates de connexion
   conservationVuesJours: 2, // F-23 : empreintes des vues, gardées le temps du dédoublonnage
+  // REF-03 : compteurs des passages des assistants d’IA (aucune donnée personnelle), 13 mois.
+  conservationPassagesAssistantsMois: 13,
 } as const;
 
 export const CODES_NIVEAU = ['curieux', 'apprenti', 'artisan', 'expert', 'maitre'] as const;

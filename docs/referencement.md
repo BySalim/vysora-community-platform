@@ -51,6 +51,21 @@ Les trois réponses sont mises en cache une heure.
 
 Le JSON est échappé (`<`, U+2028, U+2029) : un contenu de membre ne peut pas fermer la balise. Une page non indexée n'en reçoit pas. Vérifier un rendu : [test des résultats enrichis](https://search.google.com/test/rich-results) et [validateur schema.org](https://validator.schema.org).
 
+## Mesure : ce que lisent les assistants d'IA (REF-03)
+
+Écran « Assistants d'IA » de l'administration (`/admin/assistants-ia`), sur 7, 30 ou 90 jours :
+
+| Nature | Ce qui est compté | Comment on le reconnaît |
+|---|---|---|
+| Visites envoyées | Une personne arrive depuis un lien cité par un assistant | Provenance (`Referer`) : `chatgpt.com`, `claude.ai`, `perplexity.ai`, `gemini.google.com`, `copilot.microsoft.com`, `chat.mistral.ai`, `chat.deepseek.com`, `duck.ai`, `meta.ai` ; ou `utm_source` (ChatGPT ajoute `utm_source=chatgpt.com`) |
+| Pages lues pour une personne | L'assistant ouvre une page pour répondre à une question | `ChatGPT-User`, `Claude-User`, `Perplexity-User`, `MistralAI-User` |
+| Pages explorées pour leur index | Le robot de recherche de l'assistant parcourt le site | `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`, `DuckAssistBot` |
+| Robots d'entraînement | Robots que `robots.txt` refuse ; ils ne devraient lire que `/robots.txt` | `GPTBot`, `ClaudeBot`, `CCBot`, `Meta-ExternalAgent`, `Bytespider`… |
+
+La liste est dans `packages/shared/src/assistants-ia.ts` (`ASSISTANTS_IA`) : un nouvel assistant s'y ajoute, avec une migration pour la contrainte de la table `passage_assistant`. Le middleware du site (`apps/web/src/middleware.ts`) signale à l'API (`POST /api/v1/assistants-ia/passages`) les seules pages servies à un assistant ou à une personne venue de l'un d'eux, sans attendre sa réponse ; l'API reconnaît de nouveau le passage et ajoute 1 au compteur du jour. Rien d'autre n'est gardé : ni adresse IP, ni navigateur, ni parcours d'une personne.
+
+Un nom de robot s'imite : ces chiffres sont des ordres de grandeur. Les citations dans les aperçus IA de Google et dans Copilot se lisent dans la Search Console (rapport « Performances », mêlées aux résultats classiques) et dans Bing Webmaster Tools (« AI Performance »).
+
 ## À faire par le porteur du projet
 
 1. **Google Search Console** : ajouter la propriété de domaine `vysora.site` (enregistrement TXT dans la zone DNS), puis envoyer `https://vysora.site/sitemap.xml`.

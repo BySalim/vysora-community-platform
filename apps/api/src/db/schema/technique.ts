@@ -1,4 +1,10 @@
-import { MOTIFS_CONTACT, STATUTS_MESSAGE_CONTACT, TYPES_JETON } from '@vysora/shared';
+import {
+  CODES_ASSISTANT_IA,
+  MOTIFS_CONTACT,
+  NATURES_PASSAGE,
+  STATUTS_MESSAGE_CONTACT,
+  TYPES_JETON,
+} from '@vysora/shared';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -6,6 +12,7 @@ import {
   customType,
   date,
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -138,6 +145,24 @@ export const vueContenu = pgTable(
     jour: date({ mode: 'string' }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.contenuId, t.empreinteVisiteur, t.jour] })],
+);
+
+/** REF-03 : passages des assistants d'IA, comptés par jour, assistant, nature et page. Aucune donnée
+    sur la personne ou l'appareil ; conservés DELAIS.conservationPassagesAssistantsMois mois. */
+export const passageAssistant = pgTable(
+  'passage_assistant',
+  {
+    jour: date({ mode: 'string' }).notNull(),
+    assistant: varchar({ length: 20 }).notNull(),
+    nature: varchar({ length: 20 }).notNull(),
+    chemin: varchar({ length: 160 }).notNull(),
+    nombre: integer().notNull().default(1),
+  },
+  (t) => [
+    primaryKey({ columns: [t.jour, t.assistant, t.nature, t.chemin] }),
+    valeursPermises('passage_assistant_assistant_check', t.assistant, CODES_ASSISTANT_IA),
+    valeursPermises('passage_assistant_nature_check', t.nature, NATURES_PASSAGE),
+  ],
 );
 
 /** RG-31 : index plein texte des contenus publiés et visibles (configuration « vysora_fr », sans accents). */
