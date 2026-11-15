@@ -7,6 +7,7 @@
    Le propriétaire voit sa progression (RG-88) ; « ?vue=public » lui montre son profil comme les
    autres membres le voient. */
 import { LONGUEURS, type ProfilApi } from '@vysora/shared';
+import { donneesProfil } from '../../lib/donnees-structurees';
 import Base from '../../layouts/Base.astro';
 import { appelerApi, ErreurApi } from '../../lib/api';
 import type { Icone } from '../../lib/icones';
@@ -147,6 +148,11 @@ const icones = [
   icones={icones}
   remplacementsIcones={remplacementsIcones}
   nonIndexee={!profil || proprietaire}
+  contenuDeMembre
+  typePartage="profile"
+  donneesStructurees={
+    profil ? donneesProfil(profil, Astro.site ?? new URL(Astro.url.origin)) : undefined
+  }
   canonique={profil ? ROUTES.profil(profil.membre.pseudo) : undefined}
   image={profil?.membre.avatar ?? undefined}
 >

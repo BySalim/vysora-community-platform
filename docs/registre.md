@@ -139,6 +139,8 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 | S-13 | Masquage automatique au seuil de signalements | ⬜ | F-93, RG-101. Signalements déjà enregistrés (MOD-01) ; `date_masquage_automatique` alimente déjà la date du masquage affichée (`lireMasquages`) et doit placer le contenu en tête de la file. Annuler les points avec la date du masquage (`annulerContenus`) et, au rétablissement, passer cette date à `retablirContenus` quand aucune décision « masquer » ne la précède (RG-82) |
 | S-14 | Tableau de bord des indicateurs (EC-26) | ⬜ | F-97 |
 | S-15 | Interface en anglais | ⬜ | D-06, ENF-11 |
+| REF-01 | Référencement et assistants d'IA | ✅ 2026-11-15 | **Fait** (`docs/referencement.md`) : variable `INDEXATION` du site (`aucune`, `pages`, `complete` ; `pages` en préproduction : pages de l'équipe indexées, contenus des membres en `noindex, follow` tant que la démonstration est en ligne) ; `/robots.txt` (robots de citation admis, robots d'entraînement refusés, espaces personnels exclus, zones de l'équipe non citées), `/sitemap.xml` (92 adresses en développement : rubriques, guides, domaines, savoirs, pages légales), `/llms.txt` ; `og:type`, `twitter:card`, carte de partage par défaut (1200 × 630) ; données structurées : `Organization` et `WebSite` (accueil), `CreativeWork` (création), `DiscussionForumPosting` (sujet), `ProfilePage` (profil), `Article` (savoir), fils d'Ariane. 12 tests unitaires. **Reste au porteur du projet** : Google Search Console et Bing Webmaster Tools (déclarer le domaine et le plan du site). ENF-04, F-26 |
+| REF-02 | Contenus des membres dans le plan du site | ⬜ | Avant de passer `INDEXATION` à `complete` (ouverture publique) : `GET /api/v1/plan-du-site` (créations publiées et visibles, sujets non masqués, cas validés, profils des membres actifs qui ont publié, défis publiés ; adresse et date de modification ; l'API décide de ce qui est indexable, RG-30), lu par `/sitemap.xml` (index de plusieurs fichiers au-delà de 50 000 adresses). Données structurées des cas Bon réflexe et des défis. ENF-04 |
 
 ## Industrialisation (à mener en parallèle, sans attendre la fin)
 
@@ -410,6 +412,14 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - La photo est envoyée à l’API (carré de 256 px recadré par le serveur, MEDIA-01) au lieu d’être recadrée dans le navigateur ; « Complétez votre profil » fermé reste fermé sur l’appareil.
 
 ## Journal
+
+### 2026-11-15 — Référencement et assistants d'IA (REF-01)
+
+- Demande du porteur du projet : le référencement du site et sa présence dans les réponses des assistants d'IA. Le socle existait (titre, description, canonique, Open Graph, `noindex` des pages privées, liens des membres en `ugc nofollow`) ; manquaient robots.txt, plan du site, llms.txt, données structurées et une image de partage par défaut.
+- Choix du porteur du projet : pendant la démonstration, seules les pages de l'équipe sont indexées (les membres et créations fictifs n'entrent pas dans les résultats) ; robots qui cherchent et citent leurs sources admis, robots qui collectent pour entraîner des modèles refusés. Inscrits dans `docs/referencement.md` et la variable `INDEXATION` (`pages` par défaut dans `infra/production/compose.yml`, pour que la préproduction ne change pas d'état sans réglage).
+- `/admin` et `/moderation` ne figurent pas dans robots.txt : ce fichier public révélerait les zones qu'ADM-04 rend introuvables.
+- Vérifié sur un build de production (`astro build`, `node dist/server/entry.mjs`, `INDEXATION=pages`) : directives par page, JSON-LD d'une création, d'un sujet, d'un profil et d'un savoir, aucune erreur de CSP (le JSON-LD n'est pas exécuté).
+- Suite : REF-02 avant l'ouverture publique ; Search Console et Bing Webmaster Tools par le porteur du projet.
 
 ### 2026-11-09 — Pages de l'équipe introuvables pour les autres (ADM-04)
 

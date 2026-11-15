@@ -7,6 +7,7 @@
 | [`mld.md`](mld.md) | Lire le modèle de données et faire évoluer le schéma |
 | [`conventions.md`](conventions.md) | Écrire du code qui ressemble au reste (nommage, API, tests, commits) |
 | [`securite.md`](securite.md) | Connaître le socle de sécurité et ce qu'il reste à mettre en place |
+| [`referencement.md`](referencement.md) | Savoir ce que les moteurs et les assistants d'IA indexent (variable `INDEXATION`), robots, plan du site, llms.txt, données structurées |
 | [`portage-prototype.md`](portage-prototype.md) | Porter une page du prototype à l'identique |
 | [`decisions/`](decisions/README.md) | Retrouver pourquoi un choix a été fait |
 | [`produit/`](produit/) | Vision (01), cibles (02), fonctionnalités et règles (03), parcours (04), MCD (05), charte (06), plan du site (07), rédaction (08) |

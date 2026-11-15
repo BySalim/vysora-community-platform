@@ -5,6 +5,7 @@
    redirige vers la bonne si le titre a changé ; un sujet que la personne ne peut pas voir (RG-30)
    répond 404. */
 import { raisonRefus, type ListeSujetsApi, type SujetApi } from '@vysora/shared';
+import { donneesSujet } from '../../lib/donnees-structurees';
 import Base from '../../layouts/Base.astro';
 import { contexteServeur, invitationHtml } from '../../lib/acces';
 import { ErreurApi, appelerApi } from '../../lib/api';
@@ -108,6 +109,11 @@ const menu = menuHTML({ etat: etatVide(), liste: enAttente, pourVous: null, moi:
   reglages={{ resume: 'complet', compteurs: 'colonne', menu: 'gauche', solution: 'diff' }}
   icones={ICONES}
   nonIndexee={!sujet || sujet.masquee}
+  contenuDeMembre
+  typePartage="article"
+  donneesStructurees={
+    sujet ? donneesSujet(sujet, Astro.site ?? new URL(Astro.url.origin)) : undefined
+  }
 >
   <div class="container qa-shell">
     <nav class="qa-menu" aria-label="Forum" set:html={menu} />

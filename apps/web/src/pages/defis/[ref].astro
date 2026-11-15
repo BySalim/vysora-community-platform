@@ -22,6 +22,7 @@ if (correspondance[2] !== defi.slug) return Astro.redirect(ROUTES.defi(defi.id, 
 <Base
   titre={`${defi.titre} · Défis`}
   description={defi.enonce}
+  contenuDeMembre
   classeCorps="ex df"
   icones={ICONES_DEFIS}
 >

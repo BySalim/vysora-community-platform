@@ -16,6 +16,7 @@ import {
 import ApercuResultat from '../../components/ApercuResultat.astro';
 import AvatarMembre from '../../components/AvatarMembre.astro';
 import OutilsIa from '../../components/OutilsIa.astro';
+import { donneesCreation } from '../../lib/donnees-structurees';
 import Base from '../../layouts/Base.astro';
 import { contexteServeur, invitationHtml } from '../../lib/acces';
 import { ErreurApi, appelerApi } from '../../lib/api';
@@ -230,8 +231,14 @@ const icones = [
   }}
   icones={icones}
   nonIndexee={!fiche || statut !== 'publiee' || modeApercu}
+  contenuDeMembre
+  typePartage="article"
+  donneesStructurees={
+    fiche ? donneesCreation(fiche, Astro.site ?? new URL(Astro.url.origin)) : undefined
+  }
   reglages={modeApercu ? { apercu: '' } : {}}
   image={image?.url}
+  imageAlt={image?.texteAlternatif || undefined}
 >
   <section class="detail-section creation-off" data-off="indisponible">
     <h1>Cette création n’est pas disponible</h1>

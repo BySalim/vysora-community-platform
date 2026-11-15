@@ -14,6 +14,7 @@
 | En-têtes de sécurité de l'API | `helmet` |
 | CSP stricte du site : scripts hachés, aucun script externe, `object-src 'none'`, `frame` interdit. Le script `is:inline` du gabarit n'est pas haché par Astro : son empreinte est déclarée (`scriptDirective.hashes`) et vérifiée par un test (`lib/csp.test.ts`) ; sans elle, il était bloqué en production (constaté avec DEC-01) | `astro.config.mjs` (`security.csp`), `middleware.ts` |
 | En-têtes du site : `X-Frame-Options` (`DENY` ; `SAMEORIGIN` pour la seule fiche ouverte en aperçu, `?apercu`, que l'éditeur affiche dans un cadre), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS en production | `apps/web/src/middleware.ts` |
+| Référencement sans fuite : les données structurées (JSON-LD), qui reprennent des contenus de membres, sont échappées (`<`, U+2028, U+2029) et absentes des pages non indexées ; `robots.txt` ne cite pas `/admin` ni `/moderation` (ADM-04) ; les pages privées sont en `noindex` | `apps/web/src/lib/referencement.ts`, [`referencement.md`](referencement.md) |
 | Configuration validée au démarrage ; secrets de développement refusés en production | `apps/api/src/config/env.ts` |
 | Aucune adresse IP en clair : empreinte HMAC salée | `empreinteSalee` |
 | Journaux sans cookie, en-tête d'autorisation, IP ni corps de requête | `app.module.ts` (sérialiseurs pino) |

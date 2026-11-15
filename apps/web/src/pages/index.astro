@@ -12,6 +12,7 @@ import {
   type BadgeApi,
   type ReferentielsApi,
 } from '@vysora/shared';
+import { organisation, siteWeb } from '../lib/referencement';
 import Base from '../layouts/Base.astro';
 import { appelerApi } from '../lib/api';
 import { domainesHTML, listeHTML } from '../lib/accueil/cartes';
@@ -223,6 +224,7 @@ const ICONES_PAGE = [
   'compass',
   'rotate',
 ];
+const site = Astro.site ?? new URL(Astro.url.origin);
 ---
 
 <Base
@@ -231,6 +233,7 @@ const ICONES_PAGE = [
   classeCorps="accueil"
   reglages={REGLAGES}
   icones={ICONES_PAGE}
+  donneesStructurees={[organisation(site), siteWeb(site)]}
 >
   <section class="hero" aria-labelledby="hero-title" data-hero-section>
     <canvas class="hero-canvas" data-constellation aria-hidden="true"></canvas>

@@ -120,6 +120,10 @@ Revenir à une version précédente : remplacer `latest` par l'empreinte du comm
 
 Les migrations passent avant le redémarrage de l'API ; une migration qui échoue laisse l'ancienne API arrêtée et la nouvelle non démarrée (`docker compose … logs migration`).
 
+## Référencement
+
+`INDEXATION` (dans `infra/production/.env`, `pages` par défaut) dit ce que les moteurs indexent : `pages` tant que la démonstration est en ligne, `complete` à l'ouverture publique, `aucune` pour fermer le site. Un changement prend effet après `up -d`. Après la première mise en ligne, déclarer le site et son plan (`/sitemap.xml`) dans Google Search Console et Bing Webmaster Tools : voir [`referencement.md`](referencement.md).
+
 ## Exploitation
 
 - Journaux : `docker compose … logs -f api` (JSON, niveau `LOG_LEVEL`), `logs -f caddy` pour les accès.
