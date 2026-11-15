@@ -41,7 +41,7 @@ export const PAGES_LEGALES: Record<CleDocumentLegal, PageLegale> = {
     route: ROUTES.cookies,
     titre: 'Politique relative aux cookies',
     onglet: 'Cookies',
-    miseAJour: '2026-11-09',
+    miseAJour: '2026-11-15',
     points: [
       'Seuls des cookies strictement nécessaires sont déposés : ils ne demandent pas votre accord.',
       'Les vues des contenus sont comptées sans cookie, et vous pouvez refuser d’y être compté.',
@@ -52,7 +52,7 @@ export const PAGES_LEGALES: Record<CleDocumentLegal, PageLegale> = {
     route: ROUTES.mentionsLegales,
     titre: 'Mentions légales',
     onglet: 'Mentions légales',
-    miseAJour: '2026-11-09',
+    miseAJour: '2026-11-15',
   },
 };
 

@@ -19,7 +19,7 @@
 | Configuration validée au démarrage ; secrets de développement refusés en production | `apps/api/src/config/env.ts` |
 | Aucune adresse IP en clair : empreinte HMAC salée | `empreinteSalee` |
 | Journal des accès de Caddy sans donnée personnelle : adresse IP tronquée (IPv4 /16, IPv6 /32), paramètres porteurs d'un jeton (`jeton`, `verifier`, `email`, `code`, `state`) remplacés, cookies et en-tête d'autorisation masqués par Caddy ; taille bornée (5 fichiers de 10 Mo) | `infra/production/Caddyfile`, `compose.yml` (LEG-02) |
-| Refus de la mesure d'audience (cookie `vysora_audience`, page Cookies) appliqué par l'API : aucune empreinte de vue n'est calculée pour cet appareil | `VuesService`, `COOKIE_REFUS_AUDIENCE` (LEG-02) |
+| Refus de la mesure d'audience (cookie `vysora_audience`, page Cookies) appliqué partout où l'on compte : l'API ne calcule aucune empreinte de vue pour cet appareil, le serveur du site ne signale pas ses visites venues d'un assistant d'IA (REF-03) | `VuesService`, `lib/assistants-ia.ts`, `COOKIE_REFUS_AUDIENCE`, `audienceRefusee` (LEG-02) |
 | Journaux sans cookie, en-tête d'autorisation, IP ni corps de requête | `app.module.ts` (sérialiseurs pino) |
 | Intégrité en base (contraintes CHECK, unicités, décisions de modération immuables) | migrations |
 | Champ piège anti-robot sur le formulaire public | page Contact |

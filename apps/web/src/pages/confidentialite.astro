@@ -137,16 +137,21 @@ import { EMAIL_CONTACT } from '../lib/pages-legales';
             <td>1 an après la réponse</td>
           </tr>
           <tr>
-            <th scope="row">Compter les vues des contenus</th>
+            <th scope="row">Mesurer l’audience</th>
             <td>
-              Empreinte du jour, calculée à partir de votre compte, ou de l’adresse IP et du
-              navigateur, qui ne permet pas de vous retrouver
+              Vues des créations et des sujets : empreinte du jour, calculée à partir de votre
+              compte, ou de l’adresse IP et du navigateur, qui ne permet pas de vous retrouver.
+              Visites venues d’un assistant d’IA : nom du navigateur et page de provenance, lus sans
+              être conservés
             </td>
             <td>
               Intérêt légitime à faire connaître les contenus utiles ; vous pouvez vous y opposer
               depuis la <a href={`${ROUTES.cookies}#audience`}>page Cookies</a>
             </td>
-            <td>Empreintes : 2 jours ; seul le nombre de vues de chaque contenu reste</td>
+            <td>
+              Empreintes : 2 jours ; seuls des compteurs restent (vues de chaque contenu ; visites
+              des assistants par jour et par page, 13 mois)
+            </td>
           </tr>
         </tbody>
       </table>
