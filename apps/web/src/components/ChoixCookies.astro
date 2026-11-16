@@ -1,65 +1,109 @@
 ---
-/* LEG-03 : choix sur les cookies, sur le modèle des bandeaux de consentement courants. Le bandeau,
-   une barre en bas de l'écran, s'affiche tant qu'aucun choix de la version en cours n'est retenu
-   (cookie vysora_consentement) ; il ne bloque pas la page, et refuser s'y fait en un clic, comme
-   accepter. Le dialogue « Paramètres des cookies » (catégories et interrupteurs) s'ouvre par
-   « Personnaliser » et par le lien « Gérer les cookies » du pied de page. Écrans sans maquette dans
-   le prototype, dans le style du dialogue d'accès (etats.css). Branchés par scripts/commun/cookies.ts. */
+/* LEG-03 : choix sur les cookies, sur le modèle des outils de consentement courants. Un panneau en
+   bas de l'écran, en trois onglets : « Consentement » (le message), « Détails » (les catégories et
+   leurs interrupteurs), « À propos des cookies ». Trois boutons de même taille : « Tout refuser »,
+   « Personnaliser » (ouvre « Détails », puis devient « Enregistrer mes choix ») et « Tout accepter ».
+   Le panneau s'affiche tant qu'aucun choix de la version en cours n'est retenu (cookie
+   vysora_consentement), sans bloquer la page ; le lien « Gérer les cookies » du pied de page le
+   rouvre sur « Détails », avec un bouton de fermeture. Écran sans maquette dans le prototype, dans
+   le style des onglets et des cartes du site. Branché par scripts/commun/cookies.ts. */
 import { choixCookiesAttendu } from '@vysora/shared';
 import { ROUTES } from '../lib/navigation';
 import { typo } from '../lib/texte';
 import FinalitesCookies from './FinalitesCookies.astro';
 
 const attendu = choixCookiesAttendu(Astro.request.headers.get('cookie'));
+const ONGLETS = [
+  { cle: 'consentement', libelle: 'Consentement' },
+  { cle: 'details', libelle: 'Détails' },
+  { cle: 'apropos', libelle: 'À propos', complement: ' des cookies' },
+] as const;
 ---
 
-{attendu && (
-  <section class="ck-bandeau" aria-label="Choix sur les cookies" data-ck-bandeau>
-    <div class="container ck-bandeau-in">
-      <p class="ck-bandeau-texte">
-        {typo(
-          'Nous utilisons des cookies pour faire fonctionner Vysora, mesurer son audience et l’améliorer.',
-        )}{' '}
-        <a href={ROUTES.cookies}>En savoir plus</a>
-      </p>
-      <div class="ck-bandeau-actions">
-        <button class="ck-lien" type="button" data-ck-action="personnaliser">
-          Personnaliser
+<section
+  class="ck-panneau"
+  aria-labelledby="ck-titre"
+  data-ck-panneau
+  data-ck-vue="consentement"
+  hidden={!attendu}
+>
+  <div class="ck-panneau-tete">
+    <div class="ck-onglets" role="tablist" aria-label="Choix sur les cookies">
+      {ONGLETS.map((onglet, i) => (
+        <button
+          type="button"
+          role="tab"
+          id={`ck-onglet-${onglet.cle}`}
+          aria-controls={`ck-vue-${onglet.cle}`}
+          aria-selected={i === 0 ? 'true' : 'false'}
+          tabindex={i === 0 ? 0 : -1}
+          data-ck-onglet={onglet.cle}
+        >
+          {typo(onglet.libelle)}
+          {'complement' in onglet && <span class="ck-complement">{onglet.complement}</span>}
         </button>
-        <button class="btn btn-secondary btn-sm" type="button" data-ck-action="refuser">
-          Tout refuser
-        </button>
-        <button class="btn btn-primary btn-sm" type="button" data-ck-action="accepter">
-          Tout accepter
-        </button>
-      </div>
+      ))}
     </div>
-  </section>
-)}
-
-<dialog class="acces ck-dialogue" aria-labelledby="ck-dialogue-titre" data-ck-dialogue>
-  <div class="ck-dialogue-tete">
-    <h2 id="ck-dialogue-titre">Paramètres des cookies</h2>
-    <button class="icon-btn" type="button" aria-label="Fermer" data-ck-fermer>
+    <button class="icon-btn ck-fermer" type="button" aria-label="Fermer" data-ck-fermer hidden>
       <svg class="icon" aria-hidden="true">
         <use href="#i-close"></use>
       </svg>
     </button>
   </div>
-  <p class="ck-dialogue-intro">
-    {typo('Choisissez les cookies que vous acceptez. Vous pourrez changer d’avis à tout moment.')}{' '}
-    <a href={ROUTES.cookies}>En savoir plus</a>
-  </p>
-  <FinalitesCookies prefixe="ck-dialogue" />
-  <div class="ck-dialogue-actions">
+
+  <div class="ck-vues">
+    <div
+      class="ck-vue"
+      id="ck-vue-consentement"
+      role="tabpanel"
+      aria-labelledby="ck-onglet-consentement"
+    >
+      <h2 class="ck-titre" id="ck-titre">
+        Ce site utilise des cookies
+      </h2>
+      <p>
+        {typo(
+          'Nous utilisons des cookies pour faire fonctionner Vysora, mesurer son audience de façon anonyme et, avec votre accord, comprendre le parcours de vos visites afin d’améliorer le site. Vous pouvez changer d’avis à tout moment avec le lien « Gérer les cookies », en bas de chaque page.',
+        )}
+      </p>
+    </div>
+    <div
+      class="ck-vue"
+      id="ck-vue-details"
+      role="tabpanel"
+      aria-labelledby="ck-onglet-details"
+      hidden
+    >
+      <FinalitesCookies prefixe="ck-panneau" />
+    </div>
+    <div
+      class="ck-vue"
+      id="ck-vue-apropos"
+      role="tabpanel"
+      aria-labelledby="ck-onglet-apropos"
+      hidden
+    >
+      <p>
+        {typo(
+          'Un cookie est un petit fichier enregistré par votre navigateur. Certains sont indispensables : ils gardent votre connexion et retiennent vos choix. Les autres ne sont déposés qu’avec votre accord. Vysora ne dépose aucun cookie publicitaire et ne confie rien à des tiers.',
+        )}
+      </p>
+      <p class="ck-liens">
+        <a href={ROUTES.cookies}>Politique relative aux cookies</a>
+        <a href={ROUTES.confidentialite}>Politique de confidentialité</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="ck-panneau-actions">
     <button class="btn btn-secondary" type="button" data-ck-action="refuser">
       Tout refuser
     </button>
-    <button class="btn btn-secondary" type="button" data-ck-action="enregistrer">
-      Enregistrer mes choix
+    <button class="btn btn-secondary ck-personnaliser" type="button" data-ck-action="personnaliser">
+      <span data-ck-libelle>Personnaliser</span>
     </button>
     <button class="btn btn-primary" type="button" data-ck-action="accepter">
       Tout accepter
     </button>
   </div>
-</dialog>
+</section>

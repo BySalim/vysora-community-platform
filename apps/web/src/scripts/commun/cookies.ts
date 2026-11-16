@@ -1,7 +1,8 @@
 /* LEG-03 : choix sur les cookies (components/ChoixCookies.astro, FinalitesCookies.astro).
-   - Bandeau : « Tout refuser », « Personnaliser » (dialogue), « Tout accepter ».
-   - Dialogue « Gérer les cookies » : ouvert aussi par le lien du pied de page ([data-ck-gerer]) ;
-     les interrupteurs changent sans rien enregistrer jusqu'au bouton.
+   - Panneau à onglets (Consentement, Détails, À propos) : « Tout refuser », « Personnaliser » (ouvre
+     « Détails » et devient « Enregistrer mes choix »), « Tout accepter ». Les interrupteurs de
+     « Détails » changent sans rien enregistrer jusqu'au bouton. Le lien « Gérer les cookies » du
+     pied de page ([data-ck-gerer]) rouvre le panneau sur « Détails », avec un bouton de fermeture.
    - Page Cookies ([data-ck-choix]) : chaque interrupteur enregistre le choix aussitôt.
    Le choix est retenu 6 mois par le cookie vysora_consentement, sans prolongation ; il remplace
    l'ancien refus de la page Cookies (vysora_audience), effacé au passage. Le serveur du site et
@@ -66,36 +67,65 @@ function lire(zone: ParentNode): Choix {
 const basculer = (bouton: HTMLButtonElement) =>
   bouton.setAttribute('aria-checked', String(bouton.getAttribute('aria-checked') !== 'true'));
 
-/* Bandeau et dialogue --------------------------------------------------------------------------- */
+/* Panneau du choix ------------------------------------------------------------------------------ */
 
-const dialogue = $<HTMLDialogElement>('[data-ck-dialogue]');
+type Vue = 'consentement' | 'details' | 'apropos';
+const panneau = $('[data-ck-panneau]');
+const onglets = panneau ? $$<HTMLButtonElement>('[data-ck-onglet]', panneau) : [];
 
-function retirerBandeau(): void {
-  const bandeau = $('[data-ck-bandeau]');
-  if (!bandeau) return;
-  const avaitLeFocus = bandeau.contains(document.activeElement);
-  bandeau.remove();
+function afficherVue(vue: Vue, { focus = false } = {}): void {
+  if (!panneau) return;
+  panneau.dataset.ckVue = vue;
+  for (const onglet of onglets) {
+    const actif = onglet.dataset.ckOnglet === vue;
+    onglet.setAttribute('aria-selected', String(actif));
+    onglet.tabIndex = actif ? 0 : -1;
+    if (actif && focus) onglet.focus();
+  }
+  for (const zone of $$('[role="tabpanel"]', panneau)) zone.hidden = zone.id !== `ck-vue-${vue}`;
+  // « Personnaliser » mène aux détails ; une fois dans les détails, il enregistre les choix.
+  const bouton = $<HTMLElement>('.ck-personnaliser', panneau);
+  const libelle = $('[data-ck-libelle]', panneau);
+  if (bouton && libelle) {
+    const details = vue === 'details';
+    bouton.dataset.ckAction = details ? 'enregistrer' : 'personnaliser';
+    libelle.textContent = details ? 'Enregistrer mes choix' : 'Personnaliser';
+  }
+}
+
+function fermerPanneau(): void {
+  if (!panneau || panneau.hidden) return;
+  const avaitLeFocus = panneau.contains(document.activeElement);
+  panneau.hidden = true;
   if (avaitLeFocus) $('#contenu')?.focus({ preventScroll: true });
 }
 
 function choisir(choix: Choix): void {
   retenirChoix(choix);
-  if (dialogue?.open) dialogue.close();
-  retirerBandeau();
+  fermerPanneau();
   toast('Vos choix sont enregistrés.');
 }
 
+/** Rouvre le panneau sur ses détails (lien « Gérer les cookies »), avec un bouton de fermeture. */
 export function ouvrirGestionCookies(): void {
-  if (!dialogue) return;
-  poser(dialogue, choixActuel());
-  dialogue.showModal();
+  if (!panneau) return;
+  poser(panneau, choixActuel());
+  const fermer = $('[data-ck-fermer]', panneau);
+  if (fermer) fermer.hidden = false;
+  panneau.hidden = false;
+  afficherVue('details', { focus: true });
 }
 
 document.addEventListener('click', (evenement) => {
   const cible = evenement.target as Element;
-  const interrupteur = cible.closest<HTMLButtonElement>('[data-ck-dialogue] [data-ck-finalite]');
+  const interrupteur = cible.closest<HTMLButtonElement>('[data-ck-panneau] [data-ck-finalite]');
   if (interrupteur) {
     basculer(interrupteur);
+    return;
+  }
+  const onglet = cible.closest<HTMLElement>('[data-ck-onglet]');
+  if (onglet) {
+    afficherVue(onglet.dataset.ckOnglet as Vue);
     return;
   }
   if (cible.closest('[data-ck-gerer]')) {
@@ -104,19 +134,37 @@ document.addEventListener('click', (evenement) => {
     return;
   }
   if (cible.closest('[data-ck-fermer]')) {
-    dialogue?.close();
+    fermerPanneau();
     return;
   }
   const action = cible.closest<HTMLElement>('[data-ck-action]')?.dataset.ckAction;
   if (action === 'refuser') choisir({ audience: false, parcours: false });
   else if (action === 'accepter') choisir({ audience: true, parcours: true });
-  else if (action === 'personnaliser') ouvrirGestionCookies();
-  else if (action === 'enregistrer' && dialogue) choisir(lire(dialogue));
+  else if (action === 'personnaliser') afficherVue('details', { focus: true });
+  else if (action === 'enregistrer' && panneau) choisir(lire(panneau));
 });
 
-// Clic sur le fond du dialogue : fermé sans rien enregistrer.
-dialogue?.addEventListener('click', (evenement) => {
-  if (evenement.target === dialogue) dialogue.close();
+// Onglets au clavier (flèches, début, fin) ; Échap ferme le panneau rouvert depuis le pied de page.
+panneau?.addEventListener('keydown', (evenement) => {
+  if (evenement.key === 'Escape' && !$('[data-ck-fermer]', panneau)?.hidden) {
+    fermerPanneau();
+    return;
+  }
+  const actuel = onglets.indexOf(evenement.target as HTMLButtonElement);
+  if (actuel < 0) return;
+  const suivant =
+    evenement.key === 'ArrowRight'
+      ? (actuel + 1) % onglets.length
+      : evenement.key === 'ArrowLeft'
+        ? (actuel - 1 + onglets.length) % onglets.length
+        : evenement.key === 'Home'
+          ? 0
+          : evenement.key === 'End'
+            ? onglets.length - 1
+            : -1;
+  if (suivant < 0) return;
+  evenement.preventDefault();
+  afficherVue(onglets[suivant]?.dataset.ckOnglet as Vue, { focus: true });
 });
 
 /* Page Cookies : choix enregistré à chaque changement ------------------------------------------ */
@@ -143,7 +191,7 @@ if (zonePage) {
     basculer(bouton);
     const choix = lire(zonePage);
     retenirChoix(choix);
-    retirerBandeau();
+    fermerPanneau();
     const active = bouton.getAttribute('aria-checked') === 'true';
     toast(
       bouton.dataset.ckFinalite === 'audience'
