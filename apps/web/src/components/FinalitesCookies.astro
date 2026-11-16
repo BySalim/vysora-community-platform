@@ -16,13 +16,13 @@ const FINALITES = [
   {
     cle: 'audience',
     titre: 'Mesure d’audience',
-    aide: 'Pages vues, provenance et erreurs, comptées de façon anonyme, sans cookie.',
+    aide: 'Nous aident à comprendre la fréquentation du site, de façon anonyme.',
     actif: !audienceRefusee(entete),
   },
   {
     cle: 'parcours',
     titre: 'Parcours des visites',
-    aide: 'Pages et actions d’une même visite, sans lien avec votre compte.',
+    aide: 'Nous aident à repérer ce qui vous freine pour améliorer le site.',
     actif: parcoursAccepte(entete),
   },
 ] as const;
@@ -32,7 +32,7 @@ const FINALITES = [
   <li class="ck-finalite">
     <div class="ck-finalite-texte">
       <p class="ck-finalite-titre">Indispensables</p>
-      <p class="ck-finalite-aide">{typo('Votre connexion et la mémorisation de vos choix.')}</p>
+      <p class="ck-finalite-aide">{typo('Nécessaires au bon fonctionnement du site.')}</p>
     </div>
     <span class="ck-toujours">Toujours actifs</span>
   </li>
