@@ -192,6 +192,10 @@ bolong.jpg   5 220 Ko <span class="k">→</span> <span class="s">477 Ko</span>
     const el = $('[data-toast]');
     if (!el) return;
     clearTimeout(toastTimer);
+    /* Clavier d'un téléphone ouvert : le message remonte au-dessus de lui au lieu d'être caché. */
+    const vue = window.visualViewport;
+    const cache = vue ? Math.round(window.innerHeight - vue.height - vue.offsetTop) : 0;
+    el.style.translate = cache > 0 ? `0 -${cache}px` : '';
     el.innerHTML = `${icon(iconName)}<span>${t(message)}</span>`;
     requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-visible')));
     toastTimer = setTimeout(() => {
@@ -616,7 +620,9 @@ bolong.jpg   5 220 Ko <span class="k">→</span> <span class="s">477 Ko</span>
       button.addEventListener('click', () => setOpen(menu.hidden));
       zone.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu.hidden) { event.stopPropagation(); setOpen(false); button.focus(); } });
       zone.addEventListener('focusout', event => { if (!zone.contains(event.relatedTarget)) setOpen(false); });
-      document.addEventListener('click', event => { if (!zone.contains(event.target)) setOpen(false); });
+      /* pointerdown plutôt que click : sur iPhone, toucher un texte inerte n'envoie pas toujours de
+         « click » jusqu'au document, et le menu resterait ouvert. */
+      document.addEventListener('pointerdown', event => { if (!zone.contains(event.target)) setOpen(false); });
       menu.addEventListener('click', event => {
         if (!event.target.closest('[data-deconnexion]')) return;
         setOpen(false);

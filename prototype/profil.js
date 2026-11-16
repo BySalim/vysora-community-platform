@@ -950,7 +950,12 @@
   async function partager() {
     const url = `${location.origin}${location.pathname}?pseudo=${encodeURIComponent(C.pseudo)}`;
     if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-      try { await navigator.share({ title: `${E.MOI.nom} sur Vysora`, url }); return; } catch { /* partage annulé : copie du lien */ }
+      try { await navigator.share({ title: `${E.MOI.nom} sur Vysora`, url }); return; }
+      catch (erreur) {
+        /* Feuille de partage fermée : rien à faire. Copier ensuite échouerait sur iPhone (le geste est
+           consommé) et copierait sans qu'on le demande ailleurs. Partage impossible : on copie. */
+        if (erreur instanceof DOMException && erreur.name === 'AbortError') return;
+      }
     }
     copier(url, 'Lien du profil copié.');
   }

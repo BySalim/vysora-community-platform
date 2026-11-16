@@ -112,9 +112,9 @@
   /* Actions (scripts/administration.ts : QUESTIONS_DEFI, MESSAGES_DEFI) --------------------------- */
 
   const QUESTIONS = {
-    publier: ['Publier ce défi ?', 'Il apparaît sur la page Défis et, pendant sa période, sur l’accueil.', 'Publier'],
-    annuler: ['Annuler ce défi ?', 'Les participations sont fermées et le défi ne sera pas classé. Cette action est définitive.', 'Annuler le défi'],
-    cloturer: ['Clôturer ce défi ?', 'Le classement est figé, les points de participation et du podium sont crédités et chaque participant est prévenu. Cette action est définitive.', 'Clôturer']
+    publier: ['Publier ce défi ?', 'il apparaît sur la page Défis et, pendant sa période, sur l’accueil.', 'Publier'],
+    annuler: ['Annuler ce défi ?', 'les participations sont fermées et le défi ne sera pas classé. Cette action est définitive.', 'Annuler le défi'],
+    cloturer: ['Clôturer ce défi ?', 'le classement est figé, les points de participation et du podium sont crédités et chaque participant est prévenu. Cette action est définitive.', 'Clôturer']
   };
   const MESSAGES = { publier: 'Défi publié.', annuler: 'Défi annulé.', cloturer: 'Défi clôturé : le classement est publié.' };
   const NOUVEAUX_STATUTS = { publier: 'PUBLIE', annuler: 'ANNULE', cloturer: 'CLOTURE' };

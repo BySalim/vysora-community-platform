@@ -545,7 +545,7 @@ void main() {
       if (change) entree(cible, direction);
       else if (!avant) entree(cible);
       if (focus === 'titre') $('h1', cible)?.focus({ preventScroll: true });
-      else if (focus === 'champ') $('input:not([type="hidden"]):not([tabindex="-1"])', cible)?.focus({ preventScroll: true });
+      else if (focus === 'champ') $$('input:not([type="hidden"]):not([tabindex="-1"])', cible).find(champ => !champ.closest('[hidden]'))?.focus({ preventScroll: true });
       if (change && carte.getBoundingClientRect().top < 0) carte.scrollIntoView({ block: 'start', behavior: niveau === 'full' ? 'smooth' : 'auto' });
     }
     requestAnimationFrame(() => requestAnimationFrame(() => { carte.dataset.pret = ''; }));
