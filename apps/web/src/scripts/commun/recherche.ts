@@ -1608,8 +1608,9 @@ export function ouvrir(declencheur?: Element | null): void {
   x.saisie.value = '';
   etat.portee = 'tout';
   etat.exact = false;
+  // La page est figée sans décalage par styles/defilement.css (classe « rch-gouttiere » du
+  // prototype non reprise : l'emplacement réservé restait blanc, hors du voile).
   racineDoc.classList.add('rch-ouverte');
-  racineDoc.classList.toggle('rch-gouttiere', window.innerWidth > racineDoc.clientWidth);
   x.dialogue.classList.add('is-ouverture');
   x.dialogue.showModal();
   x.saisie.focus({ preventScroll: true });
@@ -1626,7 +1627,6 @@ function fermer({ instant = false } = {}): void {
   const fin = () => {
     x.dialogue.close();
     for (const a of animationsScript(x.dialogue)) a.cancel();
-    racineDoc.classList.remove('rch-gouttiere');
     declencheurs(false);
     fermeture = null;
   };

@@ -23,6 +23,7 @@ import '../styles/commun.css';
 import '../styles/etats.css';
 import '../styles/socle.css';
 import '../styles/cookies.css';
+import '../styles/defilement.css';
 
 interface Props {
   /** Titre de la page, suivi de « · Vysora ». */
@@ -166,6 +167,17 @@ const etatClient = JSON.stringify({
           motion === 'none' ? 'none' : reduce || motion === 'reduced' ? 'reduced' : 'full',
         );
         root.classList.add('js');
+        // Barres de défilement qui prennent de la place (Windows, Linux) : barre superposée et
+        // barres fines du site (styles/defilement.css), sauf en contraste élevé.
+        var sonde = document.createElement('div');
+        sonde.style.cssText =
+          'position:absolute;top:-99px;width:60px;height:60px;overflow:scroll;scrollbar-width:thin';
+        root.appendChild(sonde);
+        var classiques = sonde.offsetWidth > sonde.clientWidth;
+        root.removeChild(sonde);
+        if (classiques && !(window.matchMedia && matchMedia('(forced-colors: active)').matches)) {
+          root.classList.add('barres-classiques');
+        }
       })();
     </script>
     <slot name="head" />
@@ -200,6 +212,7 @@ const etatClient = JSON.stringify({
     <div class="toast" role="status" aria-live="polite" data-toast></div>
     <script type="application/json" id="etat-visiteur" set:html={etatClient} />
     <script>
+      import '../scripts/commun/defilement';
       import '../scripts/commun/entete';
       import '../scripts/commun/acces';
       import '../scripts/commun/suivi-compte';

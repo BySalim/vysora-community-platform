@@ -29,7 +29,7 @@ export default defineConfig({
       // Script en ligne du gabarit (layouts/Base.astro, is:inline : classe « js » et niveau
       // d'animation avant le premier affichage) : Astro n'en calcule pas l'empreinte. Elle change
       // avec son texte ; src/lib/csp.test.ts le vérifie.
-      scriptDirective: { hashes: ['sha256-pqGAyBpt+13BPqWetK4xFh/+/clYjS0lByD959HxEqE='] },
+      scriptDirective: { hashes: ['sha256-WhUh/ISy2+SbhDNlAKyvM4fXrmEwmjjd28t9YpqCzpU='] },
     },
   },
   devToolbar: { enabled: false },
