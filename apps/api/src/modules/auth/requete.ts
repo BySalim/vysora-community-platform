@@ -13,7 +13,10 @@ export interface UtilisateurConnecte {
   emailVerifie: boolean;
   role: Role;
   statutCompte: StatutCompte;
+  /** Photo importée : clé du fichier dans le stockage. */
   avatar: string | null;
+  /** RG-07 : avatar de la liste proposée, affiché sans photo. */
+  avatarChoisi: string | null;
 }
 
 export interface SessionOuverte {

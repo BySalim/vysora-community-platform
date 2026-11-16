@@ -323,6 +323,7 @@ export class ExportService implements OnModuleInit {
       compte: {
         pseudo: compte.pseudo,
         nom_affiche: compte.nomAffiche,
+        avatar_choisi: compte.avatarChoisi,
         email: compte.email,
         email_verifie: compte.emailVerifie,
         role: compte.role,

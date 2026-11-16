@@ -3,6 +3,7 @@ import {
   MESSAGES_MOT_DE_PASSE,
   champPseudo,
   estPseudoReserve,
+  tirerAvatar,
   tirerPseudo,
   variantesPseudo,
   type DisponibiliteEmail,
@@ -45,8 +46,8 @@ export class ComptesService {
     @Inject(CONFIG) private readonly config: Configuration,
   ) {}
 
-  /** Compte ACTIF, e-mail non vérifié (lecture seule, RG-02), rôle MEMBRE ; acceptations datées (RG-03) ;
-      session ouverte ; lien de vérification envoyé (AUTH-02). */
+  /** Compte ACTIF, e-mail non vérifié (lecture seule, RG-02), rôle MEMBRE, avatar tiré au hasard
+      (RG-07) ; acceptations datées (RG-03) ; session ouverte ; lien de vérification envoyé (AUTH-02). */
   async inscrire(
     saisie: Inscription,
     contexte: ContexteConnexion,
@@ -82,6 +83,7 @@ export class ComptesService {
               pseudo,
               email: saisie.email,
               empreinteMotDePasse: empreinte,
+              avatarChoisi: tirerAvatar(),
               dateDerniereConnexion: new Date(),
             })
             .returning({ id: utilisateur.id });
@@ -107,7 +109,7 @@ export class ComptesService {
 
   /** S-10 (F-02, WF-01 1a) : compte créé au retour de GitHub ou Google. L'adresse fournie par le
       service compte comme vérifiée ; aucun mot de passe (le membre pourra en définir un) ; pseudo
-      proposé, modifiable à l'écran suivant comme pour l'inscription par e-mail ; documents en
+      et avatar proposés (RG-07), modifiables à l'écran suivant comme pour l'inscription par e-mail ; documents en
       vigueur acceptés (RG-03) ; code d'invitation consommé pendant la bêta (INV-01) ; compte
       externe lié ; session ouverte (celle déjà présente sur l'appareil est fermée). */
   async inscrireAvecService(
@@ -131,7 +133,13 @@ export class ComptesService {
         return await this.db.transaction(async (tx) => {
           const [nouveau] = await tx
             .insert(utilisateur)
-            .values({ pseudo, email, emailVerifie: true, dateDerniereConnexion: new Date() })
+            .values({
+              pseudo,
+              email,
+              emailVerifie: true,
+              avatarChoisi: tirerAvatar(),
+              dateDerniereConnexion: new Date(),
+            })
             .returning({ id: utilisateur.id });
           if (!nouveau) throw new Error('Compte non créé');
           await this.documents.accepterEnVigueur(nouveau.id, tx);
@@ -182,15 +190,20 @@ export class ComptesService {
     };
   }
 
-  /** Le membre modifie ses informations : son pseudo, son nom, son fuseau horaire ; son adresse tant
-      qu'elle n'est pas vérifiée. */
+  /** Le membre modifie ses informations : son pseudo, son nom, son avatar (RG-07), son fuseau
+      horaire ; son adresse tant qu'elle n'est pas vérifiée. */
   async modifier(utilisateurId: number, modification: ModificationMembre): Promise<void> {
     if (modification.pseudo !== undefined)
       await this.modifierPseudo(utilisateurId, modification.pseudo);
-    if (modification.nomAffiche !== undefined)
+    if (modification.nomAffiche !== undefined || modification.avatarChoisi !== undefined)
       await this.db
         .update(utilisateur)
-        .set({ nomAffiche: modification.nomAffiche })
+        .set({
+          ...(modification.nomAffiche !== undefined ? { nomAffiche: modification.nomAffiche } : {}),
+          ...(modification.avatarChoisi !== undefined
+            ? { avatarChoisi: modification.avatarChoisi }
+            : {}),
+        })
         .where(eq(utilisateur.id, utilisateurId));
     if (modification.fuseauHoraire !== undefined)
       await this.db

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IDS_AVATARS } from '../avatars';
 import { LONGUEURS } from '../regles';
 import { evaluerMotDePasse } from '../mots-de-passe';
 import { IDS_FUSEAUX } from '../parametres';
@@ -82,13 +83,15 @@ export const schemaAcceptationDocuments = z.object({
   accepte: z.literal(true, { error: 'Cochez la case pour accepter les nouvelles versions.' }),
 });
 
-/** Modification par le membre de ses propres informations (pseudo, nom, fuseau, puis profil).
+/** Modification par le membre de ses propres informations (pseudo, nom, avatar, fuseau).
     L'adresse ne se modifie ici que tant qu'elle n'est pas vérifiée (inscription) ; ensuite, par
     `POST /api/v1/moi/email` (PARAM-01). */
 export const schemaModificationMembre = z.object({
   pseudo: champPseudo.optional(),
   /** null ou vide : retire le nom affiché (le pseudo s'affiche). */
   nomAffiche: champNomAffiche.nullable().optional(),
+  /** RG-07 : avatar de la liste proposée (affiché quand le membre n'a pas importé de photo). */
+  avatarChoisi: z.enum(IDS_AVATARS, { error: 'Choisissez un avatar de la liste.' }).optional(),
   email: champEmail.optional(),
   /** Horaires des défis et des notifications (PARAM-01). */
   fuseauHoraire: z.enum(IDS_FUSEAUX, { error: 'Choisissez un fuseau de la liste.' }).optional(),

@@ -1,5 +1,6 @@
 import {
   FOURNISSEURS_EXTERNES,
+  IDS_AVATARS,
   LANGUES_INTERFACE,
   MOTIFS_MOUVEMENT_REPUTATION,
   ROLES,
@@ -46,8 +47,11 @@ export const utilisateur = pgTable(
     dateMotDePasse: horodatage(),
     role: text({ enum: ROLES }).notNull().default('MEMBRE'),
     statutCompte: text({ enum: STATUTS_COMPTE }).notNull().default('ACTIF'),
-    /** Clé du fichier dans le stockage des images. */
+    /** Photo importée : clé du fichier dans le stockage des images. */
     avatar: varchar({ length: 255 }),
+    /** Extension (prototype) : avatar choisi dans la liste proposée (RG-07), tiré au hasard à la
+        création du compte ; affiché quand aucune photo n'est importée. */
+    avatarChoisi: varchar({ length: 30 }),
     biographie: varchar({ length: 500 }),
     urlSite: varchar({ length: 2048 }),
     langueInterface: text({ enum: LANGUES_INTERFACE }).notNull().default('FR'),
@@ -68,6 +72,7 @@ export const utilisateur = pgTable(
     valeursPermises('utilisateur_role_check', t.role, ROLES),
     valeursPermises('utilisateur_statut_check', t.statutCompte, STATUTS_COMPTE),
     valeursPermises('utilisateur_langue_check', t.langueInterface, LANGUES_INTERFACE),
+    valeursPermises('utilisateur_avatar_choisi_check', t.avatarChoisi, IDS_AVATARS),
     check('utilisateur_email_check', sql`${t.email} is not null or ${t.statutCompte} = 'SUPPRIME'`),
   ],
 );

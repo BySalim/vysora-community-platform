@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { AvatarApi, DescriptionImage, MediaApi } from '@vysora/shared';
+import {
+  imageDeProfil,
+  type AvatarApi,
+  type DescriptionImage,
+  type MediaApi,
+} from '@vysora/shared';
 import { and, eq, isNotNull, isNull, lt } from 'drizzle-orm';
 import { ErreurApplication, conflit, erreurValidation, introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
@@ -147,18 +152,21 @@ export class MediasService {
     const avatar = await controler(fichier, preparerAvatar);
     const cles = await ecrireDeclinaisons(this.stockage, [avatar]);
     const cle = cles[avatar.largeur] as string;
-    const precedente = await this.remplacerAvatar(membreId, cle).catch(async (erreur: unknown) => {
-      await this.stockage.supprimer([cle]);
-      throw erreur;
-    });
+    const { precedente } = await this.remplacerAvatar(membreId, cle).catch(
+      async (erreur: unknown) => {
+        await this.stockage.supprimer([cle]);
+        throw erreur;
+      },
+    );
     if (precedente) await this.stockage.supprimer([precedente]);
     return { avatar: this.stockage.adresse(cle) };
   }
 
+  /** RG-07 : sans photo, l'avatar choisi revient. */
   async retirerAvatar(membreId: number): Promise<AvatarApi> {
-    const precedente = await this.remplacerAvatar(membreId, null);
+    const { precedente, avatarChoisi } = await this.remplacerAvatar(membreId, null);
     if (precedente) await this.stockage.supprimer([precedente]);
-    return { avatar: null };
+    return { avatar: imageDeProfil(null, avatarChoisi) };
   }
 
   /** Images jamais rattachées depuis 24 heures, puis fichiers qu'aucune ligne ne désigne plus. */
@@ -200,17 +208,20 @@ export class MediasService {
     return ligne;
   }
 
-  /** Nouvelle clé de la photo de profil ; renvoie la précédente. */
-  private async remplacerAvatar(membreId: number, cle: string | null): Promise<string | null> {
+  /** Nouvelle clé de la photo de profil ; renvoie la précédente et l'avatar choisi (RG-07). */
+  private async remplacerAvatar(
+    membreId: number,
+    cle: string | null,
+  ): Promise<{ precedente: string | null; avatarChoisi: string | null }> {
     return this.db.transaction(async (tx) => {
       const [membre] = await tx
-        .select({ avatar: utilisateur.avatar })
+        .select({ avatar: utilisateur.avatar, avatarChoisi: utilisateur.avatarChoisi })
         .from(utilisateur)
         .where(eq(utilisateur.id, membreId))
         .for('update');
       if (!membre) throw introuvable();
       await tx.update(utilisateur).set({ avatar: cle }).where(eq(utilisateur.id, membreId));
-      return membre.avatar;
+      return { precedente: membre.avatar, avatarChoisi: membre.avatarChoisi };
     });
   }
 }

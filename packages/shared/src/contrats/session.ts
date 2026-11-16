@@ -1,3 +1,4 @@
+import type { AvatarChoisi } from '../avatars';
 import type { TypeDocumentLegal } from '../enums';
 import type { EtatVisiteur } from '../permissions';
 import type { ServiceExterne } from '../services-externes';
@@ -13,7 +14,10 @@ export interface MembreConnecte {
   nom: string;
   /** Réputation (RG-83). */
   points: number;
+  /** Image de profil (RG-07) : la photo importée, à défaut l'avatar choisi. */
   avatar: string | null;
+  /** Avatar choisi dans la liste proposée, même quand une photo passe devant. */
+  avatarChoisi: AvatarChoisi | null;
 }
 
 /** Personne qui consulte, vue par l'interface (prototype/etats.js). */

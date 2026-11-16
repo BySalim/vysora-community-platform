@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   etatSujet,
+  imageDeProfil,
   niveauPourReputation,
   type CodeNiveau,
   type DifficulteCas,
@@ -24,7 +25,12 @@ const SUJETS = 300;
 const MEMBRES = 200;
 const LONGUEUR_EXTRAIT = 280;
 
-type LigneMembre = { pseudo: string; nom_affiche: string | null; avatar: string | null };
+type LigneMembre = {
+  pseudo: string;
+  nom_affiche: string | null;
+  avatar: string | null;
+  avatar_choisi: string | null;
+};
 
 const extrait = (texte: string) => {
   const brut = texte
@@ -90,7 +96,10 @@ export class IndexRechercheService {
     return {
       pseudo: ligne.pseudo,
       nom: ligne.nom_affiche ?? ligne.pseudo,
-      avatar: ligne.avatar ? this.stockage.adresse(ligne.avatar) : null,
+      avatar: imageDeProfil(
+        ligne.avatar ? this.stockage.adresse(ligne.avatar) : null,
+        ligne.avatar_choisi,
+      ),
     };
   }
 
@@ -110,7 +119,7 @@ export class IndexRechercheService {
       }
     >(sql`
       select c.id, cr.slug, cr.type_creation, cr.titre, cr.objectif, cat.libelle as domaine,
-        u.pseudo, u.nom_affiche, u.avatar,
+        u.pseudo, u.nom_affiche, u.avatar, u.avatar_choisi,
         coalesce((select array_agg(e.libelle order by e.libelle) from contenu_etiquette ce
           join etiquette e on e.id = ce.etiquette_id where ce.contenu_id = c.id), '{}') as etiquettes,
         (select count(*) from vote v where v.contenu_id = c.id and v.type_vote_code = 'UTILE')::int
@@ -218,7 +227,7 @@ export class IndexRechercheService {
     >(sql`
       select s.id, s.slug, s.type_sujet as type, s.titre, s.corps,
         s.date_fermeture is not null as ferme, s.message_accepte_id is not null as accepte,
-        u.pseudo, u.nom_affiche, u.avatar, o.nom as outil,
+        u.pseudo, u.nom_affiche, u.avatar, u.avatar_choisi, o.nom as outil,
         coalesce(m.nom_court, s.modele_non_reference) as modele,
         (select count(*) from message mm join contenu mc on mc.id = mm.id
           where mm.sujet_id = s.id and mc.statut = 'VISIBLE')::int as reponses,
@@ -286,7 +295,7 @@ export class IndexRechercheService {
   ): Promise<IndexRechercheApi['membres']> {
     const [{ rows }, niveaux] = await Promise.all([
       this.db.execute<LigneMembre & { reputation: number; depuis: Date | string }>(sql`
-        select u.pseudo, u.nom_affiche, u.avatar, u.date_inscription as depuis,
+        select u.pseudo, u.nom_affiche, u.avatar, u.avatar_choisi, u.date_inscription as depuis,
           greatest(0, coalesce((select sum(mr.points) from mouvement_reputation mr
             where mr.beneficiaire_id = u.id), 0))::int as reputation
         from utilisateur u

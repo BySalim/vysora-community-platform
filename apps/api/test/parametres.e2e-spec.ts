@@ -453,6 +453,10 @@ describe('Paramètres du compte (PARAM-01, EC-17)', () => {
         contenuId: await creerCreation(contexte, lea.id),
         typeVoteCode: 'UTILE',
       });
+      await contexte.db
+        .update(utilisateur)
+        .set({ avatarChoisi: 'renard' })
+        .where(eq(utilisateur.id, awaId));
       const awa = await agentConnecte();
       await demander(awa, MOT_DE_PASSE).expect(200);
 
@@ -475,6 +479,7 @@ describe('Paramètres du compte (PARAM-01, EC-17)', () => {
         empreinteMotDePasse: null,
         nomAffiche: null,
         avatar: null,
+        avatarChoisi: null,
       });
       expect(compte?.pseudo).toMatch(/^membre-supprime-[0-9a-f]{4,}$/);
       const statuts = await contexte.db

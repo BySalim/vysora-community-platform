@@ -169,6 +169,9 @@ describe('Connexion avec GitHub et Google (S-10)', () => {
     const etat = await sessionDe(cookie!);
     expect(etat.membre.pseudo).toBe(cree?.pseudo);
     expect(etat.etat.compte).toBe('actif');
+    // RG-07 : un avatar est tiré au hasard, comme pour l'inscription par e-mail.
+    expect(etat.membre.avatarChoisi).toBe(cree?.avatarChoisi);
+    expect(etat.membre.avatar).toBe(`/assets/avatars/choix/${cree?.avatarChoisi}.webp`);
   });
 
   it('connecte ensuite le membre, en fermant la session déjà ouverte sur l’appareil', async () => {

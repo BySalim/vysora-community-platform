@@ -59,6 +59,7 @@ export class SessionsService {
           role: utilisateur.role,
           statutCompte: utilisateur.statutCompte,
           avatar: utilisateur.avatar,
+          avatarChoisi: utilisateur.avatarChoisi,
         },
       })
       .from(session)

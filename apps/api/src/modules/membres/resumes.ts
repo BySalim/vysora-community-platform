@@ -1,11 +1,16 @@
-import { niveauPourReputation, type CodeNiveau, type MembreResumeApi } from '@vysora/shared';
+import {
+  imageDeProfil,
+  niveauPourReputation,
+  type CodeNiveau,
+  type MembreResumeApi,
+} from '@vysora/shared';
 import { inArray, sql } from 'drizzle-orm';
 import type { BaseDeDonnees } from '../../db/client.js';
 import { mouvementReputation, niveau, utilisateur } from '../../db/schema/index.js';
 import type { Stockage } from '../medias/stockage.js';
 
 /** Membres tels que les pages les présentent à côté d'un contenu : nom affiché (à défaut le pseudo),
-    photo, niveau et réputation (RG-83, RG-84). */
+    image de profil (RG-07 : la photo, à défaut l'avatar choisi), niveau et réputation (RG-83, RG-84). */
 export async function resumerMembres(
   db: BaseDeDonnees,
   stockage: Stockage,
@@ -20,6 +25,7 @@ export async function resumerMembres(
         pseudo: utilisateur.pseudo,
         nomAffiche: utilisateur.nomAffiche,
         avatar: utilisateur.avatar,
+        avatarChoisi: utilisateur.avatarChoisi,
       })
       .from(utilisateur)
       .where(inArray(utilisateur.id, uniques)),
@@ -45,7 +51,7 @@ export async function resumerMembres(
           id: m.id,
           pseudo: m.pseudo,
           nom: m.nomAffiche ?? m.pseudo,
-          avatar: m.avatar ? stockage.adresse(m.avatar) : null,
+          avatar: imageDeProfil(m.avatar ? stockage.adresse(m.avatar) : null, m.avatarChoisi),
           niveau: { code: atteint.code, libelle: atteint.libelle },
           reputation,
         },

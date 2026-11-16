@@ -260,6 +260,7 @@ export class SuppressionService {
           empreinteMotDePasse: null,
           dateMotDePasse: null,
           avatar: null,
+          avatarChoisi: null,
           biographie: null,
           urlSite: null,
           notificationsEmail: false,

@@ -3,6 +3,7 @@ import {
   LONGUEURS,
   estPseudoReserve,
   slugifier,
+  tirerAvatar,
   tirerPseudo,
   type ActionAudit,
   type AjoutEquipe,
@@ -183,7 +184,7 @@ export class EquipeService {
         return await this.db.transaction(async (tx) => {
           const [nouveau] = await tx
             .insert(utilisateur)
-            .values({ pseudo, nomAffiche: nom, email, role })
+            .values({ pseudo, nomAffiche: nom, email, role, avatarChoisi: tirerAvatar() })
             .returning({ id: utilisateur.id, pseudo: utilisateur.pseudo });
           if (!nouveau) throw new Error('Compte non créé');
           await this.auditer(tx, acteur, 'MEMBRE_EQUIPE_AJOUTE', nouveau.id, { role });

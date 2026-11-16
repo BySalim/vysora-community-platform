@@ -5,6 +5,7 @@ export * from './erreurs';
 export * from './texte';
 export * from './mots-de-passe';
 export * from './pseudos';
+export * from './avatars';
 export * from './recherche';
 export * from './services-externes';
 export * from './adresses';

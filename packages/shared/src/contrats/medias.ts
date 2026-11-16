@@ -23,7 +23,7 @@ export interface MediaApi {
   legende: string | null;
 }
 
-/** Photo de profil du membre connecté : adresse de l'image carrée, ou null. */
+/** Image de profil du membre connecté (RG-07) : la photo importée, à défaut l'avatar choisi, ou null. */
 export interface AvatarApi {
   avatar: string | null;
 }

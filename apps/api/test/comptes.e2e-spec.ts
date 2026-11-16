@@ -1,4 +1,5 @@
 import { verify } from '@node-rs/argon2';
+import { IDS_AVATARS } from '@vysora/shared';
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import {
@@ -69,6 +70,10 @@ describe('Comptes (F-01)', () => {
         compte: 'email',
       });
       expect(reponse.body.membre.pseudo).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
+      // RG-07 : avatar tiré au hasard dans la liste proposée, affiché faute de photo.
+      const { avatarChoisi, avatar } = reponse.body.membre;
+      expect(IDS_AVATARS).toContain(avatarChoisi);
+      expect(avatar).toBe(`/assets/avatars/choix/${avatarChoisi}.webp`);
 
       const [cree] = await contexte.db
         .select()
@@ -285,6 +290,39 @@ describe('Comptes (F-01)', () => {
       expect(retire.body.membre.nom).toBe('awa-sarr');
       const [membre] = await contexte.db.select().from(utilisateur);
       expect(membre?.nomAffiche).toBeNull();
+    });
+
+    it('change l’avatar pour un autre de la liste, même avant la vérification de l’adresse (RG-07)', async () => {
+      const agent = request.agent(serveur());
+      await agent
+        .post('/api/v1/comptes')
+        .set('Origin', ORIGINE_SITE)
+        .set('X-Forwarded-For', ip)
+        .send(inscription)
+        .expect(201);
+
+      const choisi = await agent
+        .patch('/api/v1/moi')
+        .set('Origin', ORIGINE_SITE)
+        .send({ pseudo: 'awa-sarr', avatarChoisi: 'raton-laveur' })
+        .expect(200);
+      expect(choisi.body.membre).toMatchObject({
+        pseudo: 'awa-sarr',
+        avatarChoisi: 'raton-laveur',
+        avatar: '/assets/avatars/choix/raton-laveur.webp',
+      });
+      expect((await agent.get('/api/v1/session').expect(200)).body.membre.avatarChoisi).toBe(
+        'raton-laveur',
+      );
+
+      const inconnu = await agent
+        .patch('/api/v1/moi')
+        .set('Origin', ORIGINE_SITE)
+        .send({ avatarChoisi: 'licorne' })
+        .expect(400);
+      expect(inconnu.body.erreurs).toEqual({ avatarChoisi: 'Choisissez un avatar de la liste.' });
+      const [membre] = await contexte.db.select().from(utilisateur);
+      expect(membre?.avatarChoisi).toBe('raton-laveur');
     });
   });
 });

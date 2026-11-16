@@ -159,6 +159,7 @@ export class ComptesController {
           modification.nomAffiche === undefined
             ? session.utilisateur.nomAffiche
             : modification.nomAffiche,
+        avatarChoisi: modification.avatarChoisi ?? session.utilisateur.avatarChoisi,
       },
     });
   }

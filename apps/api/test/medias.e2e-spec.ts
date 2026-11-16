@@ -320,6 +320,34 @@ describe('Médias (MEDIA-01, RG-16)', () => {
       expect((await agent.get('/api/v1/session').expect(200)).body.membre.avatar).toBeNull();
     });
 
+    it('fait passer la photo devant l’avatar choisi, qui revient quand elle est retirée (RG-07)', async () => {
+      await creerMembre(contexte, { avatarChoisi: 'hibou' });
+      const agent = await agentConnecte();
+      const session = async () => (await agent.get('/api/v1/session').expect(200)).body.membre;
+      expect(await session()).toMatchObject({
+        avatar: '/assets/avatars/choix/hibou.webp',
+        avatarChoisi: 'hibou',
+      });
+
+      const photo = (
+        await agent
+          .put('/api/v1/moi/avatar')
+          .set('Origin', ORIGINE_SITE)
+          .set('X-Forwarded-For', ip)
+          .attach('fichier', await png(300, 300), 'moi.png')
+          .expect(200)
+      ).body.avatar as string;
+      expect(photo).toMatch(/^\/api\/v1\/fichiers\//);
+      expect(await session()).toMatchObject({ avatar: photo, avatarChoisi: 'hibou' });
+
+      const retrait = await agent
+        .delete('/api/v1/moi/avatar')
+        .set('Origin', ORIGINE_SITE)
+        .expect(200);
+      expect(retrait.body).toEqual({ avatar: '/assets/avatars/choix/hibou.webp' });
+      expect((await session()).avatar).toBe('/assets/avatars/choix/hibou.webp');
+    });
+
     it('réserve le changement de photo aux comptes actifs, le retrait reste possible', async () => {
       await creerMembre(contexte, { documentsAcceptes: false });
       const agent = await agentConnecte();

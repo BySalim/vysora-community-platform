@@ -1,0 +1,2 @@
+ALTER TABLE "utilisateur" ADD COLUMN "avatar_choisi" varchar(30);--> statement-breakpoint
+ALTER TABLE "utilisateur" ADD CONSTRAINT "utilisateur_avatar_choisi_check" CHECK ("utilisateur"."avatar_choisi" in ('renard', 'hibou', 'chat', 'ours', 'panda', 'lapin', 'tigre', 'pingouin', 'koala', 'raton-laveur', 'loup', 'elephant', 'grenouille', 'cerf', 'lion'));
