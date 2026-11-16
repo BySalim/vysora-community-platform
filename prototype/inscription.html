@@ -122,10 +122,15 @@
 
         <section class="auth-vue" data-vue="pseudo" aria-labelledby="t-pseudo" hidden>
           <p class="auth-repere is-ok" data-repere-cree><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Compte créé</span></p>
-          <h1 id="t-pseudo" tabindex="-1">Votre pseudo</h1>
-          <p class="auth-intro">Choisi au hasard : gardez-le ou modifiez-le.</p>
+          <h1 id="t-pseudo" tabindex="-1">Votre profil</h1>
+          <p class="auth-intro">Choisis au hasard : gardez-les ou changez-les.</p>
           <form class="auth-bloc" id="form-pseudo" novalidate>
             <div class="identite" data-identite hidden></div>
+            <div class="avatar-tire">
+              <img src="assets/avatars/choix/renard.webp" alt="Votre avatar" width="88" height="88" data-avatar-image>
+              <button class="avatar-autre" type="button" aria-label="Proposer un autre avatar" data-autre-avatar><svg class="icon" aria-hidden="true"><use href="#i-shuffle"/></svg></button>
+              <p class="sr-only" aria-live="polite" data-avatar-annonce></p>
+            </div>
             <div class="champ" data-champ-pseudo>
               <label for="in-pseudo">Pseudo</label>
               <div class="saisie a-etat a-de"><input id="in-pseudo" name="pseudo" autocomplete="nickname" autocapitalize="none" spellcheck="false" maxlength="30" required aria-describedby="in-pseudo-aide in-pseudo-erreur"><span class="saisie-etat" data-pseudo-etat aria-hidden="true"></span><button class="saisie-oeil saisie-de" type="button" aria-label="Proposer un autre pseudo" data-autre-pseudo><svg class="icon" aria-hidden="true"><use href="#i-shuffle"/></svg></button></div>

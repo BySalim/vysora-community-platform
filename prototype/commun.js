@@ -222,6 +222,14 @@ bolong.jpg   5 220 Ko <span class="k">→</span> <span class="s">477 Ko</span>
      (session, rôle, niveau, compte, notifications) viennent de etats.js. */
 
   const E = window.VysoraEtats;
+
+  /* Nom affiché du membre simulé : celui modifié sur la page Profil (vysora-profil), sinon celui du
+     prototype. Sans nom, c'est le pseudo qui s'affiche, comme dans le produit. */
+  const NOM_PROTOTYPE = E.MOI.nom;
+  const nomMoi = () => { const p = store.get('vysora-profil', {}); return p && typeof p.nom === 'string' ? p.nom : NOM_PROTOTYPE; };
+  const appliquerNomMoi = () => { E.MOI.nom = nomMoi() || E.MOI.pseudo; };
+  appliquerNomMoi();
+
   const APPARENCE = {
     accent: { name: 'accent', legend: 'Couleur d’accent', options: [['blue', 'Bleu', '#2563EB'], ['deep', 'Bleu foncé', '#1D4ED8'], ['ink', 'Noir', '#171717']] },
     density: { name: 'density', legend: 'Densité', options: [['airy', 'Aérée'], ['standard', 'Standard'], ['compact', 'Compacte']] },
@@ -522,12 +530,45 @@ bolong.jpg   5 220 Ko <span class="k">→</span> <span class="s">477 Ko</span>
     });
   }
 
-  /* Photo choisie sur la page Profil (vysora-profil), sinon l'avatar par défaut du compte. */
+  /* Avatars proposés à l'inscription et sur le profil : des têtes d'animaux en aplats géométriques,
+     chacune sur sa propre couleur, pour qu'on les distingue d'un coup d'œil, même en petit.
+     Images générées avec Z-Image Turbo (voir assets/avatars/choix/generation.json). */
+  const AVATARS = [
+    { id: 'renard', nom: 'Renard' },
+    { id: 'hibou', nom: 'Hibou' },
+    { id: 'chat', nom: 'Chat' },
+    { id: 'ours', nom: 'Ours' },
+    { id: 'panda', nom: 'Panda' },
+    { id: 'lapin', nom: 'Lapin' },
+    { id: 'tigre', nom: 'Tigre' },
+    { id: 'pingouin', nom: 'Pingouin' },
+    { id: 'koala', nom: 'Koala' },
+    { id: 'raton-laveur', nom: 'Raton laveur' },
+    { id: 'loup', nom: 'Loup' },
+    { id: 'elephant', nom: 'Éléphant' },
+    { id: 'grenouille', nom: 'Grenouille' },
+    { id: 'cerf', nom: 'Cerf' },
+    { id: 'lion', nom: 'Lion' }
+  ];
+  const avatarConnu = id => AVATARS.some(a => a.id === id);
+  const avatarSrc = id => (avatarConnu(id) ? `assets/avatars/choix/${id}.webp` : '');
+  const avatarNom = id => (AVATARS.find(a => a.id === id) || {}).nom || '';
+
+  /* Image du compte : la photo importée sur la page Profil (vysora-profil), sinon l'avatar choisi,
+     sinon l'icône par défaut. */
   const photoMoi = () => { const p = store.get('vysora-profil', {}); return p && typeof p.photo === 'string' && p.photo.startsWith('data:image/') ? p.photo : ''; };
+  const avatarChoisiMoi = () => { const p = store.get('vysora-profil', {}); return p && avatarConnu(p.avatar) ? p.avatar : ''; };
+  const imageMoi = () => photoMoi() || avatarSrc(avatarChoisiMoi());
+  const choisirAvatarMoi = id => {
+    const p = store.get('vysora-profil', {}) || {};
+    delete p.photo;
+    if (avatarConnu(id)) p.avatar = id; else delete p.avatar;
+    store.set('vysora-profil', p);
+  };
   const avatarMoi = size => {
-    const photo = photoMoi();
-    return photo
-      ? `<img class="avatar compte-avatar" src="${photo}" alt="" width="${size}" height="${size}" style="width:${size}px;height:${size}px" decoding="async">`
+    const image = imageMoi();
+    return image
+      ? `<img class="avatar compte-avatar" src="${image}" alt="" width="${size}" height="${size}" style="width:${size}px;height:${size}px" decoding="async">`
       : `<span class="avatar compte-avatar" style="width:${size}px;height:${size}px" aria-hidden="true">${icon('user', '')}</span>`;
   };
   /* Non lues : le nombre gardé par la page Notifications quand le membre y a lu ou reçu des notifications,
@@ -724,7 +765,8 @@ bolong.jpg   5 220 Ko <span class="k">→</span> <span class="s">477 Ko</span>
     dateLabel, daysAgo, relativeDay, icon, store,
     TOOL_BY_NAME, logo, withLogos, avatar, TYPE_LABEL, typeTag,
     mockHTML, mediaHTML, fixTypography, toast, motion, initTweaks, initHeader,
-    etats: E, exiger, invitation, accesBloc, avatarMoi, photoMoi, rendreCompte, ouvrirRecherche,
+    etats: E, exiger, invitation, accesBloc, avatarMoi, photoMoi, imageMoi, rendreCompte, ouvrirRecherche,
+    AVATARS, avatarSrc, avatarNom, avatarConnu, avatarChoisiMoi, choisirAvatarMoi, nomMoi, appliquerNomMoi,
     regler: (name, value) => regler(name, value)
   };
 })();

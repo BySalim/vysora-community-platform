@@ -37,6 +37,8 @@
     if (typeof saved.bio === 'string') propre.bio = saved.bio.slice(0, 500);
     if (typeof saved.lien === 'string') propre.lien = saved.lien;
     if (typeof saved.photo === 'string' && saved.photo.startsWith('data:image/')) propre.photo = saved.photo;
+    if (V.avatarConnu(saved.avatar)) propre.avatar = saved.avatar;
+    if (typeof saved.nom === 'string') propre.nom = saved.nom.slice(0, 60);
     if (saved.guideMasque === true) propre.guideMasque = true;
     return propre;
   }
@@ -68,7 +70,10 @@
   const prenom = () => E.MOI.nom.split(' ')[0];
   const bio = () => (typeof edits.bio === 'string' ? edits.bio : (N().bio ?? P.identite.bio));
   const lien = () => (typeof edits.lien === 'string' ? edits.lien : (N().lien ?? P.identite.lien));
+  /* Image de profil : la photo importée, sinon l'avatar choisi (à l'inscription ou ici). */
   const photo = () => edits.photo || '';
+  const avatarId = () => edits.avatar || '';
+  const image = () => photo() || V.avatarSrc(avatarId());
   const lienAffiche = url => url.replace(/^https:\/\//, '').replace(/\/$/, '');
   const moisAnnee = iso => { const d = new Date(`${iso}T12:00:00`); return `${MOIS_LONGS[d.getMonth()]} ${d.getFullYear()}`; };
   const dateLongue = iso => { const d = new Date(`${iso}T12:00:00`); return `${d.getDate() === 1 ? '1er' : d.getDate()} ${MOIS_LONGS[d.getMonth()]} ${d.getFullYear()}`; };
@@ -148,9 +153,10 @@
     const b = P.badges[nom];
     return `<span class="emblem ${cls}" data-tone="${b.tone}" aria-hidden="true"><svg class="emblem-shape" viewBox="0 0 56 60"><path class="emblem-bg" d="M28 4 50 16.75v26.5L28 56 6 43.25v-26.5z"/><path class="emblem-ring" d="M28 10.5 44.4 20v20L28 49.5 11.6 40V20z"/></svg>${icon(b.icon, '')}</span>`;
   };
-  const photoHTML = (taille, cls = '') => (photo()
-    ? `<img class="pf-photo ${cls}" src="${photo()}" alt="${C.prive ? 'Votre photo de profil' : t(`Photo de ${E.MOI.nom}`)}" width="${taille}" height="${taille}">`
-    : `<span class="pf-photo pf-photo-defaut ${cls}" role="img" aria-label="${C.prive ? 'Aucune photo de profil' : t(`Profil de ${E.MOI.nom}`)}">${icon('user', '')}</span>`);
+  const altImage = () => (photo() ? (C.prive ? 'Votre photo de profil' : t(`Photo de ${E.MOI.nom}`)) : (C.prive ? 'Votre avatar' : t(`Avatar de ${E.MOI.nom}`)));
+  const photoHTML = (taille, cls = '') => (image()
+    ? `<img class="pf-photo ${cls}" src="${image()}" alt="${altImage()}" width="${taille}" height="${taille}">`
+    : `<span class="pf-photo pf-photo-defaut ${cls}" role="img" aria-label="${C.prive ? 'Aucune image de profil' : t(`Profil de ${E.MOI.nom}`)}">${icon('user', '')}</span>`);
   const outilHTML = (outil, modele) => `<span class="pf-outil">${V.logo(outil)}${t(outil)}${modele ? `<span class="pf-modele"> · ${t(modele)}</span>` : ''}</span>`;
   const enTete = (id, kicker, kickerIcone, titre, compte = '', droite = '') => `<div class="pf-tete">
       <div><p class="kicker">${icon(kickerIcone)}${t(kicker)}</p><h2 id="${id}">${t(titre)}${compte !== '' ? ` <span class="pf-nb">${t(compte)}</span>` : ''}</h2></div>
@@ -162,7 +168,7 @@
   function etapesGuide() {
     const n = N();
     return [
-      { id: 'photo', fait: !!photo(), titre: 'Ajouter une photo', texte: 'Les membres reconnaissent plus vite vos réponses.', action: 'photo' },
+      { id: 'photo', fait: !!image(), titre: 'Choisir un avatar ou une photo', texte: 'Les membres reconnaissent plus vite vos réponses.', action: 'photo' },
       { id: 'bio', fait: !!bio(), titre: 'Écrire votre biographie', texte: 'Ce que vous créez avec l’IA, en quelques lignes.', action: 'bio' },
       { id: 'lien', fait: !!lien(), titre: 'Ajouter un lien personnel', texte: 'Portfolio, site ou dépôt de code.', action: 'lien' },
       { id: 'essai', fait: n.apprentissage.essais > 0 && !C.vide, titre: 'Déclarer un premier essai', texte: 'Reproduisez une création et partagez votre résultat.', lien: 'explorer.html' },
@@ -196,7 +202,7 @@
       <div class="container pf-hero-in">
         <div class="pf-photo-zone pf-entree" style="--i:0">
           ${photoHTML(148, 'pf-photo-hero')}
-          ${C.prive ? `<button class="pf-photo-btn" type="button" data-pf-modifier="photo" aria-label="${photo() ? 'Changer la photo de profil' : 'Ajouter une photo de profil'}">${icon('camera', '')}</button>` : ''}
+          ${C.prive ? `<button class="pf-photo-btn" type="button" data-pf-modifier="photo" aria-label="${image() ? 'Changer l’image de profil' : 'Choisir une image de profil'}">${icon('camera', '')}</button>` : ''}
         </div>
         <div class="pf-identite">
           ${C.prive ? `<p class="kicker pf-entree" style="--i:1">${icon('user')}Mon profil</p>` : ''}
@@ -720,13 +726,98 @@
   let origine = null;
   let origineCle = '';
 
-  const etatForm = () => ({ photo: brouillon.photo, bio: champBio.value.trim(), lien: champLien.value.trim() });
-  const modifie = () => { const f = etatForm(); return f.photo !== photo() || f.bio !== bio() || normaliserLien(f.lien) !== lien(); };
-  function apercuPhoto() {
-    $('[data-pf-photo-apercu]').innerHTML = brouillon.photo ? `<img src="${brouillon.photo}" alt="Nouvelle photo de profil" width="88" height="88">` : `<span class="pf-photo pf-photo-defaut" aria-hidden="true">${icon('user', '')}</span>`;
-    $('[data-pf-retirer]').hidden = !brouillon.photo;
-    $('[data-pf-fichier-libelle]').textContent = brouillon.photo ? 'Changer de photo' : 'Importer une photo';
+  /* Image de profil : l'appareil photo importe une photo ; dessous, les premiers avatars,
+     une icône pour en tirer un au hasard et une pour afficher les autres. Une photo importée
+     passe devant l'avatar ; la retirer fait revenir l'avatar. */
+  const VISIBLES = 5;
+  const zoneAvatars = $('[data-pf-avatars]');
+  let tousVisibles = false;
+  zoneAvatars.innerHTML = `${V.AVATARS.map((a, i) => `<label class="pf-avatar" style="--i:${Math.max(0, i - VISIBLES)}" title="${esc(a.nom)}">
+      <input class="sr-only" type="radio" name="pf-avatar" value="${a.id}">
+      <img src="${V.avatarSrc(a.id)}" alt="${esc(a.nom)}" width="48" height="48" loading="lazy" decoding="async">
+    </label>`).join('')}
+    <button class="pf-avatar-outil" type="button" title="Avatar au hasard" aria-label="Avatar au hasard" data-pf-avatar-hasard>${icon('shuffle', '')}</button>
+    ${V.AVATARS.length > VISIBLES ? `<button class="pf-avatar-outil pf-avatars-tous" type="button" aria-expanded="false" data-pf-avatars-tous>${icon('chevron-down', '')}</button>` : ''}`;
+
+  function majAvatars() {
+    const labels = $$('.pf-avatar', zoneAvatars);
+    const choisi = brouillon.photo ? -1 : V.AVATARS.findIndex(a => a.id === brouillon.avatar);
+    labels.forEach((label, i) => {
+      $('input', label).checked = i === choisi;
+      label.hidden = !tousVisibles && i >= VISIBLES && i !== choisi;
+    });
+    /* Repliée, la rangée garde cinq avatars : celui choisi parmi les autres prend la dernière place. */
+    if (!tousVisibles && choisi >= VISIBLES) labels[VISIBLES - 1].hidden = true;
+    zoneAvatars.classList.toggle('is-ouvert', tousVisibles);
+    const tous = $('[data-pf-avatars-tous]', zoneAvatars);
+    if (!tous) return;
+    const libelle = tousVisibles ? 'Afficher moins d’avatars' : 'Afficher tous les avatars';
+    tous.setAttribute('aria-expanded', String(tousVisibles));
+    tous.setAttribute('aria-label', libelle);
+    tous.title = libelle;
   }
+  /* Nom : affiché à côté de l'image, il se modifie sur place (clic sur le nom ou sur le crayon).
+     Entrée ou un clic ailleurs le garde, Échap l'annule ; vide, c'est le pseudo qui s'affiche. */
+  const nomBtn = $('[data-pf-nom-modifier]');
+  const nomSaisie = $('[data-pf-nom]');
+  const nomPropre = v => v.replace(/\s+/g, ' ').trim().slice(0, 60);
+  function afficherNom() {
+    $('[data-pf-nom-valeur]').textContent = brouillon.nom || 'Votre nom';
+    nomBtn.classList.toggle('is-vide', !brouillon.nom);
+  }
+  function editerNom() {
+    nomSaisie.value = brouillon.nom;
+    nomBtn.hidden = true;
+    nomSaisie.hidden = false;
+    nomSaisie.focus();
+    nomSaisie.select();
+  }
+  function finirNom(garder) {
+    if (nomSaisie.hidden) return;
+    if (garder) brouillon.nom = nomPropre(nomSaisie.value);
+    nomSaisie.hidden = true;
+    nomBtn.hidden = false;
+    afficherNom();
+  }
+  nomBtn.addEventListener('click', editerNom);
+  nomSaisie.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    finirNom(event.key === 'Enter');
+    nomBtn.focus();
+  });
+  nomSaisie.addEventListener('blur', () => finirNom(true));
+
+  const etatForm = () => ({ photo: brouillon.photo, avatar: brouillon.avatar, nom: brouillon.nom, bio: champBio.value.trim(), lien: champLien.value.trim() });
+  const modifie = () => { const f = etatForm(); return f.photo !== photo() || f.avatar !== avatarId() || f.nom !== V.nomMoi() || f.bio !== bio() || normaliserLien(f.lien) !== lien(); };
+  function apercuPhoto({ anime = false } = {}) {
+    const zone = $('[data-pf-photo-apercu]');
+    const src = brouillon.photo || V.avatarSrc(brouillon.avatar);
+    zone.innerHTML = src ? `<img src="${src}" alt="" width="96" height="96">` : `<span class="pf-photo pf-photo-defaut" aria-hidden="true">${icon('user', '')}</span>`;
+    $('[data-pf-retirer]').hidden = !brouillon.photo;
+    majAvatars();
+    if (anime) { zone.classList.remove('is-nouveau'); void zone.offsetWidth; zone.classList.add('is-nouveau'); }
+  }
+  function choisirAvatar(id) {
+    brouillon = { ...brouillon, photo: '', avatar: id };
+    erreur('photo', '');
+    apercuPhoto({ anime: true });
+  }
+  zoneAvatars.addEventListener('change', event => {
+    const input = event.target.closest('input[name="pf-avatar"]');
+    if (input) choisirAvatar(input.value);
+  });
+  zoneAvatars.addEventListener('click', event => {
+    const hasard = event.target.closest('[data-pf-avatar-hasard]');
+    if (hasard) {
+      const autres = V.AVATARS.filter(a => a.id !== brouillon.avatar || brouillon.photo);
+      choisirAvatar(autres[Math.floor(Math.random() * autres.length)].id);
+      hasard.classList.toggle('is-tire');
+      return;
+    }
+    if (event.target.closest('[data-pf-avatars-tous]')) { tousVisibles = !tousVisibles; majAvatars(); }
+  });
   const majCompte = () => { $('[data-pf-compte]').textContent = typo(`${fmt(champBio.value.length)} sur 500`); $('[data-pf-compte]').classList.toggle('is-proche', champBio.value.length > 450); };
   function erreur(cible, message) {
     const el = cible === 'photo' ? $('[data-pf-erreur-photo]') : $('[data-pf-erreur-lien]');
@@ -755,7 +846,11 @@
     if (!V.exiger('contribuer', 'modifier votre profil')) return;
     origine = document.activeElement;
     origineCle = origine?.dataset?.pfModifier ?? '';
-    brouillon = { photo: photo() };
+    brouillon = { photo: photo(), avatar: avatarId(), nom: V.nomMoi() };
+    tousVisibles = false;
+    nomSaisie.hidden = true;
+    nomBtn.hidden = false;
+    afficherNom();
     champBio.value = bio();
     champLien.value = lien();
     $('[data-pf-pseudo-fixe]').textContent = `@${C.pseudo}`;
@@ -799,34 +894,36 @@
       URL.revokeObjectURL(url);
       brouillon.photo = data;
       erreur('photo', '');
-      apercuPhoto();
-      $('[data-pf-photo-apercu]').classList.remove('is-nouveau');
-      void $('[data-pf-photo-apercu]').offsetWidth;
-      $('[data-pf-photo-apercu]').classList.add('is-nouveau');
+      apercuPhoto({ anime: true });
     };
     img.onerror = () => { URL.revokeObjectURL(url); erreur('photo', 'Cette image ne peut pas être lue. Essayez avec un autre fichier.'); };
     img.src = url;
   });
-  $('[data-pf-retirer]').addEventListener('click', () => { brouillon.photo = ''; apercuPhoto(); fichier.focus(); });
+  $('[data-pf-retirer]').addEventListener('click', () => { brouillon.photo = ''; apercuPhoto({ anime: true }); fichier.focus(); });
   champBio.addEventListener('input', majCompte);
   champLien.addEventListener('blur', () => { if (champLien.value.trim()) { champLien.value = normaliserLien(champLien.value); verifierLien(); } });
   champLien.addEventListener('input', () => { if (champLien.getAttribute('aria-invalid') === 'true') verifierLien(); });
   form.addEventListener('submit', event => {
     event.preventDefault();
     if (!verifierLien()) { champLien.focus(); return; }
+    finirNom(true);
     const f = etatForm();
-    const avant = { photo: photo(), bio: bio(), lien: lien() };
-    edits = { ...edits, bio: f.bio.replace(/\n{3,}/g, '\n\n'), lien: normaliserLien(f.lien) };
-    if (f.photo) edits.photo = f.photo; else delete edits.photo;
+    const avant = { photo: image(), nom: E.MOI.nom, bio: bio(), lien: lien() };
+    edits = { ...edits, nom: f.nom, bio: f.bio.replace(/\n{3,}/g, '\n\n'), lien: normaliserLien(f.lien) };
+    delete edits.photo;
+    delete edits.avatar;
+    if (f.photo) edits.photo = f.photo;
+    if (V.avatarConnu(f.avatar)) edits.avatar = f.avatar;
     ecrireEdits();
+    V.appliquerNomMoi();
     fermerEdition();
     render();
     V.rendreCompte();
     suivreSections();
-    const change = [avant.photo !== photo() && 'photo', avant.bio !== bio() && 'bio', avant.lien !== lien() && 'lien'].filter(Boolean);
+    const change = [avant.photo !== image() && 'photo', avant.nom !== E.MOI.nom && 'nom', avant.bio !== bio() && 'bio', avant.lien !== lien() && 'lien'].filter(Boolean);
     V.toast(change.length ? 'Profil mis à jour.' : 'Aucune modification à enregistrer.', change.length ? 'check' : 'pen');
     if (V.motion.level() !== 'none') {
-      const zones = change.map(z => (z === 'photo' ? $('.pf-photo-hero') : $(`[data-pf-zone="${z}"]`))).filter(Boolean);
+      const zones = change.map(z => (z === 'photo' ? $('.pf-photo-hero') : z === 'nom' ? $('#pf-nom') : $(`[data-pf-zone="${z}"]`))).filter(Boolean);
       zones.forEach(z => { z.classList.remove('pf-flash'); void z.offsetWidth; z.classList.add('pf-flash'); });
     }
     ($(`[data-pf-modifier="${origineCle}"]`) || $('[data-pf-modifier=""]'))?.focus();

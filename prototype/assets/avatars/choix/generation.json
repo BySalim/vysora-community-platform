@@ -1,0 +1,83 @@
+{
+  "tool": "Z-Image Turbo (LocalAI, sur l'ordinateur du porteur du projet)",
+  "generated_on": "2026-11-16",
+  "note": "Avatars proposés à l'inscription et sur le profil. Images générées en 1024 × 1024, fond prolongé puis recadrées autour du sujet (tête à la même taille d'un avatar à l'autre ; le pingouin, coupé net en bas, est ancré par le bas) et réduites à 320 × 320 en WebP. Même gabarit de prompt pour toute la série : tête d'animal de face en aplats géométriques, style affiche du milieu du XXe siècle, yeux fermés en arc si possible, et une couleur de fond franche propre à chaque avatar.",
+  "template": "Modern geometric flat illustration avatar of a <animal> head facing forward, built from bold clean geometric shapes: triangles, circles and half circles, in <couleurs de l'animal>, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid <couleur de fond> background filling the whole square. No text, no border.",
+  "assets": [
+    {
+      "file": "renard.webp",
+      "background": "bleu sarcelle",
+      "prompt": "Modern geometric flat illustration avatar of a fox head facing forward, built from bold clean geometric shapes: triangles, circles and half circles, in burnt orange, cream white and charcoal, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid deep teal background filling the whole square. No text, no border."
+    },
+    {
+      "file": "hibou.webp",
+      "background": "jaune moutarde",
+      "prompt": "Modern geometric flat illustration avatar of an owl head facing forward, built from bold clean geometric shapes: triangles, circles and half circles, in deep navy blue, warm white and a touch of burnt orange for the beak, two large round eye discs with eyes as simple closed curved lines, small pointed ear tufts, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid mustard yellow background filling the whole square. No text, no border."
+    },
+    {
+      "file": "chat.webp",
+      "background": "lavande",
+      "prompt": "Modern geometric flat illustration avatar of a cat head facing forward, built from bold clean geometric shapes: triangles, circles and half circles, in charcoal black with a warm white muzzle and soft pink inner ears, eyes as simple closed curved lines, thin white whiskers, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid soft lavender purple background filling the whole square. No text, no border."
+    },
+    {
+      "file": "ours.webp",
+      "background": "bleu cobalt",
+      "prompt": "Modern geometric flat illustration avatar: a single round bear face icon floating in the middle, head only, no neck, no shoulders, no body, built from bold clean geometric shapes: a large circle for the head, two round ears with darker inner circles, an oval cream muzzle, a small dark brown nose, eyes as simple closed curved lines, warm caramel brown, mid-century modern graphic poster style, flat colors with a very subtle paper grain, the head occupies about sixty percent of the image, perfectly centered. Solid vivid cobalt blue background filling the entire image edge to edge, no frame, no border, no text."
+    },
+    {
+      "file": "panda.webp",
+      "background": "corail",
+      "prompt": "Modern geometric flat illustration avatar of a panda head facing forward, built from bold clean geometric shapes: circles and half circles, in warm white and deep black, round black ears, black eye patches with eyes as simple closed white curved lines, a small black nose, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid coral pink background filling the whole square. No text, no border."
+    },
+    {
+      "file": "lapin.webp",
+      "background": "vert sauge",
+      "prompt": "Modern geometric flat illustration avatar of a rabbit head facing forward, head only, no body, perfectly symmetrical, built from bold clean geometric shapes, in the same style as a geometric fox portrait: a round head of warm cream white with soft caramel brown shading facets, two long upright ears with soft pink inner ears, a small pink nose, eyes as simple closed dark curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head and ears fill the central area. Solid sage green background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "tigre.webp",
+      "background": "bleu ciel",
+      "prompt": "Modern geometric flat illustration avatar of a tiger head facing forward, head only, no body, built from bold clean geometric shapes: triangles, circles and half circles, in vivid orange with bold black geometric stripes and a warm white muzzle, round ears, a small dark nose, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid light sky blue background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "pingouin.webp",
+      "background": "framboise",
+      "prompt": "Modern geometric flat illustration avatar of a penguin head facing forward, head only, no body, built from bold clean geometric shapes: circles and half circles, in deep black and warm white with a small bright orange beak, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid raspberry pink background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "koala.webp",
+      "background": "prune",
+      "prompt": "Modern geometric flat illustration avatar of a koala head facing forward, head only, no body, built from bold clean geometric shapes: circles and half circles, in soft blue grey with large fluffy round white-edged ears and a big dark charcoal oval nose, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid deep plum purple background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "raton-laveur.webp",
+      "background": "sable",
+      "prompt": "Modern geometric flat illustration avatar of a raccoon head facing forward, head only, no body, built from bold clean geometric shapes: triangles, circles and half circles, in soft grey with a bold black eye mask band, white eyebrows and white muzzle, pointed ears with white tips, a small black nose, eyes as simple closed curved white lines inside the mask, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid warm sand beige background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "loup.webp",
+      "background": "bleu nuit",
+      "prompt": "Modern geometric flat illustration avatar of a wolf head facing forward, head only, no body, built from bold clean geometric shapes: triangles and half circles, in light silver grey and warm white with darker grey accents, tall pointed ears, a small black nose, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid midnight navy blue background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "elephant.webp",
+      "background": "terracotta",
+      "prompt": "Modern geometric flat illustration avatar of an elephant head facing forward, head only, no body, perfectly symmetrical, built from bold clean faceted geometric shapes like a low poly origami portrait: a dome head, two large symmetrical fan shaped ears with dusty pink inner ears, a straight faceted trunk down the center ending in a small curl, two small cream tusks, in slate blue grey with lighter and darker grey facets, eyes as simple closed dark curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head and ears fill the central area. Solid terracotta orange red background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "grenouille.webp",
+      "background": "turquoise pâle",
+      "prompt": "Modern geometric flat illustration avatar of a frog head facing forward, head only, no body, built from bold clean geometric shapes: circles and half circles, in fresh leaf green with a lighter lime green chin and two round bulging eye domes on top, eyes as simple closed dark curved lines, a wide gentle smile line, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid pale aqua turquoise background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "cerf.webp",
+      "background": "bordeaux",
+      "prompt": "Modern geometric flat illustration avatar of a deer head facing forward, head only, no body, built from bold clean geometric shapes: triangles, circles and half circles, in warm caramel tan with a cream muzzle and cream inner ears, elegant simple branching antlers in light cream, a small dark nose, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid deep burgundy wine red background filling the whole square. No text, no border, no frame."
+    },
+    {
+      "file": "lion.webp",
+      "background": "anthracite",
+      "prompt": "Modern geometric flat illustration avatar of a lion head facing forward, head only, no body, built from bold clean geometric shapes: a round face surrounded by a large geometric mane of layered golden yellow and burnt orange petals, in warm cream muzzle, small round ears, a small dark nose, eyes as simple closed curved lines, no realistic details, mid-century modern graphic poster style, flat colors with a very subtle paper grain, perfectly centered, the head fills the central area. Solid dark charcoal grey background filling the whole square. No text, no border, no frame."
+    }
+  ]
+}

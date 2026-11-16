@@ -28,7 +28,7 @@
   let ctx = Au.contexte();
   let interne = false;
   let cree = false;
-  let compteCree = { pseudo: '', email: '', service: null };
+  let compteCree = { pseudo: '', email: '', service: null, avatar: '' };
   let arreterRenvoi = null;
 
   const params = new URLSearchParams(location.search);
@@ -300,7 +300,7 @@
 
   function creer({ email: adresse, service }) {
     cree = true;
-    compteCree = { pseudo: tirerPseudo(), email: adresse, service };
+    compteCree = { pseudo: tirerPseudo(), email: adresse, service, avatar: auHasard(V.AVATARS).id };
     mdp.value = '';
     confirmation.value = '';
     jauge.maj();
@@ -341,6 +341,8 @@
     }
     $('[data-repere-cree]').hidden = Boolean(service);
     pseudoInput.value = compteCree.pseudo;
+    if (!V.avatarConnu(compteCree.avatar)) compteCree.avatar = tirerAvatar();
+    afficherAvatar();
     Au.alerte($('[data-alerte]', formPseudo));
     pseudo.verifier({ immediat: true });
   }
@@ -363,7 +365,28 @@
       return;
     }
     compteCree.pseudo = pseudoInput.value.trim();
+    V.choisirAvatarMoi(compteCree.avatar);
+    V.rendreCompte();
     aller(compteCree.service ? 'pret' : 'verification');
+  });
+
+  /* Avatar : tiré au hasard comme le pseudo ; un bouton en propose un autre. Le choix dans
+     la liste complète et l'import d'une photo se font ensuite depuis le profil. ---------- */
+
+  const imageAvatar = $('[data-avatar-image]');
+  const autreAvatar = $('[data-autre-avatar]');
+  function tirerAvatar(different = '') {
+    return auHasard(V.AVATARS.filter(a => a.id !== different)).id;
+  }
+  function afficherAvatar({ anime = false } = {}) {
+    imageAvatar.src = V.avatarSrc(compteCree.avatar);
+    if (anime && V.motion.full()) imageAvatar.animate([{ transform: 'scale(0.8) rotate(-8deg)', opacity: 0.3 }, { transform: 'scale(1.05)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(0.05, 0.7, 0.1, 1)' });
+  }
+  autreAvatar.addEventListener('click', () => {
+    compteCree.avatar = tirerAvatar(compteCree.avatar);
+    afficherAvatar({ anime: true });
+    autreAvatar.classList.toggle('is-tire');
+    $('[data-avatar-annonce]').textContent = `Avatar proposé : ${V.avatarNom(compteCree.avatar)}.`;
   });
 
   /* Confirmation de l'adresse ------------------------------------------------- */
@@ -435,7 +458,7 @@
   function simulerCompte(compte, service = null) {
     if (!cree) {
       cree = true;
-      compteCree = { pseudo: tirerPseudo(), email: service ? A.services[service].email : Au.emailValide(email.value) ? email.value.trim() : 'clarisse.mendy@gmail.com', service };
+      compteCree = { pseudo: tirerPseudo(), email: service ? A.services[service].email : Au.emailValide(email.value) ? email.value.trim() : 'clarisse.mendy@gmail.com', service, avatar: auHasard(V.AVATARS).id };
     }
     changerEtat({ session: 'membre', role: 'membre', niveau: 'curieux', compte, notifications: 'lues' });
   }
@@ -477,6 +500,7 @@
   $('[data-aide]').addEventListener('click', () => {
     Au.aide([
       ['Pseudo', 'Un pseudo est proposé à la création du compte. Vous pouvez le garder, en tirer un autre ou le modifier : 3 à 30 caractères, lettres, chiffres et tirets.'],
+      ['Avatar', 'Un avatar est tiré au hasard, comme le pseudo ; le bouton à côté en propose un autre. Depuis votre profil, vous pourrez le choisir parmi tous les avatars ou importer votre photo.'],
       ['Mot de passe', 'Il se choisit après l’adresse e-mail et se saisit deux fois. 12 caractères minimum, sans autre règle ; les mots de passe présents dans des fuites de données connues sont refusés.'],
       ['Confirmation de l’adresse', 'Le lien reste valable 24 heures. Avant la confirmation, vous pouvez tout consulter ; publier, voter et répondre deviennent possibles ensuite.'],
       ['Google et GitHub', 'L’adresse fournie par le service est déjà vérifiée. Si elle appartient à un compte existant, rien n’est fusionné sans vous.']
@@ -495,7 +519,7 @@
     key: 'vysora-inscription-reglages',
     etats: [
       { name: 'ins-phase', legend: 'Phase', options: [['publique', 'Ouverture publique'], ['invitation', 'Bêta, lien d’invitation'], ['beta', 'Bêta, sans lien']] },
-      { name: 'ins-ecran', legend: 'Écran', options: [['compte', 'Adresse e-mail'], ['mot-de-passe', 'Mot de passe'], ['pseudo', 'Pseudo proposé'], ['verification', 'Confirmation de l’e-mail'], ['lien', 'Lien ouvert'], ['pret', 'Compte prêt'], ['lien-expire', 'Lien expiré']] },
+      { name: 'ins-ecran', legend: 'Écran', options: [['compte', 'Adresse e-mail'], ['mot-de-passe', 'Mot de passe'], ['pseudo', 'Pseudo et avatar proposés'], ['verification', 'Confirmation de l’e-mail'], ['lien', 'Lien ouvert'], ['pret', 'Compte prêt'], ['lien-expire', 'Lien expiré']] },
       { name: 'ins-resultat', legend: 'Résultat', options: [['succes', 'Réussite'], ['pseudo', 'Pseudo déjà pris'], ['email', 'Adresse déjà utilisée'], ['indisponible', 'Service indisponible']] },
       { name: 'ins-contexte', legend: 'Arrivée depuis', options: [['aucun', 'Sans page d’origine'], ['enregistrer', 'Enregistrer une création'], ['essai', 'Déclarer un essai'], ['bon-reflexe', 'Cas Bon réflexe'], ['defi', 'Défi en cours'], ['sujet', 'Sujet du forum'], ['publier', 'Nouvelle création']] }
     ],
