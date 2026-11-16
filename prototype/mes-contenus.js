@@ -293,11 +293,13 @@
     const a = MC.alertes[settings.alerte];
     if (!a || a.creation !== c.id) return '';
     if (settings.alerte === 'obsolescence') return `<p class="mc-alerte is-obsolete">${icon('alert')}<span><b>Obsolescence signalée.</b> ${t(`${plusieurs(a.membres, 'membre indique', 'membres indiquent')} que le rendu a changé avec ${a.modele} depuis le ${V.dateLabel(a.depuis, false)}`.replace(/\.?$/, '.'))} <a href="nouvelle-creation.html?modifier=${c.id}">Mettre à jour</a></span></p>`;
-    return `<p class="mc-alerte is-masquee">${icon('eye-off')}<span><b>${t(`Masquée par la modération le ${V.dateLabel(a.le, false)}`.replace(/\.?$/, '.'))}</b> ${t(a.motif)} Elle reste visible de vous et de la modération. <a href="notifications.html">Voir la décision</a></span></p>`;
+    /* Masquage automatique au seuil de signalements (F-93) : provisoire, sans motif, en attente d'un modérateur. */
+    if (settings.alerte === 'masquee-auto') return `<p class="mc-alerte is-masquee">${icon('eye-off')}<span><b>${t(`Masquée à titre provisoire le ${V.dateLabel(a.le, false)}`.replace(/\.?$/, '.'))}</b> ${t('Signalée par plusieurs membres, elle attend l’examen d’un modérateur ; elle reste visible de vous et de la modération.')} <a href="notifications.html?type=moderation">Voir la notification</a></span></p>`;
+    return `<p class="mc-alerte is-masquee">${icon('eye-off')}<span><b>${t(`Masquée par la modération le ${V.dateLabel(a.le, false)}`.replace(/\.?$/, '.'))}</b> ${t(a.motif)} Elle reste visible de vous et de la modération. <a href="notifications.html?type=moderation">Voir la décision</a></span></p>`;
   }
   function lignePubliee(c, i) {
     const href = `nouvelle-creation.html?modifier=${encodeURIComponent(c.id)}`;
-    const masquee = settings.alerte === 'masquee' && MC.alertes.masquee.creation === c.id;
+    const masquee = ['masquee', 'masquee-auto'].includes(settings.alerte) && MC.alertes[settings.alerte].creation === c.id;
     const reproductible = c.type !== 'projet';
     const modifiee = c.modifie && c.publie && c.modifie.slice(0, 10) > c.publie.slice(0, 10);
     return `<tr class="${ui.animer ? 'is-entree' : ''}${ui.nouveau === c.id ? ' is-nouveau' : ''}${masquee ? ' is-masquee' : ''}" style="--i:${Math.min(i, 8)}" data-mc-id="${c.id}">
@@ -539,7 +541,14 @@
     items[suivant].focus();
   });
   document.addEventListener('pointerdown', event => { if (!menu.hidden && !menu.contains(event.target) && !event.target.closest('[data-mc-menu-pour]')) fermerMenu(false); });
-  window.addEventListener('resize', () => { fermerMenu(false); placerIndicateur(); });
+  /* Sur téléphone, la barre d'adresse et le clavier ne changent que la hauteur : le menu (une
+     feuille en bas d'écran) ne se referme que si la largeur change. */
+  let largeurFenetre = window.innerWidth;
+  window.addEventListener('resize', () => {
+    if (window.innerWidth !== largeurFenetre) fermerMenu(false);
+    largeurFenetre = window.innerWidth;
+    placerIndicateur();
+  });
   window.addEventListener('scroll', () => { if (!menu.hidden && window.innerWidth > 720) fermerMenu(false); }, { passive: true });
 
   /* Dialogue de confirmation ------------------------------------------------------------------ */
@@ -814,7 +823,7 @@
     key: 'vysora-mes-contenus-reglages',
     etats: [
       { name: 'contenu', legend: 'Contenus', options: [['remplis', 'Existants'], ['vide', 'Aucun pour l’instant']], si: membre },
-      { name: 'alerte', legend: 'Alerte sur une création publiée', options: [['aucune', 'Aucune'], ['obsolescence', 'Obsolescence signalée'], ['masquee', 'Masquée par la modération']], si: membre },
+      { name: 'alerte', legend: 'Alerte sur une création publiée', options: [['aucune', 'Aucune'], ['obsolescence', 'Obsolescence signalée'], ['masquee', 'Masquée par la modération'], ['masquee-auto', 'Masquée automatiquement']], si: membre },
       { name: 'quota', legend: 'Publications des dernières 24 heures', options: [['disponible', 'Sous la limite'], ['atteint', 'Limite atteinte']], si: e => membre(e) && Number.isFinite(E.limite('creations', e)) }
     ],
     apparence: [

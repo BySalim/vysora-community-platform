@@ -21,7 +21,9 @@ window.VYSORA_MES_CONTENUS = {
   /* Alertes réglables dans le panneau Tweaks, rattachées à une création publiée. */
   alertes: {
     obsolescence: { creation: 'iteration', modele: 'GPT Image 1', membres: 2, depuis: '2026-10-10' },
-    masquee: { creation: 'projet', le: '2026-10-12', motif: 'Une capture d’écran laisse lire le numéro de téléphone d’une cliente.' }
+    masquee: { creation: 'projet', le: '2026-10-12', motif: 'Une capture d’écran laisse lire le numéro de téléphone d’une cliente.' },
+    /* Masquée automatiquement au seuil de signalements (F-93) : sans motif, en attente d'un modérateur. */
+    'masquee-auto': { creation: 'projet', le: '2026-10-12' }
   },
 
   /* Commentaires reçus par les créations publiées de Clarisse (profil-data.js, creations). */

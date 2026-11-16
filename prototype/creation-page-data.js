@@ -1,4 +1,62 @@
 'use strict';
+
+/* Données propres à la fiche : bandeaux d'une création masquée par la modération (MOD-01) ou
+   automatiquement au seuil de signalements (F-93), publication d'un brouillon (RG-17, RG-85), et
+   compléments que la fiche du site affiche : réponses obtenues et images jointes des échanges,
+   liens du résultat, dernière modification (RG-18), texte de la licence (F-17). */
+window.VYSORA_FICHE = {
+  masquage: { le: '14 octobre 2026', motif: 'informations personnelles visibles sur une capture', signalements: 3 },
+  masquageAutomatique: { le: '14 octobre 2026', signalements: 3 },
+  publication: {
+    /* Points à compléter d'un brouillon incomplet, tels que l'API les annonce (RG-10 à RG-16). */
+    points: ['Décrivez l’image du résultat pour les personnes qui ne la voient pas.', 'Expliquez le moment clé en 20 caractères au moins.'],
+    /* Délai avant la prochaine publication possible, quand la limite par 24 heures est atteinte. */
+    reessayer: 'dans 5 h 40 min'
+  },
+  licences: {
+    'CC BY 4.0': 'https://creativecommons.org/licenses/by/4.0/deed.fr',
+    'CC BY-SA 4.0': 'https://creativecommons.org/licenses/by-sa/4.0/deed.fr',
+    'CC BY-NC 4.0': 'https://creativecommons.org/licenses/by-nc/4.0/deed.fr',
+    'CC0 1.0': 'https://creativecommons.org/publicdomain/zero/1.0/deed.fr'
+  },
+  liens: { demo: 'Démo', depot: 'Dépôt de code', video: 'Vidéo', preuve: 'Conversation partagée', article: 'Article', autre: 'Autre lien' },
+  /* Par création : licence, dernière modification, liens du résultat ; etapes : réponse obtenue
+     (projet) et images jointes, par numéro d'étape ou d'échange à partir de 0. */
+  complements: {
+    'keur-awa': {
+      licence: 'CC BY 4.0', modifiee: '11 oct.',
+      liens: [
+        { type: 'demo', url: 'https://rendez-vous.keurawa.sn', libelle: 'Prendre rendez-vous' },
+        { type: 'depot', url: 'https://github.com/aissatou-ndiaye/keur-awa-reservation' }
+      ]
+    },
+    'portrait-gouache': {
+      licence: 'CC BY-NC 4.0', modifiee: '9 oct.',
+      etapes: {
+        2: { images: [{ src: 'assets/images/portrait-indigo-720.webp', alt: 'Portrait peint d’une jeune femme au turban orange et bleu, éclairé par une lumière chaude', largeur: 720, hauteur: 540, legende: 'Version retenue, après la lumière de fin d’après-midi' }] }
+      }
+    },
+    'ventes-boutique': {
+      licence: 'CC BY 4.0', modifiee: '10 oct.',
+      etapes: {
+        0: { reponse: 'Le tableau compte 1 342 lignes. 24 commandes n’ont pas de date de livraison et 6 identifiants apparaissent deux fois (commandes 1187, 1203, 1240, 1251, 1266 et 1290).\n\nJe propose de les placer dans un onglet « À vérifier » avant tout calcul.' },
+        1: { reponse: 'Ventes brutes : somme des montants des commandes livrées. Remboursements : somme des avoirs émis sur la période. Chiffre d’affaires net : ventes brutes moins remboursements. Taux de retour : commandes remboursées divisées par commandes livrées.' },
+        3: { reponse: 'Le total du tableau de bord, 4 200 000 FCFA, correspond aux lignes sources. L’écart de 18 500 FCFA relevé en août vient d’un avoir saisi deux fois.' }
+      }
+    },
+    'teaser-festival': {
+      liens: [{ type: 'video', url: 'https://nuitsdedakar.sn/teaser-2026', libelle: 'Teaser complet' }],
+      etapes: {
+        2: { reponse: 'Montage de 15 secondes en trois plans : 0 à 5 s, la scène dans la brume ; 5 à 10 s, la montée des lumières ; 10 à 15 s, le plan large sur la foule.', images: [{ src: 'assets/images/scene-festival-720.webp', alt: 'Faisceaux de lumière bleue traversant une scène dans la brume', largeur: 720, hauteur: 540, legende: 'Premier plan du montage, la scène dans la brume' }] }
+      }
+    },
+    'renommer-photos': {
+      licence: 'CC0 1.0',
+      liens: [{ type: 'depot', url: 'https://github.com/julien-moreau/renommer-photos' }]
+    }
+  }
+};
+
 (() => {
   function mockHTML(kind) {
     switch (kind) {
@@ -37,6 +95,7 @@ const toolHTML=config=>{let text=esc(config);const tools=D.tools.filter(t=>confi
 window.VYSORA_TOOL_HTML=toolHTML;
 if(c.id==='cite-ciel-mer')return;
 const d=window.VYSORA_CREATION_DETAILS[c.id],isProject=c.type==='projet',own=!!c.own,V=window.Vysora;
+const F=window.VYSORA_FICHE,extra=F.complements[c.id]||{},tx=s=>V?V.t(s):esc(s);
 document.title=c.title+' · Vysora';$('meta[name="description"]').content=d.intent;
 $('.creation-heading h1').textContent=c.title;
 const cat=$('.breadcrumbs a:nth-of-type(2)');cat.textContent=c.category;cat.href='explorer.html?categorie='+encodeURIComponent(c.category);
@@ -68,13 +127,18 @@ $('#prompt-text').textContent=d.prompt;
 $('.key-moment span').textContent=d.kind;$('.key-moment h4').textContent=d.moment;$('.key-moment p').textContent=d.note;
 if(d.moments&&d.moments.length>1){const km=$('.key-moment');km.previousElementSibling.textContent='Les moments clés';km.outerHTML=d.moments.map(m=>`<div class="key-moment">${icon('moment')}<div><span>${esc(m.kind)} · ${esc(m.ou)}</span><h4>${esc(m.titre)}</h4><p>${esc(m.note)}</p></div></div>`).join('');}
 const steps=d.steps||[['Le prompt et le résultat',d.prompt,d.note]];
-$('.process-details').outerHTML=`<div class="creation-steps"><h3>${isProject?'Les étapes du projet':c.type==='iteration'?'Les échanges':'Le résultat obtenu'}</h3>${steps.map((step,i)=>`<details class="process-details"><summary>${esc(step[0])}<span>${i+1} / ${steps.length}</span></summary>${step[1]?`<div class="subheading"><h4>Demande</h4><button class="text-button" data-step-copy="${i}">${icon('copy')} Copier</button></div><blockquote id="step-prompt-${i}">${esc(step[1])}</blockquote>`:''}<h4>Résultat et choix retenu</h4><p>${esc(step[2])}</p></details>`).join('')}</div>`;
+/* Réponse obtenue (projet) et images jointes à l'échange, comme la fiche du site. */
+const echange=(step,i)=>{const x={...(step[3]||{}),...((extra.etapes||{})[i]||{})};const images=(x.images||[]).filter(im=>im&&im.src);return `${isProject&&x.reponse?`<h4>Réponse obtenue</h4><div class="fc-texte">${String(x.reponse).split(/\n{2,}/).map(p=>`<p>${tx(p)}</p>`).join('')}</div>`:''}${images.length?`<div class="fc-images">${images.map(im=>`<figure><img src="${esc(im.src)}" alt="${esc(im.alt||'')}"${im.largeur?` width="${im.largeur}" height="${im.hauteur}"`:''} loading="lazy" decoding="async">${im.legende?`<figcaption>${tx(im.legende)}</figcaption>`:''}</figure>`).join('')}</div>`:''}`;};
+$('.process-details').outerHTML=`<div class="creation-steps"><h3>${isProject?'Les étapes du projet':c.type==='iteration'?'Les échanges':'Le résultat obtenu'}</h3>${steps.map((step,i)=>`<details class="process-details"><summary>${esc(step[0])}<span>${i+1} / ${steps.length}</span></summary>${step[1]?`<div class="subheading"><h4>Demande</h4><button class="text-button" data-step-copy="${i}">${icon('copy')} Copier</button></div><blockquote id="step-prompt-${i}" class="fc-prompt">${esc(step[1])}</blockquote>`:''}${echange(step,i)}<h4>Résultat et choix retenu</h4><p>${esc(step[2])}</p></details>`).join('')}</div>`;
 $('.journey-aside>.ai-tool').outerHTML=toolHTML(c.config);
-$('.journey-aside .config-list').innerHTML=`<div><dt>Contexte de travail</dt><dd>${esc(d.context)}</dd></div><div><dt>Type de création</dt><dd>${types[c.type]}</dd></div><div><dt>Publication</dt><dd>${esc(c.published)}</dd></div>`;
+$('.journey-aside .config-list').innerHTML=`<div><dt>Contexte de travail</dt><dd>${esc(d.context)}</dd></div><div><dt>Type de création</dt><dd>${types[c.type]}</dd></div><div><dt>Publication</dt><dd>${esc(c.published)}</dd></div>${(own?c.modifiee:extra.modifiee)?`<div><dt>Dernière modification</dt><dd>${esc(own?c.modifiee:extra.modifiee)}</dd></div>`:''}`;
 $('.journey-aside ul').innerHTML=d.adapt.map(t=>`<li>${esc(t)}</li>`).join('');
 if(own){const ul=$('.journey-aside ul'),h=ul.previousElementSibling;if(c.limites){h.textContent='Limites constatées';ul.innerHTML=c.limites.split(/(?<=[.!?])\s+/).filter(Boolean).map(t=>`<li>${esc(t)}</li>`).join('');}else{h.hidden=true;ul.hidden=true;}
 $('.reproduce .config-list').innerHTML=`<div><dt>${icon('sliders')} Réglages</dt><dd>${esc(c.reglages||'Aucun')}</dd></div><div><dt>${icon('moment')} Moments clés</dt><dd>${c.moments.length}</dd></div><div><dt>${icon('layers')} Parcours</dt><dd>${c.type==='projet'?c.steps.length+(c.steps.length>1?' étapes':' étape'):c.type==='iteration'?c.steps.length+(c.steps.length>1?' échanges':' échange'):'1 prompt'}</dd></div>`;}
-$('.license').innerHTML=own&&c.licence&&c.licence!=='Tous droits réservés'?icon('scale')+` Licence ${esc(c.licence)}<br><span>Créditez ${esc(c.author)} en cas de réutilisation.</span>`:icon('scale')+' Conditions de réutilisation<span>Demandez l’accord de '+esc(c.author)+' avant de réutiliser cette création.</span>';
+const licence=own?c.licence:extra.licence;
+$('.license').innerHTML=licence&&licence!=='Tous droits réservés'?icon('scale')+` Licence ${F.licences[licence]?`<a href="${esc(F.licences[licence])}">${esc(licence)}</a>`:esc(licence)}<br><span>Créditez ${esc(c.author)} en cas de réutilisation.</span>`:icon('scale')+' Conditions de réutilisation<span>Demandez l’accord de '+esc(c.author)+' avant de réutiliser cette création.</span>';
+const liens=((own?c.liens:extra.liens)||[]).filter(l=>l&&/^https:\/\//.test(l.url||''));
+if(liens.length)$('.journey-aside .license').insertAdjacentHTML('beforebegin',`<h3>Liens</h3><ul class="fc-liens">${liens.map(l=>`<li><a href="${esc(l.url)}" rel="ugc nofollow noopener noreferrer" target="_blank">${tx(l.libelle||F.liens[l.type]||F.liens.autre)}<span class="sr-only"> (nouvel onglet)</span></a></li>`).join('')}</ul>`);
 $('#reproductions .section-heading p:last-child').innerHTML='<span data-repro-count></span> reproductions <span class="success-summary">· <span data-success></span> de succès</span>';
 $('.compatibility').hidden=true;
 $('#try-model').innerHTML=`<option>${esc(c.config)}</option>`;

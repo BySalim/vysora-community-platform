@@ -17,12 +17,15 @@ const baseComments=isCity?[{name:'Aïssatou Ndiaye',avatar:'aissatou-ndiaye',dat
 /* États de la page : point de vue, statut de la création, avertissement.
    Ils se combinent avec la session (etats.js) : un brouillon n'est visible que de son auteur,
    une création masquée de son auteur et de la modération (RG-17, RG-30). */
-let page={vue:'lecteur',statut:'publiee',alerte:'aucune'};
-let deleted=false;
+let page={vue:'lecteur',statut:'publiee',alerte:'aucune',publication:'prete',quota:'disponible',signalement:'aucun'};
+let deleted=false,signale=false;
 const own=!!creation.own,apercu=!!creation.apercu;
+const FICHE=window.VYSORA_FICHE;
 const auteur=()=>E.membre()&&(page.vue==='auteur'||own);
 const moderation=()=>E.membre()&&E.get().role!=='membre';
-const visible=()=>page.statut==='publiee'||auteur()||(page.statut==='masquee'&&moderation());
+/* Masquée par une décision de la modération (MOD-01) ou automatiquement, à titre provisoire, au seuil de signalements (F-93). */
+const masquee=()=>page.statut==='masquee'||page.statut==='masquee-auto';
+const visible=()=>page.statut==='publiee'||auteur()||(masquee()&&moderation());
 const mine=r=>r.mine||r.name==='Vous'||(auteur()&&r.name===creation.author);
 const nameOf=r=>mine(r)?(E.membre()?'Vous':E.MOI.nom):r.name;
 const face=r=>mine(r)?V.avatarMoi(40):`<img src="assets/avatars/${r.avatar}.webp" alt="" width="40" height="40">`;
@@ -54,12 +57,13 @@ $('#comment-form').insertAdjacentHTML('afterend','<p class="comment-gate" data-c
 const STATUS={
   publiee:()=>[`<b>Votre création</b> · publiée ${escape(published.replace(/^Publié /,''))}`,'depublier'],
   brouillon:()=>['<b>Brouillon</b> · visible de vous seul. Les votes, les essais et les commentaires réapparaissent à la publication.','publier'],
-  masquee:()=>['<b>Masquée par la modération le 14 octobre 2026.</b> Motif : informations personnelles visibles sur une capture. Modifiez la création pour demander un nouvel examen.','']
+  masquee:()=>[`<b>Masquée par la modération le ${FICHE.masquage.le}.</b> ${V.t(`Motif : ${FICHE.masquage.motif}.`)} Modifiez la création pour demander un nouvel examen.`,''],
+  'masquee-auto':()=>[`<b>Masquée à titre provisoire le ${FICHE.masquageAutomatique.le}.</b> ${V.t('Signalée par plusieurs membres, elle a été masquée par un outil automatisé en attendant l’examen d’un modérateur. Vous pouvez la modifier dès maintenant.')}`,'']
 };
 function statusHTML(){
   if(apercu)return '';
   if(auteur()){const [text,action]=STATUS[page.statut]();return `<p>${text}</p><div class="creation-status-actions"><a class="btn btn-secondary btn-sm" href="nouvelle-creation.html?id=${encodeURIComponent(creation.id)}">Modifier</a>${action==='depublier'?'<button class="btn btn-quiet btn-sm" type="button" data-status-action="brouillon">Dépublier</button>':action==='publier'?'<button class="btn btn-primary btn-sm" type="button" data-status-action="publiee">Publier</button>':''}<button class="btn btn-quiet btn-sm is-danger" type="button" data-delete>Supprimer</button></div>`;}
-  if(page.statut==='masquee'&&moderation())return `<p><b>Masquée par la modération le 14 octobre 2026</b> · 3 signalements · Motif : informations personnelles visibles sur une capture.</p><div class="creation-status-actions"><a class="btn btn-secondary btn-sm" href="moderation.html">Ouvrir le dossier</a></div>`;
+  if(masquee()&&moderation()){const auto=page.statut==='masquee-auto',m=auto?FICHE.masquageAutomatique:FICHE.masquage,n=m.signalements;return `<p><b>${auto?'Masquée automatiquement':'Masquée par la modération'} le ${m.le}</b>${n?` · ${n} ${n>1?'signalements':'signalement'}`:''}${auto?V.t(' · en attente d’examen.'):` · ${V.t(`Motif : ${m.motif}.`)}`}</p><div class="creation-status-actions"><a class="btn btn-secondary btn-sm" href="moderation.html">Ouvrir le dossier</a></div>`;}
   return '';
 }
 const ALERT={
@@ -72,6 +76,8 @@ function applyEtat(){
   shell.toggleAttribute('data-auteur',auteur());
   const status=statusHTML();$('[data-status]').hidden=!status;$('[data-status]').innerHTML=status;
   const alert=ALERT[page.alerte];$('[data-alert]').hidden=!alert;$('[data-alert]').innerHTML=alert?alert():'';
+  /* Signaler (F-90) : une création visible de tous, jamais pour son auteur ni dans l'aperçu. */
+  $('#report-open').hidden=!(page.statut==='publiee'&&!auteur()&&!apercu);
   $('.author').innerHTML=origin.author;$('.small-author').innerHTML=origin.small;$('.license').innerHTML=origin.license;
   if(auteur()){
     $('.author img, .author .avatar').outerHTML=V.avatarMoi(44);$('.author strong').textContent=E.MOI.nom;$('.author strong+span').textContent=`${E.niveau().nom} · ${published}`;
@@ -93,39 +99,63 @@ $$('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 $$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();}}));
 $('.image-open').onclick=()=>$('#lightbox').showModal();
 $$('[data-try]').forEach(b=>b.onclick=()=>{if(V.exiger('contribuer','partager votre essai'))$('#try-dialog').showModal();});
-$('#report-open').onclick=()=>{if(V.exiger('contribuer','signaler un contenu'))$('#report-dialog').showModal();};
+const dejaSignale=()=>V.toast('Vous avez déjà signalé ce contenu. La modération l’examine.','flag');
+$('#report-open').onclick=()=>{if(!V.exiger('contribuer','signaler un contenu'))return;if(signale||page.signalement==='ouvert')return dejaSignale();$('#report-dialog').showModal();};
 $('#try-form').onsubmit=e=>{e.preventDefault();if(isProject)return;const note=$('#try-note');if(!note.value.trim()){note.setCustomValidity('Décrivez votre résultat.');note.reportValidity();return;}state.trials.unshift({name:'Vous',mine:true,outcome:new FormData(e.target).get('outcome'),model:$('#try-model').value,note:note.value.trim()});persist();render();$('#try-dialog').close();e.target.reset();notify('Votre essai a été ajouté.');};
 $('#try-note').oninput=e=>e.target.setCustomValidity('');
 let reply='';
 $('#comments-list').onclick=e=>{const button=e.target.closest('[data-reply]');if(!button||!V.exiger('contribuer','répondre'))return;reply=nameOf([...baseComments,...state.comments][+button.dataset.reply]);$('#comment-context').hidden=false;$('#comment-context').textContent='En réponse à '+reply+' ';const cancel=document.createElement('button');cancel.type='button';cancel.className='text-button';cancel.textContent='Annuler';cancel.onclick=()=>{reply='';$('#comment-context').hidden=true;};$('#comment-context').append(cancel);$('#comment').focus();};
 $('#comment-form').onsubmit=e=>{e.preventDefault();if(!V.exiger('contribuer','commenter'))return;const field=$('#comment');if(!field.value.trim()){field.setCustomValidity('Écrivez votre commentaire.');field.reportValidity();return;}state.comments.push({name:'Vous',mine:true,date:date(),note:field.value.trim(),reply});persist();render();e.target.reset();reply='';$('#comment-context').hidden=true;notify('Commentaire publié.');};
 $('#comment').oninput=e=>e.target.setCustomValidity('');
-$('#report-form').onsubmit=e=>{e.preventDefault();if(!$('#report-note').value.trim()){ $('#report-note').setCustomValidity('Précisez le motif du signalement.');$('#report-note').reportValidity();return;}$('#report-dialog').close();e.target.reset();notify('Signalement enregistré.');};
-$('#report-note').oninput=e=>e.target.setCustomValidity('');
+/* RG-100 : un motif de la liste ; la précision n'est exigée que pour « Autre ». */
+const reportReason=$('#report-reason'),reportNote=$('#report-note');
+reportReason.onchange=()=>{reportReason.setCustomValidity('');reportNote.required=reportReason.value==='AUTRE';};
+$('#report-form').onsubmit=e=>{e.preventDefault();if(!V.exiger('contribuer','signaler un contenu'))return;const invalid=(field,message)=>{field.setCustomValidity(message);field.reportValidity();};if(!reportReason.value)return invalid(reportReason,'Choisissez le motif du signalement.');if(reportReason.value==='AUTRE'&&!reportNote.value.trim())return invalid(reportNote,'Précisez le motif du signalement.');signale=true;$('#report-dialog').close();e.target.reset();reportNote.required=false;V.toast('Signalement enregistré.','flag');};
+reportNote.oninput=e=>e.target.setCustomValidity('');
 
 /* Actions de l'auteur : publier, dépublier, supprimer. */
 document.body.insertAdjacentHTML('beforeend',`<dialog id="delete-dialog" class="creation-dialog" aria-labelledby="delete-title"><div class="dialog-heading"><h2 id="delete-title">Supprimer cette création ?</h2><button class="icon-btn" data-close aria-label="Fermer"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><p>Ses essais déclarés et ses commentaires seront supprimés définitivement.</p><div class="creation-off-actions"><button class="btn btn-secondary" type="button" data-close>Annuler</button><button class="btn btn-primary is-danger" type="button" data-delete-confirm>Supprimer la création</button></div></dialog>`);
 $$('#delete-dialog [data-close]').forEach(b=>b.onclick=()=>$('#delete-dialog').close());
+/* Publier un brouillon : fenêtre de confirmation et case (RG-17), points à compléter (RG-10 à RG-16),
+   limite de publication par 24 heures (RG-85). Dépublier agit d'un clic. */
+const publishDialog=$('#publish-dialog'),consent=$('#publish-consent'),consentError=$('#publish-consent-err'),publishErrors=$('#publish-errors');
+function consentInvalid(on){consentError.hidden=!on;if(on){consent.setAttribute('aria-invalid','true');consent.setAttribute('aria-describedby','publish-consent-err');}else{consent.removeAttribute('aria-invalid');consent.removeAttribute('aria-describedby');}}
+consent.onchange=()=>consentInvalid(false);
 shell.addEventListener('click',e=>{
   const action=e.target.closest('[data-status-action]');
-  if(action){if(!V.exiger('contribuer',action.dataset.statusAction==='publiee'?'publier cette création':'dépublier cette création'))return;V.regler('statut',action.dataset.statusAction);notify(action.dataset.statusAction==='publiee'?'Création publiée.':'Création dépubliée : elle est de nouveau un brouillon.');return;}
+  if(action&&action.dataset.statusAction==='publiee'){if(!V.exiger('contribuer','publier cette création'))return;consent.checked=false;consentInvalid(false);publishErrors.hidden=true;publishDialog.showModal();return;}
+  if(action){if(!V.exiger('contribuer','dépublier cette création'))return;V.regler('statut',action.dataset.statusAction);notify('Création dépubliée : elle est de nouveau un brouillon.');return;}
   if(e.target.closest('[data-delete]'))$('#delete-dialog').showModal();
 });
+$('#publish-form').onsubmit=e=>{
+  e.preventDefault();
+  if(!consent.checked){consentInvalid(true);consent.focus();return;}
+  const points=page.publication==='incomplete'?FICHE.publication.points:[];
+  const limite=E.limite('creations');
+  if(points.length||(page.quota==='atteint'&&Number.isFinite(limite))){
+    publishErrors.innerHTML=points.length?`<p><b>${V.t(`${points.length} ${points.length>1?'points':'point'} à compléter avant de publier.`)}</b></p><ul>${points.map(p=>`<li>${V.t(p)}</li>`).join('')}</ul>`:`<p>${V.t(`Limite de ${limite} publications par 24 heures atteinte. Vous pourrez publier ${FICHE.publication.reessayer} ; votre brouillon reste enregistré.`)}</p>`;
+    publishErrors.hidden=false;publishErrors.focus();return;
+  }
+  publishDialog.close();V.regler('statut','publiee');scrollTo({top:0});notify('Création publiée.');
+};
 $('[data-delete-confirm]').onclick=()=>{$('#delete-dialog').close();deleted=true;applyEtat();scrollTo({top:0});notify('Création supprimée.');};
 
 V.initTweaks({
   key:'vysora-fiche-reglages',
   etats:[
     {name:'vue',legend:'Point de vue',options:[['lecteur','Lecteur'],['auteur','Auteur de la création']],si:e=>e.session==='membre'},
-    {name:'statut',legend:'Statut de la création',options:[['publiee','Publiée'],['brouillon','Brouillon'],['masquee','Masquée par la modération']]},
+    {name:'statut',legend:'Statut de la création',options:[['publiee','Publiée'],['brouillon','Brouillon'],['masquee','Masquée par la modération'],['masquee-auto','Masquée automatiquement']]},
+    {name:'publication',legend:'Publication du brouillon',options:[['prete','Prêt à publier'],['incomplete','Points à compléter']],si:(e,s)=>e.session==='membre'&&s.statut==='brouillon'&&(own||s.vue==='auteur')},
+    {name:'quota',legend:'Publications des dernières 24 heures',options:[['disponible','Sous la limite'],['atteint','Limite atteinte']],si:(e,s)=>e.session==='membre'&&s.statut==='brouillon'&&(own||s.vue==='auteur')&&Number.isFinite(E.limite('creations',e))},
+    {name:'signalement',legend:'Votre signalement',options:[['aucun','Aucun'],['ouvert','Déjà envoyé, en cours d’examen']],si:(e,s)=>e.session==='membre'&&!own&&s.vue!=='auteur'&&s.statut==='publiee'},
     {name:'alerte',legend:'Avertissement',options:[['aucune','Aucun'],['obsolete','Obsolescence signalée'],['agent','Instructions pour agent']]}
   ],
   apparence:[
     {name:'layout',legend:'Mise en page',options:[['balanced','Équilibrée'],['immersive','Image immersive']]},
     'accent','density','effects','motion'
   ],
-  defaults:{vue:'lecteur',statut:'publiee',alerte:'aucune',layout:'balanced'},
-  onChange:(changed,settings)=>{document.documentElement.style.scrollBehavior=V.motion.level()==='none'?'auto':'';page={vue:settings.vue,statut:apercu?'publiee':settings.statut,alerte:own&&creation.agent&&settings.alerte==='aucune'?'agent':settings.alerte};if(['vue','statut','alerte','reset','init'].includes(changed))applyEtat();}
+  defaults:{vue:'lecteur',statut:'publiee',publication:'prete',quota:'disponible',signalement:'aucun',alerte:'aucune',layout:'balanced'},
+  onChange:(changed,settings)=>{document.documentElement.style.scrollBehavior=V.motion.level()==='none'?'auto':'';page={vue:settings.vue,statut:apercu?'publiee':settings.statut,alerte:own&&creation.agent&&settings.alerte==='aucune'?'agent':settings.alerte,publication:settings.publication,quota:settings.quota,signalement:settings.signalement};if(['signalement','reset'].includes(changed))signale=false;if(['vue','statut','alerte','reset','init'].includes(changed))applyEtat();}
 });
 E.on(applyEtat);
 if(apercu)shell.inert=true;

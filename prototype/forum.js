@@ -32,7 +32,7 @@
   const first = name => (name === YOU ? (membre() ? 'Vous' : E.MOI.nom.split(' ')[0]) : name.split(' ')[0]);
   const shown = name => (name === YOU && !membre() ? E.MOI.nom : name);
   const has = (set, id) => membre() && set.has(id);
-  let page = { vue: 'lecteur' };
+  let page = { vue: 'lecteur', masquage: 'aucun' };
   const HELP = {
     'qa-n-title': ['Écrire un bon titre', 'Votre titre résume le problème en une phrase, comme si vous le posiez à un collègue.', ['Mentionnez le résultat obtenu, pas seulement l’outil.', 'Évitez « Aide » ou « Problème » seuls : ils ne disent rien du sujet.']],
     'qa-n-tool': ['L’outil et sa version', 'Une solution peut dépendre de la version du modèle. Les membres qui utilisent le même outil verront votre question en premier.', []],
@@ -42,6 +42,7 @@
     'qa-n-expected': ['Le résultat attendu', 'Décrivez ce que vous vouliez obtenir. L’écart entre les deux guide les réponses.', []],
     'qa-n-before': ['Le prompt avant', 'Le prompt d’origine, avant votre changement.', []],
     'qa-n-after': ['Le prompt après', 'Le prompt corrigé : les différences seront surlignées pour les lecteurs.', []],
+    'qa-n-presentation': ['Présenter votre astuce', 'Dites en quelques phrases ce que l’astuce change et dans quel cas elle sert.', ['Par exemple : le texte d’un logo reste exact quand il est isolé entre guillemets.']],
     'qa-n-body': ['Le détail de votre question', 'Dites ce que vous avez déjà essayé, ce qui s’est passé, et ce que vous attendiez.', ['Une seule question par sujet.', 'Les exemples concrets reçoivent des réponses plus précises.']],
     'qa-n-tags': ['Les étiquettes', 'De une à cinq étiquettes décrivent le thème. Les membres suivent les étiquettes qui les concernent.', ['Exemples : logo, script, traduction.']]
   };
@@ -233,20 +234,25 @@
     if (KINDS[kind]) state.filter.kinds = [kind];
     if (state.view === 'poser') state.composeKind = KINDS[p.get('nouveau')] ? p.get('nouveau') : 'question';
   }
-  function writeURL(push = true) {
+  /* Paramètres de la liste des sujets : l'adresse de la page courante, et celle de chaque page de la pagination. */
+  function listParams(page = state.page) {
     const p = new URLSearchParams();
+    if (state.tab !== 'recentes') p.set('onglet', state.tab);
+    if (state.q) p.set('q', state.q);
+    if (state.tag) p.set('etiquette', state.tag);
+    if (state.tool) p.set('outil', state.tool);
+    if (state.author) p.set('membre', state.author);
+    if (state.filter.kinds.length === 1) p.set('type', state.filter.kinds[0]);
+    if (page > 1) p.set('page', String(page));
+    return p;
+  }
+  const listHref = page => { const p = listParams(page); return `forum.html${p.size ? `?${p}` : ''}`; };
+  function writeURL(push = true) {
+    let p = new URLSearchParams();
     if (state.view === 'question') p.set('sujet', state.topic);
     else if (state.view === 'poser') p.set('nouveau', state.composeKind);
     else if (state.view === 'etiquettes' || state.view === 'membres') p.set('vue', state.view);
-    else {
-      if (state.tab !== 'recentes') p.set('onglet', state.tab);
-      if (state.q) p.set('q', state.q);
-      if (state.tag) p.set('etiquette', state.tag);
-      if (state.tool) p.set('outil', state.tool);
-      if (state.author) p.set('membre', state.author);
-      if (state.filter.kinds.length === 1) p.set('type', state.filter.kinds[0]);
-      if (state.page > 1) p.set('page', String(state.page));
-    }
+    else p = listParams();
     const url = `${location.pathname}${p.size ? `?${p}` : ''}`;
     if (url !== `${location.pathname}${location.search}` || location.hash) history[push ? 'pushState' : 'replaceState'](null, '', url);
   }
@@ -372,7 +378,8 @@
     const filters = activeFilters();
     const heading = state.q ? 'Résultats de recherche' : state.tag ? `Sujets étiquetés [${state.tag}]` : state.tool ? `Sujets sur ${state.tool}` : state.author ? `Sujets de ${state.author}` : state.filter.kinds.length === 1 ? KINDS[state.filter.kinds[0]].plural : state.tab === 'sans-reponse' ? 'Sujets sans réponse' : 'Tous les sujets';
     document.title = `${heading} · Forum · Vysora`;
-    const pager = pages > 1 ? `<nav class="qa-pager" aria-label="Pagination">${state.page > 1 ? `<button type="button" data-page="${state.page - 1}">Précédente</button>` : ''}${Array.from({ length: pages }, (_, i) => `<button type="button" data-page="${i + 1}"${i + 1 === state.page ? ' aria-current="page"' : ''}>${i + 1}</button>`).join('')}${state.page < pages ? `<button type="button" data-page="${state.page + 1}">Suivante</button>` : ''}</nav>` : '';
+    const pageLink = (n, label, current = false) => `<a href="${esc(listHref(n))}" data-page="${n}"${current ? ' aria-current="page"' : ''}>${t(label)}</a>`;
+    const pager = pages > 1 ? `<nav class="qa-pager" aria-label="Pagination">${state.page > 1 ? pageLink(state.page - 1, 'Précédente') : ''}${Array.from({ length: pages }, (_, i) => pageLink(i + 1, String(i + 1), i + 1 === state.page)).join('')}${state.page < pages ? pageLink(state.page + 1, 'Suivante') : ''}</nav>` : '';
     $('[data-qa-page]').innerHTML = `
       <div class="qa-main">
         <header class="qa-list-head">
@@ -391,7 +398,7 @@
             <button class="qa-filter-btn" type="button" data-filter-toggle aria-expanded="${state.filterOpen}">${icon('filter')}<span>Filtrer</span>${filters.length ? `<small>${fmt(filters.length)}</small>` : ''}</button>
           </div>
           ${state.filterOpen ? filterPanelHTML() : ''}
-          ${filters.length ? `<div class="qa-active">${filters.map(([key, label]) => `<span class="qa-chip">${t(label)}<button type="button" data-unfilter="${esc(key)}" aria-label="Retirer le filtre ${esc(label)}">${icon('close')}</button></span>`).join('')}<button class="link-btn" type="button" data-reset>Tout effacer</button></div>` : ''}
+          ${filters.length ? `<div class="qa-active">${filters.map(([key, label]) => `<span class="qa-chip">${t(label)}<button type="button" data-unfilter="${esc(key)}" aria-label="Retirer le filtre ${esc(label)}">${icon('close')}</button></span>`).join('')}<a class="link-btn" href="forum.html" data-reset>Tout effacer</a></div>` : ''}
         </header>
         ${shown.length ? `<ol class="qa-list">${shown.map(s => summaryHTML(s, tk)).join('')}</ol>` : `<div class="qa-empty"><p><b>Aucun sujet ne correspond.</b> ${state.q ? `Personne n’a encore écrit sur « ${t(state.q)} ».` : 'Élargissez les filtres.'} Posez la question : les membres qui utilisent le même outil la verront.</p><div><button class="btn btn-secondary btn-sm" type="button" data-reset>${icon('replay')}Voir tous les sujets</button><a class="btn btn-primary btn-sm" href="forum.html?nouveau=question" data-ask data-prefill>${icon('plus')}Poser une question</a></div></div>`}
         ${pager}
@@ -451,11 +458,11 @@
       PROMPTS.set(`${s.id}-after`, s.tip.after);
       return `<div class="qa-tip">
         <div class="qa-tip-grid">
-          <div class="is-before"><p class="qa-label">Avant</p><p class="qa-diff">${diffHTML(s.tip.before, s.tip.after, { add: false, del: true })}</p><p class="qa-tip-result">${icon('x')}${t(s.tip.beforeResult)}</p></div>
-          <div class="is-after"><p class="qa-label">Après</p><p class="qa-diff">${diffHTML(s.tip.before, s.tip.after, { add: true, del: false })}</p><p class="qa-tip-result">${icon('check')}${t(s.tip.afterResult)}</p></div>
+          <div class="is-before"><p class="qa-label">Avant</p><p class="qa-diff">${diffHTML(s.tip.before, s.tip.after, { add: false, del: true })}</p>${s.tip.beforeResult ? `<p class="qa-tip-result">${icon('x')}${t(s.tip.beforeResult)}</p>` : ''}</div>
+          <div class="is-after"><p class="qa-label">Après</p><p class="qa-diff">${diffHTML(s.tip.before, s.tip.after, { add: true, del: false })}</p>${s.tip.afterResult ? `<p class="qa-tip-result">${icon('check')}${t(s.tip.afterResult)}</p>` : ''}</div>
         </div>
         ${diffLegend}
-        ${s.tip.testedWith.length ? `<p class="qa-tested">${icon('repeat')}<span>Vérifiée par <b>${plural(testedCount(s.id, s.tip.tested), 'membre', 'membres')}</b> avec ${s.tip.testedWith.map(pairHTML).join(', ')} · dernier test ${t(ago(s.tip.lastTest))}</span></p>` : ''}
+        ${s.tip.testedWith.length && testedCount(s.id, s.tip.tested) ? `<p class="qa-tested">${icon('repeat')}<span>Vérifiée par <b>${plural(testedCount(s.id, s.tip.tested), 'membre', 'membres')}</b> avec ${s.tip.testedWith.map(pairHTML).join(', ')} · dernier test ${t(ago(s.tip.lastTest))}</span></p>` : ''}
       </div>`;
     }
     if (s.steps) return `<ol class="qa-steps">${s.steps.map((step, i) => `<li><span class="qa-step-node" aria-hidden="true">${i + 1}</span><p>${rich(step)}</p></li>`).join('')}</ol>`;
@@ -493,9 +500,11 @@
 
   function answerHTML(s, r) {
     const canAccept = membre() && s.mine && SOLVABLE.has(s.kind) && !s.accepted && r.author !== YOU && s.status !== 'closed';
+    const hidden = r.masquage ? `<p class="qa-closed">${icon('lock')}${r.masquage === 'automatique' ? t('Masquée à titre provisoire, en attendant l’examen d’un modérateur : vous seul et l’équipe de modération la voyez.') : 'Masquée par la modération : vous seul et l’équipe de modération la voyez.'}</p>` : '';
     return `<li class="qa-answer${r.accepted ? ' is-accepted' : ''}${r.author === YOU && membre() ? ' is-you' : ''}" id="reponse-${esc(r.id)}" tabindex="-1">
       ${voteColumn(r.id, replyVotes(r), { accepted: r.accepted, canAccept })}
       <div class="qa-post-cell">
+        ${hidden}
         ${r.accepted ? `<p class="qa-accepted-note">${icon('accept')}Réponse acceptée par ${t(s.author === YOU && membre() ? 'vous' : first(s.author))}</p>` : ''}
         <div class="qa-body"><p>${rich(r.text)}</p>${r.prompt ? fixHTML(s, r) : ''}</div>
         ${r.accepted && r.tested ? `<p class="qa-tested">${icon('repeat')}<span>Reproduite par <b>${plural(testedCount(r.id, r.tested), 'membre', 'membres')}</b> avec ${r.testedWith.map(pairHTML).join(', ')} · dernier test ${t(ago(r.lastTest))}</span><button class="qa-test" type="button" data-tested="${esc(r.id)}" aria-pressed="${has(own.tested, r.id)}">${icon(has(own.tested, r.id) ? 'check' : 'repeat')}${has(own.tested, r.id) ? 'Testé' : 'Testé, ça marche'}</button></p>` : ''}
@@ -543,8 +552,16 @@
     return [...found, ...same].slice(0, 5);
   }
 
+  /* Masquage du sujet ouvert ou d'une réponse (réglage « Masquage » du panneau Tweaks) : par une décision de la
+     modération (MOD-01) ou automatiquement, à titre provisoire, au seuil de signalements (F-93). Un sujet masqué
+     n'est visible que de son auteur et de l'équipe de modération ; une réponse masquée, de son auteur et de l'équipe. */
+  const moderation = () => membre() && E.get().role !== 'membre';
+  const masquage = () => (membre() ? page.masquage : 'aucun');
+  const topicHidden = s => s && ['sujet', 'sujet-auto'].includes(masquage()) && !s.mine && !moderation();
+
   function renderQuestion({ focus = true } = {}) {
-    const s = topicById(state.topic);
+    const found = topicById(state.topic);
+    const s = topicHidden(found) ? null : found;
     const page = $('[data-qa-page]');
     if (!s) {
       document.title = 'Sujet introuvable · Forum · Vysora';
@@ -560,7 +577,10 @@
       recentes: (a, b) => b.at.localeCompare(a.at),
       anciennes: (a, b) => a.at.localeCompare(b.at)
     };
-    const answers = [...s.replies].sort(sorters[state.answerSort]);
+    /* La réponse masquée : celle du membre dans ce sujet, sinon la plus ancienne, montrée comme la sienne. */
+    const hiddenReply = ['reponse', 'reponse-auto'].includes(masquage()) && s.replies.length ? (s.replies.find(r => r.author === YOU) || [...s.replies].sort((a, b) => a.at.localeCompare(b.at))[0]) : null;
+    const answers = [...s.replies].sort(sorters[state.answerSort]).map(r => (r === hiddenReply ? { ...r, author: moderation() ? r.author : YOU, masquage: masquage() === 'reponse-auto' ? 'automatique' : 'decision' } : r));
+    const topicNotice = ['sujet', 'sujet-auto'].includes(masquage()) ? `<p class="qa-closed">${icon('lock')}${masquage() === 'sujet-auto' ? t('Ce sujet est masqué à titre provisoire, en attendant l’examen d’un modérateur : seuls vous et l’équipe de modération le voyez.') : 'Ce sujet est masqué par la modération : seuls vous et l’équipe de modération le voyez.'}</p>` : '';
     const creation = s.creation && byId[s.creation];
     const related = relatedTopics(s);
     const followers = s.follows + (own.follows.has(s.id) ? 1 : 0);
@@ -570,6 +590,7 @@
           <div class="qa-list-title"><h1 id="qa-title" tabindex="-1">${t(s.title)}</h1><a class="btn btn-primary" href="forum.html?nouveau=question" data-ask>${icon('plus')}Poser une question</a></div>
           <p class="qa-q-meta"><span>${t(KINDS[s.kind].posted)} <b>${t(ago(s.at))}</b></span><span>Activité <b>${t(ago(s.last))}</b></span><span>Suivi par <b>${plural(followers, 'membre', 'membres')}</b></span><span class="qa-kind">${icon(KINDS[s.kind].icon)}${t(KINDS[s.kind].label)}</span></p>
         </header>
+        ${topicNotice}
         <div class="qa-question">
           ${voteColumn(s.id, votes(s), { op: true, s })}
           <div class="qa-post-cell">
@@ -659,7 +680,7 @@
               ${field('qa-n-before', 'Prompt avant', 'Au moins 20 caractères.', area('qa-n-before', 4))}
               ${field('qa-n-after', 'Prompt après', 'Au moins 20 caractères.', area('qa-n-after', 4))}
             </div>
-            ${field('qa-n-result', 'Ce que le changement a produit', '', area('qa-n-result', 2), true)}
+            ${field('qa-n-presentation', 'Présentez votre astuce', 'Au moins 30 caractères : ce que le changement a produit, et quand s’en servir.', area('qa-n-presentation', 3))}
           </div>
           <div class="qa-n-kind" data-for="question retour discussion">
             ${field('qa-n-body', 'Détail de votre question', 'Au moins 30 caractères : ce que vous avez essayé, ce qui s’est passé, ce que vous attendiez.', area('qa-n-body', 7))}
@@ -740,7 +761,8 @@
       ['qa-n-expected', kind === 'clinique' && value('qa-n-expected').length < 10 ? 'Décrivez le résultat attendu.' : ''],
       ['qa-n-before', kind === 'astuce' && value('qa-n-before').length < 20 ? 'Le prompt avant doit compter au moins 20 caractères.' : ''],
       ['qa-n-after', kind === 'astuce' && value('qa-n-after').length < 20 ? 'Le prompt après doit compter au moins 20 caractères.' : ''],
-      ['qa-n-body', ['question', 'retour', 'discussion'].includes(kind) && value('qa-n-body').length < 30 ? 'Votre question doit compter au moins 30 caractères.' : ''],
+      ['qa-n-presentation', kind === 'astuce' && value('qa-n-presentation').length < 30 ? 'Présentez votre astuce en 30 caractères au moins.' : ''],
+      ['qa-n-body', ['question', 'retour', 'discussion'].includes(kind) && value('qa-n-body').length < 30 ? { question: 'Votre question doit compter au moins 30 caractères.', retour: 'Votre retour doit compter au moins 30 caractères.', discussion: 'Votre sujet doit compter au moins 30 caractères.' }[kind] : ''],
       ['qa-n-tags', !tags.length ? 'Ajoutez au moins une étiquette.' : tags.length > 5 ? 'Gardez au plus cinq étiquettes.' : '']
     ];
     checks.forEach(([id, message]) => setError(id, message));
@@ -755,11 +777,11 @@
       domain: (entry && FAMILY_DOMAIN[entry.family]) || 'Texte et rédaction',
       at: F.now, useful: 0, follows: 0, creation: value('qa-n-creation') || undefined,
       tags: tags.map(tag => tag.charAt(0).toUpperCase() + tag.slice(1)),
-      body: kind === 'clinique' ? value('qa-n-context') : kind === 'astuce' ? (value('qa-n-result') || 'Une méthode vérifiée, avec le prompt avant et après.') : value('qa-n-body'),
+      body: kind === 'clinique' ? value('qa-n-context') : kind === 'astuce' ? value('qa-n-presentation') : value('qa-n-body'),
       replies: []
     };
     if (kind === 'clinique') topic.clinic = { prompt: value('qa-n-prompt'), got: value('qa-n-got'), expected: value('qa-n-expected') };
-    if (kind === 'astuce') topic.tip = { before: value('qa-n-before'), beforeResult: 'Résultat avant le changement.', after: value('qa-n-after'), afterResult: value('qa-n-result') || 'Résultat après le changement.', tested: 0, testedWith: entry ? [[tool, model]] : [], lastTest: F.now.slice(0, 10) };
+    if (kind === 'astuce') topic.tip = { before: value('qa-n-before'), after: value('qa-n-after'), tested: 0, testedWith: entry ? [[tool, model]] : [], lastTest: F.now.slice(0, 10) };
     own.topics.unshift(topic);
     own.follows.add(topic.id);
     persist();
@@ -942,9 +964,10 @@
       else state.filter[key] = false;
       state.page = 1; refreshList(); $('#qa-q')?.focus(); return;
     }
-    if (event.target.closest('[data-reset]')) { resetList(); refreshList(); $('#qa-q')?.focus(); return; }
+    const reset = event.target.closest('[data-reset]');
+    if (reset && (plain || reset.tagName !== 'A')) { event.preventDefault(); resetList(); refreshList(); $('#qa-q')?.focus(); return; }
     const pageBtn = event.target.closest('[data-page]');
-    if (pageBtn) { state.page = Number(pageBtn.dataset.page); refreshList(); window.scrollTo({ top: 0, behavior: V.motion.full() ? 'smooth' : 'auto' }); $('#qa-title')?.focus({ preventScroll: true }); return; }
+    if (pageBtn && plain) { event.preventDefault(); state.page = Number(pageBtn.dataset.page); refreshList(); window.scrollTo({ top: 0, behavior: V.motion.full() ? 'smooth' : 'auto' }); $('#qa-title')?.focus({ preventScroll: true }); return; }
     if (event.target.closest('[data-open-tools]')) { openTools(); return; }
     const tagSort = event.target.closest('[data-tag-sort]');
     if (tagSort) { state.tagSort = tagSort.dataset.tagSort; renderTags(); $(`[data-tag-sort="${state.tagSort}"]`)?.focus(); return; }
@@ -1097,12 +1120,13 @@
       'accent', 'density', 'radius', 'effects', 'motion'
     ],
     etats: [
-      { name: 'vue', legend: 'Sujet affiché', options: [['lecteur', 'Vu par un lecteur'], ['auteur', 'Vu par son auteur']], si: e => e.session === 'membre' }
+      { name: 'vue', legend: 'Sujet affiché', options: [['lecteur', 'Vu par un lecteur'], ['auteur', 'Vu par son auteur']], si: e => e.session === 'membre' },
+      { name: 'masquage', legend: 'Masquage du sujet affiché', options: [['aucun', 'Aucun'], ['sujet', 'Sujet masqué par la modération'], ['sujet-auto', 'Sujet masqué automatiquement'], ['reponse', 'Réponse masquée par la modération'], ['reponse-auto', 'Réponse masquée automatiquement']], si: e => e.session === 'membre' }
     ],
-    defaults: { vue: 'lecteur', resume: 'complet', compteurs: 'colonne', menu: 'gauche', solution: 'diff' },
+    defaults: { vue: 'lecteur', masquage: 'aucun', resume: 'complet', compteurs: 'colonne', menu: 'gauche', solution: 'diff' },
     onChange: (changed, settings) => {
-      page = { vue: settings.vue };
-      if (changed === 'vue' || changed === 'reset') show({ focus: false });
+      page = { vue: settings.vue, masquage: settings.masquage };
+      if (changed === 'vue' || changed === 'masquage' || changed === 'reset') show({ focus: false });
     }
   });
   V.etats.on(() => { renderMenu(); show({ focus: false }); });

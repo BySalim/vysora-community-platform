@@ -138,6 +138,8 @@ window.VYSORA_NOTIFICATIONS = (() => {
   const alertes = {
     obsolescence: { id: 'a-obsolescence', type: 'obsolescence', at: '2026-10-13T07:50', creation: 'iteration', modele: 'GPT Image 1', membres: 3 },
     masque: { id: 'a-masque', type: 'masque', at: '2026-10-12T23:10', creation: 'projet', motif: 'Données personnelles : une capture d’écran laisse lire le numéro de téléphone d’une cliente.' },
+    /* Masquée automatiquement au seuil de signalements (F-93) : provisoire, sans motif, en attente d'un modérateur. */
+    'masque-auto': { id: 'a-masque-auto', type: 'masque', automatique: true, at: '2026-10-12T23:10', creation: 'projet' },
     retabli: { id: 'a-retabli', type: 'retabli', at: '2026-10-13T09:20', creation: 'projet', texte: 'La capture a été remplacée. Les votes, les commentaires et les points liés sont rétablis.' }
   };
 
@@ -148,6 +150,31 @@ window.VYSORA_NOTIFICATIONS = (() => {
     suspension: { id: 'd-suspension', type: 'decision', at: '2026-10-13T08:05', action: 'suspendre',
       motif: 'Spam : le même lien vers votre site a été publié dans six commentaires en deux jours, après l’avertissement du 9 octobre.' }
   };
+
+  /* Décisions de la modération sur un autre contenu que la création masquée (réglage « Décision de la
+     modération ») : vise donne le type du contenu visé et son intitulé, gardé après sa suppression (MOD-01).
+     automatique : masquage provisoire au seuil de signalements, sans motif (F-93) ; indisponible : contenu supprimé. */
+  const decisions = {
+    'reponse-masquee': { id: 'm-reponse', type: 'masque', at: '2026-10-13T09:12', sujet: 'sujet-7',
+      vise: { type: 'reponse', intitule: 'Testez avec deux téléphones : voici la configuration de ma base de réservations, clé d’accès…' },
+      motif: 'Secret exposé : la réponse laisse lire la clé d’accès à votre base de réservations.' },
+    'reponse-provisoire': { id: 'm-reponse-auto', type: 'masque', automatique: true, at: '2026-10-13T09:12', sujet: 'sujet-10',
+      vise: { type: 'reponse', intitule: 'Je colle les notes brutes, puis je demande un tableau à quatre colonnes : tâche, responsable…' } },
+    'essai-retabli': { id: 'm-essai', type: 'retabli', at: '2026-10-13T09:12', fiche: 'portrait-gouache',
+      vise: { type: 'essai', intitule: 'Même composition en gardant le prompt, mais le turban sort orange au lieu de bleu.' },
+      texte: 'Après examen, l’essai respecte la charte communautaire. Les points de réputation liés sont rétablis.' },
+    'commentaire-supprime': { id: 'm-commentaire', type: 'decision', action: 'supprimer', at: '2026-10-13T09:12', indisponible: true,
+      vise: { type: 'commentaire', intitule: 'Le même prompt donne un meilleur rendu avec ma version, disponible sur mon site.' },
+      motif: 'Autopromotion : le commentaire renvoyait vers votre site sans rapport avec la création commentée.' },
+    'agent-ajoute': { id: 'm-agent', type: 'decision', action: 'agent-ajoute', at: '2026-10-13T09:12', creation: 'prompt',
+      motif: 'Le prompt demande à l’assistant de renommer des fichiers sur l’ordinateur du lecteur : il doit le relire avant de le confier à un agent.' },
+    'agent-retire': { id: 'm-agent-retire', type: 'decision', action: 'agent-retire', at: '2026-10-13T09:12', creation: 'prompt',
+      motif: 'Le script tourne désormais en simulation par défaut et ne modifie aucun fichier sans accord : l’avertissement n’est plus nécessaire.' }
+  };
+
+  /* Notifications dont le contenu n'est plus disponible (réglage « Création que vous avez commentée ») : retiré,
+     masqué ou devenu privé, il ne montre plus ni texte ni lien. */
+  const indisponibles = ['n-aissatou-reponse', 'k-lea'];
 
   /* Notification qui arrive pendant la visite (réglage « Pendant la visite »). */
   const arrivees = {
@@ -160,5 +187,5 @@ window.VYSORA_NOTIFICATIONS = (() => {
   /* Heure de la consultation simulée (data.js, today). */
   const maintenant = '2026-10-13T10:30';
 
-  return { membres, sujets, liste, heuresBadges, depuis, badgesNonLus, niveaux, alertes, compte, arrivees, maintenant };
+  return { membres, sujets, liste, heuresBadges, depuis, badgesNonLus, niveaux, alertes, compte, decisions, indisponibles, arrivees, maintenant };
 })();

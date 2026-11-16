@@ -131,8 +131,11 @@
     if (niv !== 'curieux') {
       if (settings.alerte === 'obsolescence') items.push({ ...N.alertes.obsolescence, nonLue: true });
       if (settings.alerte === 'masque') items.push({ ...N.alertes.masque, nonLue: true });
+      if (settings.alerte === 'masque-auto') items.push({ ...N.alertes['masque-auto'], nonLue: true });
       if (settings.alerte === 'retabli') items.push({ ...N.alertes.masque }, { ...N.alertes.retabli, nonLue: true });
+      if (N.decisions[settings.decision]) items.push({ ...N.decisions[settings.decision], nonLue: true });
     }
+    if (settings.disponibilite === 'retiree') items.forEach(n => { if (N.indisponibles.includes(n.id)) n.indisponible = true; });
     if (E.get().compte === 'suspendu') items.push({ ...N.compte.avertissement }, { ...N.compte.suspension, nonLue: true, epinglee: true });
     ui.recues.forEach(n => items.push({ ...n }));
     return items.filter(n => jourDe(n.at) >= pro.depuis).sort((a, b) => b.at.localeCompare(a.at));
@@ -148,6 +151,7 @@
 
   /* À traiter : une question qui vous est posée, une réponse à départager, une alerte sur une création. */
   function aTraiter(n) {
+    if (n.indisponible) return false;
     if (['obsolescence', 'masque', 'cas-refuse'].includes(n.type)) return true;
     if (reponseDe(n)) return false;
     if (n.type === 'commentaire' || n.type === 'reponse-commentaire') return /\?/.test(n.texte);
@@ -158,6 +162,7 @@
   /* Contenu concerné ---------------------------------------------------------------------------- */
 
   function cible(n) {
+    if (n.indisponible) return { cle: `indisponible:${n.id}`, titre: 'Contenu qui n’est plus disponible', href: null };
     if (n.creation) {
       const ex = PUB.exemples[n.creation];
       const c = PRO.creations.find(x => x.id === n.creation);
@@ -175,6 +180,25 @@
     if (n.defi) return { cle: `defi:${slug(n.defi.titre)}`, titre: n.defi.titre, href: 'defis.html', ouvrir: 'Voir les défis' };
     if (n.type === 'badge' || n.type === 'niveau') return { cle: 'progression', titre: 'Votre progression', href: n.type === 'badge' ? `profil.html?pseudo=${encodeURIComponent(E.MOI.pseudo)}#pf-t-badges` : 'classements.html#regles', ouvrir: n.type === 'badge' ? 'Voir mes badges' : 'Voir les niveaux' };
     return { cle: 'compte', titre: 'Votre compte', href: null };
+  }
+
+  /* Contenu visé par une décision de la modération (MOD-01) : la création, ou un commentaire, un essai, un sujet,
+     une réponse, un cas ; e accorde le participe (« masquée », « masqué »), ce le démonstratif. */
+  const DESIGNATIONS = { creation: ['création', true], commentaire: ['commentaire', false], essai: ['essai', false], sujet: ['sujet', false], reponse: ['réponse', true], cas: ['cas Bon réflexe', false] };
+  function vise(n) {
+    const type = n.vise ? n.vise.type : 'creation';
+    const [nom, feminin] = DESIGNATIONS[type];
+    return { type, nom, e: feminin ? 'e' : '', ce: feminin ? 'Cette' : 'Ce', intitule: n.vise ? n.vise.intitule : cible(n).titre };
+  }
+  function titreDecision(n) {
+    const v = vise(n);
+    switch (n.action) {
+      case 'suspendre': return `Votre compte est suspendu jusqu’au ${E.DATES.suspension}`;
+      case 'supprimer': return `Votre ${v.nom} a été supprimé${v.e} par la modération`;
+      case 'agent-ajoute': return 'Un avertissement a été ajouté à votre création';
+      case 'agent-retire': return 'L’avertissement de votre création a été retiré';
+      default: return 'La modération vous adresse un avertissement';
+    }
   }
 
   /* Textes ---------------------------------------------------------------------------------------- */
@@ -197,7 +221,7 @@
   /* Ligne de la liste : qui fait quoi, sur quel contenu, et un extrait. */
   function entete(n) {
     const c = cible(n);
-    const extrait = s => `<span class="nt-guillemets">${t(`« ${s} »`)}</span>`;
+    const extrait = s => (n.indisponible ? '' : `<span class="nt-guillemets">${t(`« ${s} »`)}</span>`);
     const points = p => `<span class="nt-points">${t(`+${p} points`)}</span>`;
     switch (n.type) {
       case 'commentaire': return { quoi: `${qui(n.par)} a commenté`, titre: c.titre, extrait: extrait(n.texte) };
@@ -211,14 +235,18 @@
       case 'variante': return { quoi: `${qui(n.par)} a publié une variante`, titre: n.variante.titre, extrait: t(`de « ${c.titre} »`) };
       case 'votes': return { quoi: `${votants(n.pars)} ${t('« Utile »')}`, titre: n.reponse ? `Votre réponse à « ${c.titre} »` : c.titre, extrait: points(n.points) };
       case 'obsolescence': return { quoi: 'Signalée comme ne fonctionnant plus', titre: c.titre, extrait: t(`Avec ${n.modele} · ${n.membres} membres`) };
-      case 'masque': return { quoi: 'Masquée par la modération', titre: c.titre, extrait: t(n.motif) };
-      case 'retabli': return { quoi: 'De nouveau visible', titre: c.titre, extrait: t(n.texte) };
+      case 'masque': { const v = vise(n); return { quoi: `Masqué${v.e} ${n.automatique ? 'à titre provisoire' : 'par la modération'}`, titre: v.intitule, extrait: n.motif ? t(n.motif) : '' }; }
+      case 'retabli': return { quoi: 'De nouveau visible', titre: vise(n).intitule, extrait: t(n.texte) };
       case 'badge': return { quoi: 'Badge obtenu', titre: `« ${n.badge} »`, extrait: t((PRO.badges[n.badge] || {}).rule || '') };
       case 'niveau': return { quoi: 'Niveau atteint', titre: E.NIVEAUX[n.niveau].nom, extrait: t(`${fmt(E.NIVEAUX[n.niveau].seuil)} points et plus`) };
       case 'cas-valide': return { quoi: 'Cas Bon réflexe validé', titre: c.titre, extrait: points(n.points) };
       case 'cas-refuse': return { quoi: 'Cas Bon réflexe à corriger', titre: c.titre, extrait: t(n.motif) };
       case 'defi': return { quoi: `Défi clos${t(' :')} ${rang(n.rang)} sur ${fmt(n.defi.participants)}`, titre: c.titre, extrait: points(n.points) };
-      case 'decision': return { quoi: 'Décision de la modération', titre: n.action === 'suspendre' ? `Compte suspendu jusqu’au ${E.DATES.suspension}` : 'Avertissement', extrait: t(n.motif) };
+      case 'decision': {
+        const v = vise(n);
+        const titres = { suspendre: `Compte suspendu jusqu’au ${E.DATES.suspension}`, avertir: 'Avertissement', supprimer: `${majuscule(v.nom)} supprimé${v.e} : « ${v.intitule} »`, 'agent-ajoute': `Avertissement « instructions pour agent » : « ${v.intitule} »`, 'agent-retire': `Avertissement retiré : « ${v.intitule} »` };
+        return { quoi: 'Décision de la modération', titre: titres[n.action] || 'Décision', extrait: t(n.motif) };
+      }
       default: return { quoi: '', titre: '', extrait: '' };
     }
   }
@@ -242,14 +270,14 @@
       case 'variante': return `${n.par} a publié une variante de votre création`;
       case 'votes': return `${votants(n.pars, false)} « Utile »`;
       case 'obsolescence': return `Votre création est signalée comme ne fonctionnant plus avec ${n.modele}`;
-      case 'masque': return 'Votre création a été masquée par la modération';
-      case 'retabli': return 'Votre création est de nouveau visible';
+      case 'masque': { const v = vise(n); return `Votre ${v.nom} a été masqué${v.e} ${n.automatique ? 'à titre provisoire' : 'par la modération'}`; }
+      case 'retabli': return `Votre ${vise(n).nom} est de nouveau visible`;
       case 'badge': return `Vous avez obtenu le badge « ${n.badge} »`;
       case 'niveau': return `Vous avez atteint le niveau ${E.NIVEAUX[n.niveau].nom}`;
       case 'cas-valide': return 'Votre cas Bon réflexe a été validé';
       case 'cas-refuse': return 'Votre cas Bon réflexe n’a pas été validé';
       case 'defi': return `Vous terminez ${n.rang}${n.rang === 1 ? 're' : 'e'} du défi`;
-      case 'decision': return n.action === 'suspendre' ? `Votre compte est suspendu jusqu’au ${E.DATES.suspension}` : 'La modération vous adresse un avertissement';
+      case 'decision': return titreDecision(n);
       default: return '';
     }
   }
@@ -269,14 +297,14 @@
       case 'variante': return `${n.par} a publié une variante de ${nom}`;
       case 'votes': return `${V.plural(n.pars.length, 'membre a', 'membres ont')} voté « Utile » pour ${n.reponse ? 'votre réponse' : nom}`;
       case 'obsolescence': return `${nom} est signalée comme ne fonctionnant plus avec ${n.modele}`;
-      case 'masque': return `${nom} a été masquée par la modération`;
-      case 'retabli': return `${nom} est de nouveau visible`;
+      case 'masque': return `${n.vise ? `« ${vise(n).intitule} »` : nom} a été masqué${vise(n).e} ${n.automatique ? 'à titre provisoire' : 'par la modération'}`;
+      case 'retabli': return `${n.vise ? `« ${vise(n).intitule} »` : nom} est de nouveau visible`;
       case 'badge': return `vous avez obtenu le badge « ${n.badge} »`;
       case 'niveau': return `vous avez atteint le niveau ${E.NIVEAUX[n.niveau].nom}`;
       case 'cas-valide': return `votre cas « ${c.titre} » a été validé`;
       case 'cas-refuse': return `votre cas « ${c.titre} » n’a pas été validé`;
       case 'defi': return `vous terminez ${n.rang}${n.rang === 1 ? 're' : 'e'} du défi « ${c.titre} »`;
-      case 'decision': return n.action === 'suspendre' ? `votre compte est suspendu jusqu’au ${E.DATES.suspension}` : 'la modération vous adresse un avertissement';
+      case 'decision': { const titre = titreDecision(n); return titre.charAt(0).toLowerCase() + titre.slice(1); }
       default: return '';
     }
   }
@@ -463,6 +491,8 @@
 
   function corps(n) {
     const c = cible(n);
+    /* Une décision de la modération se lit encore quand le contenu visé a été retiré (intitulé gardé). */
+    if (n.indisponible && !['masque', 'retabli', 'decision'].includes(n.type)) return `<p class="nt-texte-detail">${t('Le contenu concerné n’est plus disponible : il a été retiré par son auteur ou par la modération.')}</p>`;
     switch (n.type) {
       case 'commentaire': case 'reponse-commentaire': case 'reponse-sujet': {
         const r = reponseDe(n);
@@ -519,16 +549,34 @@
       case 'obsolescence':
         return `<div class="nt-essai" data-resultat="partiel"><span class="nt-essai-icone">${icon('alert', '')}</span><div><p class="nt-essai-res">${t(`${n.membres} membres, un même modèle`)}</p><p class="nt-essai-outil">${outilHTML('ChatGPT', n.modele)}</p></div></div>
           <p class="nt-texte-detail">${t('Le seuil de trois signalements est atteint : un bandeau prévient désormais les lecteurs. Refaites l’essai avec ce modèle, puis mettez à jour la création ou ses limites constatées.')}</p>`;
-      case 'masque':
-        return `<div class="nt-motif"><p><b>Motif</b>${t(n.motif)}</p></div>
-          <ul class="nt-effets"><li>${icon('eye-off')}<span>${t('La création n’est plus visible des autres membres ; ses votes et ses commentaires sont suspendus.')}</span></li><li>${icon('pen')}<span>${t('Modifiez-la : la modération l’examinera de nouveau.')}</span></li></ul>`;
+      case 'masque': {
+        const v = vise(n);
+        const effets = [
+          /* F-93 : l'auteur apprend le recours à l'outil automatisé et l'examen à venir. */
+          ...(n.automatique ? [['flag', `Signalé${v.e} par plusieurs membres de niveau Apprenti ou plus, ${v.ce.toLowerCase()} ${v.nom} a été masqué${v.e} par un outil automatisé, en attendant l’examen d’un modérateur. Aucune sanction n’est décidée sans examen humain.`]] : []),
+          ...(v.type === 'creation'
+            ? [['eye-off', 'La création n’est plus visible des autres membres ; ses votes et ses commentaires sont suspendus.'], ['pen', n.automatique ? 'Vous pouvez la modifier dès maintenant : le modérateur examinera la version corrigée.' : 'Modifiez-la : la modération l’examinera de nouveau.']]
+            : [['eye-off', `${v.ce} ${v.nom} n’est plus visible des autres membres ; les points de réputation liés sont suspendus.`]])
+        ];
+        return `${n.motif ? `<div class="nt-motif"><p><b>Motif</b>${t(n.motif)}</p></div>` : ''}
+          <ul class="nt-effets">${effets.map(([i, texte]) => `<li>${icon(i)}<span>${t(texte)}</span></li>`).join('')}</ul>`;
+      }
       case 'retabli':
         return `<p class="nt-texte-detail">${t(n.texte)}</p>`;
-      case 'decision':
+      case 'decision': {
+        const v = vise(n);
+        const effets = n.action === 'suspendre'
+          ? [['check-circle', 'Vous pouvez lire les contenus et gérer vos paramètres.'], ['lock', `Publier, voter, commenter et répondre redeviendront possibles le ${E.DATES.suspension}.`]]
+          : n.action === 'supprimer'
+            ? [['trash', `« ${v.intitule} » ne figure plus sur Vysora ; les points de réputation liés sont annulés.`]]
+            : n.action === 'agent-ajoute'
+              ? [['alert', `Les lecteurs de « ${v.intitule} » sont invités à relire le prompt avant de le confier à un outil qui peut agir sur leurs fichiers, leurs commandes ou leurs services. Seule la modération peut retirer cet avertissement.`]]
+              : n.action === 'agent-retire'
+                ? [['check-circle', `« ${v.intitule} » ne porte plus l’avertissement « instructions pour agent ».`]]
+                : [['alert', 'Un nouvel écart peut entraîner la suspension du compte.']];
         return `<div class="nt-motif"><p><b>Motif</b>${t(n.motif)}</p></div>
-          ${n.action === 'suspendre'
-            ? `<ul class="nt-effets"><li>${icon('check-circle')}<span>${t('Vous pouvez lire les contenus et gérer vos paramètres.')}</span></li><li>${icon('lock')}<span>${t(`Publier, voter, commenter et répondre redeviendront possibles le ${E.DATES.suspension}.`)}</span></li><li>${icon('mail')}<span>${t('Cette décision vous a aussi été envoyée par e-mail.')}</span></li></ul>`
-            : `<ul class="nt-effets"><li>${icon('alert')}<span>${t('Un nouvel écart peut entraîner la suspension du compte.')}</span></li><li>${icon('mail')}<span>${t('Cette décision vous a aussi été envoyée par e-mail.')}</span></li></ul>`}`;
+          <ul class="nt-effets">${[...effets, ['mail', 'Cette décision vous a aussi été envoyée par e-mail.']].map(([i, texte]) => `<li>${icon(i)}<span>${t(texte)}</span></li>`).join('')}</ul>`;
+      }
       default: return '';
     }
   }
@@ -566,8 +614,10 @@
 
   function actionsDetail(n, c, inline) {
     const out = [];
+    if (n.indisponible) return inline ? `<div class="nt-d-actions"><button class="btn btn-quiet btn-sm" type="button" data-nt-lu-volet="${n.id}">${icon(nonLue(n) ? 'check' : 'circle-dot')}${nonLue(n) ? 'Marquer comme lue' : 'Marquer comme non lue'}</button></div>` : '';
     if (n.type === 'obsolescence') out.push(`<a class="btn btn-primary btn-sm" href="nouvelle-creation.html?modifier=${encodeURIComponent(n.creation)}" data-exige-quoi="mettre à jour cette création" data-nt-lien="${n.id}">${icon('pen')}Mettre à jour la création</a>`);
-    if (n.type === 'masque') out.push(`<a class="btn btn-primary btn-sm" href="nouvelle-creation.html?modifier=${encodeURIComponent(n.creation)}" data-exige-quoi="modifier cette création" data-nt-lien="${n.id}">${icon('pen')}Modifier la création</a>`);
+    /* Une création masquée se corrige ; un autre contenu masqué ne propose pas de modification. */
+    if (n.type === 'masque' && vise(n).type === 'creation') out.push(`<a class="btn btn-primary btn-sm" href="nouvelle-creation.html?modifier=${encodeURIComponent(n.creation)}" data-exige-quoi="modifier cette création" data-nt-lien="${n.id}">${icon('pen')}Modifier la création</a>`);
     if (n.type === 'reproduction' && n.resultat !== 'reussi') out.push(`<a class="btn btn-primary btn-sm" href="nouvelle-creation.html?modifier=${encodeURIComponent(n.creation)}" data-exige-quoi="compléter cette création" data-nt-lien="${n.id}">${icon('pen')}Compléter les limites constatées</a>`);
     if (n.type === 'cas-refuse') out.push(`<a class="btn btn-primary btn-sm" href="apprendre.html?rubrique=bon-reflexe" data-exige="proposer-cas" data-exige-quoi="corriger ce cas" data-nt-lien="${n.id}">${icon('pen')}Corriger le cas</a>`);
     if (n.type === 'niveau' && n.action === 'proposer') out.push(`<a class="btn btn-primary btn-sm" href="apprendre.html?rubrique=bon-reflexe" data-exige="proposer-cas" data-exige-quoi="proposer un cas" data-nt-lien="${n.id}">${icon('shield')}Proposer un cas Bon réflexe</a>`);
@@ -1177,7 +1227,9 @@
     key: 'vysora-notifications-reglages',
     etats: [
       { name: 'donnees', legend: 'Liste des notifications', options: [['remplies', 'Remplie'], ['vide', 'Vide'], ['chargement', 'En chargement'], ['erreur', 'Erreur de chargement']], si: membre },
-      { name: 'alerte', legend: 'Alerte sur une création publiée', options: [['aucune', 'Aucune'], ['obsolescence', 'Obsolescence signalée'], ['masque', 'Masquée par la modération'], ['retabli', 'Rétablie après correction']], si: e => membre(e) && e.niveau !== 'curieux' },
+      { name: 'alerte', legend: 'Alerte sur une création publiée', options: [['aucune', 'Aucune'], ['obsolescence', 'Obsolescence signalée'], ['masque', 'Masquée par la modération'], ['masque-auto', 'Masquée automatiquement'], ['retabli', 'Rétablie après correction']], si: e => membre(e) && e.niveau !== 'curieux' },
+      { name: 'decision', legend: 'Décision de la modération', options: [['aucune', 'Aucune'], ['reponse-masquee', 'Réponse masquée par la modération'], ['reponse-provisoire', 'Réponse masquée automatiquement'], ['essai-retabli', 'Essai de nouveau visible'], ['commentaire-supprime', 'Commentaire supprimé'], ['agent-ajoute', 'Avertissement « instructions pour agent » ajouté'], ['agent-retire', 'Avertissement « instructions pour agent » retiré']], si: e => membre(e) && e.niveau !== 'curieux' },
+      { name: 'disponibilite', legend: 'Création que vous avez commentée', options: [['disponible', 'Disponible'], ['retiree', 'Retirée ou devenue privée']], si: membre },
       { name: 'arrivee', legend: 'Nouvelle notification', options: [['aucune', 'Aucune'], ['pendant', 'Pendant la visite']], si: membre }
     ],
     apparence: [
@@ -1187,7 +1239,7 @@
       { name: 'extraits', legend: 'Extraits dans la liste', options: [['affiches', 'Affichés'], ['masques', 'Masqués']] },
       'accent', 'density', 'radius', 'effects', 'motion'
     ],
-    defaults: { donnees: 'remplies', alerte: 'aucune', arrivee: 'aucune', lecture: 'volet', regroupement: 'date', nonlues: 'pastille', extraits: 'affiches' },
+    defaults: { donnees: 'remplies', alerte: 'aucune', decision: 'aucune', disponibilite: 'disponible', arrivee: 'aucune', lecture: 'volet', regroupement: 'date', nonlues: 'pastille', extraits: 'affiches' },
     onChange: (changed, next) => {
       settings = next;
       if (changed === 'init') return;

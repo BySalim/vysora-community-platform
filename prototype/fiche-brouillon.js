@@ -57,10 +57,12 @@
       : { kind: 'mock', mock: demo ? 'lien' : 'vide', url: demo ? demo.url : '', alt: b.titre };
 
   const premier = echanges[0];
+  /* Réponse obtenue et images jointes à l'échange, montrées par la fiche (creation-page-data.js). */
+  const jointes = x => x.images.map(im => ({ src: im.grand || im.src, alt: im.alt || '', legende: im.legende || '' }));
   const etapesFiche = b.type === 'projet'
-    ? etapes.map(s => { const x = visibles(s)[0]; return [s.titre || 'Étape sans titre', x ? x.prompt : '', s.recit]; })
+    ? etapes.map(s => { const x = visibles(s)[0]; return [s.titre || 'Étape sans titre', x ? x.prompt : '', s.recit, x ? { reponse: x.reponse, images: jointes(x) } : null]; })
     : b.type === 'iteration'
-      ? echanges.map((x, i) => [`Échange ${i + 1}`, x.prompt, x.reponse || (x.images.length ? 'Résultat présenté en image.' : '')])
+      ? echanges.map((x, i) => [`Échange ${i + 1}`, x.prompt, x.reponse || (x.images.length ? 'Résultat présenté en image.' : ''), { images: jointes(x) }])
       : undefined;
   const essai = b.type === 'prompt' && premier && premier.essais > 1 && premier.selection === 'meilleur' ? `Résultat retenu parmi ${premier.essais} essais` : 'Résultat obtenu';
   const contexte = configs.find(c => c.contexte);
@@ -70,7 +72,9 @@
     author: auteur.nom, level: auteur.niveau, config: outils.map(([o, m]) => (m ? `${o} · ${m}` : o)).join(' et ') || 'Outil à préciser',
     media, steps: b.type === 'projet' ? etapes.map(s => (s.moment || visibles(s).some(x => x.moment) ? 1 : 0)) : (b.type === 'iteration' ? echanges.map(x => (x.moment ? 1 : 0)) : [moments.length ? 1 : 0]),
     useful: 0, week: 0, repro: 0, success: null, published: court(b.publieLe || `${D.today}T12:00`),
-    own: true, apercu, statut: b.statut, agent: !!b.agent, licence: b.licence, limites: b.limites, reglages: (configs[0] && configs[0].reglages) || '', moments
+    own: true, apercu, statut: b.statut, agent: !!b.agent, licence: b.licence, limites: b.limites, reglages: (configs[0] && configs[0].reglages) || '', moments,
+    liens: (b.liens || []).filter(l => /^https:\/\//.test(l.url || '')),
+    modifiee: b.publieLe && b.modifieLe && b.modifieLe.slice(0, 10) > b.publieLe.slice(0, 10) ? court(b.modifieLe) : ''
   });
   const premierMoment = moments[0];
   details['ma-creation'] = {
