@@ -6,6 +6,9 @@
   grid-column: 1 / -1;
   list-style: none;
 }
+/* La ligne du classement est une grille (rang, avatar, nom, points) : le message vide n'en garde
+   pas les colonnes, sinon il tient dans les 26 px du rang et se coupe mot par mot. */
+.board > .board-vide { display: block; padding: 0 4px; }
 .cards-vide p,
 .feed-vide p,
 .topic-vide p,

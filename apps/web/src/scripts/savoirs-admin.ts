@@ -83,7 +83,7 @@ for (const form of $$<HTMLFormElement>('[data-ad-illustration]')) {
     confirmer(
       `Illustrer « ${titreDu(form)} » ?`,
       resultat.data.momentId
-        ? `${choix}. Le moment clé apparaît dans « Vu dans la communauté », tant que la création reste publiée et visible.`
+        ? `${choix}${/[.!?…]$/.test(choix) ? '' : '.'} Le moment clé apparaît dans « Vu dans la communauté », tant que la création reste publiée et visible.`
         : 'La création apparaît dans « Vu dans la communauté » avec votre note, tant qu’elle reste publiée et visible.',
       'Ajouter',
       async () => {
