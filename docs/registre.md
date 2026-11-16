@@ -23,7 +23,7 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 1. **Politique de confidentialité** — S-13 (15 novembre) et LEG-03 (16 novembre) sont faits : une fois la version déployée, le porteur du projet publie depuis `/admin/documents-legaux` **une seule** nouvelle version de la politique, sans nouvelle acceptation. Elle décrit de nouveau le masquage automatique (section 10) et, désormais, la mesure d’audience, le suivi des parcours avec accord et les cookies du choix et de la visite (sections 4 et 6). Les CGU ne changent pas ; la page Cookies n’a pas de version à publier.
 2. **OPS-01** — Mise en ligne d'une préproduction : tout est prêt dans le dépôt (`docs/deploiement.md`), images construites par GitHub depuis le 3 novembre. Le porteur du projet envisage un serveur de 2 Go (1 vCPU), suffisant puisque le serveur ne compile plus rien. Reste à sa charge : nom de domaine (variable `DOMAINE` du dépôt), service d'e-mails, serveur, et pour la connexion avec GitHub et Google (S-10, faite le 5 novembre) les applications OAuth de ce domaine (`docs/deploiement.md`). Ensuite : premier déploiement, sauvegardes (OPS-02).
 3. La fiche d'un membre des classements (S-08). APP-03 est fait et validé (le texte des savoirs reste dans le code du site pendant la bêta, voir « Décisions prises »). ADM-02 est fait et ses écrans validés (la suite le 1er novembre : éditeurs, ordre d'affichage, désactivation des codes d'invitation) ; les guides d'Explorer (DEC-02) aussi. Les compléments des classements (choix de l'outil, défi de la semaine, « Ils progressent ») sont faits ; reste la fiche d'un membre (S-08).
-4. **QA-01** — Tests de navigateur (Playwright) : les comparaisons au prototype (mesures à 1280 et 375 px, textes) gagneraient à être automatisées ; l’éditeur (CREA-02), « Mes contenus » (CREA-04 : publier, repasser en brouillon, supprimer, retirer un enregistrement), la décision de modération (MOD-02 : choisir, confirmer, voir le dossier mis à jour), les paramètres (PARAM-01 : changer d’adresse, de mot de passe, exporter, demander la suppression), Explorer (DEC-01 : chercher, filtrer, ouvrir un guide, cocher la liste, répondre au cas, comparer, signaler un piège), l’accueil (ACC-01 : onglets, cas Bon réflexe, fil relu) et le profil (PROF-01 : filtres, aperçu d’une création, modification du profil, aperçu public) sont les premiers parcours à couvrir. Le site de vérification peut tourner en production (`astro build` puis `node dist/server/entry.mjs`) : c’est là qu’on voit la CSP.
+4. **QA-01** — Tests de navigateur (Playwright) : les comparaisons au prototype (mesures à 1280 et 375 px, textes) gagneraient à être automatisées ; l’éditeur (CREA-02), « Mes contenus » (CREA-04 : publier, repasser en brouillon, supprimer, retirer un enregistrement), la décision de modération (MOD-02 : choisir, confirmer, voir le dossier mis à jour), les paramètres (PARAM-01 : changer d’adresse, de mot de passe, exporter, demander la suppression), Explorer (DEC-01 : chercher, filtrer, ouvrir un guide, cocher la liste, répondre au cas, comparer, signaler un piège), l’accueil (ACC-01 : onglets, cas Bon réflexe, fil relu) et le profil (PROF-01 : filtres, aperçu d’une création, modification du profil, aperçu public) sont les premiers parcours à couvrir. Le site de vérification peut tourner en production (`astro build` puis `node dist/server/entry.mjs`) : c’est là qu’on voit la CSP. Prévoir aussi un profil téléphone (Playwright `isMobile`, `hasTouch`) : le défaut de la liste des outils (16 novembre) n’apparaissait qu’au doigt.
 5. **CREA-06** — Suite de l’éditeur (voir le lot 2), dont le titre des échanges et l’aperçu des modifications non publiées.
 6. **PARAM-02** — Compléments des paramètres (voir le lot 5) : résumés par e-mail, alerte des signalements en attente pour la modération ; la langue et les comptes liés viennent avec S-15 et S-10.
 
@@ -324,6 +324,7 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - Supprimer : le brouillon ou la création sont supprimés dans l’API, puis « Publier une création » s’ouvre avec le message « Brouillon supprimé. » ou « Création supprimée. » ; le texte de confirmation d’un brouillon ne parle plus de « cet appareil ».
 - Avertissement « instructions pour agent » posé par la modération : case cochée et désactivée, avec « L’équipe de modération a ajouté cet avertissement. »
 - Réglages du panneau Tweaks (brouillons d’exemple, quota, données repérées) non repris : les états viennent des données.
+- Liste « Choisir l’outil » sur écran tactile : la recherche ne prend pas le focus à l’ouverture (le clavier ne s’ouvre qu’en touchant le champ), et seul un changement de largeur referme la liste. Le prototype la refermait à tout redimensionnement, donc dès que le clavier du téléphone s’ouvrait. Avec le clavier, la liste se place dans la partie visible (`visualViewport`).
 
 ## Écarts au prototype (écriture des créations)
 
@@ -427,12 +428,34 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - Courbe : semaines depuis l’inscription, douze au plus, en temps universel.
 - La photo est envoyée à l’API (carré de 256 px recadré par le serveur, MEDIA-01) au lieu d’être recadrée dans le navigateur ; « Complétez votre profil » fermé reste fermé sur l’appareil.
 
+## Écarts au prototype (écrans tactiles)
+
+- Au doigt (`pointer: coarse`), aucun champ ne prend le focus sans avoir été touché : liste des outils de l’éditeur, fenêtre « Mes outils », recherche du site et d’Apprendre après un filtre ou un terme, retrait d’une étiquette. Le prototype ouvrait alors le clavier, qui recouvrait la liste ou les résultats. Au clavier et à la souris, rien ne change.
+- « Mes outils » sous 480 px : coche dans l’angle du bouton et noms en 13 px, pour que les noms ne soient plus coupés au milieu.
+- Règle d’un badge affichée au toucher (`:focus` sur les écrans sans survol), messages passagers au-dessus du clavier, menus fermés au toucher hors d’eux (`pointerdown`).
+
 ## Écarts au prototype (barres de défilement)
 
 - Écrans à barres classiques (Windows, Linux) : barre de la page superposée et barres fines du site (UI-01), au lieu des barres du système ; les zones fines du prototype (`scrollbar-width: thin` de la recherche, des pages légales, d’Explorer, des notifications, de la fiche création) prennent la même barre fine dans Chrome, Edge et Safari. Téléphones, tablettes et macOS : inchangés.
 - Toutes les fenêtres modales figent la page derrière elles (le prototype ne le faisait que pour la recherche, avec `scrollbar-gutter: stable` et la classe `rch-gouttiere`, non reprise : l’emplacement réservé restait blanc, hors du voile).
 
 ## Journal
+
+### 2026-11-16 — Liste des outils qui se refermait sur téléphone, revue des écrans tactiles (CREA-02)
+
+- Signalé en production par le porteur du projet : sur téléphone, « Choisir l’outil » dans l’éditeur ouvrait la liste puis la refermait aussitôt ; sur ordinateur, tout allait bien.
+- Cause (héritée du prototype) : à l’ouverture, la recherche de la liste prenait le focus, ce qui ouvre le clavier du téléphone ; le clavier réduit la hauteur de la fenêtre et déclenche `resize`, que l’éditeur traitait en refermant la liste.
+- Corrigé dans `scripts/publier.ts` : pas de focus automatique sur écran tactile (`pointer: coarse`), fermeture seulement si la largeur change (rotation), placement dans la partie visible (`visualViewport`) avec une hauteur bornée à l’espace disponible, au-dessus ou au-dessous du bouton ; pendant la saisie, la liste reste ouverte même si le clavier recouvre le bouton. Même défaut corrigé dans `scripts/mes-contenus.ts` : le menu d’une ligne (feuille en bas d’écran sur téléphone) se refermait au moindre `resize`, par exemple quand la barre d’adresse se replie.
+- Revue du site à la recherche du même genre de défaut (propre aux écrans tactiles). Aucun autre n’était bloquant ; corrigés au passage, avec `ecranTactile()` (`scripts/commun/outils.ts`) :
+  - la fenêtre « Mes outils » (Explorer, Forum, Apprendre, catégories) ouvrait le clavier sur la grille ; le focus reste sur « Fermer » au doigt ;
+  - sur téléphone, les noms d’outils de cette fenêtre étaient coupés au milieu (« Perplexi-ty », « DeepSe-ek », défaut du prototype) : coche dans l’angle et texte un peu plus petit sous 480 px (`styles/socle.css`) ;
+  - la recherche du site, la recherche d’Apprendre et le retrait d’une étiquette de l’éditeur ne rendent plus le focus au champ au doigt : le clavier ne recouvre plus les résultats ;
+  - la virgule sépare les étiquettes aussi sur Android, où `keydown` ne la donne pas, et quand elle est collée ;
+  - les messages passagers (`toast`) remontent au-dessus du clavier ouvert ;
+  - fermer la feuille de partage d’un profil n’affiche plus « Copie indisponible » (iPhone) et ne copie plus le lien sans qu’on le demande (Android) ;
+  - les listes de l’éditeur et des classements et le menu du compte se ferment au toucher hors d’elles (`pointerdown`), iPhone n’envoyant pas toujours de `click` au document ;
+  - la règle d’un badge (profil, classements, accueil) s’affiche au toucher : sans survol, elle n’apparaissait qu’au clavier.
+- Vérifié dans le navigateur de l’application, en mode téléphone (375 px, écran tactile émulé) : liste ouverte sans clavier, toujours ouverte quand la hauteur passe de 812 à 420 px recherche active, filtre « cla » collé au bouton, choix de « Claude » au toucher, fermeture à 700 px de large et quand le bouton sort de la vue hors saisie. Sur ordinateur, rien ne change : focus dans la recherche, filtre, Échap rend le focus au bouton. Également vérifiés à 375 px : « logo, affiche » donne l’étiquette « Logo » et laisse « affiche » dans le champ, retrait d’une étiquette sans focus sur le champ, « Mes outils » d’Explorer ouvert avec le focus sur « Fermer » et aucun nom coupé (64 outils, dont NotebookLM et OpenRouter choisis), règle du badge « Assidu » affichée au toucher. Le clavier réel d’un téléphone ne s’émule pas : à confirmer sur l’appareil du porteur du projet après déploiement.
 
 ### 2026-11-16 — Barre de défilement et page figée sans bande blanche (UI-01)
 
