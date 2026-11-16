@@ -80,4 +80,4 @@
 
 ## Définition de « fait »
 
-Une tâche est faite quand : le comportement attendu fonctionne de bout en bout ; l'écran est fidèle au prototype (comparé côte à côte) ; les règles concernées sont testées ; `pnpm verifier` passe ; le registre est à jour (fait, reporté, découvert).
+Une tâche est faite quand : le comportement attendu fonctionne de bout en bout ; l'écran est fidèle au prototype (comparé côte à côte), dont la démo a été validée avant l'implémentation si la vue a changé (ADR-0010) ; les règles concernées sont testées ; `pnpm verifier` passe ; le registre est à jour (fait, reporté, découvert).

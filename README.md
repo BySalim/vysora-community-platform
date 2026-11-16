@@ -53,7 +53,7 @@ pnpm verifier
 | `apps/api` | API (NestJS, PostgreSQL, Drizzle) : règles de gestion, droits, données |
 | `packages/shared` | Énumérations, règles chiffrées, droits, schémas de validation partagés |
 | `docs/` | Architecture, MLD, conventions, sécurité, méthode de portage, décisions, **registre des tâches** |
-| `prototype/` | Prototype de référence, en lecture seule |
+| `prototype/` | Prototype de référence ; toute évolution d'une vue y commence par une démo à faire valider (ADR-0010) |
 
 ## Pour contribuer
 

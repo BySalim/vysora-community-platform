@@ -160,6 +160,7 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 | PERF-01 | Polices en WOFF2 et préchargées ; `styles.css` scindé (base / accueil) | P2 | ⬜ | ENF-03 ; sans changer le rendu |
 | SEC-03 | Revue de sécurité avant l'ouverture (liste `docs/securite.md`), `security.txt`, audit des dépendances en CI | P1 | ⬜ | |
 | DOC-01 | Documentation OpenAPI générée depuis les schémas Zod | P2 | ⬜ | utile pour Carnéo |
+| PROTO-01 | Prototype remis à niveau du site réel ; démo d'abord pour toute évolution d'une vue | P1 | 🔄 2026-11-16 | ADR-0010 : le prototype vit dans ce dépôt, toute modification d'une vue y commence par une démo validée par le porteur du projet avant l'implémentation (`prototype/README.md`). Inventaire des écarts présenté au porteur du projet le 2026-11-16 ; portage des écarts retenus en cours |
 
 ## Approfondissements reportés (non urgents, plus complexes)
 
@@ -234,6 +235,7 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 
 | Date | Sujet | Décision |
 |---|---|---|
+| 2026-11-16 | Démo d'abord (ADR-0010) | Demande du porteur du projet : le prototype redevient la référence à jour et évolue dans ce dépôt ; toute évolution d'une vue passe d'abord par une démo dans `prototype/`, faite avec les règles du prototype, qu'il valide avant l'implémentation dans `apps/web` et `apps/api`. Échappent à la démo : le portage d'un comportement que le prototype montre déjà, un changement invisible, une correction urgente (reportée ensuite dans le prototype) |
 | 2026-11-16 | Panneau des cookies (LEG-03) | Demandes du porteur du projet, sur l’exemple d’un outil de consentement courant (inspiration, pas copie) : un seul panneau à onglets (Consentement, Détails, À propos des cookies), design aéré, textes simples (ni liste des cookies ni des données : la page Cookies les détaille), trois boutons de même taille avec « Tout accepter » en bouton principal, « Tout refuser » au même niveau et en un clic. Le suivi des parcours reste désactivé tant que la personne ne l’active pas : un accord déjà coché d’avance n’est pas valable (CJUE, Planet49, 2019 ; lignes directrices de la CNIL) ; la mesure d’audience anonyme, exemptée d’accord, est active par défaut |
 | 2026-11-15 | Consentement aux cookies et mesure d’audience (LEG-03) | Choix du porteur du projet entre trois voies (mesure interne à l’API, outil auto-hébergé comme Umami, service tiers gratuit) : **mesure interne à l’API, avec suivi des parcours**, donc avec bandeau. Raisons : CSP inchangée (aucun script externe), rien de plus sur le serveur de 2 Go, données dans le PostgreSQL de Francfort, écran soumis aux rôles et à la double authentification de Vysora, base pour S-14. Durées proposées et retenues : choix 6 mois (bonne pratique de la CNIL, accord comme refus), parcours 3 mois, compteurs 25 mois (plafond d’une mesure exemptée de consentement). La mesure anonyme ne demande pas d’accord (exemption de la CNIL : pour l’éditeur seul, statistiques anonymes, aucun recoupement, rien chez un tiers) mais chacun peut s’y opposer ; le suivi des parcours n’a lieu qu’avec accord et n’est jamais relié au compte |
 | 2026-11-15 | Masquage automatique (S-13) | Choix validés par le porteur du projet : un modérateur ou un administrateur qui signale compte quel que soit son niveau (RG-85 : l’équipe échappe aux limites des niveaux) ; un compte banni ou supprimé ne compte plus ; un contenu masqué automatiquement se confirme (« Confirmer le masquage »), se rétablit ou se supprime avant toute autre mesure ; marque « Masqué automatiquement le … : à examiner en priorité » dans la file et encart dans le dossier, dans le style de MOD-02 |
@@ -433,6 +435,11 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 - Toutes les fenêtres modales figent la page derrière elles (le prototype ne le faisait que pour la recherche, avec `scrollbar-gutter: stable` et la classe `rch-gouttiere`, non reprise : l’emplacement réservé restait blanc, hors du voile).
 
 ## Journal
+
+### 2026-11-16 — Démo d'abord, prototype vivant (ADR-0010, PROTO-01)
+
+- Constat du porteur du projet : depuis qu'il ne modifie plus le prototype du dépôt `vysora`, le site l'a dépassé (modération, administration, cookies, double authentification, corrections d'interface), et les écrans sans maquette se découvraient une fois codés.
+- Règle écrite dans `AGENTS.md`, `prototype/README.md` (démarche et règles de développement reprises du dépôt `vysora`), `docs/portage-prototype.md` et ADR-0010 : le prototype n'est plus en lecture seule ; une évolution de vue commence par une démo, proposée au porteur du projet, implémentée seulement après sa validation. Les feuilles de style restent identiques des deux côtés : une démo validée se recopie dans le site, une feuille propre au site se recopie dans le prototype.
 
 ### 2026-11-16 — Barre de défilement et page figée sans bande blanche (UI-01)
 

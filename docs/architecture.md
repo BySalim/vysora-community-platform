@@ -76,7 +76,7 @@ apps/
       styles/                CSS du prototype, recopiées sans modification ; socle.css pour les ajouts
       lib/                   accès API côté serveur, session, routes, typographie, icônes
 packages/shared/src/         enums, règles, droits, schémas, contrats
-prototype/                   référence visuelle, en lecture seule (pnpm prototype)
+prototype/                   référence visuelle et démos à valider (pnpm prototype, ADR-0010)
 docs/                        produit (01 à 08), architecture, MLD, conventions, sécurité, registre
 infra/                       configuration des services (PostgreSQL)
 ```

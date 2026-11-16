@@ -7,7 +7,7 @@
 
 **Vysora** est une plateforme communautaire où l'on publie ce que l'on crée avec l'IA **avec le chemin parcouru** (prompts, outils, modèles, moments clés), où la communauté évalue, reproduit, discute et apprend. Slogan : « Voir comment l'IA crée. Apprendre à créer avec elle. »
 
-Un **prototype** complet et simulé existe (`prototype/`). Nous réalisons maintenant le produit réel, avec quatre objectifs :
+Un **prototype** complet et simulé existe (`prototype/`) : il vit dans ce dépôt et toute évolution d'une vue y commence par une démo (ADR-0010). Nous réalisons le produit réel, avec quatre objectifs :
 
 1. **Une représentation exacte et complète du prototype** : mêmes pages, même rendu, mêmes interactions, avec de vraies données.
 2. **Un backend professionnel** : l'API porte toutes les règles de gestion.
@@ -26,12 +26,13 @@ On privilégie la **vitesse** pour rendre le produit utilisable au plus tôt, en
 ## Pendant la session
 
 - **Le prototype est la référence visuelle.** Une page portée reprend son balisage, ses classes et sa feuille de style d'origine ; on compare côte à côte à plusieurs largeurs. La page Contact est l'exemple complet (site, API, base, e-mails, tests).
+- **Démo d'abord** ([ADR-0010](docs/decisions/0010-demo-prototype-avant-les-vues.md)). Toute modification d'une vue (page, écran, composant visible, état, interaction, texte affiché) commence par une démonstration dans `prototype/`, faite avec les règles du prototype ([`prototype/README.md`](prototype/README.md) : HTML, CSS et JavaScript natifs, données et états simulés, bouton Tweaks pour les états). On la propose au porteur du projet (adresse de la page, états à essayer, captures à plusieurs largeurs) ; **seulement s'il la valide**, on l'implémente dans `apps/web` (et `apps/api` si besoin), et la validation se note dans « Décisions prises » du registre. Une démo refusée ou modifiée reste dans le prototype telle qu'il la retient. Pas de démo pour porter ce que le prototype montre déjà ni pour un changement invisible ; une correction urgente (sécurité, page cassée) passe d'abord et se reporte ensuite dans le prototype.
 - **L'API décide, le site affiche.** Toute règle, tout droit, toute validation vit dans l'API (le site peut anticiper pour l'affichage avec les mêmes fonctions de `@vysora/shared`).
 - **Une règle implémentée cite son identifiant** (`RG-42`, `CI-15`) et a son test.
 - **Tout est modifiable** : n'importe quel fichier, y compris ce guide, le MLD, les ADR, le registre. Un changement de direction se note (nouvel ADR ou journal du registre) pour que la session suivante comprenne pourquoi.
 - **Sécurité** : aucun secret dans le dépôt, contrôles de droits côté API, entrées validées, contenus des membres jamais exécutés. Ce qui touche la sécurité met à jour `docs/securite.md`.
 - **Textes affichés** : finis et professionnels, vouvoiement, typographie française ([`docs/produit/08-guide-redaction.md`](docs/produit/08-guide-redaction.md)). Jamais de texte provisoire à l'écran.
-- **Un écran sans maquette** (modération, administration) se conçoit dans le style du prototype et de la charte ([`docs/produit/06-charte-graphique.md`](docs/produit/06-charte-graphique.md)), puis se fait valider.
+- **Un écran sans maquette** (modération, administration) se conçoit lui aussi en démo dans le prototype, dans son style et celui de la charte ([`docs/produit/06-charte-graphique.md`](docs/produit/06-charte-graphique.md)), puis se fait valider.
 - En cas de doute sur une intention produit, consulter les documents 01 à 07 ; s'ils ne tranchent pas, proposer un choix et l'inscrire dans « Points à trancher ».
 
 ## Terminer une session
@@ -54,7 +55,7 @@ On privilégie la **vitesse** pour rendre le produit utilisable au plus tôt, en
 | `pnpm db:generate` | Migration SQL depuis le schéma Drizzle (à relire) |
 | `pnpm medias:nettoyer` | Supprime les images jamais enregistrées depuis 24 h et les fichiers qu'aucune ligne ne désigne ; l'API le fait chaque jour par la file (EMAIL-01), la commande sert à le lancer à la main |
 | `pnpm dev` | Paquet partagé, API (:3000) et site (:4321) en mode développement |
-| `pnpm prototype` | Prototype de référence sur :5173 |
+| `pnpm prototype` | Prototype de référence et démos sur :5173 (fichiers servis tels quels, sans cache ni construction) |
 | `pnpm verifier` | Lint, types, tests, tests de bout en bout |
 | `pnpm build` | Builds de production |
 
@@ -71,7 +72,7 @@ Adresses en développement : site http://localhost:4321 · API http://localhost:
 | Règles chiffrées, énumérations, droits, schémas de validation | `packages/shared/src/` |
 | Modules de l'API | `apps/api/src/modules/<domaine>/` |
 | Pages, gabarit, composants, scripts, styles du site | `apps/web/src/` |
-| Pages du prototype et leurs données simulées | `prototype/` (lecture seule) |
+| Pages du prototype, leurs données simulées et les démos à valider | `prototype/` (règles de développement et démarche : `prototype/README.md`) |
 
 ## Pièges connus
 
@@ -79,7 +80,7 @@ Adresses en développement : site http://localhost:4321 · API http://localhost:
 - Après une modification de `packages/shared`, le reconstruire (`pnpm --filter @vysora/shared build`) si `pnpm dev` ne tourne pas.
 - `drizzle-kit` se lance depuis `apps/api` (`pnpm --filter @vysora/api exec drizzle-kit …`).
 - En développement, le navigateur passe par le relais `apps/web/src/pages/api/[...chemin].ts` (ADR-0007) ; le relais de Vite ne transmet pas les corps JSON.
-- Les fichiers CSS du prototype (`apps/web/src/styles/`) ne passent pas par Prettier : on les garde identiques à l'original pour pouvoir les comparer.
+- Les fichiers CSS du prototype (`apps/web/src/styles/`) ne passent pas par Prettier : on les garde identiques à l'original pour pouvoir les comparer. Une démo validée qui modifie une feuille du prototype se recopie telle quelle dans le site ; une feuille propre au site (`*-complements.css`, `moderation.css`, `cookies.css`…) se recopie de même dans le prototype quand l'écran y a sa démo.
 - La limite de débit de l'API est en mémoire : redémarrer l'API la remet à zéro pendant les essais.
 - Les e-mails et les tâches planifiées passent par la file pg-boss, que l'API exécute (schéma `pgboss`, créé à son démarrage) : API arrêtée, rien ne part ; les e-mails attendent dans la file, chiffrés. En test, la file est immédiate : `contexte.emails` est rempli dès la réponse, `contexte.taches.lancer(nom)` joue une tâche planifiée. Une tâche se déclare dans `onModuleInit` avec `FileTaches.declarer` (voir `modules/taches/taches-planifiees.ts`). Les e-mails des notifications ne partent pas avec l'action : la tâche `notifications.emails` les décide selon les préférences (chaque minute) ; en test, `contexte.taches.lancer('notifications.emails')` ou `NotificationsService.envoyerEmailsEnAttente()`.
 - `pnpm test:e2e` efface et recrée la base de test : deux sessions qui partagent le même PostgreSQL doivent avoir chacune leur base (`DATABASE_URL_TEST=postgres://…/vysora_test_<sujet>` dans le `.env` du worktree, le nom doit contenir « test »). Un worktree neuf demande `pnpm install` puis `pnpm --filter @vysora/shared build`.

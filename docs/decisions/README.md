@@ -13,6 +13,7 @@ Une décision structurante = une note courte : contexte, décision, conséquence
 | [0007](0007-relais-api-meme-origine.md) | Relais `/api` par le site : une seule origine | Acceptée |
 | [0008](0008-hebergement.md) | Hébergement : un serveur en Europe, Docker Compose | Proposée |
 | [0009](0009-oauth-openid-client.md) | Connexion avec GitHub et Google par `openid-client` (remplace `arctic`) | Acceptée |
+| [0010](0010-demo-prototype-avant-les-vues.md) | Une démo dans le prototype avant toute évolution d'une vue | Acceptée |
 
 Modèle :
 

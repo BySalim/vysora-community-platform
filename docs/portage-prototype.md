@@ -4,10 +4,21 @@
 > Le prototype (`prototype/`, servi par `pnpm prototype` sur http://localhost:5173) est la référence visuelle et fonctionnelle.
 > La page Contact (`apps/web/src/pages/contact.astro`, `src/scripts/contact.ts`) est l'exemple complet à suivre.
 
+## Démo d'abord
+
+Le prototype vit dans ce dépôt et n'est plus en lecture seule ([ADR-0010](decisions/0010-demo-prototype-avant-les-vues.md)). Toute évolution d'une vue (nouvel écran, page modifiée, composant, état, interaction, texte affiché) suit cet ordre :
+
+1. **Démo dans le prototype**, avec ses règles de développement ([`prototype/README.md`](../prototype/README.md)) : HTML, CSS et JavaScript natifs, données simulées dans `<page>-data.js`, états de la page dans le panneau Tweaks.
+2. **Proposition au porteur du projet** : adresse de la page sur http://localhost:5173, états à essayer, captures à 1280, 820 et 375 px.
+3. **Validation**, notée dans « Décisions prises » du registre. Sans elle, rien n'est implémenté dans `apps/web` ni dans `apps/api`.
+4. **Portage** de la démo validée avec la méthode ci-dessous ; les feuilles de style modifiées se recopient à l'identique dans `apps/web/src/styles/`. Un écart que les vraies données imposent se note dans « Écarts au prototype » du registre.
+
+Pas de démo pour porter ce que le prototype montre déjà, ni pour un changement sans effet visible. Une correction urgente (sécurité, page cassée) passe d'abord dans le site, puis se reporte dans le prototype dans la même session.
+
 ## 1. Méthode
 
 1. **Lire la page du prototype** : son HTML, sa feuille de style, son script et ses fichiers de données (tableau ci-dessous). Repérer ce qui est simulé (données `*-data.js`, états du panneau Tweaks) et ce qui doit venir de l'API.
-2. **Styles** : recopier la feuille de style de la page **sans la modifier** dans `apps/web/src/styles/` et l'importer dans la page après le gabarit (`import Base…` puis `import '../styles/x.css'`). `styles.css`, `commun.css` et `etats.css` sont déjà chargés par le gabarit. Un ajout nécessaire va dans `socle.css` ou un fichier nouveau.
+2. **Styles** : recopier la feuille de style de la page **sans la modifier** dans `apps/web/src/styles/` et l'importer dans la page après le gabarit (`import Base…` puis `import '../styles/x.css'`). `styles.css`, `commun.css` et `etats.css` sont déjà chargés par le gabarit. Un ajout nécessaire va dans `socle.css` ou un fichier nouveau ; un fichier nouveau qui change le rendu d'un écran a sa copie identique dans le prototype, avec la démo de cet écran.
 3. **Balisage** : créer la route (tableau ci-dessous) avec `layouts/Base.astro` et y recopier le contenu de `<main>`. Reporter :
    - les classes de `<body>` (`classeCorps`), ses attributs `data-*` (`donneesCorps`), la classe de `<main>` (`classeMain`) ;
    - les attributs `data-*` propres à la page posés sur `<html>` (`reglages`) avec leurs **valeurs par défaut** : ce sont les variantes retenues ; le panneau Tweaks n'est pas repris ;
