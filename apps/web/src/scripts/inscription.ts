@@ -1,5 +1,6 @@
 /* Inscription (portée de prototype/inscription.js) : adresse e-mail, puis mot de passe ; le compte
-   reçoit un pseudo tiré au hasard, que le membre garde ou modifie ; confirmation de l'adresse.
+   reçoit un pseudo et un avatar tirés au hasard (RG-07), que le membre garde ou change ;
+   confirmation de l'adresse.
    Chaque étape appelle l'API : disponibilité de l'adresse et du pseudo, création du compte, renvoi
    du lien. Bêta fermée : code d'invitation (INV-01). Google et GitHub (S-10) : le compte est créé
    au retour du service, l'écran du pseudo montre l'identité fournie, puis « Bienvenue ». */
@@ -7,9 +8,14 @@
 import {
   MOTIF_PSEUDO,
   NOMS_SERVICES,
+  adresseAvatar,
+  estAvatarChoisi,
   estResultatService,
   estServiceExterne,
+  nomAvatar,
+  tirerAvatar,
   tirerPseudo,
+  type AvatarChoisi,
   type DisponibiliteEmail,
   type DisponibilitePseudo,
   type LienEnvoye,
@@ -76,21 +82,25 @@ if (conteneur && carte) {
   const blocCode = $('[data-champ-code]');
   const versConnexion = $<HTMLAnchorElement>('[data-auth-lien="connexion"]')?.href ?? '/connexion';
 
-  /** Compte créé pendant cette visite : son pseudo tiré, son adresse et, avec Google ou GitHub,
-      le service et le compte utilisé (rendus par le serveur au retour du service). */
+  /** Compte créé pendant cette visite : son pseudo et son avatar tirés, son adresse et, avec Google
+      ou GitHub, le service et le compte utilisé (rendus par le serveur au retour du service). */
   let compteCree: {
     pseudo: string;
     email: string;
+    avatar?: AvatarChoisi;
     service?: ServiceExterne;
     compte?: string;
   } | null = estServiceExterne(carte.dataset.serviceCree)
     ? {
         pseudo: carte.dataset.pseudoCree ?? '',
         email: carte.dataset.emailCree ?? '',
+        ...(estAvatarChoisi(carte.dataset.avatarCree) ? { avatar: carte.dataset.avatarCree } : {}),
         service: carte.dataset.serviceCree,
         compte: carte.dataset.compteCree ?? '',
       }
     : null;
+  /** Avatar proposé à l'écran, enregistré avec le pseudo s'il diffère de celui du compte. */
+  let avatarPropose: AvatarChoisi = compteCree?.avatar ?? tirerAvatar();
   let arreterRenvoi: (() => void) | null = null;
 
   const fond = creerFond();
@@ -281,6 +291,30 @@ if (conteneur && carte) {
       );
   });
 
+  /* Avatar (RG-07) : tiré au hasard comme le pseudo ; l'icône en propose un autre. Le choix dans la
+     liste complète et l'import d'une photo se font ensuite depuis le profil. */
+
+  const imageAvatar = $<HTMLImageElement>('[data-avatar-image]')!;
+  const autreAvatar = $<HTMLButtonElement>('[data-autre-avatar]')!;
+  function afficherAvatar({ anime = false } = {}): void {
+    imageAvatar.src = adresseAvatar(avatarPropose);
+    if (anime && animations.completes())
+      imageAvatar.animate(
+        [
+          { transform: 'scale(0.8) rotate(-8deg)', opacity: 0.3 },
+          { transform: 'scale(1.05)', opacity: 1, offset: 0.6 },
+          { transform: 'none', opacity: 1 },
+        ],
+        { duration: 420, easing: 'cubic-bezier(0.05, 0.7, 0.1, 1)' },
+      );
+  }
+  autreAvatar.addEventListener('click', () => {
+    avatarPropose = tirerAvatar(avatarPropose);
+    afficherAvatar({ anime: true });
+    autreAvatar.classList.toggle('is-tire');
+    $('[data-avatar-annonce]')!.textContent = `Avatar proposé : ${nomAvatar(avatarPropose)}.`;
+  });
+
   /* Étape 1 : l'adresse e-mail (F-01). Le compte n'est créé qu'avec le mot de passe. */
 
   logos();
@@ -446,7 +480,13 @@ if (conteneur && carte) {
   });
 
   function creer(session: SessionApi): void {
-    compteCree = { pseudo: session.membre?.pseudo ?? '', email: email.value.trim() };
+    const avatar = session.membre?.avatarChoisi;
+    compteCree = {
+      pseudo: session.membre?.pseudo ?? '',
+      email: email.value.trim(),
+      ...(avatar ? { avatar } : {}),
+    };
+    avatarPropose = avatar ?? tirerAvatar();
     mdp.value = '';
     confirmation.value = '';
     jaugeMdp.maj();
@@ -466,6 +506,7 @@ if (conteneur && carte) {
       : '';
     $('[data-repere-cree]')!.hidden = Boolean(service);
     pseudoInput.value = compteCree?.pseudo ?? '';
+    afficherAvatar();
     alerte($('[data-alerte]', formPseudo));
     void pseudo.verifier({ immediat: true });
   }
@@ -484,8 +525,12 @@ if (conteneur && carte) {
       return;
     }
     const choisi = pseudoInput.value.trim();
-    if (choisi !== compteCree?.pseudo) {
-      const reponse = await api<SessionApi>('PATCH', '/api/v1/moi', { pseudo: choisi });
+    const modification = {
+      ...(choisi !== compteCree?.pseudo ? { pseudo: choisi } : {}),
+      ...(avatarPropose !== compteCree?.avatar ? { avatarChoisi: avatarPropose } : {}),
+    };
+    if (Object.keys(modification).length) {
+      const reponse = await api<SessionApi>('PATCH', '/api/v1/moi', modification);
       if (!reponse.ok) {
         occupe(bouton, false);
         const message = reponse.probleme.erreurs?.pseudo;
@@ -499,11 +544,14 @@ if (conteneur && carte) {
         } else
           alerte(
             alerteEl,
-            indisponible('L’enregistrement du pseudo est momentanément indisponible.'),
+            indisponible('L’enregistrement de votre profil est momentanément indisponible.'),
           );
         return;
       }
-      if (compteCree) compteCree.pseudo = choisi;
+      if (compteCree) {
+        compteCree.pseudo = choisi;
+        compteCree.avatar = avatarPropose;
+      }
     }
     occupe(bouton, false);
     // L'adresse fournie par Google ou GitHub est déjà vérifiée : le compte est prêt.
@@ -692,6 +740,10 @@ if (conteneur && carte) {
         [
           'Pseudo',
           'Un pseudo est proposé à la création du compte. Vous pouvez le garder, en tirer un autre ou le modifier : 3 à 30 caractères, lettres, chiffres et tirets.',
+        ],
+        [
+          'Avatar',
+          'Un avatar est tiré au hasard, comme le pseudo ; le bouton à côté en propose un autre. Depuis votre profil, vous pourrez le choisir parmi tous les avatars ou importer votre photo.',
         ],
         [
           'Mot de passe',

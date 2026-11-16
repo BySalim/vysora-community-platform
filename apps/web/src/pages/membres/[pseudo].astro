@@ -6,11 +6,10 @@
    script reprend pour les filtres, la courbe, l'aperçu d'une création et la modification du profil.
    Le propriétaire voit sa progression (RG-88) ; « ?vue=public » lui montre son profil comme les
    autres membres le voient. */
-import { LONGUEURS, type ProfilApi } from '@vysora/shared';
+import { AVATARS, LONGUEURS, adresseAvatar, type ProfilApi } from '@vysora/shared';
 import { donneesProfil } from '../../lib/donnees-structurees';
 import Base from '../../layouts/Base.astro';
 import { appelerApi, ErreurApi } from '../../lib/api';
-import type { Icone } from '../../lib/icones';
 import { ROUTES } from '../../lib/navigation';
 import type { ContexteProfil } from '../../lib/profil/elements';
 import type { DonneesProfil } from '../../lib/profil/donnees';
@@ -51,6 +50,8 @@ if (profil && profil.membre.pseudo !== pseudo)
   return Astro.redirect(`${ROUTES.profil(profil.membre.pseudo)}${Astro.url.search}`, 301);
 
 const proprietaire = Boolean(profil?.prive);
+/** « Modifier le profil » : avatars montrés avant de déplier la liste (prototype : VISIBLES). */
+const AVATARS_VISIBLES = 5;
 const apercu = proprietaire && Astro.url.searchParams.get('vue') === 'public';
 const maintenant = new Date();
 const contexte: ContexteProfil = { prive: proprietaire && !apercu, apercu, maintenant };
@@ -70,14 +71,6 @@ const description = profil
   ? `Créations, contributions et badges de ${profil.membre.nom} sur Vysora.`
   : 'Ce profil est introuvable.';
 
-/** Le prototype dessine l'icône « upload » autrement que le registre commun. */
-const remplacementsIcones: Record<string, Icone> = {
-  upload: {
-    viewBox: '0 0 24 24',
-    corps:
-      '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
-  },
-};
 const icones = [
   'arrow',
   'arrow-up-right',
@@ -93,8 +86,8 @@ const icones = [
   'lock',
   'eye',
   'pen',
+  'shuffle',
   'camera',
-  'upload',
   'share',
   'flag',
   'link',
@@ -146,7 +139,6 @@ const icones = [
     ...(contexte.prive ? { 'pf-proprio': '' } : {}),
   }}
   icones={icones}
-  remplacementsIcones={remplacementsIcones}
   nonIndexee={!profil || proprietaire}
   contenuDeMembre
   typePartage="profile"
@@ -281,40 +273,105 @@ const icones = [
           </div>
           <div class="pf-tiroir-corps">
             <fieldset class="pf-champ">
-              <legend class="pf-label">Photo de profil</legend>
-              <div class="pf-photo-edit">
-                <span class="pf-photo-apercu" data-pf-photo-apercu />
-                <div class="pf-photo-cote">
-                  <div class="pf-photo-btns">
-                    <label class="btn btn-secondary btn-sm pf-fichier" for="pf-photo-fichier">
-                      <svg class="icon icon-sm" aria-hidden="true">
-                        <use href="#i-upload" />
-                      </svg>
-                      <span data-pf-fichier-libelle>Importer une photo</span>
-                    </label>
-                    <input
-                      class="sr-only"
-                      type="file"
-                      id="pf-photo-fichier"
-                      accept="image/jpeg,image/png,image/webp"
-                      aria-describedby="pf-photo-aide pf-photo-erreur"
-                      data-pf-fichier
-                    />
-                    <button class="btn btn-quiet btn-sm" type="button" data-pf-retirer>
-                      Retirer
-                    </button>
-                  </div>
-                  <p class="pf-aide" id="pf-photo-aide">
-                    {typo('JPG, PNG ou WebP, 5 Mo au maximum. La photo est recadrée en carré.')}
-                  </p>
-                  <p
-                    class="pf-erreur"
-                    id="pf-photo-erreur"
-                    role="alert"
-                    data-pf-erreur-photo
-                    hidden
+              <legend class="sr-only">Image et nom</legend>
+              <div class="pf-image">
+                <div class="pf-image-apercu">
+                  <span class="pf-photo-apercu" data-pf-photo-apercu />
+                  <label class="pf-image-camera" for="pf-photo-fichier" title="Importer une photo">
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-camera" />
+                    </svg>
+                    <span class="sr-only">Importer une photo</span>
+                  </label>
+                  <input
+                    class="sr-only"
+                    type="file"
+                    id="pf-photo-fichier"
+                    accept="image/jpeg,image/png,image/webp"
+                    aria-describedby="pf-photo-erreur"
+                    data-pf-fichier
                   />
                 </div>
+                <div class="pf-ident">
+                  <button
+                    class="pf-nom-btn"
+                    type="button"
+                    title="Modifier le nom"
+                    data-pf-nom-modifier
+                  >
+                    <span class="sr-only">Modifier le nom : </span>
+                    <span class="pf-nom-valeur" data-pf-nom-valeur />
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-pen" />
+                    </svg>
+                  </button>
+                  <input
+                    class="pf-nom-saisie"
+                    type="text"
+                    maxlength={LONGUEURS.nomAffiche.max}
+                    autocomplete="name"
+                    spellcheck="false"
+                    aria-label="Nom"
+                    aria-describedby="pf-nom-erreur"
+                    data-pf-nom
+                    hidden
+                  />
+                  <a
+                    class="pf-ident-pseudo"
+                    href={ROUTES.parametres}
+                    title="Modifier le pseudo dans les paramètres"
+                    data-pf-pseudo-fixe
+                  >
+                    {`@${profil.membre.pseudo}`}
+                  </a>
+                  <button class="link-btn pf-retirer" type="button" data-pf-retirer hidden>
+                    Retirer la photo
+                  </button>
+                </div>
+              </div>
+              <p class="pf-erreur" id="pf-nom-erreur" role="alert" data-pf-erreur-nom hidden />
+              <p class="pf-erreur" id="pf-photo-erreur" role="alert" data-pf-erreur-photo hidden />
+              <div class="pf-avatars" data-pf-avatars>
+                {AVATARS.map((avatar, i) => (
+                  <label
+                    class="pf-avatar"
+                    style={`--i:${Math.max(0, i - AVATARS_VISIBLES)}`}
+                    title={avatar.nom}
+                  >
+                    <input class="sr-only" type="radio" name="pf-avatar" value={avatar.id} />
+                    <img
+                      src={adresseAvatar(avatar.id)}
+                      alt={avatar.nom}
+                      width="48"
+                      height="48"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </label>
+                ))}
+                <button
+                  class="pf-avatar-outil"
+                  type="button"
+                  title="Avatar au hasard"
+                  aria-label="Avatar au hasard"
+                  data-pf-avatar-hasard
+                >
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-shuffle" />
+                  </svg>
+                </button>
+                <button
+                  class="pf-avatar-outil pf-avatars-tous"
+                  type="button"
+                  title="Afficher tous les avatars"
+                  aria-label="Afficher tous les avatars"
+                  aria-expanded="false"
+                  data-pf-avatars-tous
+                >
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-chevron-down" />
+                  </svg>
+                </button>
               </div>
             </fieldset>
             <div class="pf-champ">
@@ -364,13 +421,6 @@ const icones = [
                 Portfolio, site ou dépôt de code, à une adresse en https.
               </p>
               <p class="pf-erreur" id="pf-lien-erreur" data-pf-erreur-lien hidden />
-            </div>
-            <div class="pf-champ pf-champ-fixe">
-              <p class="pf-label">Pseudo</p>
-              <p class="pf-fixe">
-                <span data-pf-pseudo-fixe>{`@${profil.membre.pseudo}`}</span>
-                <a href={ROUTES.parametres}>Modifier dans les paramètres</a>
-              </p>
             </div>
           </div>
           <div class="pf-tiroir-pied">

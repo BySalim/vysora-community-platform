@@ -267,6 +267,21 @@ html[data-motion-effective="full"] .propositions:not([hidden]) .proposition:nth-
 .identite-ok { display: inline-flex; align-items: center; gap: 4px; flex: none; color: var(--green-700); font: 600 0.75rem/1 var(--font-body); }
 .identite-ok .icon { width: 14px; height: 14px; stroke-width: 2.4; }
 
+/* Avatar tiré au hasard, au-dessus du pseudo : le bouton en propose un autre. */
+.avatar-tire { position: relative; width: 88px; height: 88px; margin: 0 0 var(--pile); }
+.identite + .avatar-tire { margin-top: var(--pile); }
+.avatar-tire img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--neutral-100); box-shadow: 0 0 0 1px rgba(23, 23, 23, 0.06); }
+.avatar-autre {
+  position: absolute; right: -6px; bottom: -2px; display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
+  border: 1px solid var(--neutral-200); border-radius: 50%; background: var(--white); color: var(--text);
+  box-shadow: 0 4px 12px -4px rgba(16, 24, 40, 0.28); cursor: pointer;
+  transition: background-color var(--d1) var(--ease), border-color var(--d1) var(--ease), color var(--d1) var(--ease), transform var(--d1) var(--ease);
+}
+.avatar-autre:hover { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.avatar-autre:active { transform: scale(0.92); }
+.avatar-autre .icon { width: 16px; height: 16px; stroke-width: 2; transition: transform var(--d4) var(--ease-emph); }
+.avatar-autre.is-tire .icon { transform: rotate(180deg); }
+
 /* Case à cocher */
 .case-champ { display: grid; gap: var(--e2); }
 .case { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--e3); align-items: start; }

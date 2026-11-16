@@ -139,7 +139,7 @@ describe('En-tête et chiffres du profil (PROF-01)', () => {
       etapesGuide(profil())
         .filter((e) => !e.fait)
         .map((e) => e.titre),
-    ).toEqual(['Ajouter une photo', 'Déclarer un premier essai']);
+    ).toEqual(['Choisir un avatar ou une photo', 'Déclarer un premier essai']);
   });
 });
 

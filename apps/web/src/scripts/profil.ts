@@ -1,16 +1,23 @@
 /* Profil (PROF-01), porté de prototype/profil.js : apparitions et compteurs, barre des sections,
    filtres et tri des créations, contributions, courbe de réputation (réticule au survol, flèches au
    clavier), aperçu d'une création (sa fiche lue dans l'API), partage du lien, « Complétez votre
-   profil » et modification du profil (photo, biographie, lien) envoyées à l'API. Le prototype
-   gardait le profil modifié sur l'appareil ; ici, c'est le compte. */
+   profil » et modification du profil (photo ou avatar, nom, biographie, lien) envoyée à l'API. Le
+   prototype gardait le profil modifié sur l'appareil ; ici, c'est le compte. */
 
 import {
+  AVATARS,
+  adresseAvatar,
   erreurLien,
+  estAdresseAvatar,
+  estAvatarChoisi,
   LONGUEURS,
   normaliserLien,
+  tirerAvatar,
   type AvatarApi,
+  type AvatarChoisi,
   type CreationFicheApi,
   type ProfilPublicApi,
+  type SessionApi,
 } from '@vysora/shared';
 import { vueHTML } from '../lib/profil/apercu';
 import type { DonneesProfil } from '../lib/profil/donnees';
@@ -27,6 +34,7 @@ import {
 } from '../lib/profil/sections';
 import { exiger } from './commun/acces';
 import { api } from './commun/api';
+import { etats } from './commun/etats';
 import { $, $$, animations, esc, fmt, icon, toast, typo } from './commun/outils';
 
 const racine = document.documentElement;
@@ -355,7 +363,8 @@ function rendreEntete(changees: string[] = []): void {
   montrerGuide();
   if (animations.niveau() === 'none') return;
   for (const z of changees) {
-    const el = z === 'photo' ? $('.pf-photo-hero') : $(`[data-pf-zone="${z}"]`);
+    const el =
+      z === 'photo' ? $('.pf-photo-hero') : z === 'nom' ? $('#pf-nom') : $(`[data-pf-zone="${z}"]`);
     if (!el) continue;
     el.classList.remove('pf-flash');
     void el.offsetWidth;
@@ -363,16 +372,22 @@ function rendreEntete(changees: string[] = []): void {
   }
 }
 
-/** Photo de l'en-tête du site (menu du compte), mise à jour sans rechargement. */
-function rendrePhotoCompte(adresse: string | null): void {
+/** Image et nom de l'en-tête du site (menu du compte), mis à jour sans rechargement. */
+function rendreCompte(adresse: string | null, nom: string): void {
   for (const ancienne of $$('.compte .compte-avatar')) {
     const taille =
       ancienne.getAttribute('width') ?? (ancienne.style.width.replace('px', '') || '34');
     ancienne.outerHTML = adresse
-      ? `<img class="avatar compte-avatar" src="${esc(adresse)}" alt="" width="${taille}" height="${taille}" decoding="async">`
+      ? `<img class="avatar compte-avatar" src="${esc(adresse)}" alt="" width="${taille}" height="${taille}" style="width:${taille}px;height:${taille}px" decoding="async">`
       : `<span class="avatar compte-avatar" style="width:${taille}px;height:${taille}px" aria-hidden="true">${icon('user', 'icon')}</span>`;
   }
+  for (const b of $$('.compte .compte-qui b')) b.textContent = nom;
 }
+
+/** Avatars montrés avant de déplier la liste (prototype : VISIBLES). */
+const AVATARS_VISIBLES = 5;
+const nomPropre = (valeur: string): string =>
+  valeur.replace(/\s+/g, ' ').trim().slice(0, LONGUEURS.nomAffiche.max);
 
 function initialiserModification(): void {
   const tiroir = $<HTMLDialogElement>('[data-pf-tiroir]');
@@ -380,25 +395,81 @@ function initialiserModification(): void {
   const champBio = $<HTMLTextAreaElement>('[data-pf-bio]');
   const champLien = $<HTMLInputElement>('[data-pf-lien]');
   const fichier = $<HTMLInputElement>('[data-pf-fichier]');
+  const zoneAvatars = $('[data-pf-avatars]');
+  const nomBtn = $<HTMLButtonElement>('[data-pf-nom-modifier]');
+  const nomSaisie = $<HTMLInputElement>('[data-pf-nom]');
   const membre = donnees?.profil.membre;
-  if (!tiroir || !formulaire || !champBio || !champLien || !fichier || !membre) return;
+  if (
+    !tiroir ||
+    !formulaire ||
+    !champBio ||
+    !champLien ||
+    !fichier ||
+    !zoneAvatars ||
+    !nomBtn ||
+    !nomSaisie ||
+    !membre
+  )
+    return;
 
-  /** Photo choisie : nouvelle (fichier), retirée (null) ou inchangée (undefined). */
+  /* RG-07 : l'image de profil est la photo importée, à défaut l'avatar choisi. Le compte garde
+     les deux : retirer la photo fait revenir l'avatar. */
+  let avatarCompte: AvatarChoisi | null = etats.moi()?.avatarChoisi ?? null;
+  const aUnePhoto = () => Boolean(membre.avatar) && !estAdresseAvatar(membre.avatar);
+  /** Nom affiché enregistré ; vide quand le pseudo s'affiche à sa place. */
+  const nomCompte = () => (membre.nom === membre.pseudo ? '' : membre.nom);
+
+  /** Photo : nouvelle (fichier), retirée (null) ou inchangée (undefined). */
   let photo: { fichier: File; apercu: string } | null | undefined;
+  let avatar: AvatarChoisi | null = avatarCompte;
+  let nom = '';
+  let tousVisibles = false;
   let origineCle = '';
   let envoi = false;
 
-  const apercuPhoto = () => {
+  /** Photo montrée dans le volet : la nouvelle, celle du compte, ou aucune. */
+  const photoAffichee = (): string | null =>
+    photo === undefined ? (aUnePhoto() ? membre.avatar : null) : (photo?.apercu ?? null);
+  const oublierPhoto = () => {
+    if (photo?.apercu) URL.revokeObjectURL(photo.apercu);
+    photo = aUnePhoto() ? null : undefined;
+  };
+
+  const majAvatars = () => {
+    const labels = $$('.pf-avatar', zoneAvatars);
+    const choisi = photoAffichee() ? -1 : AVATARS.findIndex((a) => a.id === avatar);
+    labels.forEach((label, i) => {
+      const radio = $<HTMLInputElement>('input', label);
+      if (radio) radio.checked = i === choisi;
+      label.hidden = !tousVisibles && i >= AVATARS_VISIBLES && i !== choisi;
+    });
+    // Repliée, la rangée garde cinq avatars : celui choisi parmi les autres prend la dernière place.
+    const cinquieme = labels[AVATARS_VISIBLES - 1];
+    if (!tousVisibles && choisi >= AVATARS_VISIBLES && cinquieme) cinquieme.hidden = true;
+    zoneAvatars.classList.toggle('is-ouvert', tousVisibles);
+    const tous = $('[data-pf-avatars-tous]', zoneAvatars);
+    if (!tous) return;
+    const libelle = tousVisibles ? 'Afficher moins d’avatars' : 'Afficher tous les avatars';
+    tous.setAttribute('aria-expanded', String(tousVisibles));
+    tous.setAttribute('aria-label', libelle);
+    tous.title = libelle;
+  };
+  const apercuImage = ({ anime = false } = {}) => {
     const zone = $('[data-pf-photo-apercu]');
-    const adresse = photo === undefined ? membre.avatar : (photo?.apercu ?? null);
-    if (zone)
+    const adresse = photoAffichee() ?? (avatar ? adresseAvatar(avatar) : null);
+    if (zone) {
       zone.innerHTML = adresse
-        ? `<img src="${esc(adresse)}" alt="Nouvelle photo de profil" width="88" height="88">`
+        ? `<img src="${esc(adresse)}" alt="" width="96" height="96">`
         : `<span class="pf-photo pf-photo-defaut" aria-hidden="true">${icon('user', '')}</span>`;
+      if (anime) {
+        zone.classList.remove('is-nouveau');
+        void zone.offsetWidth;
+        zone.classList.add('is-nouveau');
+      }
+    }
     const retirer = $<HTMLButtonElement>('[data-pf-retirer]');
-    if (retirer) retirer.hidden = !adresse;
-    const libelle = $('[data-pf-fichier-libelle]');
-    if (libelle) libelle.textContent = adresse ? 'Changer de photo' : 'Importer une photo';
+    if (retirer) retirer.hidden = !photoAffichee();
+    majAvatars();
   };
   const majCompte = () => {
     const compte = $('[data-pf-compte]');
@@ -406,7 +477,7 @@ function initialiserModification(): void {
     compte.textContent = typo(`${fmt(champBio.value.length)} sur ${LONGUEURS.biographie.max}`);
     compte.classList.toggle('is-proche', champBio.value.length > LONGUEURS.biographie.max - 50);
   };
-  const erreur = (cible: 'photo' | 'lien' | 'bio', message: string) => {
+  const erreur = (cible: 'photo' | 'nom' | 'lien' | 'bio', message: string) => {
     const el = $(`[data-pf-erreur-${cible}]`);
     if (el) {
       el.textContent = message ? typo(message) : '';
@@ -414,14 +485,53 @@ function initialiserModification(): void {
     }
     if (cible === 'lien') champLien.setAttribute('aria-invalid', String(Boolean(message)));
     if (cible === 'bio') champBio.setAttribute('aria-invalid', String(Boolean(message)));
+    if (cible === 'nom') nomSaisie.setAttribute('aria-invalid', String(Boolean(message)));
   };
   const verifierLien = () => {
     const message = erreurLien(champLien.value) ?? '';
     erreur('lien', message);
     return !message;
   };
+
+  /* Nom : affiché à côté de l'image, il se modifie sur place (clic sur le nom ou le crayon).
+     Entrée ou un clic ailleurs le garde, Échap l'annule ; vide, c'est le pseudo qui s'affiche. */
+  const afficherNom = () => {
+    const valeur = $('[data-pf-nom-valeur]', nomBtn);
+    if (valeur) valeur.textContent = nom || 'Votre nom';
+    nomBtn.classList.toggle('is-vide', !nom);
+  };
+  const editerNom = () => {
+    nomSaisie.value = nom;
+    nomBtn.hidden = true;
+    nomSaisie.hidden = false;
+    nomSaisie.focus();
+    nomSaisie.select();
+  };
+  const finirNom = (garder: boolean) => {
+    if (nomSaisie.hidden) return;
+    if (garder) nom = nomPropre(nomSaisie.value);
+    nomSaisie.hidden = true;
+    nomBtn.hidden = false;
+    afficherNom();
+  };
+  nomBtn.addEventListener('click', editerNom);
+  nomSaisie.addEventListener('keydown', (evenement) => {
+    if (evenement.key !== 'Enter' && evenement.key !== 'Escape') return;
+    // Échap ferme la saisie, pas le volet ; Entrée garde le nom sans enregistrer le profil.
+    evenement.preventDefault();
+    evenement.stopPropagation();
+    finirNom(evenement.key === 'Enter');
+    nomBtn.focus();
+  });
+  nomSaisie.addEventListener('blur', () => finirNom(true));
+  nomSaisie.addEventListener('input', () => {
+    if (nomSaisie.getAttribute('aria-invalid') === 'true') erreur('nom', '');
+  });
+
   const modifie = () =>
     photo !== undefined ||
+    avatar !== avatarCompte ||
+    nom !== nomCompte() ||
     champBio.value.trim() !== (membre.biographie ?? '') ||
     normaliserLien(champLien.value) !== (membre.lien ?? '');
 
@@ -429,16 +539,20 @@ function initialiserModification(): void {
     if (!exiger('contribuer', 'modifier votre profil')) return;
     origineCle = cible;
     photo = undefined;
+    avatar = avatarCompte;
+    nom = nomCompte();
+    tousVisibles = false;
+    nomSaisie.hidden = true;
+    nomBtn.hidden = false;
+    afficherNom();
     champBio.value = membre.biographie ?? '';
     champLien.value = membre.lien ?? '';
-    erreur('photo', '');
-    erreur('lien', '');
-    erreur('bio', '');
+    for (const c of ['photo', 'nom', 'lien', 'bio'] as const) erreur(c, '');
     const abandon = $('[data-pf-abandon]');
     const actions = $('[data-pf-pied-actions]');
     if (abandon) abandon.hidden = true;
     if (actions) actions.hidden = false;
-    apercuPhoto();
+    apercuImage();
     majCompte();
     tiroir.showModal();
     const focus = { photo: fichier, bio: champBio, lien: champLien }[cible] ?? champBio;
@@ -451,6 +565,7 @@ function initialiserModification(): void {
     ($(`[data-pf-modifier="${origineCle}"]`) ?? $('[data-pf-modifier=""]'))?.focus();
   };
   const demanderFermeture = () => {
+    finirNom(true);
     if (!modifie()) {
       fermer();
       return;
@@ -461,6 +576,33 @@ function initialiserModification(): void {
     if (actions) actions.hidden = true;
     $<HTMLButtonElement>('[data-pf-continuer]')?.focus();
   };
+
+  const choisirAvatar = (id: AvatarChoisi) => {
+    avatar = id;
+    if (photoAffichee()) oublierPhoto();
+    erreur('photo', '');
+    apercuImage({ anime: true });
+  };
+  zoneAvatars.addEventListener('change', (evenement) => {
+    const radio = (evenement.target as Element).closest<HTMLInputElement>(
+      'input[name="pf-avatar"]',
+    );
+    if (radio && estAvatarChoisi(radio.value)) choisirAvatar(radio.value);
+  });
+  zoneAvatars.addEventListener('click', (evenement) => {
+    const cible = evenement.target as Element;
+    const hasard = cible.closest<HTMLElement>('[data-pf-avatar-hasard]');
+    if (hasard) {
+      // Avec une photo à l'écran, l'avatar actuel compte aussi comme un changement.
+      choisirAvatar(tirerAvatar(photoAffichee() ? null : avatar));
+      hasard.classList.toggle('is-tire');
+      return;
+    }
+    if (cible.closest('[data-pf-avatars-tous]')) {
+      tousVisibles = !tousVisibles;
+      majAvatars();
+    }
+  });
 
   fichier.addEventListener('change', () => {
     const f = fichier.files?.[0];
@@ -477,15 +619,11 @@ function initialiserModification(): void {
     if (photo?.apercu) URL.revokeObjectURL(photo.apercu);
     photo = { fichier: f, apercu: URL.createObjectURL(f) };
     erreur('photo', '');
-    apercuPhoto();
-    const zone = $('[data-pf-photo-apercu]');
-    zone?.classList.remove('is-nouveau');
-    void zone?.offsetWidth;
-    zone?.classList.add('is-nouveau');
+    apercuImage({ anime: true });
   });
   $('[data-pf-retirer]')?.addEventListener('click', () => {
-    photo = null;
-    apercuPhoto();
+    oublierPhoto();
+    apercuImage({ anime: true });
     fichier.focus();
   });
   champBio.addEventListener('input', majCompte);
@@ -501,6 +639,7 @@ function initialiserModification(): void {
   formulaire.addEventListener('submit', async (evenement) => {
     evenement.preventDefault();
     if (envoi) return;
+    finirNom(true);
     if (!verifierLien()) {
       champLien.focus();
       return;
@@ -508,7 +647,7 @@ function initialiserModification(): void {
     envoi = true;
     const bouton = $<HTMLButtonElement>('button[type="submit"]', formulaire);
     bouton?.setAttribute('aria-busy', 'true');
-    const changees: string[] = [];
+    const avant = { image: membre.avatar, nom: membre.nom };
     try {
       // La photo d'abord : une image refusée laisse le reste du formulaire ouvert.
       if (photo !== undefined) {
@@ -521,10 +660,36 @@ function initialiserModification(): void {
           erreur('photo', reponse.probleme.detail ?? reponse.probleme.title);
           return;
         }
-        if (reponse.donnees.avatar !== membre.avatar) changees.push('photo');
         membre.avatar = reponse.donnees.avatar;
         photo = undefined;
-        rendrePhotoCompte(membre.avatar);
+      }
+      // Nom et avatar (RG-07) : informations du compte, enregistrées comme dans les paramètres.
+      const compte = {
+        ...(nom !== nomCompte() ? { nomAffiche: nom } : {}),
+        ...(avatar && avatar !== avatarCompte ? { avatarChoisi: avatar } : {}),
+      };
+      if (Object.keys(compte).length) {
+        const reponse = await api<SessionApi>('PATCH', '/api/v1/moi', compte);
+        if (!reponse.ok) {
+          const message = reponse.probleme.erreurs?.nomAffiche;
+          if (message) {
+            erreur('nom', message);
+            editerNom();
+          } else
+            toast(
+              reponse.probleme.detail ??
+                'L’enregistrement n’a pas abouti. Réessayez dans un instant.',
+              'alert',
+            );
+          return;
+        }
+        etats.appliquer(reponse.donnees);
+        const connecte = reponse.donnees.membre;
+        if (connecte) {
+          membre.nom = connecte.nom;
+          membre.avatar = connecte.avatar;
+          avatarCompte = connecte.avatarChoisi;
+        }
       }
       const reponse = await api<ProfilPublicApi>('PATCH', '/api/v1/moi/profil', {
         biographie: champBio.value,
@@ -542,10 +707,15 @@ function initialiserModification(): void {
           );
         return;
       }
+      const changees: string[] = [];
+      if (membre.avatar !== avant.image) changees.push('photo');
+      if (membre.nom !== avant.nom) changees.push('nom');
       if (reponse.donnees.biographie !== membre.biographie) changees.push('bio');
       if (reponse.donnees.lien !== membre.lien) changees.push('lien');
       membre.biographie = reponse.donnees.biographie;
       membre.lien = reponse.donnees.lien;
+      if (changees.includes('photo') || changees.includes('nom'))
+        rendreCompte(membre.avatar, membre.nom);
       tiroir.close();
       rendreEntete(changees);
       toast(

@@ -467,19 +467,64 @@ img.pf-photo { background: var(--neutral-200); box-shadow: 0 0 0 1px rgba(23, 23
 .pf-sous-champ { display: flex; justify-content: space-between; gap: 16px; }
 .pf-compte { flex: none; margin: 8px 0 0; color: var(--text-muted); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
 .pf-compte.is-proche { color: var(--amber-700); font-weight: 600; }
-.pf-photo-edit { display: flex; align-items: center; gap: 20px; }
-.pf-photo-apercu { width: 88px; height: 88px; flex: none; overflow: hidden; border-radius: 50%; }
-.pf-photo-apercu img { width: 100%; height: 100%; object-fit: cover; }
+/* Image et nom : l'appareil photo posé sur l'aperçu, le nom modifiable sur place à côté,
+   puis une rangée d'avatars terminée par deux icônes (au hasard, tous les avatars). */
+.pf-image { display: flex; align-items: center; gap: 20px; }
+.pf-ident { display: grid; flex: 1; justify-items: start; gap: 2px; min-width: 0; }
+.pf-nom-btn, .pf-nom-saisie {
+  max-width: 100%; margin: 0 0 0 -8px; padding: 3px 8px; border: 0; border-radius: 8px;
+  color: var(--text); font: 700 1.375rem/1.3 var(--font-heading); letter-spacing: -0.02em;
+}
+.pf-nom-btn {
+  display: inline-flex; align-items: center; gap: 10px; background: none; text-align: left; cursor: text;
+  transition: background-color var(--d-quick) var(--ease);
+}
+.pf-nom-valeur { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-nom-btn .icon { flex: none; width: 16px; height: 16px; color: var(--text-muted); transition: color var(--d-quick) var(--ease), transform var(--d-std) var(--ease-emph); }
+.pf-nom-btn:hover { background: var(--panel); }
+.pf-nom-btn:hover .icon { color: var(--accent-text); transform: rotate(-8deg); }
+.pf-nom-btn.is-vide .pf-nom-valeur { color: var(--text-muted); }
+.pf-nom-saisie { width: calc(100% + 8px); background: var(--panel); box-shadow: inset 0 -2px 0 var(--accent); outline: none; }
+.pf-ident-pseudo { color: var(--text-muted); font: 500 0.875rem/1.4 var(--font-body); text-decoration: none; }
+.pf-ident-pseudo:hover { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.pf-retirer { margin-top: 6px; }
+.pf-image-apercu { position: relative; width: 96px; height: 96px; flex: none; }
+.pf-photo-apercu { display: block; width: 100%; height: 100%; overflow: hidden; border-radius: 50%; }
+.pf-photo-apercu img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .pf-photo-apercu .pf-photo-defaut .icon { width: 42%; height: 42%; }
 .pf-photo-apercu.is-nouveau { animation: pf-pop 560ms var(--ease-emph); }
-.pf-photo-cote { min-width: 0; }
-.pf-photo-btns { display: flex; flex-wrap: wrap; gap: 6px; }
-.pf-fichier { cursor: pointer; }
-.pf-photo-btns:has(input:focus-visible) .pf-fichier { outline: 2px solid var(--focus); outline-offset: 2px; }
-.pf-champ-fixe .pf-label { margin-bottom: 8px; }
-.pf-fixe { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 0; padding: 12px 14px; border-radius: var(--r-control); background: var(--panel); color: var(--text); font: 600 0.9375rem/1.3 var(--font-body); }
-.pf-fixe a { font-size: 0.8125rem; text-decoration: none; }
-.pf-fixe a:hover { text-decoration: underline; }
+.pf-image-camera {
+  position: absolute; right: -4px; bottom: -2px; display: grid; place-items: center; width: 36px; height: 36px;
+  border-radius: 50%; background: var(--white); color: var(--ink); cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(23, 23, 23, 0.08), 0 8px 18px -8px rgba(23, 23, 23, 0.45);
+  transition: background-color var(--d-quick) var(--ease), color var(--d-quick) var(--ease), transform var(--d-std) var(--ease-emph);
+}
+.pf-image-camera:hover { background: var(--accent); color: var(--on-accent); transform: scale(1.06); }
+.pf-image-camera .icon { width: 17px; height: 17px; }
+.pf-image-apercu:has(input:focus-visible) .pf-image-camera { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.pf-avatars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
+.pf-avatar { position: relative; display: block; aspect-ratio: 1; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pf-avatar img {
+  display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--neutral-100);
+  box-shadow: 0 0 0 1px rgba(23, 23, 23, 0.06); transition: transform 200ms var(--ease-emph), box-shadow 200ms var(--ease);
+}
+.pf-avatar:hover img { transform: scale(1.07); }
+.pf-avatar:active img { transform: scale(0.95); }
+.pf-avatar:has(input:checked) img { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--accent); }
+.pf-avatar:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 6px; }
+.pf-avatars.is-ouvert .pf-avatar { animation: pf-pop 420ms var(--ease-emph) both; animation-delay: calc(var(--i, 0) * 25ms); }
+.pf-avatars.is-ouvert .pf-avatar:nth-child(-n+5) { animation: none; }
+.pf-avatar-outil {
+  display: grid; place-items: center; width: 100%; aspect-ratio: 1; padding: 0;
+  border: 1px solid var(--border); border-radius: 50%; background: var(--white); color: var(--text-muted); cursor: pointer;
+  transition: background-color var(--d-quick) var(--ease), border-color var(--d-quick) var(--ease), color var(--d-quick) var(--ease), transform var(--d-quick) var(--ease);
+}
+.pf-avatar-outil:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+.pf-avatar-outil:active { transform: scale(0.94); }
+.pf-avatar-outil .icon { width: 18px; height: 18px; transition: transform 560ms var(--ease-emph); }
+.pf-avatar-outil.is-tire .icon { transform: rotate(180deg); }
+.pf-avatars-tous[aria-expanded="true"] .icon { transform: rotate(180deg); }
 .pf-tiroir-pied { padding: 16px 28px 20px; border-top: 1px solid var(--border); background: var(--white); }
 .pf-pied-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .pf-abandon { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; animation: rise-in 260ms var(--ease-emph); }
@@ -599,6 +644,8 @@ img.pf-photo { background: var(--neutral-200); box-shadow: 0 0 0 1px rgba(23, 23
   .pf-v-media { height: 75vw; }
   .pf-v-media.is-affiche { height: 100vw; }
   .pf-v-pied .btn { flex: 1 1 auto; }
-  .pf-photo-edit { align-items: flex-start; }
-  .pf-photo-apercu { width: 72px; height: 72px; }
+  .pf-image-apercu { width: 84px; height: 84px; }
+  .pf-image { gap: 16px; }
+  .pf-nom-btn, .pf-nom-saisie { font-size: 1.1875rem; }
+  .pf-avatars { gap: 8px; }
 }

@@ -1,6 +1,7 @@
 ---
 /* Page Inscription, portée de prototype/inscription.html (inscription.js, auth.js, auth.css) :
-   adresse e-mail, mot de passe, pseudo proposé, confirmation de l'adresse, session déjà ouverte.
+   adresse e-mail, mot de passe, pseudo et avatar proposés (RG-07), confirmation de l'adresse,
+   session déjà ouverte.
    Le lien de vérification reçu par e-mail (?verifier=…) est lu ici par le serveur.
    Bêta fermée (INV-01) : le code d'invitation est demandé (champ), ou repris d'un lien
    d'invitation (?invitation=…, « Claire Dubois vous invite »).
@@ -9,6 +10,7 @@
    le service ; sinon `?resultat=…` dit pourquoi (inscription.ts). */
 import {
   MOTIF_CODE_INVITATION,
+  adresseAvatar,
   estServiceExterne,
   type ConditionsInscriptionApi,
   type DocumentLegalApi,
@@ -27,7 +29,9 @@ import { contexteArrivee } from '../lib/retour';
 import '../styles/auth.css';
 
 const contexte = contexteArrivee(Astro.url.searchParams);
-const { etat } = Astro.locals;
+const { etat, membre } = Astro.locals;
+/** RG-07 : avatar tiré à la création du compte ; le script le remplace par celui du compte créé. */
+const avatarInitial = membre?.avatarChoisi ?? 'renard';
 const verifier = Astro.url.searchParams.get('verifier');
 
 let adresseClient: string | undefined;
@@ -161,6 +165,7 @@ const visible = (nom: string) => nom === ecran;
     data-requete={contexte.requete || undefined}
     data-service-cree={compteService?.service}
     data-pseudo-cree={compteService?.pseudo}
+    data-avatar-cree={compteService ? membre?.avatarChoisi : undefined}
     data-email-cree={compteService?.email}
     data-compte-cree={compteService?.compte}
   >
@@ -393,11 +398,31 @@ const visible = (nom: string) => nom === ecran;
           <span>Compte créé</span>
         </p>
         <h1 id="t-pseudo" tabindex="-1">
-          Votre pseudo
+          Votre profil
         </h1>
-        <p class="auth-intro">Choisi au hasard : gardez-le ou modifiez-le.</p>
+        <p class="auth-intro">Choisis au hasard : gardez-les ou changez-les.</p>
         <form class="auth-bloc" id="form-pseudo" novalidate>
           <div class="identite" data-identite hidden></div>
+          <div class="avatar-tire">
+            <img
+              src={adresseAvatar(avatarInitial)}
+              alt="Votre avatar"
+              width="88"
+              height="88"
+              data-avatar-image
+            />
+            <button
+              class="avatar-autre"
+              type="button"
+              aria-label="Proposer un autre avatar"
+              data-autre-avatar
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-shuffle"></use>
+              </svg>
+            </button>
+            <p class="sr-only" aria-live="polite" data-avatar-annonce></p>
+          </div>
           <div class="champ" data-champ-pseudo>
             <label for="in-pseudo">Pseudo</label>
             <div class="saisie a-etat a-de">

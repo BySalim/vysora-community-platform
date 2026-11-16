@@ -44,7 +44,7 @@ export function etapesGuide(p: ProfilApi) {
   return [
     {
       fait: Boolean(p.membre.avatar),
-      titre: 'Ajouter une photo',
+      titre: 'Choisir un avatar ou une photo',
       texte: 'Les membres reconnaissent plus vite vos réponses.',
       action: 'photo',
     },
@@ -128,7 +128,7 @@ export function heroHTML(p: ProfilApi, c: ContexteProfil): string {
       <div class="container pf-hero-in">
         <div class="pf-photo-zone pf-entree" style="--i:0">
           ${photoHTML(m, 148, 'pf-photo-hero', c.prive)}
-          ${c.prive ? `<button class="pf-photo-btn" type="button" data-pf-modifier="photo" aria-label="${m.avatar ? 'Changer la photo de profil' : 'Ajouter une photo de profil'}">${icone('camera', '')}</button>` : ''}
+          ${c.prive ? `<button class="pf-photo-btn" type="button" data-pf-modifier="photo" aria-label="${m.avatar ? 'Changer l’image de profil' : 'Choisir une image de profil'}">${icone('camera', '')}</button>` : ''}
         </div>
         <div class="pf-identite">
           ${c.prive ? `<p class="kicker pf-entree" style="--i:1">${icone('user')}Mon profil</p>` : ''}

@@ -1,4 +1,9 @@
-import type { BadgeObtenuApi, OutilResumeApi, ProfilApi } from '@vysora/shared';
+import {
+  estAdresseAvatar,
+  type BadgeObtenuApi,
+  type OutilResumeApi,
+  type ProfilApi,
+} from '@vysora/shared';
 import { embleme } from '../accueil/elements';
 import { icone, jourRelatif, logo } from '../explorer/elements';
 import { esc, t } from '../texte';
@@ -77,7 +82,17 @@ export const hexagone = (classe = ''): string =>
 export const emblemeBadge = (badge: Pick<BadgeObtenuApi, 'icone' | 'ton'>, classe = ''): string =>
   classe ? embleme(badge).replace('class="emblem"', `class="emblem ${classe}"`) : embleme(badge);
 
-/** Photo du membre, ou la silhouette (prototype : photoHTML). */
+/** Texte alternatif de l'image de profil : photo importée ou avatar choisi (RG-07). */
+const altImage = (membre: Pick<ProfilApi['membre'], 'avatar' | 'nom'>, prive: boolean): string =>
+  estAdresseAvatar(membre.avatar)
+    ? prive
+      ? 'Votre avatar'
+      : t(`Avatar de ${membre.nom}`)
+    : prive
+      ? 'Votre photo de profil'
+      : t(`Photo de ${membre.nom}`);
+
+/** Image de profil du membre (photo, à défaut avatar), ou la silhouette (prototype : photoHTML). */
 export function photoHTML(
   membre: Pick<ProfilApi['membre'], 'avatar' | 'nom'>,
   taille: number,
@@ -85,8 +100,8 @@ export function photoHTML(
   prive: boolean,
 ): string {
   return membre.avatar
-    ? `<img class="pf-photo ${classe}" src="${esc(membre.avatar)}" alt="${prive ? 'Votre photo de profil' : t(`Photo de ${membre.nom}`)}" width="${taille}" height="${taille}">`
-    : `<span class="pf-photo pf-photo-defaut ${classe}" role="img" aria-label="${prive ? 'Aucune photo de profil' : t(`Profil de ${membre.nom}`)}">${icone('user', '')}</span>`;
+    ? `<img class="pf-photo ${classe}" src="${esc(membre.avatar)}" alt="${altImage(membre, prive)}" width="${taille}" height="${taille}">`
+    : `<span class="pf-photo pf-photo-defaut ${classe}" role="img" aria-label="${prive ? 'Aucune image de profil' : t(`Profil de ${membre.nom}`)}">${icone('user', '')}</span>`;
 }
 
 /** Outil et modèle (prototype : outilHTML). */

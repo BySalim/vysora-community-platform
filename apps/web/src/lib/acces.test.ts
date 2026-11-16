@@ -107,7 +107,7 @@ describe('contexteServeur', () => {
   it('reprend la page, l’adresse publique et le membre', () => {
     const locals = {
       etat: { session: 'membre', role: 'membre', niveau: 'artisan', compte: 'actif' },
-      membre: { id: 1, pseudo: 'aya', nom: 'aya', points: 640, avatar: null },
+      membre: { id: 1, pseudo: 'aya', nom: 'aya', points: 640, avatar: null, avatarChoisi: null },
       nonLues: 0,
       suspensionJusqua: null,
       conditionsDepuis: null,
