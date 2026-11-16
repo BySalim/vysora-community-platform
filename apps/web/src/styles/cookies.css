@@ -16,7 +16,9 @@
 .ck-panneau:not([open]) { display: none; }
 .ck-panneau::backdrop { background: rgba(5, 11, 28, 0.55); animation: ck-voile 380ms var(--ease); }
 /* La page ne défile plus derrière la fenêtre. */
-html:has(.ck-panneau[open]) { overflow: hidden; }
+html:has(.ck-panneau[open]) { overflow: hidden; scrollbar-gutter: stable; }
+/* Safari sur iPhone fait encore défiler le corps de la page sans cette règle. */
+html:has(.ck-panneau[open]) body { overflow: hidden; }
 @keyframes ck-entree { from { opacity: 0; transform: translateY(24px) scale(0.98); } }
 @keyframes ck-voile { from { opacity: 0; } }
 :root:not(.js) .ck-panneau, :root:not(.js) .ck-choix { display: none; }
