@@ -156,16 +156,14 @@
           <p class="kicker" data-enter="1"><svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg>Explorer</p>
           <h1 id="ex-title" data-enter="2">Que voulez-vous réussir&nbsp;?</h1>
           <p class="ex-lead" data-enter="3">Chaque guide rassemble les parcours que la communauté a documentés pour un même objectif&nbsp;: la méthode qui ressort, les pièges à éviter et ce qui fonctionne avec vos outils.</p>
-          <form class="ex-search" role="search" data-search data-enter="4">
-            <label class="sr-only" for="ex-q">Décrivez ce que vous voulez réussir</label>
+          <div class="ex-search" data-enter="4">
             <div class="ex-field">
               <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-              <input id="ex-q" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="Par exemple : prendre des rendez-vous en ligne" aria-describedby="ex-search-help">
+              <button class="champ-recherche" id="ex-q" type="button" aria-label="Rechercher dans Explorer" aria-haspopup="dialog" aria-expanded="false" aria-keyshortcuts="/" data-recherche-ouvrir data-recherche-portee="guides"><span data-ex-q>Par exemple : prendre des rendez-vous en ligne</span></button>
               <button class="ex-clear" type="button" aria-label="Effacer la recherche" data-clear-query hidden><svg class="icon icon-sm" aria-hidden="true"><use href="#i-close"/></svg></button>
               <kbd class="ex-kbd" aria-hidden="true">/</kbd>
             </div>
-            <p class="sr-only" id="ex-search-help">La liste des guides se met à jour pendant la saisie. Appuyez sur Entrée pour ouvrir le premier guide.</p>
-          </form>
+          </div>
           <p class="ex-often" data-enter="5"><span>Souvent cherché</span><span class="ex-often-list" data-often></span></p>
           </div>
           <figure class="ex-hero-card" data-hero-card data-enter="6"></figure>

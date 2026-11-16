@@ -674,7 +674,12 @@ bolong.jpg   5 220 Ko <span class="k">→</span> <span class="s">477 Ko</span>
   /* Recherche sur tout le site --------------------------------------------
      La loupe de l'en-tête ([data-recherche-ouvrir]) et Ctrl K (⌘ K) ouvrent la recherche
      (recherche.js et recherche.css), chargée au premier survol de la loupe ou après
-     le chargement de la page, puis gardée pour les ouvertures suivantes. */
+     le chargement de la page, puis gardée pour les ouvertures suivantes.
+     Les champs de recherche des pages (accueil, Explorer, forum) et le bouton « Rechercher »
+     d'Apprendre n'ont que l'aspect d'une saisie : ils portent eux aussi [data-recherche-ouvrir]
+     et ouvrent cette même recherche, qui part de la loupe de l'en-tête, avec le texte qu'ils
+     affichent (data-recherche-texte) ou la touche frappée sur le champ, sur l'onglet de leur
+     page (data-recherche-portee : guides, forum, apprendre). */
 
   let recherche = null;
   function chargerRecherche() {
@@ -688,20 +693,30 @@ bolong.jpg   5 220 Ko <span class="k">→</span> <span class="s">477 Ko</span>
     }
     return recherche;
   }
-  const ouvrirRecherche = declencheur => chargerRecherche().then(R => R && R.ouvrir(declencheur));
+  const loupeEnTete = () => $('.site-header [data-recherche-ouvrir]');
+  const ouvrirRecherche = (declencheur, texte = '') => chargerRecherche().then(R => R && R.ouvrir(
+    declencheur?.closest('.site-header') ? declencheur : loupeEnTete() || declencheur,
+    { texte, portee: declencheur?.dataset?.recherchePortee || null }
+  ));
   function monterRecherche() {
     document.addEventListener('click', event => {
       const declencheur = event.target.closest('[data-recherche-ouvrir]');
       if (!declencheur) return;
       event.preventDefault();
-      ouvrirRecherche(declencheur);
+      ouvrirRecherche(declencheur, declencheur.dataset.rechercheTexte || '');
     });
     const intention = event => { if (event.target.closest?.('[data-recherche-ouvrir]')) chargerRecherche().then(R => R && R.prechauffer()); };
     ['pointerover', 'focusin', 'touchstart'].forEach(type => document.addEventListener(type, intention, { passive: true }));
     document.addEventListener('keydown', event => {
+      const champ = event.target.closest?.('.champ-recherche[data-recherche-ouvrir]');
+      if (champ && String(event.key || '').length === 1 && event.key !== ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        ouvrirRecherche(champ, (champ.dataset.rechercheTexte || '') + event.key);
+        return;
+      }
       if (String(event.key || '').toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
       event.preventDefault();
-      ouvrirRecherche($('.site-header [data-recherche-ouvrir]') || $('[data-recherche-ouvrir]'));
+      ouvrirRecherche(loupeEnTete() || $('[data-recherche-ouvrir]'));
     });
     const plusTard = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
     const precharger = () => plusTard(() => chargerRecherche(), { timeout: 4000 });

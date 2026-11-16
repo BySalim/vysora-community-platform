@@ -48,7 +48,8 @@
   const els = {
     viewIndex: $('[data-view="index"]'),
     viewGuide: $('[data-view="guide"]'),
-    input: $('#ex-q'),
+    champ: $('#ex-q'),
+    texte: $('[data-ex-q]'),
     guides: $('[data-guides]'),
     domains: $('[data-domains]'),
     sub: $('[data-index-sub]'),
@@ -142,7 +143,7 @@
       <p class="ex-hc-head"><a href="${g.href}" data-guide-link="${g.id}">${t(g.short)}</a></p>
       <p class="ex-hc-caption">La méthode qui ressort de ${plural(g.items.length, 'parcours', 'parcours')}</p>
       <ol class="ex-hc-steps">${g.path.map((step, i) => `<li style="--i:${i}"${pit && pit.step === i ? ' class="has-pit"' : ''}><span class="ex-hc-node" aria-hidden="true">${i + 1}</span><span class="ex-hc-text">${t(step.title)}<small>${step.sources.length} sur ${g.items.length}</small></span>${pit && pit.step === i ? `<span class="ex-hc-pit"><span class="ex-ring" aria-hidden="true"></span><span>Piège fréquent : ${t(pit.title.charAt(0).toLowerCase() + pit.title.slice(1))}</span></span>` : ''}</li>`).join('')}</ol>
-      <div class="ex-hc-foot"><span class="ex-avatars" aria-hidden="true">${g.authors.slice(0, 4).map(name => avatar(name, 24)).join('')}</span><span>${plural(g.repro, 'reproduction', 'reproductions')}${g.rate !== null ? ` · ${g.rate} % réussies` : ''}</span><span class="ex-hc-go"><kbd class="ex-hc-enter" aria-hidden="true">Entrée</kbd><a class="link-arrow" href="${g.href}" data-guide-link="${g.id}">Ouvrir le guide${icon('arrow')}</a></span></div>
+      <div class="ex-hc-foot"><span class="ex-avatars" aria-hidden="true">${g.authors.slice(0, 4).map(name => avatar(name, 24)).join('')}</span><span>${plural(g.repro, 'reproduction', 'reproductions')}${g.rate !== null ? ` · ${g.rate} % réussies` : ''}</span><span class="ex-hc-go"><a class="link-arrow" href="${g.href}" data-guide-link="${g.id}">Ouvrir le guide${icon('arrow')}</a></span></div>
     </div>`;
   }
   function heroNoneHTML() {
@@ -224,14 +225,25 @@
   const EXAMPLES = ['prendre des rendez-vous en ligne', 'un logo lisible en petit format', 'trier mes factures automatiquement', 'une série d’illustrations au même style', 'un script qui range mes fichiers', 'répondre aux avis de mes clients'];
   const placeholder = { index: 0, timer: null };
   function rotatePlaceholder() {
-    if (!V.motion.full() || state.guide || document.activeElement === els.input || els.input.value || document.hidden) return;
+    if (!V.motion.full() || state.guide || document.activeElement === els.champ || state.q || document.hidden) return;
     placeholder.index = (placeholder.index + 1) % EXAMPLES.length;
     const prefix = 'Par exemple : ';
     const text = `${prefix}${EXAMPLES[placeholder.index]}`;
     let n = prefix.length;
     clearTimeout(placeholder.timer);
-    const step = () => { n += 1; els.input.placeholder = typo(text.slice(0, n)); if (n < text.length) placeholder.timer = setTimeout(step, 26); };
+    const step = () => { n += 1; els.texte.textContent = typo(text.slice(0, n)); if (n < text.length) placeholder.timer = setTimeout(step, 26); };
     step();
+  }
+
+  /* Le champ n'a que l'aspect d'une saisie : il ouvre la recherche de l'en-tête (commun.js),
+     avec la recherche en cours (?q=, « Souvent cherché »), que la croix efface. */
+  function afficherRecherche() {
+    clearTimeout(placeholder.timer);
+    els.champ.classList.toggle('a-texte', Boolean(state.q));
+    els.texte.textContent = typo(state.q || `Par exemple : ${EXAMPLES[placeholder.index]}`);
+    if (state.q) els.champ.dataset.rechercheTexte = state.q;
+    else delete els.champ.dataset.rechercheTexte;
+    $('[data-clear-query]').hidden = !state.q;
   }
 
   /* ------------------------------------------------------------------ */
@@ -526,8 +538,7 @@
       if (focus) { window.scrollTo({ top: 0 }); $('#ex-guide-title')?.focus({ preventScroll: true }); }
     } else {
       document.title = 'Explorer · Vysora';
-      els.input.value = state.q;
-      $('[data-clear-query]').hidden = !state.q;
+      afficherRecherche();
       renderIndex();
       compare.clear();
       updateCompareBar();
@@ -583,7 +594,7 @@
     const domain = event.target.closest('[data-domain]');
     if (domain && domain.closest('[data-domains]')) { state.domain = domain.dataset.domain === state.domain ? '' : domain.dataset.domain; writeURL(true); renderIndex(); return; }
     const term = event.target.closest('[data-term]');
-    if (term) { event.preventDefault(); state.q = term.dataset.term; els.input.value = state.q; writeURL(true); renderIndex(); $('[data-clear-query]').hidden = false; $('#ex-index-title').scrollIntoView({ behavior: V.motion.full() ? 'smooth' : 'auto' }); return; }
+    if (term) { event.preventDefault(); state.q = term.dataset.term; afficherRecherche(); writeURL(true); renderIndex(); $('#ex-index-title').scrollIntoView({ behavior: V.motion.full() ? 'smooth' : 'auto' }); return; }
     if (event.target.closest('[data-compare-open]')) { openCompare(); return; }
     if (event.target.closest('[data-compare-clear]')) { compare.clear(); $$('[data-compare-id]').forEach(box => { box.checked = false; box.disabled = false; }); updateCompareBar(); return; }
     if (event.target.closest('[data-close-dialog]')) event.target.closest('dialog').close();
@@ -655,11 +666,9 @@
       $(`[data-frise="${state.frise}"]`)?.focus();
       return;
     }
-    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.closest('input, textarea, select, [contenteditable="true"]')) {
+    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.closest('input, textarea, select, [contenteditable="true"], [data-recherche-ouvrir]')) {
       event.preventDefault();
-      if (state.guide) backToIndex();
-      els.input.focus();
-      els.input.select();
+      V.ouvrirRecherche(els.champ, state.q);
     }
   });
 
@@ -669,23 +678,8 @@
   /* Recherche d'objectif                                                 */
   /* ------------------------------------------------------------------ */
 
-  let typingTimer;
-  els.input.addEventListener('input', () => {
-    $('[data-clear-query]').hidden = !els.input.value;
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => { state.q = els.input.value.trim(); writeURL(false); renderIndex(); }, 120);
-  });
-  $('[data-search]').addEventListener('submit', event => {
-    event.preventDefault();
-    clearTimeout(typingTimer);
-    state.q = els.input.value.trim();
-    renderIndex();
-    const first = $('[data-guide-link]', els.guides);
-    writeURL(false);
-    if (state.q && first) openGuide(first.dataset.guideLink);
-    else { writeURL(true); $('#ex-index-title').scrollIntoView({ behavior: V.motion.full() ? 'smooth' : 'auto' }); }
-  });
-  $('[data-clear-query]').addEventListener('click', () => { els.input.value = ''; state.q = ''; $('[data-clear-query]').hidden = true; writeURL(true); renderIndex(); els.input.focus(); });
+  /* La saisie se fait dans la recherche de l'en-tête : Entrée y mène ici avec ?q=. */
+  $('[data-clear-query]').addEventListener('click', () => { state.q = ''; afficherRecherche(); writeURL(true); renderIndex(); els.champ.focus(); });
   $('[data-often]').innerHTML = X.frequent.map(term => `<a href="explorer.html?q=${encodeURIComponent(term)}" data-term="${esc(term)}">${t(term)}</a>`).join('');
 
   /* ------------------------------------------------------------------ */

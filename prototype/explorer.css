@@ -68,9 +68,8 @@
 .ex-field:hover { border-color: var(--neutral-400); }
 .ex-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft), 0 16px 36px -22px rgba(23, 23, 23, 0.35); }
 .ex-field > .icon { color: var(--text-muted); }
-.ex-field input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 1.0625rem/1.2 var(--font-body); }
-.ex-field input::placeholder { color: var(--neutral-500); font-weight: 400; }
-.ex-field input::-webkit-search-cancel-button { display: none; }
+.ex-field .champ-recherche { color: var(--neutral-500); font: 400 1.0625rem/1.2 var(--font-body); }
+.ex-field .champ-recherche.a-texte { color: var(--text); font-weight: 500; }
 .ex-clear { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--text); cursor: pointer; }
 .ex-clear:hover { background: var(--surface-3); }
 .ex-kbd { display: grid; place-items: center; min-width: 26px; height: 26px; padding: 0 7px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; color: var(--text-muted); font: 600 0.75rem/1 var(--font-body); }
@@ -544,7 +543,7 @@
 @media (max-width: 760px) {
   .ex-hero h1 { font-size: 2.5rem; }
   .ex-field { height: 56px; padding: 0 10px 0 16px; }
-  .ex-field input { font-size: 1rem; }
+  .ex-field .champ-recherche { font-size: 1rem; }
   .ex-kbd { display: none; }
   .ex-often { flex-wrap: nowrap; overflow-x: auto; margin-right: -16px; padding-right: 16px; scrollbar-width: none; white-space: nowrap; }
   .ex-often::-webkit-scrollbar { display: none; }
@@ -608,8 +607,6 @@
 .ex-hc-steps { margin-bottom: 18px; }
 .ex-hc-text { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .ex-hc-pit > span:last-child { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.ex-hc-enter { display: none; padding: 3px 7px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--white); color: var(--text-muted); font: 600 0.6875rem/1 var(--font-body); }
-.ex-hero-card.is-matching .ex-hc-enter { display: inline-block; }
 .ex-hc-go { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; white-space: nowrap; }
 .ex-hc-body:not(.ex-hc-none) .ex-hc-steps { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
 .ex-hc-near { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 4px 0 6px; font-size: 0.8125rem; }

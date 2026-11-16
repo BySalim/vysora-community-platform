@@ -124,6 +124,11 @@ body {
 img, svg, canvas { display: block; max-width: 100%; }
 img { height: auto; }
 button, input { font: inherit; color: inherit; }
+/* Champ de recherche d'une page : il a l'aspect d'une saisie et ouvre la recherche du site
+   ([data-recherche-ouvrir]). Son texte est l'exemple, ou la recherche en cours (.a-texte). */
+.champ-recherche { flex: 1; display: flex; align-items: center; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: none; text-align: left; cursor: text; }
+.champ-recherche > span { overflow: hidden; white-space: nowrap; }
+.champ-recherche:focus-visible { outline: none; }
 a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 a:hover { color: var(--link-hover); }
 p { margin: 0 0 1em; }
@@ -382,9 +387,7 @@ img.avatar { object-fit: cover; background: var(--neutral-200); box-shadow: 0 0 
 .intent-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft), 0 18px 40px -22px rgba(23, 23, 23, 0.32); }
 .intent-field > .icon { color: var(--text-muted); transition: color var(--d-quick) var(--ease), transform var(--d-std) var(--ease-emph); }
 .intent-field:focus-within > .icon { color: var(--accent); transform: scale(1.08); }
-.intent-field input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; color: var(--ink); font: 500 1.0625rem/1 var(--font-body); }
-.intent-field input::placeholder { color: var(--neutral-400); }
-.intent-field input::-webkit-search-cancel-button { display: none; }
+.intent-field .champ-recherche { padding: 0 2px; color: var(--neutral-400); font: 500 1.0625rem/1 var(--font-body); }
 .intent-field .btn { --h: 48px; padding: 0 22px; border-radius: 999px; }
 
 

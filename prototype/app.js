@@ -522,9 +522,12 @@
   /* Saisie d'intention                                                  */
   /* ------------------------------------------------------------------ */
 
+  /* Le champ n'a que l'aspect d'une saisie : il ouvre la recherche de l'en-tête (commun.js).
+     Les exemples s'écrivent dans son texte, à la place d'un placeholder. */
   function initIntent() {
-    const input = $('[data-intent]');
-    if (!input) return;
+    const texte = $('[data-intent]');
+    if (!texte) return;
+    const champ = texte.closest('button');
     const phrases = ['un site de réservation', 'un logo pour mon association', 'une analyse de mes ventes', 'une illustration de couverture', 'un script pour trier mes fichiers', 'une lettre de motivation'];
     let phrase = 0;
     let chars = phrases[0].length;
@@ -533,7 +536,7 @@
     let timer = 0;
     const tickIntent = () => {
       timer = setTimeout(tickIntent, deleting ? 32 : 58);
-      if (!motionFull() || document.activeElement === input || input.value) { input.placeholder = phrases[phrase]; return; }
+      if (!motionFull() || document.activeElement === champ) { texte.textContent = phrases[phrase]; return; }
       if (wait > 0) { wait -= deleting ? 32 : 58; return; }
       const target = phrases[phrase];
       if (deleting) {
@@ -543,7 +546,7 @@
         chars += 1;
         if (chars >= phrases[phrase].length) { deleting = true; wait = 2200; }
       }
-      input.placeholder = (deleting ? target : phrases[phrase]).slice(0, Math.max(chars, 0)) || ' ';
+      texte.textContent = (deleting ? target : phrases[phrase]).slice(0, Math.max(chars, 0)) || ' ';
     };
     timer = setTimeout(tickIntent, 1800);
   }

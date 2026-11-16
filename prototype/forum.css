@@ -85,6 +85,8 @@
 .qa-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 0.9375rem/1 var(--font-body); }
 .qa-search input::placeholder { color: var(--neutral-500); }
 .qa-search input::-webkit-search-cancel-button { display: none; }
+.qa-search .champ-recherche { color: var(--neutral-500); font: 500 0.9375rem/1 var(--font-body); }
+.qa-search .champ-recherche.a-texte { color: var(--text); }
 .qa-search:focus-within kbd { display: none; }
 .qa-search.is-small { width: min(100%, 300px); height: 40px; }
 

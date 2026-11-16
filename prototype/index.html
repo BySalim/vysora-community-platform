@@ -152,14 +152,14 @@
         <span class="hero-respiration" data-respiration="title" aria-hidden="true"></span>
         <p class="hero-lead" data-vague-apres="text" data-vague-avant="title" data-enter="2">Vysora est la communauté où l’on publie ce que l’on crée avec l’IA. Pour reproduire ce qui fonctionne, et comprendre pourquoi.</p>
         <span class="hero-respiration" data-respiration="text" aria-hidden="true"></span>
-        <form class="intent" action="explorer.html" method="get" role="search" data-vague-avant="text" data-vague-apres="search" data-enter="3">
+        <div class="intent" data-vague-avant="text" data-vague-apres="search" data-enter="3">
           <label class="intent-label" for="intent-input">Que voulez-vous créer ?</label>
           <div class="intent-field">
             <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-            <input id="intent-input" name="q" type="search" autocomplete="off" placeholder="un site de réservation" data-intent>
-            <button class="btn btn-primary" type="submit" data-magnetic>Explorer<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <button class="champ-recherche" id="intent-input" type="button" aria-haspopup="dialog" aria-expanded="false" data-recherche-ouvrir><span data-intent>un site de réservation</span></button>
+            <a class="btn btn-primary" href="explorer.html" data-magnetic>Explorer<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
           </div>
-        </form>
+        </div>
         <span class="hero-respiration" data-respiration="search" aria-hidden="true"></span>
       </div>
     </section>

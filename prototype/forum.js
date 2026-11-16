@@ -358,6 +358,7 @@
 
   function activeFilters() {
     const out = [];
+    if (state.q) out.push(['q', `« ${state.q} »`]);
     if (state.tag) out.push(['tag', `[${state.tag}]`]);
     if (state.tool) out.push(['tool', state.tool]);
     if (state.author) out.push(['author', `Membre : ${state.author}`]);
@@ -385,17 +386,16 @@
         <header class="qa-list-head">
           <div class="qa-list-title"><h1 id="qa-title" tabindex="-1">${t(heading)}</h1><a class="btn btn-primary" href="forum.html?nouveau=question" data-ask>${icon('plus')}Poser une question</a></div>
           ${state.tag || state.tool ? `<p class="qa-tag-intro">${state.tool ? `${logo(state.tool, 18)}Les questions et astuces sur ${t(state.tool)}, toutes versions confondues. ${isMine(state.tool) ? 'Vous suivez cet outil.' : `<button class="link-btn" type="button" data-open-tools>Suivre cet outil</button>`}` : 'Les sujets qui portent cette étiquette, du plus récent au plus ancien.'}</p>` : ''}
-          <form class="qa-search" role="search" data-search>
-            <label class="sr-only" for="qa-q">Rechercher dans le forum</label>
+          <div class="qa-search">
             ${icon('search', '')}
-            <input id="qa-q" type="search" autocomplete="off" spellcheck="false" value="${esc(state.q)}" placeholder="Rechercher un sujet, ou [étiquette]" aria-describedby="qa-q-help">
+            <button class="champ-recherche${state.q ? ' a-texte' : ''}" id="qa-q" type="button" aria-label="Rechercher dans le forum" aria-haspopup="dialog" aria-expanded="false" aria-keyshortcuts="/" aria-describedby="qa-q-help" data-recherche-ouvrir data-recherche-portee="forum"${state.q ? ` data-recherche-texte="${esc(state.q)}"` : ''}><span>${t(state.q || 'Rechercher un sujet, ou [étiquette]')}</span></button>
             <kbd aria-hidden="true">/</kbd>
-          </form>
+          </div>
           <p class="sr-only" id="qa-q-help">Entourez un mot de crochets pour chercher une étiquette.</p>
           <div class="qa-bar">
             <p class="qa-count" role="status" aria-live="polite">${plural(list.length, 'sujet', 'sujets')}</p>
             <div class="qa-tabs" role="group" aria-label="Classer les sujets">${TABS.map(([key, label]) => `<button type="button" data-tab="${key}" aria-pressed="${state.tab === key}">${t(label)}</button>`).join('')}</div>
-            <button class="qa-filter-btn" type="button" data-filter-toggle aria-expanded="${state.filterOpen}">${icon('filter')}<span>Filtrer</span>${filters.length ? `<small>${fmt(filters.length)}</small>` : ''}</button>
+            <button class="qa-filter-btn" type="button" data-filter-toggle aria-expanded="${state.filterOpen}">${icon('filter')}<span>Filtrer</span>${filters.length > (state.q ? 1 : 0) ? `<small>${fmt(filters.length - (state.q ? 1 : 0))}</small>` : ''}</button>
           </div>
           ${state.filterOpen ? filterPanelHTML() : ''}
           ${filters.length ? `<div class="qa-active">${filters.map(([key, label]) => `<span class="qa-chip">${t(label)}<button type="button" data-unfilter="${esc(key)}" aria-label="Retirer le filtre ${esc(label)}">${icon('close')}</button></span>`).join('')}<a class="link-btn" href="forum.html" data-reset>Tout effacer</a></div>` : ''}
@@ -959,7 +959,7 @@
     const un = event.target.closest('[data-unfilter]');
     if (un) {
       const key = un.dataset.unfilter;
-      if (key === 'tag') state.tag = ''; else if (key === 'tool') state.tool = ''; else if (key === 'author') state.author = '';
+      if (key === 'q') state.q = ''; else if (key === 'tag') state.tag = ''; else if (key === 'tool') state.tool = ''; else if (key === 'author') state.author = '';
       else if (key.startsWith('kind:')) state.filter.kinds = state.filter.kinds.filter(k => k !== key.slice(5));
       else state.filter[key] = false;
       state.page = 1; refreshList(); $('#qa-q')?.focus(); return;
@@ -1025,11 +1025,9 @@
 
   document.addEventListener('focusin', event => { if (event.target.closest?.('[data-compose-form]') && HELP[event.target.id]) renderHelp(event.target.id); });
 
-  let searchTimer;
   let similarTimer;
   document.addEventListener('input', event => {
     const target = event.target;
-    if (target.id === 'qa-q') { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.q = target.value.trim(); state.page = 1; writeURL(false); const pos = target.selectionStart; renderQuestions(); const field = $('#qa-q'); field.focus(); field.setSelectionRange(pos, pos); }, 220); return; }
     if (target.matches('[data-tag-filter]')) { state.tagQuery = target.value; const pos = target.selectionStart; renderTags(); const field = $('[data-tag-filter]'); field.focus(); field.setSelectionRange(pos, pos); return; }
     if (target.id === 'qa-reply-prompt') { const s = topicById(state.topic); $('[data-diff-preview]').innerHTML = diffHTML(s.clinic.prompt, target.value); return; }
     if (target.id === 'qa-reply') {
@@ -1048,7 +1046,6 @@
 
   document.addEventListener('submit', event => {
     const form = event.target;
-    if (form.matches('[data-search]')) { event.preventDefault(); clearTimeout(searchTimer); state.q = $('#qa-q').value.trim(); state.page = 1; refreshList(); $('.qa-sum-title a')?.focus(); return; }
     if (form.matches('[data-filter-form]')) {
       event.preventDefault();
       const f = state.filter;
@@ -1099,8 +1096,9 @@
       if (key) { event.preventDefault(); const input = $(`[data-types] input[value="${key}"]`); input.checked = true; input.focus(); input.dispatchEvent(new Event('change', { bubbles: true })); }
       return;
     }
-    if (document.querySelector('dialog[open]') || event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
-    if (event.key === '/' && state.view === 'questions') { event.preventDefault(); $('#qa-q').focus(); $('#qa-q').select(); }
+    if (document.querySelector('dialog[open]') || event.target.closest?.('input, textarea, select, [contenteditable="true"], [data-recherche-ouvrir]')) return;
+    // La recherche est celle de l'en-tête (commun.js) ; « Rechercher … dans le forum » y ramène ici avec ?q=.
+    if (event.key === '/' && state.view === 'questions') { event.preventDefault(); V.ouvrirRecherche($('#qa-q'), state.q); }
   });
 
   window.addEventListener('popstate', () => { readURL(); show({ focus: false }); });

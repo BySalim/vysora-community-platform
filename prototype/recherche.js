@@ -170,6 +170,15 @@ window.VysoraRecherche = (() => {
     { id: 'pages', label: 'Pages', max: 3, plus: n => `Voir les ${n} pages` }
   ];
   const GROUPE = Object.fromEntries(GROUPES.map(g => [g.id, g]));
+  /* Portée de la page d'origine : le champ de recherche d'Explorer, du forum ou d'Apprendre
+     ([data-recherche-portee]) ouvre la recherche sur l'onglet de sa page, affiché dès l'ouverture
+     et gardé même quand il ne trouve rien ; « Tout » élargit. La loupe de l'en-tête, Ctrl K et le
+     champ de l'accueil ouvrent sur « Tout ». */
+  const CONTEXTES = {
+    guides: { dans: 'dans Explorer', saisie: 'Rechercher un guide, un objectif, un domaine…', rien: 'Aucun guide ni domaine', lien: q => `explorer.html?q=${encodeURIComponent(q)}` },
+    forum: { dans: 'dans le forum', saisie: 'Rechercher un sujet, une question, une astuce…', rien: 'Aucun sujet du forum', lien: q => `forum.html?q=${encodeURIComponent(q)}` },
+    apprendre: { dans: 'dans Apprendre', saisie: 'Rechercher une notion, une règle, un cas…', rien: 'Aucun savoir ni cas' }
+  };
   const TYPES = { prompt: ['type-prompt', '1 prompt'], iteration: ['type-iteration', 'Itération'], projet: ['type-projet', 'Projet'] };
   const SUJETS = { question: ['help', 'Question'], clinique: ['scan', 'Clinique du prompt'], astuce: ['bulb', 'Astuce avant/après'], retour: ['route', 'Retour d’expérience'], discussion: ['users', 'Discussion'] };
   const NIVEAUX_CAS = { 1: 'Débutant', 2: 'Intermédiaire', 3: 'Avancé' };
@@ -467,7 +476,7 @@ window.VysoraRecherche = (() => {
 
   /* Rendu ---------------------------------------------------------------------- */
 
-  const etat = { q: '', portee: 'tout', exact: false };
+  const etat = { q: '', portee: 'tout', contexte: null, exact: false };
   let dialogue, voile, feuille, champEl, loupe, saisie, effacer, fermerBtn, filtres, zone, colonne, avant, liste, apercu, pied, total, annonce;
   let curseur = null;
   let options = [];
@@ -478,6 +487,7 @@ window.VysoraRecherche = (() => {
   let source = null;
   let fermeture = null;
   let annonceMinuteur = 0;
+  let horsPortee = false; // rien dans l'onglet de la page, mais des résultats ailleurs
 
   const groupeHTML = (id, label, contenu, { compte = null, colonne: col = 0 } = {}) => `<div class="rch-groupe" role="group" aria-labelledby="rch-g-${id}"${col ? ` data-colonne="${col}"` : ''}><p class="rch-groupe-tete" id="rch-g-${id}" role="presentation">${t(label)}${compte !== null ? `<small>${fmt(compte)}</small>` : ''}</p>${contenu}</div>`;
   function optionHTML(o) {
@@ -502,6 +512,19 @@ window.VysoraRecherche = (() => {
     }
     html += groupeHTML('frequentes', 'Recherches fréquentes', frequentes.slice(0, 6).map(f => optionHTML({ kind: 'terme', terme: f, cle: `frequente:${f}`, cls: 'est-compacte', vignette: ic('trend'), titre: esc(typo(f)) })).join(''));
 
+    // Depuis une page : ses contenus les plus suivis, à la place des accès rapides, en alternant
+    // les sortes (guides et domaines, savoirs et cas).
+    const c = etat.portee !== 'tout' && CONTEXTES[etat.portee];
+    const sortes = {};
+    if (c) index.filter(e => e.groupe === etat.portee).sort((a, b) => b.pop - a.pop).forEach(e => (sortes[e.cle.split(':')[0]] ||= []).push(e));
+    const aDecouvrir = [];
+    for (let rang = 0; aDecouvrir.length < 4 && Object.values(sortes).some(l => l[rang]); rang += 1) {
+      Object.values(sortes).forEach(l => { if (l[rang] && aDecouvrir.length < 4) aDecouvrir.push(l[rang]); });
+    }
+    if (aDecouvrir.length) {
+      return html + groupeHTML('decouvrir', `À découvrir ${c.dans}`, aDecouvrir.map(e => optionHTML(depuisEntree(e, []))).join(''), { colonne: 2 });
+    }
+
     const parId = Object.fromEntries(pages().map(p => [p.id, p]));
     const rapides = E.membre() ? ['mes-contenus', 'notifications', 'poser', 'publier'] : ['poser', 'bon-reflexe', 'publier', 'inscription'];
     html += groupeHTML('rapides', 'Accès rapide', [
@@ -513,19 +536,23 @@ window.VysoraRecherche = (() => {
 
   function resultatsHTML(q) {
     const { resultats, racines, correction } = chercher(q);
+    horsPortee = false;
     const parGroupe = Object.fromEntries(GROUPES.map(g => [g.id, []]));
     resultats.forEach(r => parGroupe[r.e.groupe].push(r));
     const presents = GROUPES.filter(g => parGroupe[g.id].length);
-    if (etat.portee !== 'tout' && !parGroupe[etat.portee]?.length) etat.portee = 'tout';
+    // L'onglet de la page d'origine reste, même vide ; un autre onglet vide rend la main à « Tout ».
+    if (etat.portee !== 'tout' && etat.portee !== etat.contexte && !parGroupe[etat.portee]?.length) etat.portee = 'tout';
+    const onglets = [...(etat.contexte ? [GROUPE[etat.contexte]] : []), ...presents.filter(g => g.id !== etat.contexte)];
 
-    filtres.innerHTML = [['tout', 'Tout', resultats.length], ...presents.map(g => [g.id, g.court || g.label, parGroupe[g.id].length])]
+    filtres.innerHTML = [['tout', 'Tout', resultats.length], ...onglets.map(g => [g.id, g.court || g.label, parGroupe[g.id].length])]
       .map(([id, label, n]) => `<button type="button" aria-pressed="${etat.portee === id}" data-rch-portee="${id}">${t(label)}<small>${fmt(n)}</small></button>`).join('');
     filtres.hidden = !resultats.length;
-    total.textContent = resultats.length ? typo(plural(resultats.length, 'résultat', 'résultats')) : '';
-    annoncer(resultats.length ? plural(resultats.length, 'résultat', 'résultats') : 'Aucun résultat');
+    const nPortee = etat.portee === 'tout' ? resultats.length : parGroupe[etat.portee].length;
+    total.textContent = resultats.length ? typo(plural(nPortee, 'résultat', 'résultats')) : '';
+    annoncer(resultats.length ? `${plural(nPortee, 'résultat', 'résultats')}${CONTEXTES[etat.portee] ? ` ${CONTEXTES[etat.portee].dans}` : ''}` : 'Aucun résultat');
 
     const continuer = [
-      ...(ici === 'forum.html' ? [{ cle: 'continuer:forum', href: `forum.html?q=${encodeURIComponent(q)}`, vignette: ic('message'), titre: t(`Rechercher « ${q} » dans le forum`), meta: ['Questions, cliniques et discussions'] }] : []),
+      ...(ici === 'forum.html' || etat.contexte === 'forum' ? [{ cle: 'continuer:forum', href: `forum.html?q=${encodeURIComponent(q)}`, vignette: ic('message'), titre: t(`Rechercher « ${q} » dans le forum`), meta: ['Questions, cliniques et discussions'] }] : []),
       { cle: 'continuer:explorer', href: `explorer.html?q=${encodeURIComponent(q)}`, vignette: ic('compass'), titre: t(`Rechercher « ${q} » dans Explorer`), meta: ['Guides et parcours documentés'] }
     ];
 
@@ -538,6 +565,14 @@ window.VysoraRecherche = (() => {
     }
 
     avant.innerHTML = correction ? `<p class="rch-correction">${t('Résultats pour')} <b>${esc(correction)}</b>. <button type="button" data-rch-exact>${t(`Rechercher plutôt « ${q} »`)}</button></p>` : '';
+    // Rien dans l'onglet de la page, mais ailleurs : on le dit, et la première ligne élargit à « Tout ».
+    if (etat.portee !== 'tout' && !parGroupe[etat.portee].length) {
+      horsPortee = true;
+      const ailleurs = resultats.length === 1 ? 'Voir le résultat sur tout Vysora' : `Voir les ${fmt(resultats.length)} résultats sur tout Vysora`;
+      avant.innerHTML = `<p class="rch-correction">${t(`${CONTEXTES[etat.portee]?.rien || 'Aucun résultat'} pour « ${correction || q} ».`)}</p>`;
+      return groupeHTML('ailleurs', 'Ailleurs sur Vysora', optionHTML({ kind: 'portee', portee: 'tout', cle: 'ailleurs', vignette: ic('layers'), titre: t(ailleurs), meta: presents.map(g => `${t(g.court || g.label)} ${fmt(parGroupe[g.id].length)}`) }))
+        + groupeHTML('continuer', 'Continuer la recherche', continuer.map(optionHTML).join(''));
+    }
     const affiches = etat.portee === 'tout'
       ? presents.slice().sort((a, b) => parGroupe[b.id][0].score - parGroupe[a.id][0].score)
       : [GROUPE[etat.portee]];
@@ -559,7 +594,8 @@ window.VysoraRecherche = (() => {
     const brut = saisie.value;
     const q = brut.trim().replace(/\s+/g, ' ');
     etat.q = q;
-    if (!q) etat.portee = 'tout';
+    // Sans texte : l'onglet de la page d'origine, ou « Tout » s'il a été choisi.
+    if (!q && !(etat.contexte && etat.portee === 'tout')) etat.portee = etat.contexte || 'tout';
     champEl.classList.toggle('a-texte', Boolean(brut));
     effacer.hidden = !brut;
     dialogue.classList.toggle('is-vide', !q);
@@ -569,7 +605,10 @@ window.VysoraRecherche = (() => {
     avant.innerHTML = '';
     let html = '';
     if (!q) {
-      filtres.hidden = true;
+      // Ouverte depuis une page : son onglet est visible dès l'ouverture, « Tout » à côté pour élargir.
+      filtres.innerHTML = etat.contexte ? [['tout', 'Tout'], [etat.contexte, GROUPE[etat.contexte].court || GROUPE[etat.contexte].label]]
+        .map(([id, label]) => `<button type="button" aria-pressed="${etat.portee === id}" data-rch-portee="${id}">${t(label)}</button>`).join('') : '';
+      filtres.hidden = !etat.contexte;
       total.textContent = '';
       html = accueilHTML();
     } else if (!pret) {
@@ -578,7 +617,7 @@ window.VysoraRecherche = (() => {
     } else {
       html = resultatsHTML(q);
     }
-    colonne.classList.toggle('est-rien', Boolean(q) && pret && !options.some(o => o.apercu));
+    colonne.classList.toggle('est-rien', Boolean(q) && pret && !horsPortee && !options.some(o => o.apercu));
     zone.classList.toggle('sans-apercu', !q || !pret || !options.some(o => o.apercu));
     liste.setAttribute('aria-label', q ? 'Résultats' : 'Suggestions');
     liste.innerHTML = `<span class="rch-curseur" aria-hidden="true"></span>${html}`;
@@ -747,21 +786,27 @@ window.VysoraRecherche = (() => {
 
   const declencheurs = ouvert => $$('[data-recherche-ouvrir]').forEach(el => el.setAttribute('aria-expanded', String(ouvert)));
 
-  function ouvrir(declencheur) {
+  /* « texte » : ce qu'affiche le champ de la page qui l'ouvre, ou la touche frappée sur ce champ.
+     « portee » : l'onglet de cette page (CONTEXTES), sinon « Tout ». */
+  function ouvrir(declencheur, { texte = '', portee = null } = {}) {
     monter();
     if (dialogue.open && !fermeture) { saisie.focus(); saisie.select(); return; }
     if (fermeture) return;
     if (!pret) prechauffer().then(() => { if (dialogue.open && (etat.q || actif < 0)) rendre(); });
     source = declencheur && declencheur.isConnected ? declencheur : $('[data-recherche-ouvrir]');
-    saisie.placeholder = typo(window.innerWidth < 560 ? 'Rechercher sur Vysora' : 'Rechercher une création, un sujet, un outil…');
-    saisie.value = '';
-    etat.portee = 'tout';
+    etat.contexte = CONTEXTES[portee] ? portee : null;
+    const c = CONTEXTES[etat.contexte];
+    saisie.placeholder = typo(window.innerWidth < 560 ? `Rechercher ${c ? c.dans : 'sur Vysora'}` : c ? c.saisie : 'Rechercher une création, un sujet, un outil…');
+    saisie.setAttribute('aria-label', typo(`Rechercher ${c ? c.dans : 'sur Vysora'}`));
+    saisie.value = String(texte).slice(0, saisie.maxLength > 0 ? saisie.maxLength : undefined);
+    etat.portee = etat.contexte || 'tout';
     etat.exact = false;
     root.classList.add('rch-ouverte');
     root.classList.toggle('rch-gouttiere', window.innerWidth > root.clientWidth);
     dialogue.classList.add('is-ouverture');
     dialogue.showModal();
     saisie.focus({ preventScroll: true });
+    saisie.setSelectionRange(saisie.value.length, saisie.value.length);
     declencheurs(true);
     rendre({ neuf: true });
     animerOuverture();
@@ -839,7 +884,7 @@ window.VysoraRecherche = (() => {
         event.preventDefault();
         if (event.isComposing) return;
         if (elements[actif]) elements[actif].click();
-        else if (etat.q && pret) { memoriser(etat.q); location.href = `explorer.html?q=${encodeURIComponent(etat.q)}`; }
+        else if (etat.q && pret) { memoriser(etat.q); location.href = CONTEXTES[etat.contexte]?.lien?.(etat.q) || `explorer.html?q=${encodeURIComponent(etat.q)}`; }
       } else if ((event.key === 'Delete' || (event.key === 'Backspace' && !saisie.value)) && options[actif]?.kind === 'terme' && options[actif].cle.startsWith('recente:')) {
         event.preventDefault();
         oublier(options[actif].terme);

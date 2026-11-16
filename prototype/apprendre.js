@@ -10,9 +10,6 @@
   const X = window.VYSORA_EXPLORER;
   if (!V || !M || !A || !X) return;
   const { D, $, $$, esc, t, plural, icon, store, logo, avatar, mediaHTML, dateLabel, toast } = V;
-  /* Écran tactile (téléphone, tablette) : on n'y donne pas le focus à un champ que la
-     personne n'a pas touché, le clavier s'ouvrirait et recouvrirait la page. */
-  const ecranTactile = () => matchMedia('(pointer: coarse)').matches;
 
   /* ------------------------------------------------------------------ */
   /* Modèle                                                               */
@@ -841,7 +838,6 @@
     renderProgressLink();
     restoreQuizzes(view);
     observeReveal(view);
-    closeSearch(false);
     if (V.motion.level() !== 'none') { view.classList.remove('is-entering'); void view.offsetWidth; view.classList.add('is-entering'); }
     if (hash && document.getElementById(decodeURIComponent(hash.slice(1)))) {
       requestAnimationFrame(() => document.getElementById(decodeURIComponent(hash.slice(1))).scrollIntoView({ block: 'start' }));
@@ -876,54 +872,6 @@
     if (V.motion.level() !== 'none') { panel.classList.remove('is-swapping'); void panel.offsetWidth; panel.classList.add('is-swapping'); }
   }
 
-  /* Recherche ---------------------------------------------------------- */
-
-  const index = [
-    ...active.map(s => ({ href: s.href, kind: s.kindLabel, kindIcon: kindOf(s).icon, title: s.title, sub: s.kind === 'astuces' ? `${s.tool}${s.model ? ` ${s.model}` : ''}` : '', text: ` ${M.fold(`${s.title} ${s.short} ${s.tool || ''} ${(s.tools || []).join(' ')} ${s.kindLabel}`)}`, titleText: ` ${M.fold(s.title)}` })),
-    ...cases.map(c => ({ href: c.href, kind: 'Cas Bon réflexe', kindIcon: RUB['bon-reflexe'].icon, title: c.title, sub: c.domain, text: ` ${M.fold(`${c.title} ${c.context} ${c.domain} bon reflexe cas`)}`, titleText: ` ${M.fold(c.title)}` }))
-  ];
-  function searchResults(query) {
-    const tokens = M.tokenize(query);
-    if (!tokens.length) return { tokens, list: [] };
-    const list = index
-      .filter(item => tokens.every(variants => M.hits(item.text, variants)))
-      .map(item => ({ item, score: tokens.filter(variants => M.hits(item.titleText, variants)).length }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8)
-      .map(r => r.item);
-    return { tokens, list };
-  }
-  function renderSearch() {
-    const input = $('[data-ap-search-input]');
-    const query = input.value.trim();
-    const { tokens, list } = searchResults(query);
-    const box = $('[data-ap-search-results]');
-    const status = $('[data-ap-search-status]');
-    if (!query) {
-      box.innerHTML = `<li class="ap-search-hint">Exemples : ${['graine', 'agent', 'traduction', 'Midjourney', 'script'].map(word => `<button class="link-btn" type="button" data-ap-search-try="${word}">${word}</button>`).join('')}</li>`;
-      status.textContent = '';
-      return;
-    }
-    box.innerHTML = list.length
-      ? list.map(item => `<li><a class="ap-search-item" href="${item.href}"><span class="ap-related-kind">${icon(item.kindIcon)}${t(item.kind)}${item.sub ? ` · ${t(item.sub)}` : ''}</span><span class="ap-search-title">${M.highlight(item.title, tokens)}</span></a></li>`).join('')
-      : `<li class="ap-search-hint">${t(`Aucun savoir ne correspond à « ${query} ».`)} <a href="forum.html?nouveau=question">Poser la question au forum</a></li>`;
-    status.textContent = list.length ? `${plural(list.length, 'résultat', 'résultats')}.` : 'Aucun résultat.';
-  }
-  function openSearch() {
-    const panel = $('[data-ap-search]');
-    panel.hidden = false;
-    $$('[data-ap-search-open]').forEach(b => b.setAttribute('aria-expanded', 'true'));
-    renderSearch();
-    $('[data-ap-search-input]').focus();
-  }
-  function closeSearch(restore = true) {
-    const panel = $('[data-ap-search]');
-    if (panel.hidden) return;
-    panel.hidden = true;
-    $$('[data-ap-search-open]').forEach(b => b.setAttribute('aria-expanded', 'false'));
-    if (restore) $('.ap-search-btn').focus();
-  }
-
   /* ------------------------------------------------------------------ */
   /* Interactions                                                         */
   /* ------------------------------------------------------------------ */
@@ -944,16 +892,6 @@
 
   document.addEventListener('click', event => {
     const target = event.target;
-    if (target.closest('[data-ap-search-open]')) { event.preventDefault(); const panel = $('[data-ap-search]'); if (panel.hidden) openSearch(); else closeSearch(); return; }
-    if (target.closest('[data-ap-search-close]')) { closeSearch(); return; }
-    const tryWord = target.closest('[data-ap-search-try]');
-    if (tryWord) {
-      const input = $('[data-ap-search-input]');
-      input.value = tryWord.dataset.apSearchTry;
-      renderSearch();
-      if (!ecranTactile()) input.focus(); // au doigt, le clavier cacherait les résultats
-      return;
-    }
     if (target.closest('[data-open-tools]')) { openTools(); return; }
 
     const stop = target.closest('[data-ap-stop]');
@@ -1019,27 +957,12 @@
     if (form) $('[data-ap-error]', form).hidden = true;
   });
   document.addEventListener('input', event => {
-    if (event.target.matches('[data-ap-search-input]')) renderSearch();
     if (event.target.matches('[data-ap-notion-filter]')) { state.notionQuery = event.target.value; $('[data-ap-notion-groups]').innerHTML = notionGroupsHTML(); }
   });
 
   document.addEventListener('keydown', event => {
     const { key } = event;
     if (event.ctrlKey || event.metaKey || event.altKey) return;
-
-    // Recherche : Échap ferme, flèches parcourent les résultats.
-    if (event.target.closest?.('[data-ap-search]')) {
-      if (key === 'Escape') { event.preventDefault(); closeSearch(); return; }
-      if (key === 'ArrowDown' || key === 'ArrowUp') {
-        const items = $$('.ap-search-item');
-        if (!items.length) return;
-        event.preventDefault();
-        const at = items.indexOf(document.activeElement);
-        const next = key === 'ArrowDown' ? Math.min(items.length - 1, at + 1) : at - 1;
-        if (next < 0) $('[data-ap-search-input]').focus(); else items[next].focus();
-      }
-      return;
-    }
 
     // Frise des bases : onglets parcourus aux flèches.
     const stop = event.target.closest?.('[data-ap-stop]');
@@ -1066,7 +989,8 @@
     }
 
     if (document.querySelector('dialog[open]') || event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
-    if (key === '/') { event.preventDefault(); openSearch(); }
+    // La recherche est celle de l'en-tête (commun.js), comme le bouton « Rechercher ».
+    if (key === '/') { event.preventDefault(); V.ouvrirRecherche($('.ap-search-btn')); }
   });
 
   window.addEventListener('popstate', () => { readURL(); show({ focus: true, hash: location.hash }); });

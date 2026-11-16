@@ -165,22 +165,8 @@
         <a class="ap-local-title" href="apprendre.html" data-ap-nav>Apprendre</a>
         <ul class="ap-local-tabs" data-ap-tabs></ul>
         <div class="ap-local-tools">
-          <button class="ap-search-btn" type="button" aria-expanded="false" aria-controls="ap-search" data-ap-search-open><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span>Rechercher</span><kbd aria-hidden="true">/</kbd></button>
+          <button class="ap-search-btn" type="button" aria-label="Rechercher dans Apprendre" aria-haspopup="dialog" aria-expanded="false" aria-keyshortcuts="/" data-recherche-ouvrir data-recherche-portee="apprendre"><svg class="icon icon-sm" aria-hidden="true"><use href="#i-search"/></svg><span>Rechercher</span><kbd aria-hidden="true">/</kbd></button>
           <a class="ap-progress-link" href="apprendre.html?vue=progression" data-ap-nav data-ap-progress-link></a>
-        </div>
-      </div>
-      <div class="ap-search" id="ap-search" hidden data-ap-search>
-        <div class="container">
-          <div class="ap-search-box">
-            <label class="ap-search-field">
-              <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
-              <span class="sr-only">Rechercher une base, une notion, une règle ou une astuce</span>
-              <input type="search" placeholder="Une notion, une règle, un outil…" autocomplete="off" spellcheck="false" aria-describedby="ap-search-status" data-ap-search-input>
-              <button class="icon-btn" type="button" aria-label="Fermer la recherche" data-ap-search-close><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
-            </label>
-            <p class="sr-only" id="ap-search-status" aria-live="polite" data-ap-search-status></p>
-            <ul class="ap-search-results" data-ap-search-results></ul>
-          </div>
         </div>
       </div>
     </nav>
