@@ -1,0 +1,75 @@
+/* ==========================================================================
+   Barres de défilement et page figée derrière les fenêtres (UI-01).
+   Chargé par toutes les pages (layouts/Base.astro ; prototype : etats.js), après leurs styles.
+
+   Les téléphones, les tablettes et macOS ont des barres superposées : elles ne prennent aucune
+   place et n'apparaissent qu'en défilant ; on les laisse au système. Windows et Linux ont des
+   barres classiques, qui réservent une colonne au bord de l'écran. Ces écrans sont repérés avant
+   le premier affichage par le script du gabarit (classe « barres-classiques ») :
+   - la barre de la page est remplacée par une barre superposée (scripts/commun/defilement.ts) ;
+   - les zones qui défilent dans la page (fenêtres, listes, tableaux, éditeur) ont une barre fine,
+     une pastille arrondie sans flèches.
+   Le défilement reste celui du navigateur. Contraste élevé de Windows : barres du système.
+   ========================================================================== */
+
+:root {
+  /* Pastille : contraste de 3:1 sur blanc au repos, plus marqué au survol et pendant le glissement. */
+  --barre-pouce: rgba(23, 23, 23, 0.46);
+  --barre-pouce-survol: rgba(23, 23, 23, 0.6);
+  --barre-pouce-appui: rgba(23, 23, 23, 0.72);
+}
+@media (prefers-contrast: more) {
+  :root { --barre-pouce: rgba(23, 23, 23, 0.7); --barre-pouce-survol: rgba(23, 23, 23, 0.82); --barre-pouce-appui: var(--ink); }
+}
+
+/* Page : barre du système masquée, la page garde toute la largeur de l'écran. */
+:root.barres-classiques { scrollbar-width: none; }
+.barres-classiques::-webkit-scrollbar, .barres-classiques body::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Barre superposée de la page : invisible au repos, visible pendant le défilement et au survol du
+   bord droit, plus large au survol ; un clic sur la piste avance ou recule d'un écran. */
+.vy-barre { position: fixed; z-index: 80; top: 0; right: 0; bottom: 0; width: 14px; }
+.vy-barre-pouce {
+  position: absolute; top: 0; right: 3px; width: 6px; border-radius: 999px;
+  background: var(--barre-pouce); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+  opacity: 0; will-change: transform;
+  transition: opacity 420ms var(--ease), width var(--d-quick) var(--ease), background-color var(--d-quick) var(--ease);
+}
+.vy-barre.est-visible .vy-barre-pouce, .vy-barre:hover .vy-barre-pouce, .vy-barre.est-glisse .vy-barre-pouce { opacity: 1; transition-duration: 120ms, var(--d-quick), var(--d-quick); }
+.vy-barre:hover .vy-barre-pouce, .vy-barre.est-glisse .vy-barre-pouce { width: 8px; background-color: var(--barre-pouce-survol); }
+.vy-barre.est-glisse .vy-barre-pouce { background-color: var(--barre-pouce-appui); }
+:root[data-motion-effective="none"] .vy-barre-pouce { transition: none; }
+@media print { .vy-barre { display: none; } }
+
+/* Zones qui défilent dans la page (Chrome, Edge, Safari) : piste de 10 px, pastille de 4 px (6 au survol). */
+.barres-classiques ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+.barres-classiques ::-webkit-scrollbar-track, .barres-classiques ::-webkit-scrollbar-corner { background: transparent; }
+.barres-classiques ::-webkit-scrollbar-thumb {
+  min-width: 40px; min-height: 40px; border: 3px solid transparent; border-radius: 999px;
+  background: var(--barre-pouce) padding-box;
+}
+.barres-classiques ::-webkit-scrollbar-thumb:hover { border-width: 2px; background-color: var(--barre-pouce-survol); }
+.barres-classiques ::-webkit-scrollbar-thumb:active { border-width: 2px; background-color: var(--barre-pouce-appui); }
+
+@supports selector(::-webkit-scrollbar) {
+  /* Les zones fines du prototype (scrollbar-width, scrollbar-color) prendraient sinon la barre standard
+     de Chrome, avec ses flèches ; le guide d'Explorer garde sa barre invisible hors survol. Sélecteur
+     plus précis que celui du volet des notifications (.nt-boite[data-nt-mode="volet"] .nt-volet). */
+  html.barres-classiques:root :is(.rch-liste, .lg-rail, .ex-guide-nav, .nt-volet, .section-nav) { scrollbar-width: auto; scrollbar-color: auto; }
+  .barres-classiques .ex-guide-nav:not(:hover)::-webkit-scrollbar-thumb { background-color: transparent; }
+}
+/* Firefox : propriétés standard, sans état de survol. */
+@supports not selector(::-webkit-scrollbar) {
+  .barres-classiques { scrollbar-color: var(--barre-pouce) transparent; }
+  :where(.barres-classiques) * { scrollbar-width: thin; }
+}
+
+/* Page figée -------------------------------------------------------------- */
+
+/* Fenêtre modale ouverte (cookies, recherche, accès, signalement…) : la page derrière le voile ne
+   défile plus. Aucune colonne n'est réservée à la barre : le voile couvre l'écran jusqu'au bord. */
+html:has(dialog:modal) { overflow: hidden; }
+/* Safari sur iPhone fait encore défiler le corps de la page sans cette règle. */
+@media (hover: none) {
+  html:has(dialog:modal) body { overflow: hidden; }
+}

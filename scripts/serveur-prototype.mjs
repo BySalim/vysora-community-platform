@@ -49,6 +49,22 @@ const serveur = createServer((req, res) => {
     });
     createReadStream(fichier).pipe(res);
   } catch {
+    // Page inconnue : la page 404 du prototype, comme le site ; un fichier inconnu : rien.
+    const page = join(racine, '404.html');
+    if (extname(fichier) === '.html' || extname(fichier) === '') {
+      try {
+        const infos = statSync(page);
+        res.writeHead(404, {
+          'Content-Type': TYPES['.html'],
+          'Content-Length': infos.size,
+          'Cache-Control': 'no-store',
+        });
+        createReadStream(page).pipe(res);
+        return;
+      } catch {
+        // pas de page 404 : réponse brève ci-dessous
+      }
+    }
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Introuvable');
   }
 });

@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Barres de défilement et page figée derrière les fenêtres, absentes du prototype.
-   Chargé par toutes les pages (layouts/Base.astro), après les styles du prototype.
+   Barres de défilement et page figée derrière les fenêtres (UI-01).
+   Chargé par toutes les pages (layouts/Base.astro ; prototype : etats.js), après leurs styles.
 
    Les téléphones, les tablettes et macOS ont des barres superposées : elles ne prennent aucune
    place et n'apparaissent qu'en défilant ; on les laisse au système. Windows et Linux ont des

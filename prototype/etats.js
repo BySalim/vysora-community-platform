@@ -4,7 +4,7 @@
    notifications. Ils valent pour toutes les pages, se règlent dans le panneau
    Tweaks (onglet « États ») et se retrouvent sur <html> en attributs data-*.
    Chargé dans <head> sans defer : la page s'affiche d'emblée dans le bon état.
-   Le catalogue des états et les règles à suivre sont dans AGENTS.md (« États de l'interface »). */
+   Le catalogue des états et les règles à suivre sont dans README.md (« Règles de développement »). */
 
 window.VysoraEtats = (() => {
   const KEY = 'vysora-etats';
@@ -16,9 +16,10 @@ window.VysoraEtats = (() => {
     { name: 'role', legend: 'Rôle', si: estMembre, options: [['membre', 'Membre'], ['moderateur', 'Modérateur'], ['admin', 'Administrateur']] },
     { name: 'niveau', legend: 'Niveau', si: estMembre, options: [['curieux', 'Curieux'], ['apprenti', 'Apprenti'], ['artisan', 'Artisan'], ['expert', 'Expert'], ['maitre', 'Maître']] },
     { name: 'compte', legend: 'Compte', si: estMembre, options: [['actif', 'Actif'], ['email', 'E-mail à vérifier'], ['conditions', 'Conditions à accepter'], ['suspendu', 'Suspendu']] },
-    { name: 'notifications', legend: 'Notifications', si: estMembre, options: [['nouvelles', '3 non lues'], ['lues', 'Toutes lues']] }
+    { name: 'notifications', legend: 'Notifications', si: estMembre, options: [['nouvelles', '3 non lues'], ['lues', 'Toutes lues']] },
+    { name: 'cookies', legend: 'Cookies', options: [['a-choisir', 'Choix à faire'], ['choisis', 'Choix retenu']] }
   ];
-  const INITIAL = { session: 'visiteur', role: 'membre', niveau: 'apprenti', compte: 'actif', notifications: 'nouvelles' };
+  const INITIAL = { session: 'visiteur', role: 'membre', niveau: 'apprenti', compte: 'actif', notifications: 'nouvelles', cookies: 'a-choisir' };
   const PERMIS = Object.fromEntries(GROUPES.map(g => [g.name, g.options.map(([value]) => value)]));
 
   /* Niveaux et seuils de réputation (RG-84) ; points du membre simulé à chaque niveau. */
@@ -96,6 +97,32 @@ window.VysoraEtats = (() => {
   }
 
   appliquer();
+
+  /* Ce que le gabarit du site rend sur toutes les pages, accueil compris : barre de défilement
+     superposée sur les écrans à barres classiques (UI-01) et fenêtre des cookies (LEG-03). Les
+     barres classiques (Windows, Linux) se repèrent avant le premier affichage, comme dans le
+     gabarit du site, sauf en contraste élevé. */
+  (() => {
+    const sonde = document.createElement('div');
+    sonde.style.cssText = 'position:absolute;top:-99px;width:60px;height:60px;overflow:scroll;scrollbar-width:thin';
+    root.appendChild(sonde);
+    const classiques = sonde.offsetWidth > sonde.clientWidth;
+    root.removeChild(sonde);
+    if (classiques && !matchMedia('(forced-colors: active)').matches) root.classList.add('barres-classiques');
+    const tete = document.head || root;
+    ['defilement.css', 'cookies.css'].forEach(href => {
+      const lien = document.createElement('link');
+      lien.rel = 'stylesheet';
+      lien.href = href;
+      tete.appendChild(lien);
+    });
+    ['defilement.js', 'choix-cookies.js'].forEach(src => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = false;
+      tete.appendChild(script);
+    });
+  })();
 
   return {
     GROUPES, INITIAL, NIVEAUX, ROLES, MOI, DATES,
