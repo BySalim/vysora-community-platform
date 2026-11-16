@@ -23,6 +23,7 @@ import { dateLongue } from '../../lib/texte';
 import { api } from './api';
 import { etats } from './etats';
 import { $, $$, animations, esc, fmt, pluriel, t, typo } from './outils';
+import { signalerRecherche } from './mesure';
 
 const racineDoc = document.documentElement;
 const CLE_RECENTES = 'vysora-recherches-recentes';
@@ -1375,6 +1376,8 @@ function annoncer(texte: string): void {
 function memoriser(q: string): void {
   const terme = q.trim().replace(/\s+/g, ' ').slice(0, 80);
   if (terme.length < 2) return;
+  // LEG-03 : recherche inscrite dans la visite suivie, sans les mots cherchés.
+  signalerRecherche();
   const avant = memoire.lire().filter((r) => plier(r).trim() !== plier(terme).trim());
   memoire.ecrire([terme, ...avant].slice(0, 6));
 }

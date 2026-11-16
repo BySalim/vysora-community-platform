@@ -43,9 +43,9 @@ export const PAGES_LEGALES: Record<CleDocumentLegal, PageLegale> = {
     onglet: 'Cookies',
     miseAJour: '2026-11-15',
     points: [
-      'Seuls des cookies strictement nécessaires sont déposés : ils ne demandent pas votre accord.',
-      'Les vues des contenus sont comptées sans cookie, et vous pouvez refuser d’y être compté.',
-      'Vysora ne dépose aucun cookie publicitaire et n’intègre aucun outil de mesure d’un tiers.',
+      'Les cookies indispensables sont toujours actifs ; le suivi de vos parcours attend votre accord, que vous refusez aussi simplement que vous le donnez.',
+      'La fréquentation du site est mesurée par nos propres serveurs, sans cookie ni outil d’un tiers, et vous pouvez refuser d’y être compté.',
+      'Avec votre accord seulement, le parcours de vos visites est suivi, sans lien avec votre compte, pour améliorer le site.',
     ],
   },
   mentions: {

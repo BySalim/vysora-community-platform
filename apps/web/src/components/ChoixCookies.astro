@@ -1,0 +1,67 @@
+---
+/* LEG-03 : choix sur les cookies. Le bandeau s'affiche tant qu'aucun choix de la version en cours
+   n'est retenu (cookie vysora_consentement) ; il ne bloque pas la page, et refuser y est aussi simple
+   qu'accepter. Le dialogue « Gérer les cookies » s'ouvre par « Personnaliser » et par le lien du pied
+   de page. Écrans sans maquette dans le prototype : style du dialogue d'accès (etats.css) et de
+   l'interrupteur de la page Cookies. Branchés par scripts/commun/cookies.ts. */
+import { choixCookiesAttendu } from '@vysora/shared';
+import { ROUTES } from '../lib/navigation';
+import { typo } from '../lib/texte';
+import FinalitesCookies from './FinalitesCookies.astro';
+
+const attendu = choixCookiesAttendu(Astro.request.headers.get('cookie'));
+---
+
+{attendu && (
+  <section class="ck-bandeau" aria-labelledby="ck-bandeau-titre" data-ck-bandeau>
+    <h2 class="ck-bandeau-titre" id="ck-bandeau-titre">
+      Vos choix sur les cookies
+    </h2>
+    <p class="ck-bandeau-texte">
+      {typo(
+        'Vysora dépose les cookies indispensables à votre connexion et compte les visites de façon anonyme. Avec votre accord, nous suivons aussi le parcours de vos visites, sans lien avec votre compte, pour améliorer le site et corriger ses problèmes.',
+      )}{' '}
+      <a href={ROUTES.cookies}>En savoir plus</a>
+    </p>
+    <div class="ck-actions">
+      <button class="btn btn-secondary btn-sm" type="button" data-ck-action="refuser">
+        Tout refuser
+      </button>
+      <button class="btn btn-quiet btn-sm" type="button" data-ck-action="personnaliser">
+        Personnaliser
+      </button>
+      <button class="btn btn-secondary btn-sm" type="button" data-ck-action="accepter">
+        Tout accepter
+      </button>
+    </div>
+  </section>
+)}
+
+<dialog class="acces ck-dialogue" aria-labelledby="ck-dialogue-titre" data-ck-dialogue>
+  <button class="icon-btn acces-fermer" type="button" aria-label="Fermer" data-ck-fermer>
+    <svg class="icon" aria-hidden="true">
+      <use href="#i-close"></use>
+    </svg>
+  </button>
+  <h2 id="ck-dialogue-titre">Gérer les cookies</h2>
+  <p class="ck-dialogue-intro">
+    {typo(
+      'Choisissez ce que Vysora mesure pendant vos visites. Vous pouvez changer d’avis à tout moment avec le lien « Gérer les cookies », en bas de chaque page.',
+    )}
+  </p>
+  <FinalitesCookies prefixe="ck-dialogue" />
+  <div class="ck-actions ck-dialogue-actions">
+    <button class="btn btn-secondary" type="button" data-ck-action="refuser">
+      Tout refuser
+    </button>
+    <button class="btn btn-secondary" type="button" data-ck-action="accepter">
+      Tout accepter
+    </button>
+    <button class="btn btn-primary" type="button" data-ck-action="enregistrer">
+      Enregistrer mes choix
+    </button>
+  </div>
+  <p class="ck-dialogue-lien">
+    <a href={ROUTES.cookies}>Politique relative aux cookies</a>
+  </p>
+</dialog>

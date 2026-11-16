@@ -41,6 +41,7 @@ export const ROUTES = {
   invitationsAdmin: '/admin/invitations',
   journalDecisions: '/admin/decisions',
   journalAudit: '/admin/journal-audit',
+  audienceAdmin: '/admin/audience',
   assistantsIaAdmin: '/admin/assistants-ia',
   defisAdmin: '/admin/defis',
   /** Guides d'Explorer (DEC-02) : liste, rédaction d'un guide, pièges signalés, demandes. */

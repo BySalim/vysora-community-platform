@@ -1,0 +1,64 @@
+---
+/* LEG-03 : finalités des cookies et de la mesure, avec leurs interrupteurs. Reprise par le dialogue
+   « Gérer les cookies » (choix enregistré par son bouton) et par la page Cookies (choix enregistré à
+   chaque changement). L'état vient du cookie du choix ; scripts/commun/cookies.ts le met à jour. */
+import { DELAIS, audienceRefusee, parcoursAccepte } from '@vysora/shared';
+import { typo } from '../lib/texte';
+
+interface Props {
+  /** Préfixe des identifiants (deux listes peuvent figurer sur la même page). */
+  prefixe: string;
+}
+
+const { prefixe } = Astro.props;
+const entete = Astro.request.headers.get('cookie');
+const FINALITES = [
+  {
+    cle: 'audience',
+    titre: 'Mesure d’audience',
+    aide: 'Compter les pages vues, la provenance des visites, le type d’appareil et les erreurs du site, de façon anonyme et sans cookie.',
+    actif: !audienceRefusee(entete),
+  },
+  {
+    cle: 'parcours',
+    titre: 'Parcours des visites',
+    aide: `Relier les pages et les actions d’une même visite (inscription, publication, erreur rencontrée), sans lien avec votre compte, pour voir où le site vous freine. Un cookie de visite est déposé ; il s’efface après ${DELAIS.inactiviteParcoursMinutes} minutes sans activité.`,
+    actif: parcoursAccepte(entete),
+  },
+] as const;
+---
+
+<ul class="ck-finalites">
+  <li class="ck-finalite">
+    <div class="ck-finalite-texte">
+      <p class="ck-finalite-titre">Indispensables</p>
+      <p class="ck-finalite-aide">
+        {typo('Garder votre connexion, vous connecter avec GitHub ou Google et retenir vos choix.')}
+      </p>
+    </div>
+    <span class="ck-toujours">Toujours actifs</span>
+  </li>
+  {FINALITES.map((finalite) => (
+    <li class="ck-finalite">
+      <div class="ck-finalite-texte">
+        <p class="ck-finalite-titre" id={`${prefixe}-${finalite.cle}`}>
+          {typo(finalite.titre)}
+        </p>
+        <p class="ck-finalite-aide" id={`${prefixe}-${finalite.cle}-aide`}>
+          {typo(finalite.aide)}
+        </p>
+      </div>
+      <button
+        class="ck-interrupteur"
+        type="button"
+        role="switch"
+        aria-checked={finalite.actif ? 'true' : 'false'}
+        aria-labelledby={`${prefixe}-${finalite.cle}`}
+        aria-describedby={`${prefixe}-${finalite.cle}-aide`}
+        data-ck-finalite={finalite.cle}
+      >
+        <span aria-hidden="true" />
+      </button>
+    </li>
+  ))}
+</ul>

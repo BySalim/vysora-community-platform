@@ -8,7 +8,7 @@ import { EMAIL_CONTACT } from '../lib/pages-legales';
 
 <PageLegale
   cle="confidentialite"
-  description="Politique de confidentialité de Vysora : données traitées, usages et durées, destinataires, hébergement, cookies, sécurité et droits."
+  description="Politique de confidentialité de Vysora : données traitées, usages et durées, destinataires, hébergement, cookies, mesure d’audience, sécurité et droits."
   renvois={['traitements', 'public', 'cookies', 'transferts', 'droits']}
 >
   <section class="lg-article" id="responsable">
@@ -137,21 +137,37 @@ import { EMAIL_CONTACT } from '../lib/pages-legales';
             <td>1 an après la réponse</td>
           </tr>
           <tr>
-            <th scope="row">Mesurer l’audience</th>
+            <th scope="row">Mesurer l’audience et régler les problèmes techniques</th>
             <td>
-              Vues des créations et des sujets : empreinte du jour, calculée à partir de votre
-              compte, ou de l’adresse IP et du navigateur, qui ne permet pas de vous retrouver.
-              Visites venues d’un assistant d’IA : nom du navigateur et page de provenance, lus sans
-              être conservés
+              Pages servies, domaine de provenance ou nom de campagne, catégories d’appareil, de
+              navigateur et de système, pages introuvables ou en erreur, erreurs des scripts du site
+              ; empreinte du jour calculée à partir de l’adresse IP et du navigateur (ou de votre
+              compte pour les vues des contenus), qui ne permet pas de vous retrouver. Visites
+              venues d’un assistant d’IA : nom du navigateur et page de provenance, lus sans être
+              conservés
             </td>
             <td>
-              Intérêt légitime à faire connaître les contenus utiles ; vous pouvez vous y opposer
-              depuis la <a href={`${ROUTES.cookies}#audience`}>page Cookies</a>
+              Intérêt légitime à améliorer le site et à faire connaître les contenus utiles ; vous
+              pouvez vous y opposer depuis la <a href={`${ROUTES.cookies}#choix`}>page Cookies</a>
             </td>
             <td>
-              Empreintes : 2 jours ; seuls des compteurs restent (vues de chaque contenu ; visites
-              des assistants par jour et par page, 13 mois)
+              Empreintes : 2 jours ; seuls des compteurs restent (pages et visites, 25 mois ; vues
+              de chaque contenu ; visites des assistants par jour et par page, 13 mois)
             </td>
+          </tr>
+          <tr>
+            <th scope="row">Comprendre les parcours des visites</th>
+            <td>
+              Identifiant de visite tiré au hasard (cookie effacé après 30 minutes sans activité),
+              provenance de la visite, catégories d’appareil, pages vues, actions réussies et
+              erreurs rencontrées, avec leur heure ; jamais reliés à votre compte ni à votre adresse
+              IP
+            </td>
+            <td>
+              Votre consentement, donné et retiré depuis le bandeau, le lien « Gérer les cookies »
+              ou la <a href={`${ROUTES.cookies}#choix`}>page Cookies</a>
+            </td>
+            <td>3 mois après la visite</td>
           </tr>
         </tbody>
       </table>
@@ -256,12 +272,13 @@ import { EMAIL_CONTACT } from '../lib/pages-legales';
   <section class="lg-article" id="cookies">
     <h2>6. Cookies et stockage du navigateur</h2>
     <p>
-      Vysora ne dépose que des cookies strictement nécessaires : la session, l’aller-retour de la
-      connexion avec GitHub ou Google et, si vous refusez la mesure d’audience, le cookie qui
-      retient ce choix. Ils ne demandent pas votre consentement. Le site garde aussi dans votre
-      navigateur quelques préférences et travaux en cours, comme vos recherches récentes. La{' '}
-      <a href={ROUTES.cookies}>politique relative aux cookies</a> les détaille et vous permet de
-      refuser d’être compté dans la mesure d’audience.
+      Vysora dépose des cookies indispensables : la session, l’aller-retour de la connexion avec
+      GitHub ou Google et le cookie qui retient vos choix sur les cookies. Ils ne demandent pas
+      votre consentement. Avec votre accord seulement, un cookie de visite relie les étapes du
+      parcours de vos visites. La mesure d’audience, elle, se fait sans cookie. Le site garde aussi
+      dans votre navigateur quelques préférences et travaux en cours, comme vos recherches récentes.
+      La <a href={ROUTES.cookies}>politique relative aux cookies</a> les détaille et vous permet de
+      changer vos choix à tout moment.
     </p>
   </section>
 
@@ -293,7 +310,7 @@ import { EMAIL_CONTACT } from '../lib/pages-legales';
       </li>
       <li>
         <strong>vous opposer</strong> à un traitement pour des motifs légitimes, par exemple à la
-        mesure d’audience depuis la <a href={`${ROUTES.cookies}#audience`}>page Cookies</a>, ou en
+        mesure d’audience depuis la <a href={`${ROUTES.cookies}#choix`}>page Cookies</a>, ou en
         demander la limitation ;
       </li>
       <li>

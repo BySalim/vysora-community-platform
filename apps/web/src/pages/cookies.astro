@@ -1,23 +1,29 @@
 ---
 /* Politique relative aux cookies, portée de prototype/cookies.html : le texte du document ; l'en-tête, le sommaire,
    « L'essentiel » et l'acceptation sont rendus par PageLegale (versions lues dans l'API). */
+import FinalitesCookies from '../components/FinalitesCookies.astro';
 import PageLegale from '../components/PageLegale.astro';
 import { ROUTES } from '../lib/navigation';
 ---
 
 <PageLegale
   cle="cookies"
-  description="Cookies déposés par Vysora, données gardées dans votre navigateur, mesure d’audience sans cookie et refus de la mesure d’audience."
-  renvois={['liste', 'audience', 'liste']}
+  description="Cookies déposés par Vysora, données gardées dans votre navigateur, mesure d’audience sans cookie, suivi des parcours avec votre accord et gestion de vos choix."
+  renvois={['liste', 'audience', 'parcours']}
 >
   <section class="lg-article" id="principe">
     <h2>1. Ce que nous déposons sur votre appareil</h2>
     <p>
       Un cookie est un petit fichier enregistré par votre navigateur lorsque vous consultez un site.
-      Vysora n’en dépose que lorsqu’ils sont strictement nécessaires au service que vous demandez :
-      rester connecté, vous connecter avec GitHub ou Google, retenir votre choix sur la mesure
-      d’audience. Ces cookies ne demandent pas votre accord, et c’est pourquoi aucun bandeau ne
-      s’affiche.
+      Vysora dépose les cookies indispensables au service que vous demandez : rester connecté, vous
+      connecter avec GitHub ou Google, retenir vos choix. Ils ne demandent pas votre accord. Avec
+      votre accord seulement, un cookie de visite nous permet aussi de suivre le parcours de vos
+      visites.
+    </p>
+    <p>
+      À votre première visite, un bandeau vous demande votre choix : vous pouvez tout accepter, tout
+      refuser ou choisir finalité par finalité, et refuser est aussi simple qu’accepter. Le site
+      reste utilisable tant que vous n’avez pas répondu ; rien n’est alors suivi sans votre accord.
     </p>
   </section>
 
@@ -48,21 +54,35 @@ import { ROUTES } from '../lib/navigation';
             <td>10 minutes</td>
           </tr>
           <tr>
-            <th scope="row">Choix sur la mesure d’audience</th>
-            <td>Retenir votre refus d’être compté dans les vues, si vous l’exprimez</td>
-            <td>13 mois</td>
+            <th scope="row">Vos choix sur les cookies</th>
+            <td>
+              Retenir vos choix sur la mesure d’audience et le suivi des parcours, pour ne pas vous
+              les redemander à chaque page
+            </td>
+            <td>6 mois, puis votre choix vous est redemandé</td>
+          </tr>
+          <tr>
+            <th scope="row">Visite suivie</th>
+            <td>
+              Relier les pages et les actions d’une même visite ; déposé seulement si vous acceptez
+              le suivi des parcours
+            </td>
+            <td>Effacé après 30 minutes sans activité</td>
           </tr>
         </tbody>
       </table>
     </div>
     <p>
       Dans les réglages de votre navigateur, ils portent les noms __Host-vysora_session,
-      __Secure-vysora_oauth et vysora_audience.
+      __Secure-vysora_oauth, vysora_consentement et __Host-vysora_parcours. Le cookie
+      vysora_audience, qui retenait auparavant un refus de la mesure d’audience, reste respecté
+      jusqu’à votre prochain choix, qui l’efface.
     </p>
     <p>
       Vysora ne dépose aucun cookie publicitaire et n’intègre ni bouton de réseau social, ni outil
-      de mesure d’un tiers. Si vous vous connectez avec GitHub ou Google, ces services déposent
-      leurs propres cookies sur leur site, selon leurs conditions.
+      de mesure d’un tiers : la mesure d’audience est faite par nos propres serveurs. Si vous vous
+      connectez avec GitHub ou Google, ces services déposent leurs propres cookies sur leur site,
+      selon leurs conditions.
     </p>
   </section>
 
@@ -141,30 +161,70 @@ import { ROUTES } from '../lib/navigation';
   <section class="lg-article" id="audience">
     <h2>4. Mesure d’audience</h2>
     <p>
-      Pour faire connaître les contenus qui intéressent la communauté, nous comptons les vues des
-      créations et des sujets du forum, sans cookie : une vue par visiteur et par jour. Pour ne pas
-      compter deux fois la même personne, nous calculons une empreinte du jour à partir de votre
-      compte, ou de votre adresse IP et de votre navigateur ; elle ne permet pas de vous retrouver
-      et elle est effacée au bout de 2 jours. Seul le nombre de vues de chaque contenu est conservé
-      et affiché ; il n’est ni croisé avec votre compte ni transmis à des tiers. L’auteur qui relit
-      son contenu n’est pas compté.
+      Pour améliorer le site et régler ses problèmes techniques, nous mesurons sa fréquentation par
+      nos propres serveurs, sans cookie. Pour chaque page servie, nous comptons jour par jour : la
+      page, le domaine du site d’où vous arrivez (un moteur de recherche, par exemple) ou le nom de
+      la campagne indiqué dans le lien, le type d’appareil (ordinateur, mobile ou tablette), la
+      famille de votre navigateur et de votre système, et les pages introuvables ou en erreur. Les
+      erreurs des scripts du site dans votre navigateur sont comptées de la même façon, avec un
+      message technique court.
     </p>
     <p>
-      Nous comptons aussi les pages lues par les assistants d’IA, comme ChatGPT, Claude ou
-      Perplexity, et les visites des personnes qui en viennent, reconnues au nom du navigateur et à
-      la page de provenance. Seul un compteur par jour, par assistant et par page est conservé,
-      pendant 13 mois.
+      Pour ne pas compter deux fois la même personne dans la journée, nous calculons une empreinte
+      du jour à partir de votre adresse IP et de votre navigateur ; elle ne permet pas de vous
+      retrouver et elle est effacée au bout de 2 jours. Seuls des compteurs sont conservés, pendant
+      25 mois ; ils ne sont ni croisés avec votre compte ni transmis à des tiers.
     </p>
     <p>
-      Cette mesure repose sur notre intérêt légitime à faire connaître les contenus utiles. Vous
-      pouvez vous y opposer à tout moment, sans conséquence sur votre utilisation de Vysora : vos
-      visites ne sont alors plus comptées sur cet appareil.
+      Nous comptons aussi les vues des créations et des sujets du forum, affichées sur chaque
+      contenu : une vue par visiteur et par jour, avec une empreinte du jour calculée à partir de
+      votre compte, ou de votre adresse IP et de votre navigateur, effacée au bout de 2 jours.
+      L’auteur qui relit son contenu n’est pas compté. Nous comptons enfin les pages lues par les
+      assistants d’IA, comme ChatGPT, Claude ou Perplexity, et les visites des personnes qui en
+      viennent, reconnues au nom du navigateur et à la page de provenance : un compteur par jour,
+      par assistant et par page, conservé 13 mois.
     </p>
-    <div class="lg-choix" data-lg-audience></div>
+    <p>
+      Cette mesure, réservée à l’équipe de Vysora, repose sur notre intérêt légitime à améliorer le
+      site et à faire connaître les contenus utiles ; elle ne demande pas votre accord. Vous pouvez
+      vous y opposer à tout moment, sans conséquence sur votre utilisation de Vysora : vos visites
+      ne sont alors plus comptées sur cet appareil.
+    </p>
+  </section>
+
+  <section class="lg-article" id="parcours">
+    <h2>5. Parcours des visites</h2>
+    <p>
+      Avec votre accord seulement, nous suivons le parcours de vos visites pour comprendre où le
+      site vous freine : la page par laquelle vous arrivez, les pages que vous enchaînez, les
+      actions que vous réussissez (inscription, connexion, publication, commentaire, vote, essai,
+      message à l’équipe, recherche sans les mots cherchés) et les erreurs que vous rencontrez.
+    </p>
+    <p>
+      Un cookie de visite, tiré au hasard, relie ces étapes ; il s’efface après 30 minutes sans
+      activité, et la visite suivante reçoit un autre identifiant. Le parcours n’est jamais relié à
+      votre compte ni à votre adresse IP : il garde seulement la provenance de la visite et la
+      catégorie de votre appareil. Les parcours sont réservés à l’équipe de Vysora et effacés au
+      bout de 3 mois. Si vous retirez votre accord, le suivi s’arrête dès la page suivante et le
+      cookie de visite est effacé.
+    </p>
+  </section>
+
+  <section class="lg-article" id="choix">
+    <h2>6. Vos choix</h2>
+    <p>
+      Vos choix sont retenus 6 mois sur cet appareil, puis le bandeau vous les redemande. Vous
+      pouvez les changer ici à tout moment, ou avec le lien « Gérer les cookies », en bas de chaque
+      page.
+    </p>
+    <div class="ck-choix" data-ck-choix>
+      <FinalitesCookies prefixe="ck-page" />
+      <p class="ck-choix-etat" data-ck-etat aria-live="polite"></p>
+    </div>
   </section>
 
   <section class="lg-article" id="navigateur">
-    <h2>5. Gérer les cookies dans votre navigateur</h2>
+    <h2>7. Gérer les cookies dans votre navigateur</h2>
     <p>
       Les réglages de votre navigateur vous permettent de consulter, de supprimer ou de bloquer les
       cookies et les données que le site garde sur votre appareil. Si vous bloquez le cookie de
@@ -174,12 +234,11 @@ import { ROUTES } from '../lib/navigation';
   </section>
 
   <section class="lg-article" id="evolution">
-    <h2>6. Évolution de cette page</h2>
+    <h2>8. Évolution de cette page</h2>
     <p>
-      Si Vysora devait un jour utiliser un cookie qui n’est pas strictement nécessaire, nous vous
-      demanderions votre accord avant de le déposer, avec la possibilité de refuser aussi simplement
-      que d’accepter, et cette page serait mise à jour. Le traitement de vos données est décrit dans
-      la <a href={ROUTES.confidentialite}>politique de confidentialité</a>.
+      Si Vysora devait utiliser un autre cookie ou un autre traceur, cette page serait mise à jour
+      et, s’il demande votre accord, le bandeau vous reposerait la question. Le traitement de vos
+      données est décrit dans la <a href={ROUTES.confidentialite}>politique de confidentialité</a>.
     </p>
   </section>
 </PageLegale>

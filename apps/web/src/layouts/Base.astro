@@ -5,6 +5,7 @@
    L'enveloppe « auth » est celle de la connexion et de l'inscription : fond animé, en-tête réduit
    (logo et lien de retour), pas de pied de page. */
 import AuthTete from '../components/AuthTete.astro';
+import ChoixCookies from '../components/ChoixCookies.astro';
 import EtatBandeau from '../components/EtatBandeau.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
@@ -21,6 +22,7 @@ import '../styles/styles.css';
 import '../styles/commun.css';
 import '../styles/etats.css';
 import '../styles/socle.css';
+import '../styles/cookies.css';
 
 interface Props {
   /** Titre de la page, suivi de « · Vysora ». */
@@ -173,6 +175,7 @@ const etatClient = JSON.stringify({
     <a class="skip-link" href="#contenu">
       {lienEvitement}
     </a>
+    <ChoixCookies />
     {enveloppe === 'auth' ? (
       <>
         <div class="fond" data-fond aria-hidden="true" />
@@ -200,6 +203,8 @@ const etatClient = JSON.stringify({
       import '../scripts/commun/entete';
       import '../scripts/commun/acces';
       import '../scripts/commun/suivi-compte';
+      import '../scripts/commun/cookies';
+      import '../scripts/commun/mesure';
     </script>
   </body>
 </html>

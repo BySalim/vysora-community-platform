@@ -1,6 +1,7 @@
 ---
 /* Pied de page commun (prototype : <footer class="site-footer"> complété par commun.js :
-   cookies, mentions légales et contact ; liens du membre à la place de l'inscription). */
+   cookies, mentions légales et contact ; liens du membre à la place de l'inscription).
+   « Gérer les cookies » (LEG-03) ouvre le dialogue du choix ; sans script, la page Cookies. */
 import { ROUTES } from '../lib/navigation';
 
 const { etat, membre } = Astro.locals;
@@ -104,6 +105,11 @@ const estMembre = etat.session === 'membre' && membre;
         <li>
           <a href={ROUTES.cookies} aria-current={courant(ROUTES.cookies)}>
             Cookies
+          </a>
+        </li>
+        <li>
+          <a href={`${ROUTES.cookies}#choix`} data-ck-gerer>
+            Gérer les cookies
           </a>
         </li>
         <li>

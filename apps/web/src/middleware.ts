@@ -1,6 +1,7 @@
 import type { APIContext } from 'astro';
 import { defineMiddleware } from 'astro:middleware';
 import { signalerPassageAssistant } from './lib/assistants-ia';
+import { preparerParcours, signalerPage } from './lib/audience';
 import { ROUTES } from './lib/navigation';
 import { chargerSession } from './lib/session';
 import { accueilZone, zoneReservee, zoneVisible } from './lib/zones-reservees';
@@ -44,13 +45,29 @@ export const onRequest = defineMiddleware(async (contexte, suite) => {
     return redirection;
   }
 
-  const reponse = await suite();
+  // LEG-03 : visite suivie, si la personne l'a accepté (cookie de visite repris, créé ou effacé).
+  const lecture = contexte.request.method === 'GET';
+  const visite = lecture ? preparerParcours(contexte.request) : { id: null, cookie: null };
+  const mesure = { adresseClient: adresseDuClient(contexte), visite: visite.id };
+  // Adresse demandée par la personne : une page de l'équipe réécrite en /404 reste « /admin/… »,
+  // que la mesure écarte.
+  const demandee = new URL(contexte.originPathname + contexte.url.search, contexte.url);
+  let reponse: Response;
+  try {
+    reponse = await suite();
+  } catch (erreur) {
+    signalerPage(contexte.request, demandee, 500, mesure);
+    throw erreur;
+  }
   // REF-03 : pages lues par les assistants d'IA et visites qu'ils envoient.
-  if (contexte.request.method === 'GET' && reponse.status === 200)
-    signalerPassageAssistant(contexte.request, contexte.url);
+  if (lecture && reponse.status === 200) signalerPassageAssistant(contexte.request, contexte.url);
+  // LEG-03 : mesure d'audience des pages (documents HTML seulement : ni robots.txt ni plan du site).
+  if (reponse.headers.get('content-type')?.includes('text/html'))
+    signalerPage(contexte.request, demandee, reponse.status, mesure);
   const entetes = reponse.headers;
   // Échéance de la session repoussée ou cookie périmé effacé par l'API : le navigateur en est informé.
   for (const cookie of session.cookies) entetes.append('Set-Cookie', cookie);
+  if (visite.cookie) entetes.append('Set-Cookie', visite.cookie);
   entetes.set('X-Content-Type-Options', 'nosniff');
   entetes.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   // L'aperçu de la fiche s'affiche dans un cadre de l'éditeur (CREA-02), sur le même site seulement.

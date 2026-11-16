@@ -1,8 +1,8 @@
 /* Pages légales (prototype/documents-legaux.js) : sommaire qui suit la lecture, liens de section,
-   impression, choix sur la mesure d'audience (page Cookies) et acceptation des nouvelles versions
-   (conditions et charte). Le contenu (sommaire, « L'essentiel », versions) est rendu par le serveur. */
+   impression et acceptation des nouvelles versions (conditions et charte). Le contenu (sommaire,
+   « L'essentiel », versions) est rendu par le serveur. Les choix de la page Cookies (LEG-03) sont
+   branchés par scripts/commun/cookies.ts, commun à toutes les pages. */
 
-import { COOKIE_REFUS_AUDIENCE } from '@vysora/shared';
 import { DOCUMENTS_ACCEPTES, accepterDocuments } from './commun/acces';
 import { $, $$, icon, toast } from './commun/outils';
 
@@ -118,45 +118,6 @@ for (const tableau of $$('.lg-tableau-empile')) {
     });
 }
 
-/* Mesure d'audience (page Cookies) : le refus est retenu 13 mois par un cookie, comme l'annonce
-   la liste des cookies ; sans refus, aucun cookie n'est déposé. L'API le lit avant de compter une
-   vue (F-23) : un appareil qui a refusé n'est plus compté. */
-
-const { nom: COOKIE_AUDIENCE, valeur: REFUS } = COOKIE_REFUS_AUDIENCE;
-const TREIZE_MOIS = 13 * 30 * 24 * 60 * 60;
-
-const audienceRefusee = () =>
-  document.cookie.split('; ').some((c) => c === `${COOKIE_AUDIENCE}=${REFUS}`);
-
-function retenirAudience(refusee: boolean): void {
-  const securise = location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = refusee
-    ? `${COOKIE_AUDIENCE}=${REFUS}; Max-Age=${TREIZE_MOIS}; Path=/; SameSite=Lax${securise}`
-    : `${COOKIE_AUDIENCE}=; Max-Age=0; Path=/; SameSite=Lax${securise}`;
-}
-
-function monterChoixAudience(): void {
-  const zone = $('[data-lg-audience]');
-  if (!zone) return;
-  const rendre = () => {
-    const comptee = !audienceRefusee();
-    zone.innerHTML = `<div class="lg-choix-texte">
-        <p class="lg-choix-titre" id="lg-audience-titre">Compter mes visites dans la mesure d’audience</p>
-        <p class="lg-choix-etat" id="lg-audience-etat">${comptee ? 'Vos visites sont comptées, de façon anonyme.' : 'Vos visites ne sont plus comptées sur cet appareil.'}</p>
-      </div>
-      <button class="lg-interrupteur" type="button" role="switch" aria-checked="${comptee}" aria-labelledby="lg-audience-titre" aria-describedby="lg-audience-etat" data-lg-audience-bouton><span aria-hidden="true"></span></button>`;
-  };
-  zone.addEventListener('click', (evenement) => {
-    if (!(evenement.target as Element).closest('[data-lg-audience-bouton]')) return;
-    const refuser = !audienceRefusee();
-    retenirAudience(refuser);
-    rendre();
-    $<HTMLElement>('[data-lg-audience-bouton]', zone)?.focus();
-    toast(refuser ? 'Vos visites ne sont plus comptées.' : 'Vos visites sont de nouveau comptées.');
-  });
-  rendre();
-}
-
 /* Acceptation des nouvelles versions (RG-03) --------------------------------------------------- */
 
 /** Versions acceptées (ici ou depuis le bandeau du compte) : la page montre le nouvel état. */
@@ -197,7 +158,6 @@ function monterAcceptation(): void {
   });
 }
 
-monterChoixAudience();
 monterAcceptation();
 window.addEventListener('hashchange', marquerCible);
 suivreLecture();

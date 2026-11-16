@@ -617,7 +617,7 @@ function donneesHTML(): string {
         <thead><tr><th scope="col">${t('Information')}</th><th scope="col">${icon('users', 'icon-sm')}${t('Tout le monde')}</th><th scope="col">${icon('lock', 'icon-sm')}${t('Vous seul')}</th></tr></thead>
         <tbody>${VISIBILITE.map((v) => `<tr><th scope="row">${t(v.label)}</th><td>${v.public ? `${icon('check', 'icon')}<span class="sr-only">Oui</span>` : '<span class="sr-only">Non</span>'}</td><td>${v.public ? '<span class="sr-only">Non</span>' : `${icon('check', 'icon')}<span class="sr-only">Oui</span>`}</td></tr>`).join('')}</tbody>
       </table>
-      <p class="pa-groupe-note">${t('Seuls les cookies strictement nécessaires au fonctionnement du site sont utilisés.')} <a href="${ROUTES.confidentialite}">${t('Politique de confidentialité')}</a></p>
+      <p class="pa-groupe-note">${t('Vos choix sur les cookies et la mesure d’audience valent pour cet appareil.')} <a href="${ROUTES.cookies}#choix" data-ck-gerer>${t('Gérer les cookies')}</a> · <a href="${ROUTES.confidentialite}">${t('Politique de confidentialité')}</a></p>
     </section>`;
   const aAccepter = documents.filter((d) => d.aAccepter);
   const depuis = etats.dates().conditionsDepuis;

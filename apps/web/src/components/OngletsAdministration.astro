@@ -1,7 +1,7 @@
 ---
 /* Onglets des écrans d'administration (ADM-01, ADM-02, DEC-02, APP-03) : rôles de l'équipe, codes
    d'invitation, défis, guides d'Explorer, savoirs d'Apprendre, référentiels, documents légaux,
-   journal des décisions de modération, journal d'audit, assistants d'IA (REF-03). */
+   journal des décisions de modération, journal d'audit, audience (LEG-03), assistants d'IA (REF-03). */
 import { ROUTES } from '../lib/navigation';
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
     | 'documents'
     | 'decisions'
     | 'audit'
+    | 'audience'
     | 'assistants';
 }
 
@@ -29,6 +30,7 @@ const ONGLETS = [
   { cle: 'documents', libelle: 'Documents légaux', href: ROUTES.documentsLegauxAdmin },
   { cle: 'decisions', libelle: 'Journal des décisions', href: ROUTES.journalDecisions },
   { cle: 'audit', libelle: 'Journal d’audit', href: ROUTES.journalAudit },
+  { cle: 'audience', libelle: 'Audience', href: ROUTES.audienceAdmin },
   { cle: 'assistants', libelle: 'Assistants d’IA', href: ROUTES.assistantsIaAdmin },
 ] as const;
 ---
