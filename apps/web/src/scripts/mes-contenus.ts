@@ -806,8 +806,12 @@ function demarrer(depart: Donnees): void {
     if (!menu.hidden && !menu.contains(cible) && !cible.closest('[data-mc-menu-pour]'))
       fermerMenu(false);
   });
+  /* Sur téléphone, la barre d'adresse et le clavier ne changent que la hauteur : le menu (une
+     feuille en bas d'écran) ne se referme que si la largeur change. */
+  let largeurFenetre = window.innerWidth;
   window.addEventListener('resize', () => {
-    fermerMenu(false);
+    if (window.innerWidth !== largeurFenetre) fermerMenu(false);
+    largeurFenetre = window.innerWidth;
     placerIndicateur();
   });
   window.addEventListener(

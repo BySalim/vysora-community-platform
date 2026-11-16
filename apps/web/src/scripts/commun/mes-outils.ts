@@ -5,7 +5,7 @@
 import type { FamilleOutil, OutilResumeApi } from '@vysora/shared';
 import { plier } from '../../lib/explorer/recherche';
 import { FAMILLES } from '../../lib/publier/donnees';
-import { $, esc, icon, pluriel, t, toast } from './outils';
+import { $, ecranTactile, esc, icon, pluriel, t, toast } from './outils';
 
 export interface OutilChoisissable extends OutilResumeApi {
   famille: FamilleOutil;
@@ -87,7 +87,8 @@ export function monterMesOutils(
     filtre.value = '';
     rendre();
     dialogue.showModal();
-    filtre.focus();
+    // Sur téléphone, le clavier recouvrirait la grille : le focus reste sur « Fermer ».
+    if (!ecranTactile()) filtre.focus();
   };
 
   liste?.addEventListener('click', (evenement) => {

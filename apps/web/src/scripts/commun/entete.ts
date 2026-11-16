@@ -83,7 +83,9 @@ function initialiserCompte(): void {
   zone.addEventListener('focusout', (evenement) => {
     if (!zone.contains(evenement.relatedTarget as Node | null)) regler(false);
   });
-  document.addEventListener('click', (evenement) => {
+  // pointerdown plutôt que click : sur iPhone, toucher un texte inerte n'envoie pas toujours de
+  // « click » jusqu'au document, et le menu resterait ouvert.
+  document.addEventListener('pointerdown', (evenement) => {
     if (!zone.contains(evenement.target as Node)) regler(false);
   });
 

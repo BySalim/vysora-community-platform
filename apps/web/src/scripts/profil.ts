@@ -318,8 +318,10 @@ async function partager(): Promise<void> {
     try {
       await navigator.share({ title: `${profil.membre.nom} sur Vysora`, url: adresse });
       return;
-    } catch {
-      // Partage annulé : le lien est copié.
+    } catch (erreur) {
+      // Feuille de partage fermée : rien à faire. Copier ensuite échouerait sur iPhone (le geste
+      // est consommé) et copierait sans qu'on le demande ailleurs. Partage impossible : on copie.
+      if (erreur instanceof DOMException && erreur.name === 'AbortError') return;
     }
   }
   await copier(adresse, 'Lien du profil copié.');

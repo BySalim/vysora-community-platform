@@ -56,7 +56,18 @@ import { FAMILLES } from '../lib/publier/donnees';
 import { exiger, invitation } from './commun/acces';
 import { api } from './commun/api';
 import { etats } from './commun/etats';
-import { $, $$, animations, esc, icon, pluriel, t, toast, typo } from './commun/outils';
+import {
+  $,
+  $$,
+  animations,
+  ecranTactile,
+  esc,
+  icon,
+  pluriel,
+  t,
+  toast,
+  typo,
+} from './commun/outils';
 
 /* Données, état et adresse --------------------------------------------------- */
 
@@ -704,7 +715,8 @@ function ouvrirOutils(): void {
   filtreOutils.value = '';
   rendreOutils();
   dialogueOutils.showModal();
-  filtreOutils.focus();
+  // Sur téléphone, le clavier recouvrirait la grille : le focus reste sur « Fermer ».
+  if (!ecranTactile()) filtreOutils.focus();
 }
 
 listeOutils?.addEventListener('click', (evenement) => {

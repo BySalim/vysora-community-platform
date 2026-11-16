@@ -18,12 +18,20 @@ export const $$ = <E extends Element = HTMLElement>(
 export const icon = (nom: string, classe = 'icon-sm') =>
   `<svg class="icon ${classe}" aria-hidden="true"><use href="#i-${nom}"/></svg>`;
 
+/** Écran tactile (téléphone, tablette). On n'y donne pas le focus à un champ que la personne n'a
+    pas touché : le clavier s'ouvrirait et recouvrirait la page. */
+export const ecranTactile = () => matchMedia('(pointer: coarse)').matches;
+
 let minuterieToast: ReturnType<typeof setTimeout> | undefined;
 /** Message bref en bas de l'écran (zone [data-toast], annoncée aux lecteurs d'écran). */
 export function toast(message: string, nomIcone = 'check'): void {
   const zone = $('[data-toast]');
   if (!zone) return;
   clearTimeout(minuterieToast);
+  // Clavier d'un téléphone ouvert : le message remonte au-dessus de lui au lieu d'être caché.
+  const vue = window.visualViewport;
+  const cache = vue ? Math.round(window.innerHeight - vue.height - vue.offsetTop) : 0;
+  zone.style.translate = cache > 0 ? `0 -${cache}px` : '';
   zone.innerHTML = `${icon(nomIcone)}<span>${t(message)}</span>`;
   requestAnimationFrame(() => requestAnimationFrame(() => zone.classList.add('is-visible')));
   minuterieToast = setTimeout(() => {
