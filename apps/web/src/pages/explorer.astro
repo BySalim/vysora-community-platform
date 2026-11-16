@@ -211,23 +211,26 @@ const icones = [
             objectif&nbsp;: la méthode qui ressort, les pièges à éviter et ce qui fonctionne avec
             vos outils.
           </p>
-          <form class="ex-search" role="search" data-search data-enter="4" action={ROUTES.explorer}>
-            <label class="sr-only" for="ex-q">
-              Décrivez ce que vous voulez réussir
-            </label>
+          <div class="ex-search" data-enter="4">
             <div class="ex-field">
               <Fragment set:html={icone('search', '')} />
-              <input
+              {/* Aspect d'une saisie : ouvre la recherche de l'en-tête sur « Guides » (commun/entete.ts). */}
+              <button
+                class:list={['champ-recherche', { 'a-texte': Boolean(adresse.q) }]}
                 id="ex-q"
-                name="q"
-                type="search"
-                autocomplete="off"
-                spellcheck="false"
-                placeholder={typo('Par exemple : prendre des rendez-vous en ligne')}
-                aria-describedby="ex-search-help"
-                maxlength="200"
-                value={adresse.q}
-              />
+                type="button"
+                aria-label="Rechercher dans Explorer"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-keyshortcuts="/"
+                data-recherche-ouvrir
+                data-recherche-portee="guides"
+                data-recherche-texte={adresse.q || undefined}
+              >
+                <span data-ex-q>
+                  {typo(adresse.q || 'Par exemple : prendre des rendez-vous en ligne')}
+                </span>
+              </button>
               <button
                 class="ex-clear"
                 type="button"
@@ -241,11 +244,7 @@ const icones = [
                 /
               </kbd>
             </div>
-            <p class="sr-only" id="ex-search-help">
-              La liste des guides se met à jour pendant la saisie. Appuyez sur Entrée pour ouvrir le
-              premier guide.
-            </p>
-          </form>
+          </div>
           <p class="ex-often" data-enter="5" hidden={!souvent.length}>
             <span>Souvent cherché</span>
             <span class="ex-often-list" data-often>

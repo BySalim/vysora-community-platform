@@ -235,7 +235,7 @@ interface Option {
   cle?: string;
   kind?: 'terme' | 'portee' | 'effacer';
   terme?: string;
-  portee?: IdGroupe;
+  portee?: IdGroupe | 'tout';
   href?: string;
   cls?: string;
   vignette?: string;
@@ -297,6 +297,37 @@ const GROUPE = Object.fromEntries(GROUPES.map((g) => [g.id, g])) as Record<
   IdGroupe,
   (typeof GROUPES)[number]
 >;
+/* Portée de la page d'origine : le champ de recherche d'Explorer, du forum ou d'Apprendre
+   ([data-recherche-portee]) ouvre la recherche sur l'onglet de sa page, affiché dès l'ouverture et
+   gardé même quand il ne trouve rien ; « Tout » élargit. La loupe de l'en-tête, Ctrl K et le champ
+   de l'accueil ouvrent sur « Tout ». */
+interface Contexte {
+  dans: string;
+  saisie: string;
+  rien: string;
+  lien?: (q: string) => string;
+}
+const CONTEXTES: Partial<Record<IdGroupe, Contexte>> = {
+  guides: {
+    dans: 'dans Explorer',
+    saisie: 'Rechercher un guide, un objectif, un domaine…',
+    rien: 'Aucun guide ni domaine',
+    lien: (q) => `${ROUTES.explorer}?q=${encodeURIComponent(q)}`,
+  },
+  forum: {
+    dans: 'dans le forum',
+    saisie: 'Rechercher un sujet, une question, une astuce…',
+    rien: 'Aucun sujet du forum',
+    lien: (q) => `${ROUTES.forum}?q=${encodeURIComponent(q)}`,
+  },
+  apprendre: {
+    dans: 'dans Apprendre',
+    saisie: 'Rechercher une notion, une règle, un cas…',
+    rien: 'Aucun savoir ni cas',
+  },
+};
+const estContexte = (valeur: unknown): valeur is IdGroupe =>
+  typeof valeur === 'string' && Object.hasOwn(CONTEXTES, valeur);
 const TYPES: Record<TypeCreation, [string, string]> = {
   UN_PROMPT: ['type-prompt', '1 prompt'],
   ITERATION: ['type-iteration', 'Itération'],
@@ -1015,9 +1046,15 @@ function chercher(q: string): { resultats: Resultat[]; racines: string[]; correc
 
 /* Rendu ---------------------------------------------------------------------- */
 
-const etat: { q: string; portee: IdGroupe | 'tout'; exact: boolean } = {
+const etat: {
+  q: string;
+  portee: IdGroupe | 'tout';
+  contexte: IdGroupe | null;
+  exact: boolean;
+} = {
   q: '',
   portee: 'tout',
+  contexte: null,
   exact: false,
 };
 interface Elements {
@@ -1049,6 +1086,7 @@ let dejaVues = new Set<string>();
 let source: Element | null = null;
 let fermeture: Promise<void> | null = null;
 let annonceMinuteur = 0;
+let horsPortee = false; // rien dans l'onglet de la page, mais des résultats ailleurs
 
 const groupeHTML = (
   id: string,
@@ -1125,6 +1163,34 @@ function accueilHTML(): string {
       .join(''),
   );
 
+  // Depuis une page : ses contenus les plus suivis, à la place des accès rapides, en alternant les
+  // sortes (guides et domaines, savoirs et cas).
+  const contexte = etat.portee === 'tout' ? undefined : CONTEXTES[etat.portee];
+  const sortes = new Map<string, Entree[]>();
+  if (contexte)
+    for (const entree of index
+      .filter((e) => e.groupe === etat.portee)
+      .toSorted((a, b) => b.pop - a.pop)) {
+      const sorte = entree.cle.split(':')[0] ?? '';
+      sortes.set(sorte, [...(sortes.get(sorte) ?? []), entree]);
+    }
+  const aDecouvrir: Entree[] = [];
+  for (let rang = 0; aDecouvrir.length < 4 && [...sortes.values()].some((l) => l[rang]); rang += 1)
+    for (const liste of sortes.values()) {
+      const e = liste[rang];
+      if (e && aDecouvrir.length < 4) aDecouvrir.push(e);
+    }
+  if (contexte && aDecouvrir.length)
+    return (
+      html +
+      groupeHTML(
+        'decouvrir',
+        `À découvrir ${contexte.dans}`,
+        aDecouvrir.map((e) => optionHTML(depuisEntree(e, []))).join(''),
+        { colonne: 2 },
+      )
+    );
+
   const parId = Object.fromEntries(pages().map((p) => [p.id, p]));
   const rapides = etats.membre()
     ? ['mes-contenus', 'notifications', 'poser', 'publier']
@@ -1164,18 +1230,25 @@ function accueilHTML(): string {
 
 function resultatsHTML(q: string, x: Elements): string {
   const { resultats, racines, correction } = chercher(q);
+  horsPortee = false;
   const parGroupe = Object.fromEntries(GROUPES.map((g) => [g.id, [] as Resultat[]])) as Record<
     IdGroupe,
     Resultat[]
   >;
   for (const r of resultats) parGroupe[r.e.groupe].push(r);
   const presents = GROUPES.filter((g) => parGroupe[g.id].length);
-  if (etat.portee !== 'tout' && !parGroupe[etat.portee].length) etat.portee = 'tout';
+  // L'onglet de la page d'origine reste, même vide ; un autre onglet vide rend la main à « Tout ».
+  if (etat.portee !== 'tout' && etat.portee !== etat.contexte && !parGroupe[etat.portee].length)
+    etat.portee = 'tout';
+  const onglets = [
+    ...(etat.contexte ? [GROUPE[etat.contexte]] : []),
+    ...presents.filter((g) => g.id !== etat.contexte),
+  ];
 
   x.filtres.innerHTML = (
     [
       ['tout', 'Tout', resultats.length],
-      ...presents.map((g) => [g.id, g.court ?? g.label, parGroupe[g.id].length]),
+      ...onglets.map((g) => [g.id, g.court ?? g.label, parGroupe[g.id].length]),
     ] as [string, string, number][]
   )
     .map(
@@ -1184,15 +1257,17 @@ function resultatsHTML(q: string, x: Elements): string {
     )
     .join('');
   x.filtres.hidden = !resultats.length;
-  x.total.textContent = resultats.length
-    ? typo(pluriel(resultats.length, 'résultat', 'résultats'))
-    : '';
+  const nPortee = etat.portee === 'tout' ? resultats.length : parGroupe[etat.portee].length;
+  const dansPortee = etat.portee === 'tout' ? undefined : CONTEXTES[etat.portee];
+  x.total.textContent = resultats.length ? typo(pluriel(nPortee, 'résultat', 'résultats')) : '';
   annoncer(
-    resultats.length ? pluriel(resultats.length, 'résultat', 'résultats') : 'Aucun résultat',
+    resultats.length
+      ? `${pluriel(nPortee, 'résultat', 'résultats')}${dansPortee ? ` ${dansPortee.dans}` : ''}`
+      : 'Aucun résultat',
   );
 
   const continuer: Option[] = [
-    ...(location.pathname.startsWith(ROUTES.forum)
+    ...(location.pathname.startsWith(ROUTES.forum) || etat.contexte === 'forum'
       ? [
           {
             cle: 'continuer:forum',
@@ -1239,6 +1314,29 @@ function resultatsHTML(q: string, x: Elements): string {
   x.avant.innerHTML = correction
     ? `<p class="rch-correction">${t('Résultats pour')} <b>${esc(correction)}</b>. <button type="button" data-rch-exact>${t(`Rechercher plutôt « ${q} »`)}</button></p>`
     : '';
+  // Rien dans l'onglet de la page, mais ailleurs : on le dit, et la première ligne élargit à « Tout ».
+  if (etat.portee !== 'tout' && !parGroupe[etat.portee].length) {
+    horsPortee = true;
+    const ailleurs =
+      resultats.length === 1
+        ? 'Voir le résultat sur tout Vysora'
+        : `Voir les ${fmt(resultats.length)} résultats sur tout Vysora`;
+    x.avant.innerHTML = `<p class="rch-correction">${t(`${CONTEXTES[etat.portee]?.rien ?? 'Aucun résultat'} pour « ${correction ?? q} ».`)}</p>`;
+    return (
+      groupeHTML(
+        'ailleurs',
+        'Ailleurs sur Vysora',
+        optionHTML({
+          kind: 'portee',
+          portee: 'tout',
+          cle: 'ailleurs',
+          vignette: ic('layers'),
+          titre: t(ailleurs),
+          meta: presents.map((g) => `${t(g.court ?? g.label)} ${fmt(parGroupe[g.id].length)}`),
+        }),
+      ) + groupeHTML('continuer', 'Continuer la recherche', continuer.map(optionHTML).join(''))
+    );
+  }
   const affiches =
     etat.portee === 'tout'
       ? presents.toSorted(
@@ -1283,7 +1381,8 @@ function rendre({ neuf = false } = {}): void {
   const brut = x.saisie.value;
   const q = brut.trim().replace(/\s+/g, ' ');
   etat.q = q;
-  if (!q) etat.portee = 'tout';
+  // Sans texte : l'onglet de la page d'origine, ou « Tout » s'il a été choisi.
+  if (!q && !(etat.contexte && etat.portee === 'tout')) etat.portee = etat.contexte ?? 'tout';
   x.champ.classList.toggle('a-texte', Boolean(brut));
   x.effacer.hidden = !brut;
   x.dialogue.classList.toggle('is-vide', !q);
@@ -1293,7 +1392,22 @@ function rendre({ neuf = false } = {}): void {
   x.avant.innerHTML = '';
   let html = '';
   if (!q) {
-    x.filtres.hidden = true;
+    // Ouverte depuis une page : son onglet est visible dès l'ouverture, « Tout » à côté pour élargir.
+    const contexte = etat.contexte;
+    x.filtres.innerHTML = contexte
+      ? (
+          [
+            ['tout', 'Tout'],
+            [contexte, GROUPE[contexte].court ?? GROUPE[contexte].label],
+          ] as [string, string][]
+        )
+          .map(
+            ([id, label]) =>
+              `<button type="button" aria-pressed="${etat.portee === id}" data-rch-portee="${id}">${t(label)}</button>`,
+          )
+          .join('')
+      : '';
+    x.filtres.hidden = !contexte;
     x.total.textContent = '';
     html = accueilHTML();
   } else if (!pret) {
@@ -1302,7 +1416,10 @@ function rendre({ neuf = false } = {}): void {
   } else {
     html = resultatsHTML(q, x);
   }
-  x.colonne.classList.toggle('est-rien', Boolean(q) && pret && !options.some((o) => o.apercu));
+  x.colonne.classList.toggle(
+    'est-rien',
+    Boolean(q) && pret && !horsPortee && !options.some((o) => o.apercu),
+  );
   x.zone.classList.toggle('sans-apercu', !q || !pret || !options.some((o) => o.apercu));
   x.liste.setAttribute('aria-label', q ? 'Résultats' : 'Suggestions');
   x.liste.innerHTML = `<span class="rch-curseur" aria-hidden="true"></span>${html}`;
@@ -1591,7 +1708,12 @@ const declencheurs = (ouvert: boolean) => {
   for (const d of $$('[data-recherche-ouvrir]')) d.setAttribute('aria-expanded', String(ouvert));
 };
 
-export function ouvrir(declencheur?: Element | null): void {
+/** « texte » : ce qu'affiche le champ de la page qui l'ouvre, ou la touche frappée sur ce champ.
+ * « portee » : l'onglet de cette page (CONTEXTES), sinon « Tout ». */
+export function ouvrir(
+  declencheur?: Element | null,
+  { texte = '', portee = null }: { texte?: string; portee?: string | null } = {},
+): void {
   const x = monter();
   if (x.dialogue.open && !fermeture) {
     x.saisie.focus();
@@ -1604,13 +1726,17 @@ export function ouvrir(declencheur?: Element | null): void {
       if (x.dialogue.open && (etat.q || actif < 0)) rendre();
     });
   source = declencheur?.isConnected ? declencheur : $('[data-recherche-ouvrir]');
+  etat.contexte = estContexte(portee) ? portee : null;
+  const contexte = etat.contexte ? CONTEXTES[etat.contexte] : undefined;
+  const dans = contexte ? contexte.dans : 'sur Vysora';
   x.saisie.placeholder = typo(
     window.innerWidth < 560
-      ? 'Rechercher sur Vysora'
-      : 'Rechercher une création, un sujet, un outil…',
+      ? `Rechercher ${dans}`
+      : (contexte?.saisie ?? 'Rechercher une création, un sujet, un outil…'),
   );
-  x.saisie.value = '';
-  etat.portee = 'tout';
+  x.saisie.setAttribute('aria-label', typo(`Rechercher ${dans}`));
+  x.saisie.value = texte.slice(0, x.saisie.maxLength > 0 ? x.saisie.maxLength : undefined);
+  etat.portee = etat.contexte ?? 'tout';
   etat.exact = false;
   // La page est figée sans décalage par styles/defilement.css (classe « rch-gouttiere » du
   // prototype non reprise : l'emplacement réservé restait blanc, hors du voile).
@@ -1618,6 +1744,7 @@ export function ouvrir(declencheur?: Element | null): void {
   x.dialogue.classList.add('is-ouverture');
   x.dialogue.showModal();
   x.saisie.focus({ preventScroll: true });
+  x.saisie.setSelectionRange(x.saisie.value.length, x.saisie.value.length);
   declencheurs(true);
   rendre({ neuf: true });
   animerOuverture(x);
@@ -1718,7 +1845,9 @@ function monter(): Elements {
       if (choisi) choisi.click();
       else if (etat.q && pret) {
         memoriser(etat.q);
-        location.href = `${ROUTES.explorer}?q=${encodeURIComponent(etat.q)}`;
+        const contexte = etat.contexte ? CONTEXTES[etat.contexte] : undefined;
+        location.href =
+          contexte?.lien?.(etat.q) ?? `${ROUTES.explorer}?q=${encodeURIComponent(etat.q)}`;
       }
     } else if (
       (evenement.key === 'Delete' || (evenement.key === 'Backspace' && !x.saisie.value)) &&

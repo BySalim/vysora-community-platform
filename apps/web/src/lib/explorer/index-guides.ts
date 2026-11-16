@@ -256,7 +256,7 @@ export function apercuGuide(g: GuideResumeApi, actif: boolean): string {
         .map((a) => avatar(a, 24))
         .join(
           '',
-        )}</span><span>${t(`${pluriel(g.reproductions, 'reproduction', 'reproductions')}${g.tauxReussite !== null ? ` · ${g.tauxReussite} % réussies` : ''}`)}</span><span class="ex-hc-go"><kbd class="ex-hc-enter" aria-hidden="true">Entrée</kbd>${lienGuide(g, `Ouvrir le guide${icone('arrow')}`, 'link-arrow')}</span></div>
+        )}</span><span>${t(`${pluriel(g.reproductions, 'reproduction', 'reproductions')}${g.tauxReussite !== null ? ` · ${g.tauxReussite} % réussies` : ''}`)}</span><span class="ex-hc-go">${lienGuide(g, `Ouvrir le guide${icone('arrow')}`, 'link-arrow')}</span></div>
     </div>`;
 }
 

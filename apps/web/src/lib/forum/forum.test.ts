@@ -59,6 +59,10 @@ describe('adresse de la liste du forum', () => {
     expect(ecrireAdresse(sansFiltre(etat, 'type:astuce'))).toBe(
       '/forum?etiquette=code&avecPrompt=1',
     );
+    // La recherche en cours a sa puce, en tête, et se retire comme un filtre.
+    const recherche = adresse('q=visages&etiquette=code');
+    expect(filtresActifs(recherche, {}).map((f) => f.libelle)).toEqual(['« visages »', '[code]']);
+    expect(ecrireAdresse(sansFiltre(recherche, 'q'))).toBe('/forum?etiquette=code');
   });
 
   it('titre la liste comme le prototype', () => {

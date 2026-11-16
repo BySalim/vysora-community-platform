@@ -90,19 +90,16 @@ if (donnees) {
     });
   });
 
-  /* Recherche : la touche « / » y mène (prototype : raccourci de la liste). */
-  const recherche = $<HTMLFormElement>('[data-search]');
-  recherche?.addEventListener('submit', (evenement) => {
-    evenement.preventDefault();
-    const q = $<HTMLInputElement>('#qa-q', recherche)?.value.trim() ?? '';
-    aller({ ...etat, q, page: 1 });
-  });
+  /* Recherche : le champ ouvre la recherche de l'en-tête sur l'onglet « Forum » (commun/entete.ts) ;
+     « Rechercher … dans le forum » y ramène ici avec ?q=. La touche « / » y mène aussi. */
   document.addEventListener('keydown', (evenement) => {
     if (evenement.key !== '/' || evenement.ctrlKey || evenement.metaKey || evenement.altKey) return;
     const cible = evenement.target as HTMLElement;
-    if (cible.closest('input, textarea, select, [contenteditable="true"]')) return;
+    if (cible.closest('input, textarea, select, [contenteditable="true"], [data-recherche-ouvrir]'))
+      return;
+    if (document.querySelector('dialog[open]')) return;
     evenement.preventDefault();
-    $<HTMLInputElement>('#qa-q')?.focus();
+    $<HTMLButtonElement>('#qa-q')?.click();
   });
 
   document.addEventListener('click', (evenement) => {

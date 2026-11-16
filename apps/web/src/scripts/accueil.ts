@@ -933,9 +933,12 @@ function initialiserComparaison(): void {
 
 /* Héros : intention et hauteur visible ------------------------------------------------------------- */
 
+/* Le champ n'a que l'aspect d'une saisie : il ouvre la recherche de l'en-tête (commun/entete.ts).
+   Les exemples s'écrivent dans son texte, à la place d'un placeholder. */
 function initialiserIntention(): void {
-  const champ = $<HTMLInputElement>('[data-intent]');
-  if (!champ) return;
+  const texte = $('[data-intent]');
+  if (!texte) return;
+  const champ = texte.closest('button');
   const phrases = [
     'un site de réservation',
     'un logo pour mon association',
@@ -950,8 +953,8 @@ function initialiserIntention(): void {
   let attente = 2200;
   const battement = () => {
     setTimeout(battement, efface ? 32 : 58);
-    if (!completes() || document.activeElement === champ || champ.value) {
-      champ.placeholder = phrases[phrase]!;
+    if (!completes() || document.activeElement === champ) {
+      texte.textContent = phrases[phrase]!;
       return;
     }
     if (attente > 0) {
@@ -974,7 +977,7 @@ function initialiserIntention(): void {
         attente = 2200;
       }
     }
-    champ.placeholder = (efface ? cible : phrases[phrase]!).slice(0, Math.max(lettres, 0)) || ' ';
+    texte.textContent = (efface ? cible : phrases[phrase]!).slice(0, Math.max(lettres, 0)) || ' ';
   };
   setTimeout(battement, 1800);
 }

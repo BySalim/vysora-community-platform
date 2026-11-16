@@ -75,22 +75,6 @@
 .ap-progress-num { font: 700 0.875rem/1.1 var(--font-body); font-variant-numeric: tabular-nums; }
 .ap-local :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* Recherche */
-.ap-search { position: absolute; left: 0; right: 0; top: 100%; border-bottom: 1px solid var(--border); background: var(--white); box-shadow: 0 30px 50px -36px rgba(23, 23, 23, 0.45); }
-.js[data-motion-effective="full"] .ap-search:not([hidden]) { animation: ap-swap 260ms var(--ease-emph); }
-.ap-search-box { max-width: 720px; margin: 0 auto; padding: 18px 0 22px; }
-.ap-search-field { display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 6px 0 18px; border: 1px solid var(--border-strong); border-radius: calc(var(--r-control) + 6px); color: var(--text-muted); transition: border-color var(--d-quick) var(--ease), box-shadow var(--d-std) var(--ease); }
-.ap-search-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-.ap-search-field input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 1.0625rem/1 var(--font-body); }
-.ap-search-field input::-webkit-search-cancel-button { display: none; }
-.ap-search-results { display: grid; gap: 2px; margin: 10px 0 0; padding: 0; list-style: none; }
-.ap-search-item { display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; color: var(--text); text-decoration: none; }
-.ap-search-item:hover { background: var(--panel); }
-.ap-search-item:focus-visible { background: var(--panel); outline: 2px solid var(--focus); outline-offset: 0; }
-.ap-search-title { font-weight: 600; line-height: 1.4; }
-.ap-search-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 10px 12px; color: var(--text-muted); font-size: 0.875rem; }
-.ap-search-hint a { color: var(--link); font-weight: 600; }
-
 /* Vue d'ensemble : en-tête ---------------------------------------------------- */
 
 .ap-hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(52px, 7vw, 104px) 0 clamp(40px, 5vw, 72px); }
@@ -594,7 +578,6 @@
   .ap-local-tabs a { height: 34px; padding: 0 11px; }
   .ap-progress-label { display: none; }
   .ap-progress-link { padding-right: 8px; }
-  .ap-search-box { padding: 12px 0 16px; }
   .ap-hero-actions .btn { flex: 1 1 auto; }
   .ap-hero-count { gap: 6px 16px; }
   .ap-sec-head { margin-bottom: 28px; }

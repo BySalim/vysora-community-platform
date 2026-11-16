@@ -206,6 +206,8 @@ export function filtresActifs(
   noms: { outil?: string; membre?: string },
 ): { cle: string; libelle: string }[] {
   const actifs: { cle: string; libelle: string }[] = [];
+  // La recherche en cours : le champ n'ouvre que la recherche de l'en-tête, sa puce l'efface.
+  if (etat.q) actifs.push({ cle: 'q', libelle: `« ${etat.q} »` });
   if (etat.etiquette) actifs.push({ cle: 'etiquette', libelle: `[${etat.etiquette}]` });
   if (etat.outil) actifs.push({ cle: 'outil', libelle: noms.outil ?? etat.outil });
   if (etat.membre)
@@ -224,7 +226,8 @@ export function filtresActifs(
 /** État sans le filtre désigné (puces « Retirer le filtre »). */
 export function sansFiltre(etat: EtatListe, cle: string): EtatListe {
   const suite: EtatListe = { ...etat, page: 1, filtres: { ...etat.filtres } };
-  if (cle === 'etiquette') suite.etiquette = '';
+  if (cle === 'q') suite.q = '';
+  else if (cle === 'etiquette') suite.etiquette = '';
   else if (cle === 'outil') suite.outil = '';
   else if (cle === 'membre') suite.membre = '';
   else if (cle === 'sansReponse') suite.filtres.sansReponse = false;

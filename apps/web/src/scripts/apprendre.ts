@@ -17,7 +17,6 @@ import {
 } from '../lib/apprendre/pages';
 import type { DonneesPageApprendre, IdRubrique } from '../lib/apprendre/types';
 import { creerVues, filtresDeDepart } from '../lib/apprendre/vues';
-import { decouper, contient, plier, surligner } from '../lib/explorer/recherche';
 import { ROUTES } from '../lib/navigation';
 import { invitation } from './commun/acces';
 import { api } from './commun/api';
@@ -28,7 +27,6 @@ import {
   $$,
   animations,
   corrigerTypographie,
-  ecranTactile,
   esc,
   icon,
   pluriel,
@@ -47,7 +45,7 @@ if (D && vue) {
 
   const m = creerModele(D);
   const { RUB, byId, bases, regles, actifs, cases, caseById } = m;
-  const { toolLabel, kindOf, shortDate } = m;
+  const { kindOf, shortDate } = m;
 
   /* Progression : dans le compte du membre (savoirs, APP-03 ; cas, RG-72), sinon dans ce
      navigateur ---------------------------------------------------------------------- */
@@ -525,7 +523,6 @@ if (D && vue) {
     restoreQuizzes(zone);
     void chargerCas(zone);
     observeReveal(zone);
-    closeSearch(false);
     if (animer && animations.niveau() !== 'none') {
       zone.classList.remove('is-entering');
       void zone.offsetWidth;
@@ -572,77 +569,6 @@ if (D && vue) {
     }
   }
 
-  /* Recherche ---------------------------------------------------------------------- */
-
-  const index = [
-    ...actifs.map((s) => ({
-      href: s.href,
-      kind: s.kindLabel,
-      kindIcon: kindOf(s).icon,
-      title: s.title,
-      sub: s.kind === 'astuces' ? toolLabel(s.tool ?? '', s.model) : '',
-      text: ` ${plier(`${s.title} ${s.short} ${s.tool ?? ''} ${(s.tools ?? []).join(' ')} ${s.kindLabel}`)}`,
-      titleText: ` ${plier(s.title)}`,
-    })),
-    ...cases.map((c) => ({
-      href: c.href,
-      kind: 'Cas Bon réflexe',
-      kindIcon: RUB['bon-reflexe'].icon,
-      title: c.title,
-      sub: c.domain,
-      text: ` ${plier(`${c.title} ${c.context} ${c.domain} bon reflexe cas`)}`,
-      titleText: ` ${plier(c.title)}`,
-    })),
-  ];
-  function renderSearch() {
-    const input = $<HTMLInputElement>('[data-ap-search-input]');
-    const box = $('[data-ap-search-results]');
-    const status = $('[data-ap-search-status]');
-    if (!input || !box || !status) return;
-    const query = input.value.trim();
-    const tokens = decouper(query);
-    if (!query) {
-      box.innerHTML = `<li class="ap-search-hint">Exemples : ${['graine', 'agent', 'traduction', 'Midjourney', 'script'].map((word) => `<button class="link-btn" type="button" data-ap-search-try="${word}">${word}</button>`).join('')}</li>`;
-      status.textContent = '';
-      return;
-    }
-    const list = index
-      .filter((item) => tokens.every((variants) => contient(item.text, variants)))
-      .map((item) => ({
-        item,
-        score: tokens.filter((variants) => contient(item.titleText, variants)).length,
-      }))
-      .toSorted((a, b) => b.score - a.score)
-      .slice(0, 8)
-      .map((r) => r.item);
-    box.innerHTML = list.length
-      ? list
-          .map(
-            (item) =>
-              `<li><a class="ap-search-item" href="${item.href}"><span class="ap-related-kind">${icon(item.kindIcon)}${t(item.kind)}${item.sub ? ` · ${t(item.sub)}` : ''}</span><span class="ap-search-title">${surligner(item.title, tokens)}</span></a></li>`,
-          )
-          .join('')
-      : `<li class="ap-search-hint">${t(`Aucun savoir ne correspond à « ${query} ».`)} <a href="${ROUTES.nouveauSujet}">Poser la question au forum</a></li>`;
-    status.textContent = list.length
-      ? `${pluriel(list.length, 'résultat', 'résultats')}.`
-      : 'Aucun résultat.';
-  }
-  function openSearch() {
-    const panel = $('[data-ap-search]');
-    if (!panel) return;
-    panel.hidden = false;
-    for (const b of $$('[data-ap-search-open]')) b.setAttribute('aria-expanded', 'true');
-    renderSearch();
-    $<HTMLInputElement>('[data-ap-search-input]')?.focus();
-  }
-  function closeSearch(restore = true) {
-    const panel = $('[data-ap-search]');
-    if (!panel || panel.hidden) return;
-    panel.hidden = true;
-    for (const b of $$('[data-ap-search-open]')) b.setAttribute('aria-expanded', 'false');
-    if (restore) $<HTMLButtonElement>('.ap-search-btn')?.focus();
-  }
-
   /* Interactions ------------------------------------------------------------------- */
 
   const outilsDialogue: OutilChoisissable[] = D.outils.map((o) => ({
@@ -674,24 +600,6 @@ if (D && vue) {
 
   document.addEventListener('click', (event) => {
     const target = event.target as Element;
-    if (target.closest('[data-ap-search-open]')) {
-      event.preventDefault();
-      const panel = $('[data-ap-search]');
-      if (panel?.hidden) openSearch();
-      else closeSearch();
-      return;
-    }
-    if (target.closest('[data-ap-search-close]')) return void closeSearch();
-    const tryWord = target.closest<HTMLElement>('[data-ap-search-try]');
-    if (tryWord) {
-      const input = $<HTMLInputElement>('[data-ap-search-input]');
-      if (input) {
-        input.value = tryWord.dataset.apSearchTry ?? '';
-        renderSearch();
-        if (!ecranTactile()) input.focus(); // au doigt, le clavier cacherait les résultats
-      }
-      return;
-    }
     if (target.closest('[data-open-tools]')) return void mesOutils.ouvrir();
     const stop = target.closest<HTMLElement>('[data-ap-stop]');
     if (stop) return void selectStop(Number(stop.dataset.apStop));
@@ -809,7 +717,6 @@ if (D && vue) {
   });
   document.addEventListener('input', (event) => {
     const cible = event.target as HTMLInputElement;
-    if (cible.matches('[data-ap-search-input]')) renderSearch();
     if (cible.matches('[data-ap-notion-filter]')) {
       filtres.notionQuery = cible.value;
       const groupes = $('[data-ap-notion-groups]');
@@ -820,23 +727,6 @@ if (D && vue) {
     const { key } = event;
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const cible = event.target as Element;
-    if (cible.closest?.('[data-ap-search]')) {
-      if (key === 'Escape') {
-        event.preventDefault();
-        closeSearch();
-        return;
-      }
-      if (key === 'ArrowDown' || key === 'ArrowUp') {
-        const items = $$<HTMLAnchorElement>('.ap-search-item');
-        if (!items.length) return;
-        event.preventDefault();
-        const at = items.indexOf(document.activeElement as HTMLAnchorElement);
-        const next = key === 'ArrowDown' ? Math.min(items.length - 1, at + 1) : at - 1;
-        if (next < 0) $<HTMLInputElement>('[data-ap-search-input]')?.focus();
-        else items[next]?.focus();
-      }
-      return;
-    }
     const stop = cible.closest?.<HTMLElement>('[data-ap-stop]');
     if (stop) {
       const i = Number(stop.dataset.apStop);
@@ -877,12 +767,13 @@ if (D && vue) {
     }
     if (
       document.querySelector('dialog[open]') ||
-      cible.closest?.('input, textarea, select, [contenteditable="true"]')
+      cible.closest?.('input, textarea, select, [contenteditable="true"], [data-recherche-ouvrir]')
     )
       return;
     if (key === '/') {
       event.preventDefault();
-      openSearch();
+      // Recherche de l'en-tête, onglet « Apprendre », comme le bouton « Rechercher ».
+      $<HTMLButtonElement>('.ap-search-btn')?.click();
     }
   });
   window.addEventListener('popstate', () => {

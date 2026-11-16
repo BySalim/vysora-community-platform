@@ -118,18 +118,33 @@ function afficherMessageEnAttente(): void {
 
 /* Recherche sur tout le site : la loupe ([data-recherche-ouvrir]) et Ctrl K (⌘ K) l'ouvrent. Son
    script et sa feuille de style (recherche.ts) se chargent au premier survol de la loupe ou après
-   le chargement de la page, puis servent aux ouvertures suivantes. */
+   le chargement de la page, puis servent aux ouvertures suivantes.
+   Les champs de recherche des pages (accueil, Explorer, forum) et le bouton « Rechercher »
+   d'Apprendre n'ont que l'aspect d'une saisie : ils portent eux aussi [data-recherche-ouvrir] et
+   ouvrent cette même recherche, qui part de la loupe de l'en-tête, avec le texte qu'ils affichent
+   (data-recherche-texte) ou la touche frappée sur le champ, sur l'onglet de leur page
+   (data-recherche-portee : guides, forum, apprendre). */
 let recherche: Promise<typeof import('./recherche')> | null = null;
 const chargerRecherche = () => (recherche ??= import('./recherche'));
+const loupeEnTete = () => $('.site-header [data-recherche-ouvrir]');
+
+/** Ouvre la recherche du site depuis un déclencheur (loupe, champ d'une page). Les pages y mènent
+ * la touche `/` en cliquant leur champ (`champ.click()`). */
+function ouvrirRecherche(declencheur: Element | null, texte = ''): void {
+  const portee = declencheur instanceof HTMLElement ? declencheur.dataset.recherchePortee : null;
+  const depart = declencheur?.closest('.site-header')
+    ? declencheur
+    : (loupeEnTete() ?? declencheur);
+  void chargerRecherche().then((r) => r.ouvrir(depart, { texte, portee }));
+}
 
 function initialiserRecherche(): void {
-  const ouvrir = (declencheur: Element | null) =>
-    void chargerRecherche().then((r) => r.ouvrir(declencheur));
+  const ouvrir = ouvrirRecherche;
   document.addEventListener('click', (evenement) => {
     const declencheur = (evenement.target as Element).closest('[data-recherche-ouvrir]');
     if (!declencheur) return;
     evenement.preventDefault();
-    ouvrir(declencheur);
+    ouvrir(declencheur, (declencheur as HTMLElement).dataset.rechercheTexte ?? '');
   });
   const intention = (evenement: Event) => {
     if ((evenement.target as Element).closest?.('[data-recherche-ouvrir]'))
@@ -138,6 +153,21 @@ function initialiserRecherche(): void {
   for (const type of ['pointerover', 'focusin', 'touchstart'])
     document.addEventListener(type, intention, { passive: true });
   document.addEventListener('keydown', (evenement) => {
+    const champ = (evenement.target as Element).closest?.<HTMLElement>(
+      '.champ-recherche[data-recherche-ouvrir]',
+    );
+    if (
+      champ &&
+      evenement.key.length === 1 &&
+      evenement.key !== ' ' &&
+      !evenement.ctrlKey &&
+      !evenement.metaKey &&
+      !evenement.altKey
+    ) {
+      evenement.preventDefault();
+      ouvrir(champ, (champ.dataset.rechercheTexte ?? '') + evenement.key);
+      return;
+    }
     if (
       evenement.key.toLowerCase() !== 'k' ||
       !(evenement.ctrlKey || evenement.metaKey) ||
@@ -146,7 +176,7 @@ function initialiserRecherche(): void {
     )
       return;
     evenement.preventDefault();
-    ouvrir($('.site-header [data-recherche-ouvrir]') ?? $('[data-recherche-ouvrir]'));
+    ouvrir(loupeEnTete() ?? $('[data-recherche-ouvrir]'));
   });
   const plusTard = (fn: () => void) =>
     typeof window.requestIdleCallback === 'function'

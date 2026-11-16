@@ -153,12 +153,16 @@ const rendu = typographier(
       set:html={typographier(vues.onglets(vue.view, vue.rubrique))}
     />
     <div class="ap-local-tools">
+      {/* Ouvre la recherche de l'en-tête sur « Apprendre » (commun/entete.ts). */}
       <button
         class="ap-search-btn"
         type="button"
+        aria-label="Rechercher dans Apprendre"
+        aria-haspopup="dialog"
         aria-expanded="false"
-        aria-controls="ap-search"
-        data-ap-search-open
+        aria-keyshortcuts="/"
+        data-recherche-ouvrir
+        data-recherche-portee="apprendre"
       >
         <Fragment set:html={icone('search')} />
         <span>Rechercher</span>
@@ -172,34 +176,6 @@ const rendu = typographier(
         aria-current={vue.view === 'progression' ? 'page' : undefined}
         set:html={vues.lienProgression()}
       />
-    </div>
-  </div>
-  <div class="ap-search" id="ap-search" hidden data-ap-search>
-    <div class="container">
-      <div class="ap-search-box">
-        <label class="ap-search-field">
-          <Fragment set:html={icone('search', '')} />
-          <span class="sr-only">Rechercher une base, une notion, une règle ou une astuce</span>
-          <input
-            type="search"
-            placeholder="Une notion, une règle, un outil…"
-            autocomplete="off"
-            spellcheck="false"
-            aria-describedby="ap-search-status"
-            data-ap-search-input
-          />
-          <button
-            class="icon-btn"
-            type="button"
-            aria-label="Fermer la recherche"
-            data-ap-search-close
-          >
-            <Fragment set:html={icone('close', '')} />
-          </button>
-        </label>
-        <p class="sr-only" id="ap-search-status" aria-live="polite" data-ap-search-status></p>
-        <ul class="ap-search-results" data-ap-search-results></ul>
-      </div>
     </div>
   </div>
 </nav>

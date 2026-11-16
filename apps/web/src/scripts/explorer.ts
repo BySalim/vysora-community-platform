@@ -134,7 +134,8 @@ function ecrireAdresseCourante(pousser: boolean): void {
 const els = {
   vueIndex: $('[data-view="index"]'),
   vueGuide: $('[data-view="guide"]'),
-  champ: $<HTMLInputElement>('#ex-q'),
+  champ: $<HTMLButtonElement>('#ex-q'),
+  texte: $('[data-ex-q]'),
   effacer: $('[data-clear-query]'),
   guides: $('[data-guides]'),
   domaines: $('[data-domains]'),
@@ -286,35 +287,10 @@ async function soutenir(bouton: HTMLButtonElement): Promise<void> {
 
 /* Recherche d'un objectif ----------------------------------------------------- */
 
-let minuterieSaisie: ReturnType<typeof setTimeout> | undefined;
-els.champ?.addEventListener('input', () => {
-  if (els.effacer) els.effacer.hidden = !els.champ?.value;
-  clearTimeout(minuterieSaisie);
-  minuterieSaisie = setTimeout(() => {
-    etat.q = (els.champ?.value ?? '').trim().slice(0, 200);
-    ecrireAdresseCourante(false);
-    rendreIndex();
-  }, 120);
-});
-
-$('[data-search]')?.addEventListener('submit', (evenement) => {
-  evenement.preventDefault();
-  clearTimeout(minuterieSaisie);
-  etat.q = (els.champ?.value ?? '').trim().slice(0, 200);
-  rendreIndex();
-  const premier = $<HTMLElement>('[data-guide-link]', els.guides ?? document);
-  ecrireAdresseCourante(false);
-  if (etat.q && premier?.dataset.guideLink) void ouvrirGuide(premier.dataset.guideLink);
-  else {
-    ecrireAdresseCourante(true);
-    $('#ex-index-title')?.scrollIntoView({ behavior: animations.completes() ? 'smooth' : 'auto' });
-  }
-});
-
+/* La saisie se fait dans la recherche de l'en-tête (onglet « Guides ») : Entrée y mène ici avec ?q=. */
 els.effacer?.addEventListener('click', () => {
-  if (els.champ) els.champ.value = '';
   etat.q = '';
-  if (els.effacer) els.effacer.hidden = true;
+  afficherRecherche();
   ecrireAdresseCourante(true);
   rendreIndex();
   els.champ?.focus();
@@ -332,9 +308,9 @@ const EXEMPLES = [
 let exemple = 0;
 let minuterieExemple: ReturnType<typeof setTimeout> | undefined;
 function exempleSuivant(): void {
-  const champ = els.champ;
-  if (!champ || !animations.completes() || etat.guide || document.activeElement === champ) return;
-  if (champ.value || document.hidden) return;
+  const { champ, texte: zone } = els;
+  if (!champ || !zone || !animations.completes() || etat.guide) return;
+  if (document.activeElement === champ || etat.q || document.hidden) return;
   exemple = (exemple + 1) % EXEMPLES.length;
   const prefixe = 'Par exemple : ';
   const texte = `${prefixe}${EXEMPLES[exemple]}`;
@@ -342,10 +318,23 @@ function exempleSuivant(): void {
   clearTimeout(minuterieExemple);
   const taper = () => {
     n += 1;
-    champ.placeholder = typo(texte.slice(0, n));
+    zone.textContent = typo(texte.slice(0, n));
     if (n < texte.length) minuterieExemple = setTimeout(taper, 26);
   };
   taper();
+}
+
+/* Le champ n'a que l'aspect d'une saisie : il ouvre la recherche de l'en-tête sur « Guides »
+   (commun/entete.ts), avec la recherche en cours (?q=, « Souvent cherché »), que la croix efface. */
+function afficherRecherche(): void {
+  clearTimeout(minuterieExemple);
+  if (els.champ) {
+    els.champ.classList.toggle('a-texte', Boolean(etat.q));
+    if (etat.q) els.champ.dataset.rechercheTexte = etat.q;
+    else delete els.champ.dataset.rechercheTexte;
+  }
+  if (els.texte) els.texte.textContent = typo(etat.q || `Par exemple : ${EXEMPLES[exemple]}`);
+  if (els.effacer) els.effacer.hidden = !etat.q;
 }
 
 /* Guide d'un objectif ---------------------------------------------------------- */
@@ -429,8 +418,7 @@ function afficherVue({ focus = false, rechercher = true } = {}): void {
     }
   } else {
     document.title = 'Explorer · Vysora';
-    if (els.champ) els.champ.value = etat.q;
-    if (els.effacer) els.effacer.hidden = !etat.q;
+    afficherRecherche();
     rendreIndex(rechercher);
     comparaisonChoisie.clear();
     majBarreComparaison();
@@ -890,8 +878,7 @@ document.addEventListener('click', (evenement) => {
   if (terme && sansModificateur(evenement as MouseEvent)) {
     evenement.preventDefault();
     etat.q = terme.dataset.term ?? '';
-    if (els.champ) els.champ.value = etat.q;
-    if (els.effacer) els.effacer.hidden = false;
+    afficherRecherche();
     ecrireAdresseCourante(true);
     rendreIndex();
     $('#ex-index-title')?.scrollIntoView({ behavior: animations.completes() ? 'smooth' : 'auto' });
@@ -1022,12 +1009,12 @@ document.addEventListener('keydown', (evenement) => {
     !evenement.ctrlKey &&
     !evenement.metaKey &&
     !evenement.altKey &&
-    !cible.closest('input, textarea, select, [contenteditable="true"], dialog[open]')
+    !cible.closest(
+      'input, textarea, select, [contenteditable="true"], dialog[open], [data-recherche-ouvrir]',
+    )
   ) {
     evenement.preventDefault();
-    if (etat.guide) retourIndex();
-    els.champ?.focus();
-    els.champ?.select();
+    els.champ?.click(); // recherche de l'en-tête, onglet « Guides », avec la recherche en cours
   }
 });
 

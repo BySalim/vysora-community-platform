@@ -205,6 +205,8 @@ export function listeHTML(c: ContexteListe): string {
   const { etat, liste } = c;
   const titre = titreListe(etat, c.noms);
   const filtres = filtresActifs(etat, c.noms);
+  // Le bouton « Filtrer » compte les filtres, pas la recherche en cours (sa puce est à part).
+  const nbFiltres = filtres.filter((f) => f.cle !== 'q').length;
   const jetons = decouper(lireRecherche(etat.q).texte);
   const total = liste?.total ?? 0;
   const sujets = liste?.elements ?? [];
@@ -221,17 +223,16 @@ export function listeHTML(c: ContexteListe): string {
         <header class="qa-list-head">
           <div class="qa-list-title"><h1 id="qa-title" tabindex="-1">${t(titre)}</h1><a class="btn btn-primary" href="${ROUTES.nouveauSujet}">${icone('plus')}Poser une question</a></div>
           ${introEtiquette}
-          <form class="qa-search" role="search" action="${ROUTES.forum}" data-search>
-            <label class="sr-only" for="qa-q">Rechercher dans le forum</label>
+          <div class="qa-search">
             ${icone('search', '')}
-            <input id="qa-q" name="q" type="search" autocomplete="off" spellcheck="false" value="${esc(etat.q)}" placeholder="Rechercher un sujet, ou [étiquette]" aria-describedby="qa-q-help">
+            <button class="champ-recherche${etat.q ? ' a-texte' : ''}" id="qa-q" type="button" aria-label="Rechercher dans le forum" aria-haspopup="dialog" aria-expanded="false" aria-keyshortcuts="/" aria-describedby="qa-q-help" data-recherche-ouvrir data-recherche-portee="forum"${etat.q ? ` data-recherche-texte="${esc(etat.q)}"` : ''}><span>${t(etat.q || 'Rechercher un sujet, ou [étiquette]')}</span></button>
             <kbd aria-hidden="true">/</kbd>
-          </form>
+          </div>
           <p class="sr-only" id="qa-q-help">Entourez un mot de crochets pour chercher une étiquette.</p>
           <div class="qa-bar">
             <p class="qa-count" role="status" aria-live="polite">${t(pluriel(total, 'sujet', 'sujets'))}</p>
             <div class="qa-tabs" role="group" aria-label="Classer les sujets">${ONGLETS.map(([cle, libelle]) => `<button type="button" data-tab="${cle}" aria-pressed="${etat.onglet === cle}">${t(libelle)}</button>`).join('')}</div>
-            <button class="qa-filter-btn" type="button" data-filter-toggle aria-expanded="false">${icone('filter')}<span>Filtrer</span>${filtres.length ? `<small>${fmt(filtres.length)}</small>` : ''}</button>
+            <button class="qa-filter-btn" type="button" data-filter-toggle aria-expanded="false">${icone('filter')}<span>Filtrer</span>${nbFiltres ? `<small>${fmt(nbFiltres)}</small>` : ''}</button>
           </div>
           ${filtres.length ? `<div class="qa-active">${filtres.map((f) => `<span class="qa-chip">${t(f.libelle)}<button type="button" data-unfilter="${esc(f.cle)}" aria-label="${esc(`Retirer le filtre ${f.libelle}`)}">${icone('close')}</button></span>`).join('')}<a class="link-btn" href="${ROUTES.forum}" data-reset>Tout effacer</a></div>` : ''}
         </header>
