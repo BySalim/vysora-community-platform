@@ -76,8 +76,8 @@ window.VYSORA_AUTH = {
       points: [
         'Vos données servent uniquement au fonctionnement de Vysora : votre compte, vos contributions, la modération et la sécurité.',
         'Votre adresse e-mail n’apparaît jamais sur votre profil public.',
-        'Seuls les cookies strictement nécessaires sont utilisés ; la fréquentation est mesurée sans cookie, et vous pouvez refuser d’y être compté.',
-        'Vos données sont hébergées en France ; elles ne sont ni vendues ni utilisées à des fins publicitaires.',
+        'Les cookies indispensables sont toujours actifs ; la fréquentation est mesurée sans cookie, et le parcours de vos visites n’est suivi qu’avec votre accord.',
+        'Vos données sont hébergées dans l’Union européenne, en Allemagne, sauf les messages adressés à l’équipe ; elles ne sont ni vendues ni utilisées à des fins publicitaires.',
         'Depuis vos paramètres, vous téléchargez vos données ou supprimez votre compte ; toute autre demande reçoit une réponse sous un mois.'
       ]
     },

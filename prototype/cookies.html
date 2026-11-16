@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="Cookies déposés par Vysora, mesure d’audience sans cookie et refus de la mesure d’audience.">
+  <meta name="description" content="Cookies déposés par Vysora, données gardées dans votre navigateur, mesure d’audience sans cookie, suivi des parcours avec votre accord et gestion de vos choix.">
   <title>Politique relative aux cookies · Vysora</title>
   <link rel="icon" href="assets/logos/vysora%20logo%20bleu.png">
   <link rel="stylesheet" href="assets/fonts/fonts.css">
@@ -48,6 +48,9 @@
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
     <symbol id="i-printer" viewBox="0 0 24 24"><path d="M7 9V3.5h10V9"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v6.5H7z"/></symbol>
     <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/></symbol>
   </svg>
   <a class="skip-link" href="#contenu">Aller au contenu</a>
 
@@ -113,11 +116,12 @@
       <nav class="lg-rail" aria-labelledby="lg-sommaire-titre" data-lg-sommaire></nav>
 
       <article class="lg-texte" aria-labelledby="lg-titre">
-        <section class="lg-essentiel" aria-labelledby="lg-essentiel-titre" data-lg-essentiel data-renvois="liste audience liste"></section>
+        <section class="lg-essentiel" aria-labelledby="lg-essentiel-titre" data-lg-essentiel data-renvois="liste audience parcours"></section>
 
         <section class="lg-article" id="principe">
           <h2>1. Ce que nous déposons sur votre appareil</h2>
-          <p>Un cookie est un petit fichier enregistré par votre navigateur lorsque vous consultez un site. Vysora n’en dépose que lorsqu’ils sont strictement nécessaires au service que vous demandez : rester connecté, sécuriser les formulaires, retenir votre choix sur la mesure d’audience. Ces cookies ne demandent pas votre accord, et c’est pourquoi aucun bandeau ne s’affiche.</p>
+          <p>Un cookie est un petit fichier enregistré par votre navigateur lorsque vous consultez un site. Vysora dépose les cookies indispensables au service que vous demandez : rester connecté, vous connecter avec GitHub ou Google, retenir vos choix. Ils ne demandent pas votre accord. Avec votre accord seulement, un cookie de visite nous permet aussi de suivre le parcours de vos visites.</p>
+          <p>À votre première visite, un bandeau vous demande votre choix : vous pouvez tout accepter, tout refuser ou choisir finalité par finalité, et refuser est aussi simple qu’accepter. Le site reste utilisable tant que vous n’avez pas répondu ; rien n’est alors suivi sans votre accord.</p>
         </section>
 
         <section class="lg-article" id="liste">
@@ -129,30 +133,88 @@
                 <tr><th scope="col">Cookie</th><th scope="col">Rôle</th><th scope="col">Durée</th></tr>
               </thead>
               <tbody>
-                <tr><th scope="row">Session</th><td>Garder votre connexion active pendant votre visite</td><td>Jusqu’à la déconnexion ou la fin de la session</td></tr>
-                <tr><th scope="row">Sécurité</th><td>Protéger les formulaires contre les envois frauduleux</td><td>Fin de la session</td></tr>
-                <tr><th scope="row">Choix sur la mesure d’audience</th><td>Retenir votre refus d’être compté dans les statistiques, si vous l’exprimez</td><td>13 mois</td></tr>
+                <tr><th scope="row">Session</th><td>Garder votre connexion active</td><td>30 jours, prolongés à chaque visite ; effacé à la déconnexion</td></tr>
+                <tr><th scope="row">Connexion avec un service</th><td>Relier le retour de GitHub ou de Google à votre demande et la protéger contre les détournements ; déposé seulement si vous choisissez l’un de ces services</td><td>10 minutes</td></tr>
+                <tr><th scope="row">Vos choix sur les cookies</th><td>Retenir vos choix sur la mesure d’audience et le suivi des parcours, pour ne pas vous les redemander à chaque page</td><td>6 mois, puis votre choix vous est redemandé</td></tr>
+                <tr><th scope="row">Visite suivie</th><td>Relier les pages et les actions d’une même visite ; déposé seulement si vous acceptez le suivi des parcours</td><td>Effacé après 30 minutes sans activité</td></tr>
               </tbody>
             </table>
           </div>
-          <p>Vysora ne dépose aucun cookie publicitaire et n’intègre ni bouton de réseau social, ni outil de mesure d’un tiers. Si vous vous connectez avec GitHub ou Google, ces services déposent leurs propres cookies sur leur site, selon leurs conditions.</p>
+          <p>Dans les réglages de votre navigateur, ils portent les noms __Host-vysora_session, __Secure-vysora_oauth, vysora_consentement et __Host-vysora_parcours. Le cookie vysora_audience, qui retenait auparavant un refus de la mesure d’audience, reste respecté jusqu’à votre prochain choix, qui l’efface.</p>
+          <p>Vysora ne dépose aucun cookie publicitaire et n’intègre ni bouton de réseau social, ni outil de mesure d’un tiers : la mesure d’audience est faite par nos propres serveurs. Si vous vous connectez avec GitHub ou Google, ces services déposent leurs propres cookies sur leur site, selon leurs conditions.</p>
+        </section>
+
+        <section class="lg-article" id="stockage">
+          <h2>3. Données gardées dans votre navigateur</h2>
+          <p>Pour vous éviter de recommencer ce que vous avez déjà fait, le site garde aussi quelques éléments dans le stockage de votre navigateur. Ils restent sur votre appareil et ne nous sont pas transmis, sauf la progression d’Apprendre, qui rejoint votre compte quand vous êtes connecté. Ils s’effacent avec les données du site dans les réglages de votre navigateur.</p>
+          <div class="lg-defile" role="region" aria-labelledby="stockage-liste" tabindex="0">
+            <table class="lg-tableau lg-tableau-compact lg-tableau-empile">
+              <caption id="stockage-liste">Éléments gardés dans votre navigateur</caption>
+              <thead>
+                <tr><th scope="col">Élément</th><th scope="col">Rôle</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Recherches récentes</th><td>Vous proposer vos dernières recherches dans la recherche du site</td></tr>
+                <tr><th scope="row">Mes outils</th><td>Retenir les outils que vous utilisez, pour le filtre « Avec mes outils »</td></tr>
+                <tr><th scope="row">Listes de contrôle d’Explorer</th><td>Garder les étapes cochées dans un guide lorsque vous n’êtes pas connecté</td></tr>
+                <tr><th scope="row">Progression d’Apprendre</th><td>Garder vos savoirs acquis, vos vérifications et vos réponses aux cas lorsque vous n’êtes pas connecté ; à votre première visite d’Apprendre avec votre compte, savoirs et vérifications le rejoignent, puis le navigateur n’en garde rien</td></tr>
+                <tr><th scope="row">Brouillon d’un sujet du forum</th><td>Garder le sujet que vous rédigez jusqu’à sa publication</td></tr>
+                <tr><th scope="row">Passages conservés dans l’éditeur</th><td>Ne plus vous signaler un passage sensible que vous avez choisi de garder dans une création</td></tr>
+                <tr><th scope="row">Guide du profil</th><td>Ne plus afficher « Complétez votre profil » une fois fermé</td></tr>
+                <tr><th scope="row">Suivi du compte</th><td>Prévenir vos autres onglets de Vysora quand vous confirmez votre adresse ou acceptez les conditions ; seule la date du changement est gardée</td></tr>
+                <tr><th scope="row">Message en attente</th><td>Afficher un message sur la page suivante, par exemple après une déconnexion ; effacé dès qu’il est lu ou à la fermeture de l’onglet</td></tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section class="lg-article" id="audience">
-          <h2>3. Mesure d’audience</h2>
-          <p>Pour savoir quelles pages sont consultées et améliorer Vysora, nous comptons les visites sans cookie, à partir des données de navigation transmises par votre navigateur : page consultée, page de provenance, type d’appareil. Ces données sont rendues anonymes et ne servent qu’à produire des statistiques pour NeoCoders ; elles ne sont ni croisées avec votre compte ni transmises à des tiers. Les statistiques sont conservées 25 mois.</p>
-          <p>Cette mesure repose sur notre intérêt légitime à améliorer le service. Vous pouvez vous y opposer à tout moment, sans conséquence sur votre utilisation de Vysora.</p>
-          <div class="lg-choix" data-lg-audience></div>
+          <h2>4. Mesure d’audience</h2>
+          <p>Pour améliorer le site et régler ses problèmes techniques, nous mesurons sa fréquentation par nos propres serveurs, sans cookie. Pour chaque page servie, nous comptons jour par jour : la page, le domaine du site d’où vous arrivez (un moteur de recherche, par exemple) ou le nom de la campagne indiqué dans le lien, le type d’appareil (ordinateur, mobile ou tablette), la famille de votre navigateur et de votre système, et les pages introuvables ou en erreur. Les erreurs des scripts du site dans votre navigateur sont comptées de la même façon, avec un message technique court.</p>
+          <p>Pour ne pas compter deux fois la même personne dans la journée, nous calculons une empreinte du jour à partir de votre adresse IP et de votre navigateur ; elle ne permet pas de vous retrouver et elle est effacée au bout de 2 jours. Seuls des compteurs sont conservés, pendant 25 mois ; ils ne sont ni croisés avec votre compte ni transmis à des tiers.</p>
+          <p>Nous comptons aussi les vues des créations et des sujets du forum, affichées sur chaque contenu : une vue par visiteur et par jour, avec une empreinte du jour calculée à partir de votre compte, ou de votre adresse IP et de votre navigateur, effacée au bout de 2 jours. L’auteur qui relit son contenu n’est pas compté. Nous comptons enfin les pages lues par les assistants d’IA, comme ChatGPT, Claude ou Perplexity, et les visites des personnes qui en viennent, reconnues au nom du navigateur et à la page de provenance : un compteur par jour, par assistant et par page, conservé 13 mois.</p>
+          <p>Cette mesure, réservée à l’équipe de Vysora, repose sur notre intérêt légitime à améliorer le site et à faire connaître les contenus utiles ; elle ne demande pas votre accord. Vous pouvez vous y opposer à tout moment, sans conséquence sur votre utilisation de Vysora : vos visites ne sont alors plus comptées sur cet appareil.</p>
+        </section>
+
+        <section class="lg-article" id="parcours">
+          <h2>5. Parcours des visites</h2>
+          <p>Avec votre accord seulement, nous suivons le parcours de vos visites pour comprendre où le site vous freine : la page par laquelle vous arrivez, les pages que vous enchaînez, les actions que vous réussissez (inscription, connexion, publication, commentaire, vote, essai, message à l’équipe, recherche sans les mots cherchés) et les erreurs que vous rencontrez.</p>
+          <p>Un cookie de visite, tiré au hasard, relie ces étapes ; il s’efface après 30 minutes sans activité, et la visite suivante reçoit un autre identifiant. Le parcours n’est jamais relié à votre compte ni à votre adresse IP : il garde seulement la provenance de la visite et la catégorie de votre appareil. Les parcours sont réservés à l’équipe de Vysora et effacés au bout de 3 mois. Si vous retirez votre accord, le suivi s’arrête dès la page suivante et le cookie de visite est effacé.</p>
+        </section>
+
+        <section class="lg-article" id="choix">
+          <h2>6. Vos choix</h2>
+          <p>Vos choix sont retenus 6 mois sur cet appareil, puis le bandeau vous les redemande. Vous pouvez les changer ici à tout moment, ou avec le lien « Gérer les cookies », en bas de chaque page.</p>
+          <div class="ck-choix" data-ck-choix>
+            <ul class="ck-finalites">
+              <li class="ck-finalite">
+                <span class="ck-finalite-icone" aria-hidden="true"><svg class="icon icon-sm"><use href="#i-lock"/></svg></span>
+                <div class="ck-finalite-texte"><p class="ck-finalite-titre">Indispensables</p><p class="ck-finalite-aide">Nécessaires au bon fonctionnement du site.</p></div>
+                <span class="ck-toujours">Toujours actifs</span>
+              </li>
+              <li class="ck-finalite">
+                <span class="ck-finalite-icone" aria-hidden="true"><svg class="icon icon-sm"><use href="#i-chart"/></svg></span>
+                <div class="ck-finalite-texte"><p class="ck-finalite-titre" id="ck-page-audience">Mesure d’audience</p><p class="ck-finalite-aide" id="ck-page-audience-aide">Nous aident à comprendre la fréquentation du site, de façon anonyme.</p></div>
+                <button class="ck-interrupteur" type="button" role="switch" aria-checked="true" aria-labelledby="ck-page-audience" aria-describedby="ck-page-audience-aide" data-ck-finalite="audience"><span aria-hidden="true"></span></button>
+              </li>
+              <li class="ck-finalite">
+                <span class="ck-finalite-icone" aria-hidden="true"><svg class="icon icon-sm"><use href="#i-route"/></svg></span>
+                <div class="ck-finalite-texte"><p class="ck-finalite-titre" id="ck-page-parcours">Parcours des visites</p><p class="ck-finalite-aide" id="ck-page-parcours-aide">Nous aident à repérer ce qui vous freine pour améliorer le site.</p></div>
+                <button class="ck-interrupteur" type="button" role="switch" aria-checked="false" aria-labelledby="ck-page-parcours" aria-describedby="ck-page-parcours-aide" data-ck-finalite="parcours"><span aria-hidden="true"></span></button>
+              </li>
+            </ul>
+            <p class="ck-choix-etat" data-ck-etat aria-live="polite"></p>
+          </div>
         </section>
 
         <section class="lg-article" id="navigateur">
-          <h2>4. Gérer les cookies dans votre navigateur</h2>
-          <p>Les réglages de votre navigateur vous permettent de consulter, de supprimer ou de bloquer les cookies. Si vous bloquez le cookie de session, vous ne pourrez plus vous connecter à votre compte ; la consultation des contenus publiés reste possible.</p>
+          <h2>7. Gérer les cookies dans votre navigateur</h2>
+          <p>Les réglages de votre navigateur vous permettent de consulter, de supprimer ou de bloquer les cookies et les données que le site garde sur votre appareil. Si vous bloquez le cookie de session, vous ne pourrez plus vous connecter à votre compte ; la consultation des contenus publiés reste possible.</p>
         </section>
 
         <section class="lg-article" id="evolution">
-          <h2>5. Évolution de cette page</h2>
-          <p>Si Vysora devait un jour utiliser un cookie qui n’est pas strictement nécessaire, nous vous demanderions votre accord avant de le déposer, avec la possibilité de refuser aussi simplement que d’accepter, et cette page serait mise à jour. Le traitement de vos données est décrit dans la <a href="confidentialite.html">politique de confidentialité</a>.</p>
+          <h2>8. Évolution de cette page</h2>
+          <p>Si Vysora devait utiliser un autre cookie ou un autre traceur, cette page serait mise à jour et, s’il demande votre accord, le bandeau vous reposerait la question. Le traitement de vos données est décrit dans la <a href="confidentialite.html">politique de confidentialité</a>.</p>
         </section>
       </article>
     </div>

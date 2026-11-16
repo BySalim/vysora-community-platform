@@ -1,12 +1,14 @@
 'use strict';
 
 /* Pages des informations légales : conditions générales d'utilisation,
-   politique de confidentialité, charte communautaire et mentions légales.
-   Le texte est écrit dans chaque page ; les versions, les résumés affichés à
-   l'inscription et les changements viennent de auth-data.js, la date du
-   changement de etats.js. Le script ajoute le sommaire qui suit la lecture,
-   les liens de section, l'impression et, pour les documents à accepter
-   (conditions et charte), l'acceptation selon l'état du compte. */
+   politique de confidentialité, cookies, charte communautaire et mentions
+   légales. Le texte est écrit dans chaque page ; les versions, les résumés
+   affichés à l'inscription et les changements viennent de auth-data.js, la
+   date du changement de etats.js. Le script ajoute le sommaire qui suit la
+   lecture, les liens de section, l'impression et, pour les documents à
+   accepter (conditions et charte), l'acceptation selon l'état du compte. Les
+   choix de la page Cookies (section « Vos choix ») sont branchés par
+   choix-cookies.js, chargé sur toutes les pages par etats.js. */
 
 (() => {
   const V = window.Vysora;
@@ -17,14 +19,14 @@
   const DOCS = {
     ...A.documents,
     cookies: {
-      titre: 'Politique relative aux cookies', onglet: 'Cookies', version: '19 octobre 2026', miseAJour: true,
+      titre: 'Politique relative aux cookies', onglet: 'Cookies', version: '15 novembre 2026', miseAJour: true,
       points: [
-        'Seuls des cookies strictement nécessaires sont déposés : ils ne demandent pas votre accord.',
-        'La fréquentation est mesurée sans cookie, et vous pouvez refuser d’y être compté.',
-        'Vysora ne dépose aucun cookie publicitaire et n’intègre aucun outil de mesure d’un tiers.'
+        'Les cookies indispensables sont toujours actifs ; le suivi de vos parcours attend votre accord, que vous refusez aussi simplement que vous le donnez.',
+        'La fréquentation du site est mesurée par nos propres serveurs, sans cookie ni outil d’un tiers, et vous pouvez refuser d’y être compté.',
+        'Avec votre accord seulement, le parcours de vos visites est suivi, sans lien avec votre compte, pour améliorer le site.'
       ]
     },
-    mentions: { titre: 'Mentions légales', onglet: 'Mentions légales', version: '19 octobre 2026', miseAJour: true }
+    mentions: { titre: 'Mentions légales', onglet: 'Mentions légales', version: '15 novembre 2026', miseAJour: true }
   };
   const doc = DOCS[cle];
   const ORDRE = ['cgu', 'confidentialite', 'cookies', 'charte', 'mentions'];
@@ -261,32 +263,6 @@
     });
   }
 
-  /* Mesure d'audience : opposition enregistrée sur l'appareil (page Cookies). */
-
-  const CLE_AUDIENCE = 'vysora-mesure-audience';
-  function monterChoixAudience() {
-    const zone = $('[data-lg-audience]');
-    if (!zone) return;
-    const rendreChoix = () => {
-      const comptee = V.store.get(CLE_AUDIENCE, 'comptee') !== 'refusee';
-      zone.innerHTML = `<div class="lg-choix-texte">
-          <p class="lg-choix-titre" id="lg-audience-titre">Compter mes visites dans la mesure d’audience</p>
-          <p class="lg-choix-etat" id="lg-audience-etat">${comptee ? 'Vos visites sont comptées, de façon anonyme.' : 'Vos visites ne sont plus comptées sur cet appareil.'}</p>
-        </div>
-        <button class="lg-interrupteur" type="button" role="switch" aria-checked="${comptee}" aria-labelledby="lg-audience-titre" aria-describedby="lg-audience-etat" data-lg-audience-bouton><span aria-hidden="true"></span></button>`;
-      typographie(zone);
-    };
-    zone.addEventListener('click', event => {
-      if (!event.target.closest('[data-lg-audience-bouton]')) return;
-      const refuser = V.store.get(CLE_AUDIENCE, 'comptee') !== 'refusee';
-      V.store.set(CLE_AUDIENCE, refuser ? 'refusee' : 'comptee');
-      rendreChoix();
-      $('[data-lg-audience-bouton]', zone).focus();
-      V.toast(refuser ? 'Vos visites ne sont plus comptées.' : 'Vos visites sont de nouveau comptées.');
-    });
-    rendreChoix();
-  }
-
   /* Rendu et réglages ------------------------------------------------------ */
 
   function rendre() {
@@ -304,7 +280,6 @@
   });
 
   rendreEssentiel();
-  monterChoixAudience();
   rendreSommaire();
   ajouterAncres();
   rendre();
