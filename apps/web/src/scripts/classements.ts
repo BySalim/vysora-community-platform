@@ -74,7 +74,9 @@ if (choix) {
       }
     }
   });
-  document.addEventListener('click', (evenement) => {
+  // pointerdown plutôt que click : sur iPhone, toucher un texte inerte n'envoie pas toujours de
+  // « click » jusqu'au document, et la liste resterait ouverte.
+  document.addEventListener('pointerdown', (evenement) => {
     if (!(evenement.target as Element).closest('[data-cl-tool-picker]')) fermer(false);
   });
 }

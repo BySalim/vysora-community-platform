@@ -75,6 +75,7 @@ import {
   $$,
   animations,
   corrigerTypographie,
+  ecranTactile,
   esc,
   icon,
   messageApresChargement,
@@ -1359,38 +1360,51 @@ function editeur(donnees: DonneesPage): void {
         liste.scrollTop = opt.offsetTop + opt.offsetHeight - liste.clientHeight + 8;
     }
   }
+  /* Sur téléphone, le clavier réduit la partie visible de la page (visualViewport) et la fait
+     défiler : la liste se place dans ce qui reste visible au lieu de se refermer. */
+  let largeurFenetre = innerWidth;
   function placerPop(): void {
     if (!popBouton?.isConnected) {
       fermerPop();
       return;
     }
     const r = popBouton.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > innerHeight) {
-      fermerPop();
-      return;
-    }
+    const haut = visualViewport?.offsetTop ?? 0;
+    const bas = haut + (visualViewport?.height ?? innerHeight);
     const largeur = Math.min(300, innerWidth - 24);
     el.pop.style.width = `${largeur}px`;
     el.pop.style.left = `${Math.max(12, Math.min(r.left, innerWidth - largeur - 12))}px`;
-    const bas = innerHeight - r.bottom;
-    if (bas < 320 && r.top > bas) {
-      el.pop.style.top = '';
-      el.pop.style.bottom = `${innerHeight - r.top + 6}px`;
-    } else {
-      el.pop.style.bottom = '';
-      el.pop.style.top = `${r.bottom + 6}px`;
+    el.pop.style.bottom = '';
+    if (r.bottom < haut || r.top > bas) {
+      // Bouton sorti de la vue : on referme, sauf pendant la saisie (le clavier l'a recouvert).
+      if (!document.activeElement?.matches('[data-pop-q]')) {
+        fermerPop();
+        return;
+      }
+      el.pop.style.maxHeight = `${Math.max(160, bas - haut - 16)}px`;
+      el.pop.style.top = `${haut + 8}px`;
+      return;
     }
+    const dessous = bas - r.bottom - 14;
+    const dessus = r.top - haut - 14;
+    const versLeHaut = dessous < 320 && dessus > dessous;
+    el.pop.style.maxHeight = `${Math.max(160, Math.min(400, versLeHaut ? dessus : dessous))}px`;
+    el.pop.style.top = versLeHaut
+      ? `${Math.max(haut + 8, r.top - 6 - el.pop.offsetHeight)}px`
+      : `${r.bottom + 6}px`;
   }
   function ouvrirPop(bouton: HTMLElement, bloc: BlocPrompt): void {
     popBloc = bloc;
     popBouton = bouton;
     popActif = 0;
+    largeurFenetre = innerWidth;
     el.pop.innerHTML = `<div class="pub-pop-tete">${icon('search')}<label class="sr-only" for="pub-pop-q">Rechercher un outil</label><input id="pub-pop-q" type="text" role="combobox" aria-expanded="true" aria-controls="pub-pop-liste" aria-autocomplete="list" placeholder="Rechercher un outil" autocomplete="off" data-pop-q></div><div class="pub-pop-liste" id="pub-pop-liste" role="listbox" aria-label="Outils d’IA" data-pop-liste></div>`;
     el.pop.hidden = false;
-    placerPop();
     bouton.setAttribute('aria-expanded', 'true');
     rendrePop();
-    $('[data-pop-q]', el.pop)?.focus();
+    placerPop();
+    // Sur écran tactile, le clavier ne s'ouvre qu'à la demande : la liste reste lisible.
+    if (!ecranTactile()) $('[data-pop-q]', el.pop)?.focus();
   }
   function fermerPop(rendreFocus = false): void {
     if (el.pop.hidden) return;
@@ -1412,17 +1426,20 @@ function editeur(donnees: DonneesPage): void {
     modifieMaintenant();
     rendre(`o:${x.id}`);
   }
+  /* Seul un changement de largeur (rotation, fenêtre redimensionnée) referme la liste : le
+     clavier et la barre d'adresse des téléphones ne changent que la hauteur. */
   addEventListener('resize', () => {
     if (el.apercu.open) placerApercu();
-    if (!el.pop.hidden) fermerPop();
+    if (el.pop.hidden) return;
+    if (innerWidth !== largeurFenetre) fermerPop();
+    else placerPop();
   });
-  addEventListener(
-    'scroll',
-    () => {
-      if (!el.pop.hidden) placerPop();
-    },
-    { passive: true },
-  );
+  const suivrePop = () => {
+    if (!el.pop.hidden) placerPop();
+  };
+  addEventListener('scroll', suivrePop, { passive: true });
+  visualViewport?.addEventListener('resize', suivrePop);
+  visualViewport?.addEventListener('scroll', suivrePop);
 
   /* Aperçu : la fiche de création elle-même, telle que les lecteurs la verront. */
   let ecran: 'ordinateur' | 'mobile' | null = null;
@@ -1804,7 +1821,8 @@ function editeur(donnees: DonneesPage): void {
     'retirer-etiquette': (b) => {
       d.etiquettes = d.etiquettes.filter((e) => e !== b.dataset.v);
       modifie();
-      rendreCote('etiquette-saisie');
+      // Au doigt, revenir au champ ouvrirait le clavier : le focus n'est rendu qu'au clavier.
+      rendreCote(ecranTactile() ? undefined : 'etiquette-saisie');
     },
     'copier-lien': async () => {
       const url = new URL(ficheCourante ? adresseCreation(ficheCourante) : '/', location.href).href;
@@ -1825,6 +1843,13 @@ function editeur(donnees: DonneesPage): void {
 
   /* Événements -------------------------------------------------------------------------------- */
 
+  /* Fermeture au toucher hors de la liste : sur iPhone, toucher un texte inerte n'envoie pas
+     toujours de « click » jusqu'au document. */
+  document.addEventListener('pointerdown', (e) => {
+    const cible = e.target as HTMLElement;
+    if (!el.pop.hidden && !el.pop.contains(cible) && !cible.closest('[data-action="outil"]'))
+      fermerPop();
+  });
   document.addEventListener('click', (e) => {
     const cible = e.target as HTMLElement;
     if (!el.pop.hidden && !el.pop.contains(cible) && !cible.closest('[data-action="outil"]'))
@@ -1860,9 +1885,22 @@ function editeur(donnees: DonneesPage): void {
       if (touches.has(cle) || tentative) majChamp(cle, err);
       return;
     }
+    if (cible.matches('[data-etiquette]')) {
+      // La virgule sépare les étiquettes. Le clavier d'Android ne la donne pas à keydown
+      // (touche « Unidentified ») et elle peut être collée : on la traite ici aussi.
+      const champ = cible as HTMLInputElement;
+      if (!champ.value.includes(',')) return;
+      const morceaux = champ.value.split(',');
+      const reste = morceaux.pop() ?? '';
+      for (const morceau of morceaux) ajouterEtiquette(morceau);
+      const saisie = $<HTMLInputElement>('[data-etiquette]');
+      if (saisie) saisie.value = reste.trimStart();
+      return;
+    }
     if (cible.matches('[data-pop-q]')) {
       popActif = 0;
       rendrePop((cible as HTMLInputElement).value);
+      placerPop(); // ouverte vers le haut, la liste filtrée reste collée au bouton
     }
   });
 

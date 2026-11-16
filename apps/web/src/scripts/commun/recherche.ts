@@ -22,7 +22,7 @@ import { ROUTES } from '../../lib/navigation';
 import { dateLongue } from '../../lib/texte';
 import { api } from './api';
 import { etats } from './etats';
-import { $, $$, animations, esc, fmt, pluriel, t, typo } from './outils';
+import { $, $$, animations, ecranTactile, esc, fmt, pluriel, t, typo } from './outils';
 import { signalerRecherche } from './mesure';
 
 const racineDoc = document.documentElement;
@@ -1389,6 +1389,10 @@ function oublier(terme: string): void {
     activer(Math.min(garde, elements.length - 1), { glisser: false });
   annoncer(`« ${terme} » retiré de l’historique.`);
 }
+/** Rend le focus au champ, sauf sur écran tactile : le clavier recouvrirait les résultats demandés. */
+function revenirASaisie(): void {
+  if (el && !ecranTactile()) el.saisie.focus();
+}
 function executer(o: Option): void {
   if (!el) return;
   const { saisie } = el;
@@ -1396,16 +1400,16 @@ function executer(o: Option): void {
     saisie.value = o.terme;
     etat.exact = false;
     rendre({ neuf: true });
-    saisie.focus();
+    revenirASaisie();
     saisie.setSelectionRange(saisie.value.length, saisie.value.length);
   } else if (o.kind === 'portee' && o.portee) {
     etat.portee = o.portee;
     rendre({ neuf: true });
-    saisie.focus();
+    revenirASaisie();
   } else if (o.kind === 'effacer') {
     memoire.ecrire([]);
     rendre();
-    saisie.focus();
+    revenirASaisie();
     annoncer('Historique de recherche effacé.');
   }
 }
@@ -1750,7 +1754,7 @@ function monter(): Elements {
     if (cible.closest('[data-rch-exact]')) {
       etat.exact = true;
       rendre({ neuf: true });
-      x.saisie.focus();
+      revenirASaisie();
     }
   });
   x.filtres.addEventListener('click', (evenement) => {
@@ -1758,7 +1762,7 @@ function monter(): Elements {
     if (!bouton) return;
     etat.portee = (bouton.dataset.rchPortee ?? 'tout') as IdGroupe | 'tout';
     rendre({ neuf: true });
-    if (evenement.detail) x.saisie.focus();
+    if (evenement.detail) revenirASaisie();
     else $<HTMLButtonElement>(`[data-rch-portee="${etat.portee}"]`, x.filtres)?.focus();
   });
   x.filtres.addEventListener('keydown', (evenement) => {

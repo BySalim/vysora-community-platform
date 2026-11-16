@@ -28,6 +28,7 @@ import {
   $$,
   animations,
   corrigerTypographie,
+  ecranTactile,
   esc,
   icon,
   pluriel,
@@ -687,7 +688,7 @@ if (D && vue) {
       if (input) {
         input.value = tryWord.dataset.apSearchTry ?? '';
         renderSearch();
-        input.focus();
+        if (!ecranTactile()) input.focus(); // au doigt, le clavier cacherait les résultats
       }
       return;
     }

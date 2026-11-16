@@ -8,3 +8,19 @@
 
 /* Bouton pendant un envoi au serveur. */
 .btn[aria-busy="true"] { cursor: progress; opacity: 0.72; }
+
+/* Règle d'un badge au doigt (écrans sans survol) : toucher le badge lui donne le focus, sans
+   :focus-visible sur iPhone ; la bulle s'affiche alors comme au survol. `translate` compense le
+   décalage de 6 px de la bulle masquée, quelle que soit sa transformation. */
+@media (hover: none) {
+  .badge:focus:not(:focus-visible) .badge-rule,
+  .cl-badge-name:focus:not(:focus-visible) .cl-badge-rule,
+  .pf-badge:focus:not(:focus-visible) .pf-badge-regle { opacity: 1; translate: 0 -6px; }
+}
+/* « Mes outils » sur téléphone (Explorer, Forum, Apprendre, catégories) : la coche, invisible tant
+   que l'outil n'est pas choisi, gardait sa place et coupait les noms (« Perplexi-ty »). Elle passe
+   dans l'angle du bouton et le nom prend toute la largeur. */
+@media (max-width: 480px) {
+  button.ex-tool-opt { position: relative; gap: 8px; padding: 6px 12px 6px 10px; font-size: 0.8125rem; }
+  button.ex-tool-opt .icon { position: absolute; top: 5px; right: 5px; width: 12px; height: 12px; }
+}
