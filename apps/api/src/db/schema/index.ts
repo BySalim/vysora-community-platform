@@ -8,3 +8,4 @@ export * from './forum.js';
 export * from './guides.js';
 export * from './moderation.js';
 export * from './technique.js';
+export * from './audience.js';

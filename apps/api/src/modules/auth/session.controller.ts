@@ -19,6 +19,7 @@ import { ConnexionService } from './connexion.service.js';
 import { EtatCompteService } from './etat-compte.service.js';
 import { contexteDe, type RequeteVysora } from './requete.js';
 import { SessionsService } from './sessions.service.js';
+import { EtapeParcours } from '../audience/etape-parcours.js';
 
 /* La session de la personne qui consulte (ADR-0005) : la lire, l'ouvrir (connexion), la fermer. */
 @Controller('session')
@@ -38,6 +39,7 @@ export class SessionController {
 
   /** POST /api/v1/session : connexion (F-03). Au plus 20 essais par minute et par adresse IP. */
   @Post()
+  @EtapeParcours('CONNEXION')
   @HttpCode(200)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   async ouvrir(

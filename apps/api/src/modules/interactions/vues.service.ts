@@ -14,7 +14,7 @@ export interface Visiteur {
   membreId: number | null;
   ip?: string;
   userAgent?: string;
-  /** Refus de la mesure d'audience exprimé sur la page Cookies (COOKIE_REFUS_AUDIENCE). */
+  /** Refus de la mesure d'audience (choix sur les cookies, LEG-03 ; ancien refus de la page Cookies). */
   refusAudience?: boolean;
 }
 

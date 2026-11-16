@@ -14,6 +14,7 @@ import { EtatCompteService } from '../auth/etat-compte.service.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { CreationsService } from './creations.service.js';
 import { EcritureCreationsService, type Redacteur } from './ecriture.service.js';
+import { EtapeParcours } from '../audience/etape-parcours.js';
 
 /* Créations (F-10 à F-23) : lecture d'une fiche (CREA-01), écriture par l'auteur (CREA-05). */
 @Controller('creations')
@@ -62,6 +63,7 @@ export class CreationsController {
 
   /** POST /api/v1/creations/:id/publication : publier un brouillon (RG-17). */
   @Post(':id/publication')
+  @EtapeParcours('CREATION_PUBLIEE')
   @HttpCode(200)
   @Exige('contribuer')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })

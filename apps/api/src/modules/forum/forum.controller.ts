@@ -32,6 +32,7 @@ import { EcritureSujetsService, type Intervenant } from './ecriture-sujets.servi
 import { ListeSujetsService } from './liste-sujets.service.js';
 import { MessagesService, type Repondant } from './messages.service.js';
 import { SujetsService } from './sujets.service.js';
+import { EtapeParcours } from '../audience/etape-parcours.js';
 
 const intervenant = (session: SessionOuverte): Intervenant => ({
   id: session.utilisateur.id,
@@ -70,6 +71,7 @@ export class ForumController {
 
   /** POST /api/v1/sujets (F-50) */
   @Post('sujets')
+  @EtapeParcours('SUJET_PUBLIE')
   @HttpCode(201)
   @Exige('contribuer')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -127,6 +129,7 @@ export class ForumController {
 
   /** POST /api/v1/sujets/:id/messages : répondre (F-51). */
   @Post('sujets/:id/messages')
+  @EtapeParcours('REPONSE_PUBLIEE')
   @HttpCode(201)
   @Exige('contribuer')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })

@@ -17,6 +17,7 @@ import { EtatCompteService } from '../auth/etat-compte.service.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { CommentairesService } from './commentaires.service.js';
 import { ReproductionsService } from './reproductions.service.js';
+import { EtapeParcours } from '../audience/etape-parcours.js';
 
 /* Contributions sur une création : commentaires (F-40, F-42), reproductions (F-32). */
 @Controller()
@@ -29,6 +30,7 @@ export class ContributionsController {
 
   /** POST /api/v1/creations/:id/reproductions : « J'ai essayé ». */
   @Post('creations/:id/reproductions')
+  @EtapeParcours('ESSAI_DECLARE')
   @HttpCode(201)
   @Exige('contribuer')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
@@ -42,6 +44,7 @@ export class ContributionsController {
 
   /** POST /api/v1/creations/:id/commentaires */
   @Post('creations/:id/commentaires')
+  @EtapeParcours('COMMENTAIRE_PUBLIE')
   @HttpCode(201)
   @Exige('contribuer')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })

@@ -11,7 +11,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import {
   CODES_TYPE_VOTE,
-  COOKIE_REFUS_AUDIENCE,
+  audienceRefusee,
   type CodeTypeVote,
   type EnregistrementApi,
   type VoteApi,
@@ -22,6 +22,7 @@ import { Exige, SessionCourante } from '../auth/droits.js';
 import type { RequeteVysora, SessionOuverte } from '../auth/requete.js';
 import { InteractionsService } from './interactions.service.js';
 import { VuesService } from './vues.service.js';
+import { EtapeParcours } from '../audience/etape-parcours.js';
 
 /** Type de vote dans l'adresse (UTILE, TESTE_OK) ; tout autre ne désigne rien. */
 class TypeVotePipe implements PipeTransform<string, CodeTypeVote> {
@@ -49,17 +50,17 @@ export class InteractionsController {
     @Param('id', IdentifiantPipe) id: number,
     @Req() requete: RequeteVysora,
   ): Promise<void> {
-    const refus: unknown = requete.cookies?.[COOKIE_REFUS_AUDIENCE.nom];
     await this.vues.compter(id, {
       membreId: requete.sessionOuverte?.utilisateur.id ?? null,
       ip: requete.ip,
       userAgent: requete.headers['user-agent'],
-      refusAudience: refus === COOKIE_REFUS_AUDIENCE.valeur,
+      refusAudience: audienceRefusee(requete.headers.cookie),
     });
   }
 
   /** PUT /api/v1/contenus/:id/votes/:type : sans effet si le vote existe déjà. */
   @Put('votes/:type')
+  @EtapeParcours('VOTE')
   @Exige('contribuer')
   voter(
     @SessionCourante() session: SessionOuverte,

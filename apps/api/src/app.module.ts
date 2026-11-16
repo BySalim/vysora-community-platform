@@ -9,6 +9,7 @@ import type { Configuration } from './config/env.js';
 import { BaseDeDonneesModule } from './db/base-de-donnees.module.js';
 import { AccueilModule } from './modules/accueil/accueil.module.js';
 import { AssistantsIaModule } from './modules/assistants-ia/assistants-ia.module.js';
+import { AudienceModule } from './modules/audience/audience.module.js';
 import { ApprentissageModule } from './modules/apprentissage/apprentissage.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { DroitsGuard } from './modules/auth/droits.js';
@@ -70,6 +71,7 @@ import { TachesModule } from './modules/taches/taches.module.js';
     ReferentielsModule,
     ContactModule,
     AssistantsIaModule,
+    AudienceModule,
     MediasModule,
     CreationsModule,
     InteractionsModule,

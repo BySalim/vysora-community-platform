@@ -41,6 +41,7 @@ import { InvitationsService } from './invitations.service.js';
 import { contexteDe, type RequeteVysora, type SessionOuverte } from './requete.js';
 import { SessionsService } from './sessions.service.js';
 import { VerificationEmailService } from './verification-email.service.js';
+import { EtapeParcours } from '../audience/etape-parcours.js';
 
 /* Comptes des membres (F-01) : inscription, vérifications de disponibilité, modification par le membre. */
 @Controller()
@@ -57,6 +58,7 @@ export class ComptesController {
 
   /** POST /api/v1/comptes : inscription par e-mail ; la session est ouverte dans la foulée. */
   @Post('comptes')
+  @EtapeParcours('INSCRIPTION')
   @HttpCode(201)
   @Throttle({ default: { limit: 10, ttl: 15 * 60_000 } })
   async inscrire(

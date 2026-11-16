@@ -4,7 +4,10 @@ import { lt } from 'drizzle-orm';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
 import {
+  audienceCompteur,
+  audienceVisiteur,
   notification,
+  parcoursVisite,
   passageAssistant,
   session,
   tentativeConnexion,
@@ -17,6 +20,9 @@ export interface BilanConservation {
   notifications: number;
   vues: number;
   passagesAssistants: number;
+  compteursAudience: number;
+  visiteursAudience: number;
+  visitesSuivies: number;
 }
 
 const JOUR_MS = 24 * 3600_000;
@@ -61,7 +67,32 @@ export class ConservationService {
     const passages = await this.db
       .delete(passageAssistant)
       .where(lt(passageAssistant.jour, limitePassages));
+    // LEG-03 : compteurs de la mesure d'audience (25 mois), empreintes des visiteurs du jour (2 jours),
+    // visites suivies avec leurs étapes (3 mois après la dernière étape).
+    const jourLimite = (date: Date) => date.toISOString().slice(0, 10);
+    const compteurs = await this.db
+      .delete(audienceCompteur)
+      .where(
+        lt(
+          audienceCompteur.jour,
+          jourLimite(moisAvant(maintenant, DELAIS.conservationAudienceMois)),
+        ),
+      );
+    const visiteurs = await this.db
+      .delete(audienceVisiteur)
+      .where(
+        lt(
+          audienceVisiteur.jour,
+          jourLimite(new Date(maintenant.getTime() - DELAIS.conservationVisiteursJours * JOUR_MS)),
+        ),
+      );
+    const visites = await this.db
+      .delete(parcoursVisite)
+      .where(lt(parcoursVisite.derniere, moisAvant(maintenant, DELAIS.conservationParcoursMois)));
     return {
+      compteursAudience: compteurs.rowCount ?? 0,
+      visiteursAudience: visiteurs.rowCount ?? 0,
+      visitesSuivies: visites.rowCount ?? 0,
       sessions: sessions.rowCount ?? 0,
       tentatives: tentatives.rowCount ?? 0,
       notifications: notifications.rowCount ?? 0,

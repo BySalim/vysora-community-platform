@@ -181,6 +181,14 @@ export const DELAIS = {
   conservationVuesJours: 2, // F-23 : empreintes des vues, gardées le temps du dédoublonnage
   // REF-03 : compteurs des passages des assistants d’IA (aucune donnée personnelle), 13 mois.
   conservationPassagesAssistantsMois: 13,
+  // LEG-03 : choix sur les cookies (bonne pratique de la CNIL : 6 mois, accord comme refus, puis la
+  // question est reposée), compteurs de la mesure d’audience (25 mois au plus pour une mesure exemptée
+  // de consentement), empreintes des visiteurs du jour, visites suivies et fin d’une visite.
+  choixCookiesMois: 6,
+  conservationAudienceMois: 25,
+  conservationVisiteursJours: 2,
+  conservationParcoursMois: 3,
+  inactiviteParcoursMinutes: 30,
 } as const;
 
 export const CODES_NIVEAU = ['curieux', 'apprenti', 'artisan', 'expert', 'maitre'] as const;

@@ -22,17 +22,6 @@ export const IDS_FUSEAUX = FUSEAUX_HORAIRES.map((fuseau) => fuseau.id) as [
   ...FuseauHoraire[],
 ];
 
-/** Page Cookies, « Mesure d'audience » : refus d'être compté dans les vues des contenus (F-23) et
-    les visites venues d'un assistant d'IA (REF-03), retenu 13 mois sur l'appareil par ce cookie. Le
-    site le pose ; l'API (vues) et le serveur du site (assistants) le lisent avant de compter. */
-export const COOKIE_REFUS_AUDIENCE = { nom: 'vysora_audience', valeur: 'refusee' } as const;
-
-/** L'en-tête Cookie d'une requête porte-t-il le refus de la mesure d'audience ? */
-export function audienceRefusee(enteteCookie: string | null | undefined): boolean {
-  const attendu = `${COOKIE_REFUS_AUDIENCE.nom}=${COOKIE_REFUS_AUDIENCE.valeur}`;
-  return (enteteCookie ?? '').split(';').some((morceau) => morceau.trim() === attendu);
-}
-
 /** WF-25 : seules les réponses à ses sujets et les réponses acceptées partent par défaut par e-mail. */
 const EMAIL_PAR_DEFAUT: readonly TypeNotification[] = ['REPONSE_SUJET', 'REPONSE_ACCEPTEE'];
 

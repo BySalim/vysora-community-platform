@@ -8,6 +8,7 @@ import {
 import type { Request } from 'express';
 import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { ContactService } from './contact.service.js';
+import { EtapeParcours } from '../audience/etape-parcours.js';
 
 @Controller('contact')
 export class ContactController {
@@ -15,6 +16,7 @@ export class ContactController {
 
   /** POST /api/v1/contact : ouvert sans compte, limité à 5 messages par quart d'heure et par adresse IP. */
   @Post()
+  @EtapeParcours('MESSAGE_CONTACT')
   @HttpCode(201)
   @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
   envoyer(
