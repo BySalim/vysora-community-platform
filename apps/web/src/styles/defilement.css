@@ -53,8 +53,9 @@
 
 @supports selector(::-webkit-scrollbar) {
   /* Les zones fines du prototype (scrollbar-width, scrollbar-color) prendraient sinon la barre standard
-     de Chrome, avec ses flèches ; le guide d'Explorer garde sa barre invisible hors survol. */
-  :root.barres-classiques :is(.rch-liste, .lg-rail, .ex-guide-nav, .nt-volet, .section-nav) { scrollbar-width: auto; scrollbar-color: auto; }
+     de Chrome, avec ses flèches ; le guide d'Explorer garde sa barre invisible hors survol. Sélecteur
+     plus précis que celui du volet des notifications (.nt-boite[data-nt-mode="volet"] .nt-volet). */
+  html.barres-classiques:root :is(.rch-liste, .lg-rail, .ex-guide-nav, .nt-volet, .section-nav) { scrollbar-width: auto; scrollbar-color: auto; }
   .barres-classiques .ex-guide-nav:not(:hover)::-webkit-scrollbar-thumb { background-color: transparent; }
 }
 /* Firefox : propriétés standard, sans état de survol. */
