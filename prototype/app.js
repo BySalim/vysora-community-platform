@@ -77,8 +77,18 @@
   const DEFAULTS = { herolead: 'court', herowaves: 'houle', herolimit: 'text', heroblue: 'deep', herobg: 'constellation', herosize: 'full', accent: 'blue', band: 'dark', cards: 'path', eyebrow: 'icon', toolsbg: 'trame', methodfocus: 'suivi', density: 'standard', radius: 'charte', effects: 'standard', motion: 'full' };
   const listeners = new Set();
   const onSettings = fn => listeners.add(fn);
+  /* États sans contenu, que le site affiche quand l'API ne renvoie rien (accueil-complements.css) ;
+     les données simulées de data.js restent intactes, elles sont seulement filtrées ici. */
+  const ETATS_PAGE = [
+    { name: 'ac-creations', legend: 'Créations', options: [['donnees', 'Créations publiées'], ['sans-reproduction', 'Aucune reproduction ce mois-ci'], ['vide', 'Aucune création publiée'], ['indisponible', 'Créations indisponibles']] },
+    { name: 'ac-contributions', legend: 'Dernières contributions', options: [['donnees', 'Fil d’activité'], ['vide', 'Aucune contribution']] },
+    { name: 'ac-questions', legend: 'Questions en attente', options: [['donnees', 'Questions sans réponse'], ['vide', 'Aucune question en attente']] },
+    { name: 'ac-classement', legend: 'Classement de la semaine', options: [['donnees', 'Points gagnés'], ['vide', 'Aucun point cette semaine']] },
+    { name: 'ac-cas', legend: 'Options du cas Bon réflexe', options: [['courtes', 'Courtes, sur trois colonnes'], ['longues', 'Longues, sur une colonne']] }
+  ];
   const settings = window.Vysora.initTweaks({
     key: 'vysora-reglages-v2',
+    etats: ETATS_PAGE,
     apparence: [
       { name: 'herolead', legend: 'Texte d’introduction', options: [['court', 'Courte'], ['methode', 'Méthode'], ['chemin', 'Chemin parcouru'], ['apprendre', 'Apprendre'], ['communaute', 'Communauté']] },
       { name: 'herowaves', legend: 'Animation du bandeau bleu', options: [['houle', 'Houle'], ['fils', 'Fils'], ['filet', 'Filet'], ['none', 'Aucune']] },
@@ -94,7 +104,7 @@
       { name: 'eyebrow', legend: 'Intertitres des sections', options: [['icon', 'Icône'], ['rule', 'Filet'], ['none', 'Masqués']] },
       'density', 'radius', 'effects', 'motion'
     ],
-    defaults: DEFAULTS,
+    defaults: { ...DEFAULTS, 'ac-creations': 'donnees', 'ac-contributions': 'donnees', 'ac-questions': 'donnees', 'ac-classement': 'donnees', 'ac-cas': 'courtes' },
     onChange: changed => listeners.forEach(fn => fn(changed))
   });
 
@@ -967,6 +977,18 @@
     reproduced: 'Les créations les plus souvent reproduites avec succès ce mois-ci.'
   };
   let currentList = 'useful';
+  /* Site : LISTES_VIDES (lib/accueil/cartes.ts) et message d'API indisponible (pages/index.astro). */
+  const LISTE_VIDE = {
+    useful: 'Aucune création publiée pour l’instant.',
+    recent: 'Aucune création publiée pour l’instant.',
+    reproduced: 'Aucune création reproduite avec succès pour l’instant.'
+  };
+  function listeVide() {
+    const etat = settings['ac-creations'];
+    if (etat === 'indisponible') return 'Les créations ne peuvent pas s’afficher pour le moment. Réessayez dans un instant.';
+    if (etat === 'vide' || (etat === 'sans-reproduction' && currentList === 'reproduced')) return LISTE_VIDE[currentList];
+    return '';
+  }
 
   function traceSVG(steps) {
     const n = steps.length;
@@ -1011,7 +1033,8 @@
 
   function renderCards({ animate = false } = {}) {
     const ids = D.lists[currentList];
-    const html = ids.map((id, i) => `<li data-id="${id}">${cardHTML(byId[id], i)}</li>`).join('');
+    const vide = listeVide();
+    const html = vide ? `<li class="cards-vide"><p>${t(vide)}</p></li>` : ids.map((id, i) => `<li data-id="${id}">${cardHTML(byId[id], i)}</li>`).join('');
     const caption = $('[data-explore-caption]');
     const finish = () => {
       cardsList.innerHTML = html;
@@ -1055,7 +1078,7 @@
   const r1 = value => Math.round(value * 10) / 10;
 
   function pathGeometry() {
-    const boxes = $$(':scope > li', cardsList).map((li, i) => {
+    const boxes = $$(':scope > li[data-id]', cardsList).map((li, i) => {
       const card = li.firstElementChild;
       const media = $('.card-media', card);
       const o = offsetIn(card, cardsStage);
@@ -1127,7 +1150,7 @@
       return;
     }
     const geo = pathGeometry();
-    if (!geo) return;
+    if (!geo) { pathSvg.textContent = ''; pathNodes.textContent = ''; return; }
     const W = cardsStage.clientWidth;
     const H = geo.head.y + 12;
     pathSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -1230,6 +1253,14 @@
     const result = $('[data-reflex-result]', box);
     const buttons = $$('[data-choice]', box);
     const labels = { accept: 'J’accepte', refuse: 'Je refuse', fix: 'Je corrige' };
+    /* Les options d'un vrai cas sont des phrases : au-delà de 28 caractères, une seule colonne (site : laboratoire.ts). */
+    const LONGUES = {
+      accept: 'J’accepte : la case et le script suffisent pour un petit site.',
+      refuse: 'Je refuse : un robot envoie la requête sans passer par la page.',
+      fix: 'Je corrige : j’ajoute un délai avant d’activer le bouton.'
+    };
+    const libelle = b => (settings['ac-cas'] === 'longues' ? LONGUES : labels)[b.dataset.choice];
+    const options = $('.verdict-options', verdict);
     buttons.forEach((b, i) => { b.dataset.key = 'ABC'[i]; });
     const reset = () => {
       verdict.classList.remove('is-answered');
@@ -1257,7 +1288,7 @@
       result.innerHTML = `
         <p class="verdict-title">Réponses de la communauté</p>
         <div class="verdict-dist" aria-hidden="true">${buttons.map(b => `<span class="${b.hasAttribute('data-correct') ? 'is-correct' : ''}" style="--w:${b.dataset.share}%"></span>`).join('')}</div>
-        <ul class="verdict-legend">${buttons.map(b => `<li${b.hasAttribute('data-correct') ? ' class="is-correct"' : ''}><b>${typo(`${b.dataset.share} %`)}</b>${t(labels[b.dataset.choice])}${b === button ? '<span class="mine">Votre choix</span>' : ''}</li>`).join('')}</ul>
+        <ul class="verdict-legend">${buttons.map(b => `<li${b.hasAttribute('data-correct') ? ' class="is-correct"' : ''}><b>${typo(`${b.dataset.share} %`)}</b>${t(libelle(b))}${b === button ? '<span class="mine">Votre choix</span>' : ''}</li>`).join('')}</ul>
         <div class="expert">
           ${avatar('Claire Dubois', 40)}
           <div>
@@ -1280,6 +1311,15 @@
       choose(buttons[k]);
       buttons[k].focus();
     });
+    const appliquerOptions = () => {
+      const longues = settings['ac-cas'] === 'longues';
+      if (longues === options.classList.contains('is-long')) return;
+      if (verdict.classList.contains('is-answered')) reset();
+      options.classList.toggle('is-long', longues);
+      buttons.forEach(b => { $('span', b).textContent = typo(libelle(b)); });
+    };
+    appliquerOptions();
+    onSettings(changed => { if (changed === 'ac-cas' || changed === 'reset') { appliquerOptions(); if (lab) lab.fit(); } });
   }
 
   function initLab() {
@@ -1320,7 +1360,7 @@
     const openFromHash = () => { if (location.hash === '#defis') $('#lab-tab-challenge').click(); };
     openFromHash();
     window.addEventListener('hashchange', openFromHash);
-    return { refresh: () => { if (!clinic.hidden) playClinic(); } };
+    return { refresh: () => { if (!clinic.hidden) playClinic(); }, fit };
   }
 
   function initCountdown() {
@@ -1384,20 +1424,27 @@
     }
   }
 
-  function initFeed() {
+  const filVide = () => settings['ac-contributions'] === 'vide';
+  function remplirFil() {
+    feedList.textContent = '';
+    if (filVide()) { feedList.innerHTML = `<li class="feed-item feed-vide"><p>${t('Aucune contribution pour l’instant.')}</p></li>`; return; }
     const now = Date.now();
     const offsets = [0, 45, 70, 130, 190, 260, 330, 410];
     for (let i = 7; i >= 0; i -= 1) {
       const base = D.feed[i];
       addFeed({ ...base, createdAt: now - offsets[i] * 1000 }, { animate: false });
     }
+  }
+  function initFeed() {
+    remplirFil();
+    onSettings(changed => { if (changed === 'ac-contributions' || changed === 'reset') remplirFil(); });
     feedCursor = 8;
     setInterval(() => {
       $$('time[data-created]', feedList).forEach(time => { time.textContent = typo(timeLabel(Number(time.dataset.created))); });
     }, 15000);
     const loop = () => {
       setTimeout(loop, random(3800, 6200));
-      if (feedPaused || !ambientActive() || motionLevel() !== 'full' || !isVisible(feedList)) return;
+      if (feedPaused || filVide() || !ambientActive() || motionLevel() !== 'full' || !isVisible(feedList)) return;
       const base = D.feed[feedCursor % D.feed.length];
       feedCursor += 1;
       addFeed({ ...base, createdAt: Date.now() });
@@ -1561,6 +1608,7 @@
   }
 
   function renderTopics() {
+    if (settings['ac-questions'] === 'vide') { $('[data-topics]').innerHTML = `<li class="topic topic-vide"><p>${t('Aucune question n’attend de réponse pour l’instant.')}</p></li>`; return; }
     $('[data-topics]').innerHTML = D.topics.map(topic => `
       <li class="topic">
         <span class="topic-type"${topic.type.startsWith('Clinique') ? ' data-clinic' : ''}>${icon(topic.type.startsWith('Clinique') ? 'message' : 'help', 'icon-xs')}${t(topic.type)}</span>
@@ -1576,7 +1624,11 @@
   const board = $('[data-board]');
   const members = D.leaderboard.map(m => ({ ...m }));
 
+  const classementVide = () => settings['ac-classement'] === 'vide';
   function renderBoard() {
+    if (classementVide()) { board.innerHTML = `<li class="board-vide"><p>${t('Aucun point gagné cette semaine pour l’instant.')}</p></li>`; return; }
+    const sansPoints = $('.board-vide', board);
+    if (sansPoints) board.removeChild(sansPoints);
     const sorted = [...members].sort((a, b) => b.points - a.points);
     const max = sorted[0].points;
     const before = new Map($$('li', board).map(li => [li.dataset.name, li.getBoundingClientRect()]));
@@ -1619,7 +1671,7 @@
     });
     const loop = () => {
       setTimeout(loop, random(4200, 7000));
-      if (holds.size || !ambientActive() || motionLevel() !== 'full' || !isVisible(board)) return;
+      if (holds.size || classementVide() || !ambientActive() || motionLevel() !== 'full' || !isVisible(board)) return;
       const sorted = [...members].sort((a, b) => b.points - a.points);
       const candidate = sorted[Math.min(sorted.length - 1, Math.floor(Math.pow(Math.random(), 0.6) * sorted.length))];
       const gain = pick([5, 10, 10, 15]);
@@ -1772,7 +1824,9 @@
   });
 
   onSettings(changed => {
-    if (changed === 'cards' || changed === 'reset') renderCards({ animate: true });
+    if (changed === 'ac-questions' || changed === 'reset') renderTopics();
+    if (changed === 'ac-classement' || changed === 'reset') renderBoard();
+    if (changed === 'cards' || changed === 'reset' || changed === 'ac-creations') renderCards({ animate: true });
     else schedulePath();
     if (constellation) {
       if (changed === 'effects' || changed === 'reset' || changed === 'herolimit' || changed === 'herosize') constellation.reseed();

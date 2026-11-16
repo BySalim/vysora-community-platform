@@ -1,0 +1,38 @@
+/* Compléments de auth.css (gardée identique au prototype) : activation de la vérification en deux
+   étapes et codes de secours (SEC-02), écrans absents du prototype, dans le style de la connexion. */
+
+.df-etapes { display: grid; gap: var(--e5); margin: var(--bloc) 0 0; padding: 0; list-style: none; counter-reset: df; }
+.df-etapes > li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px var(--e3); counter-increment: df; }
+.df-etapes > li::before {
+  content: counter(df); display: grid; grid-row: span 4; place-items: center; width: 28px; height: 28px;
+  border-radius: 50%; background: var(--panel); color: var(--accent-text); font: 700 0.8125rem/1 var(--font-body);
+}
+.df-etapes > li > b { color: var(--text); font: 600 0.9375rem/1.3 var(--font-body); padding-top: 5px; }
+.df-etapes > li > span { color: var(--neutral-600); font: 500 0.875rem/1.5 var(--font-body); }
+.df-etapes .auth-bloc { margin-top: var(--e3); }
+
+.df-qr { justify-self: start; width: 168px; height: 168px; margin-top: var(--e3); padding: 10px; border: 1px solid var(--neutral-200); border-radius: var(--r-control); background: var(--white); }
+.df-qr:empty { background: var(--panel); }
+.df-qr svg { display: block; width: 100%; height: 100%; }
+.df-qr path { fill: var(--black); }
+
+.df-cle { margin-top: var(--e3); font: 500 0.875rem/1.4 var(--font-body); }
+.df-cle summary { display: inline-flex; align-items: center; gap: 6px; color: var(--accent-text); font-weight: 600; cursor: pointer; list-style: none; }
+.df-cle summary::-webkit-details-marker { display: none; }
+.df-cle summary .icon { width: 16px; height: 16px; }
+.df-cle p { display: grid; gap: var(--e2); justify-items: start; margin: var(--e2) 0 0; }
+.df-cle code {
+  padding: 10px var(--e3); border-radius: var(--r-control); background: var(--panel); color: var(--text);
+  font: 600 0.9375rem/1.5 var(--font-code); letter-spacing: 0.06em; overflow-wrap: anywhere; user-select: all;
+}
+.df-cle .lien { font-size: 0.8125rem; }
+
+.df-codes {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e2);
+  margin: var(--bloc) 0 0; padding: var(--e4); border-radius: var(--r-control); background: var(--panel); list-style: none;
+}
+.df-codes li { color: var(--text); font: 600 1rem/1.6 var(--font-code); letter-spacing: 0.1em; text-align: center; }
+.df-outils { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e2); margin: var(--e3) 0 0; }
+.df-outils .action { gap: var(--e2); height: 42px; font-size: 0.875rem; }
+.df-outils .action + .action { margin-top: 0; }
+.df-outils .action .icon { width: 16px; height: 16px; }

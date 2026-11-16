@@ -1,0 +1,38 @@
+/* « Proposer un cas » (APP-03, EC-11) : écran sans maquette, dans le style de « Poser une
+   question » (forum.css) ; ces règles ne couvrent que les options, la difficulté et la colonne. */
+
+.cs-shell { grid-template-columns: minmax(0, 1fr); }
+.cs-shell .qa-page { grid-template-columns: minmax(0, 1fr) 300px; }
+.cs-options { display: grid; gap: 12px; margin: 6px 0 12px; }
+.cs-option { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-card); }
+.cs-option:has(input[type="radio"]:checked) { border-color: var(--green-700); background: color-mix(in oklab, var(--green-700) 4%, var(--white)); }
+.cs-option legend { padding: 0 4px; color: var(--text); font: 700 0.875rem/1.3 var(--font-body); }
+.cs-option textarea { width: 100%; }
+.cs-juste { display: inline-flex; align-items: center; gap: 8px; color: var(--text-body); font: 600 0.8125rem/1.3 var(--font-body); cursor: pointer; }
+.cs-juste input { accent-color: var(--green-700); }
+.cs-option .link-btn { justify-self: start; font-size: 0.8125rem; }
+.cs-trois { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.7fr); }
+.cs-difficultes { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-chip { display: inline-flex; cursor: pointer; }
+.cs-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.cs-chip span { padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--text-body); font: 600 0.8125rem/1 var(--font-body); }
+.cs-chip input:checked + span { border-color: var(--text); background: var(--text); color: var(--white); }
+.cs-chip input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cs-refus { border-left: 3px solid var(--amber-700); }
+.cs-refus h2 { margin: 0 0 6px; font: 700 1rem/1.3 var(--font-body); }
+.cs-mes-cas h2 { margin: 0 0 12px; font: 700 1rem/1.3 var(--font-body); }
+.cs-mes-cas ul { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.cs-mes-cas li { display: grid; gap: 4px; font: 500 0.8125rem/1.45 var(--font-body); }
+.cs-mes-cas b { color: var(--text); font-weight: 600; }
+.cs-mes-cas small { color: var(--text-muted); }
+.cs-mes-cas a { justify-self: start; color: var(--accent-text); font-weight: 600; }
+.cs-statut.is-propose { color: var(--accent-text); }
+.cs-statut.is-valide { color: var(--green-700); }
+.cs-statut.is-refuse { color: var(--amber-700); }
+@media (max-width: 900px) {
+  .cs-shell .qa-page, .cs-trois { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Le champ de la durée reprend le style des champs du formulaire (forum.css ne vise que le texte). */
+.qa-ask-form input[type="number"] { width: 100%; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--white); color: var(--text); font: 500 0.9375rem/1.6 var(--font-body); }
+.qa-ask-form input[type="number"]:focus { border-color: var(--accent); outline: 0; box-shadow: 0 0 0 4px var(--accent-soft); }

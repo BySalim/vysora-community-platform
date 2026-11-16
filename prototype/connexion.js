@@ -2,18 +2,22 @@
 
 /* Connexion : adresse e-mail et mot de passe sur un seul écran, Google et
    GitHub, double authentification des comptes de modération et
-   d'administration, nouvelles conditions, mot de passe oublié, puis retour à
-   la page d'origine. */
+   d'administration (code, code de secours, ou, la première fois, activation
+   avec code QR et clé puis codes de secours : SEC-02), nouvelles conditions,
+   mot de passe oublié, puis retour à la page d'origine. Le même écran que le
+   nouveau mot de passe active un compte de l'équipe créé par l'administration
+   (ADM-03, lien `connexion.html?jeton=…`). */
 
 (() => {
   const V = window.Vysora;
   const Au = window.VysoraAuth;
   const A = Au.A;
+  const C = window.VYSORA_CONNEXION;
   const E = V.etats;
   const { $, $$, t, icon } = V;
 
-  const ECRANS = ['identifiants', 'deux-facteurs', 'documents', 'oubli', 'oubli-envoye', 'nouveau-mdp', 'lien-expire', 'succes'];
-  const ORDRE = ['identifiants', 'deux-facteurs', 'documents', 'succes', 'deja', 'oubli', 'oubli-envoye', 'lien-expire', 'nouveau-mdp', 'nouveau-ok'];
+  const ECRANS = ['identifiants', 'deux-facteurs', 'deux-facteurs-config', 'deux-facteurs-secours', 'documents', 'oubli', 'oubli-envoye', 'nouveau-mdp', 'nouveau-ok', 'lien-expire', 'succes'];
+  const ORDRE = ['identifiants', 'deux-facteurs', 'deux-facteurs-config', 'deux-facteurs-secours', 'documents', 'succes', 'deja', 'oubli', 'oubli-envoye', 'lien-expire', 'nouveau-mdp', 'nouveau-ok'];
   const conteneur = $('[data-vues]');
   const form = $('#form-identifiants');
   const formCode = $('#form-code');
@@ -150,6 +154,7 @@
     const profil = reglages['cx-compte'];
     if (['moderateur', 'admin'].includes(profil)) {
       profilEnCours = profil;
+      if (reglages['cx-deux-facteurs'] === 'configurer') { preparerConfiguration(profil); vues.afficher('deux-facteurs-config', { focus: 'titre' }); return; }
       preparerCode(profil);
       vues.afficher('deux-facteurs', { focus: 'champ' });
       return;
@@ -209,9 +214,12 @@
 
   /* Double authentification (ENF-05) --------------------------------------- */
 
-  const otp = Au.codeSixChiffres($('[data-otp]'), () => formCode.requestSubmit());
+  const otp = Au.codeSixChiffres($('[data-otp]', formCode), () => formCode.requestSubmit());
+  function libelleRole(profil) {
+    $$('[data-role-libelle]').forEach(el => { el.textContent = V.typo(profil === 'admin' ? 'Compte d’administration' : 'Compte de modération'); });
+  }
   function preparerCode(profil) {
-    $('[data-role-libelle]').textContent = V.typo(profil === 'admin' ? 'Compte d’administration' : 'Compte de modération');
+    libelleRole(profil);
     choisirModeCode('appli');
     otp.vider();
     secours.value = '';
@@ -250,6 +258,99 @@
       return;
     }
     terminer(profilEnCours || reglages['cx-compte'], action);
+  });
+
+  /* Activation, à la première connexion d'un compte de l'équipe (SEC-02) :
+     clé (code QR ou saisie à la main), premier code, puis codes de secours. */
+
+  const formActivation = $('#form-activation');
+  const champActivation = $('#cx-activation');
+  const alerteActivation = $('[data-alerte]', formActivation);
+  const otpActivation = Au.codeSixChiffres($('[data-otp]', formActivation), () => formActivation.requestSubmit());
+  let qrCharge = null;
+
+  /* Code QR dessiné en SVG, inséré tel quel pour que la feuille du site s'y applique. */
+  function chargerQr() {
+    qrCharge ??= fetch(C.deuxFacteurs.qr).then(r => (r.ok ? r.text() : Promise.reject(r.status)))
+      .catch(() => `<img src="${C.deuxFacteurs.qr}" alt="" width="146" height="146">`);
+    return qrCharge;
+  }
+  function preparerConfiguration(profil) {
+    libelleRole(profil);
+    $('[data-config-intro]').textContent = V.typo(`Votre compte donne accès ${profil === 'admin' ? 'à l’administration' : 'à la modération'}. À chaque connexion, un code de votre application d’authentification vous sera demandé.`);
+    otpActivation.vider();
+    Au.erreur(champActivation);
+    Au.alerte(alerteActivation);
+    $('.df-cle').open = false;
+    const zone = $('[data-qr]');
+    zone.innerHTML = '';
+    $('[data-cle]').textContent = '';
+    chargerQr().then(svg => {
+      zone.innerHTML = svg;
+      $('[data-cle]').textContent = C.deuxFacteurs.cle.replace(/(.{4})(?=.)/g, '$1 ');
+    });
+  }
+
+  async function copier(texte, message) {
+    try {
+      await navigator.clipboard.writeText(texte);
+      V.toast(message, 'check');
+    } catch {
+      V.toast('La copie n’a pas abouti. Sélectionnez le texte pour le copier.', 'alert');
+    }
+  }
+  $('[data-copier-cle]').addEventListener('click', () => copier(C.deuxFacteurs.cle, 'Clé copiée.'));
+
+  formActivation.addEventListener('submit', async event => {
+    event.preventDefault();
+    const action = $('.action-principale', formActivation);
+    if (action.disabled) return;
+    Au.erreur(champActivation, champActivation.value.length === 6 ? '' : 'Saisissez les six chiffres du code.');
+    if (Au.premierInvalide(formActivation)) return;
+    Au.alerte(alerteActivation);
+    Au.occupe(action, true, 'Activation…');
+    await Au.attendre(750);
+    Au.occupe(action, false);
+    const resultat = reglages['cx-resultat'];
+    if (resultat === 'code') {
+      Au.erreur(champActivation, 'Ce code ne correspond pas. Attendez le suivant, puis réessayez.');
+      otpActivation.vider();
+      Au.premierInvalide(formActivation);
+      return;
+    }
+    if (resultat === 'limite') { Au.alerte(alerteActivation, `<p><b>${t('Trop de tentatives.')}</b> ${t('Réessayez dans quelques minutes.')}</p>`); return; }
+    if (resultat === 'indisponible') { Au.alerte(alerteActivation, `<p><b>${t('L’activation est momentanément indisponible.')}</b> ${t('Réessayez dans quelques instants.')}</p>`); return; }
+    afficherCodes();
+  });
+
+  function afficherCodes() {
+    $('[data-codes]').innerHTML = C.deuxFacteurs.codesSecours.map(code => `<li>${t(code)}</li>`).join('');
+    gardes.checked = false;
+    Au.erreur(gardes);
+    vues.afficher('deux-facteurs-secours');
+  }
+  const texteCodes = () => `Codes de secours Vysora\n\nChaque code permet une connexion, une seule fois.\n\n${C.deuxFacteurs.codesSecours.join('\n')}\n`;
+  $('[data-copier-codes]').addEventListener('click', () => copier(C.deuxFacteurs.codesSecours.join('\n'), 'Codes copiés.'));
+  $('[data-telecharger-codes]').addEventListener('click', () => {
+    const lien = document.createElement('a');
+    lien.href = URL.createObjectURL(new Blob([texteCodes()], { type: 'text/plain;charset=utf-8' }));
+    lien.download = 'vysora-codes-de-secours.txt';
+    lien.click();
+    setTimeout(() => URL.revokeObjectURL(lien.href), 1000);
+  });
+
+  const formCodes = $('#form-codes');
+  const gardes = $('#cx-codes-gardes');
+  gardes.addEventListener('change', () => Au.erreur(gardes));
+  formCodes.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!gardes.checked) {
+      Au.erreur(gardes, 'Cochez la case une fois les codes mis en lieu sûr.');
+      Au.premierInvalide(formCodes);
+      return;
+    }
+    $('[data-codes]').innerHTML = '';
+    terminer(profilEnCours || reglages['cx-compte'], $('.action-principale', formCodes));
   });
 
   /* Nouvelles conditions (F-04, WF-03) ------------------------------------- */
@@ -305,10 +406,32 @@
   }
   $('[data-renvoyer-oubli]').addEventListener('click', () => { V.toast('Nouveau lien envoyé.', 'mail'); delaiRenvoi(); });
 
-  /* Nouveau mot de passe (lien valable une heure) -------------------------- */
+  /* Nouveau mot de passe (lien valable une heure), ou activation d'un compte
+     de l'équipe créé par l'administration (ADM-03 : lien valable 7 jours,
+     premier mot de passe et acceptation des documents en vigueur). */
 
   const nouveau = $('#cx-nouveau');
-  const jauge = Au.jauge(nouveau, () => ({ email: 'clarisse.mendy@gmail.com' }));
+  const lienRecu = () => (reglages['cx-lien'] === 'activation' ? C.activation : C.reinitialisation);
+  const masquer = adresse => {
+    const [local = '', domaine = ''] = adresse.split('@');
+    return `${local.slice(0, 1)}${'•'.repeat(Math.max(3, Math.min(local.length - 1, 8)))}@${domaine}`;
+  };
+  function rendreLien() {
+    const activation = reglages['cx-lien'] === 'activation';
+    const lien = lienRecu();
+    const formNouveau = $('#form-nouveau');
+    const action = $('.action-principale', formNouveau);
+    $('[data-nouveau-titre]').textContent = V.typo(activation ? 'Activez votre compte' : 'Nouveau mot de passe');
+    $('[data-nouveau-email]').textContent = lien.masque || masquer(lien.email);
+    $('input[name="username"]', formNouveau).value = lien.email;
+    delete action.dataset.libelle;
+    Au.libelle(action, activation ? 'Activer mon compte' : 'Enregistrer');
+    $('[data-consentement-activation]').hidden = !activation;
+    $('[data-nouveau-ok-titre]').textContent = V.typo(activation ? 'Compte activé' : 'Mot de passe modifié');
+    $('[data-nouveau-ok-texte]').textContent = V.typo(activation ? 'Connectez-vous avec votre adresse e-mail et ce mot de passe.' : 'Connectez-vous avec votre nouveau mot de passe.');
+    $('[data-expire-texte]').textContent = V.typo(activation ? `Les liens d’activation restent valables ${C.activation.jours} jours et ne servent qu’une fois.` : 'Les liens de réinitialisation restent valables une heure.');
+  }
+  const jauge = Au.jauge(nouveau, () => ({ email: lienRecu().email }));
   $('#form-nouveau').addEventListener('submit', async event => {
     event.preventDefault();
     const action = $('.action-principale', event.currentTarget);
@@ -323,7 +446,7 @@
     nouveau.value = '';
     jauge.maj();
     Au.cacherMotsDePasse(conteneur);
-    email.value = 'clarisse.mendy@gmail.com';
+    email.value = lienRecu().email;
     vues.afficher('nouveau-ok');
   });
 
@@ -336,7 +459,10 @@
       if (E.membre()) { rendreDeja(); vues.afficher('deja'); } else vues.afficher('identifiants', { focus: 'champ' });
       return;
     }
-    if (nom === 'deux-facteurs') { profilEnCours = ['moderateur', 'admin'].includes(reglages['cx-compte']) ? reglages['cx-compte'] : 'moderateur'; preparerCode(profilEnCours); }
+    if (nom.startsWith('deux-facteurs')) profilEnCours = ['moderateur', 'admin'].includes(reglages['cx-compte']) ? reglages['cx-compte'] : 'moderateur';
+    if (nom === 'deux-facteurs') preparerCode(profilEnCours);
+    if (nom === 'deux-facteurs-config') preparerConfiguration(profilEnCours);
+    if (nom === 'deux-facteurs-secours') { libelleRole(profilEnCours); afficherCodes(); return; }
     if (nom === 'oubli-envoye') { lienEnvoye(oubliEmail.value.trim() || email.value.trim() || 'clarisse.mendy@gmail.com'); return; }
     if (nom === 'succes') { simulerSucces(); return; }
     vues.afficher(nom, { focus: ['oubli', 'nouveau-mdp', 'deux-facteurs'].includes(nom) ? 'champ' : 'titre' });
@@ -370,11 +496,12 @@
     $('[data-continuer]').href = destination();
     Au.libelle($('[data-continuer]'), ctx.actif ? 'Reprendre où vous en étiez' : 'Continuer');
   }
-  $('[data-autre-compte]').addEventListener('click', () => {
+  $$('[data-autre-compte]').forEach(lien => lien.addEventListener('click', () => {
     changerEtat({ session: 'visiteur' });
+    profilEnCours = null;
     V.toast('Session fermée sur cet appareil.');
     vues.afficher('identifiants', { focus: 'champ' });
-  });
+  }));
 
   E.on((etat, changes) => {
     if (interne) return;
@@ -399,34 +526,43 @@
 
   /* Réglages ---------------------------------------------------------------- */
 
+  /* `?jeton=…` simule le lien reçu par e-mail : `expire` ou `activation-expire`
+     pour un lien expiré, `activation…` pour l'activation d'un compte de l'équipe. */
+  const jeton = new URLSearchParams(location.search).get('jeton');
   function ecranInitial() {
-    const params = new URLSearchParams(location.search);
-    if (params.has('jeton')) return params.get('jeton') === 'expire' ? 'lien-expire' : 'nouveau-mdp';
+    if (jeton !== null) return /expire$/.test(jeton) ? 'lien-expire' : 'nouveau-mdp';
     if (location.hash === '#oubli') return 'oubli';
     return 'identifiants';
   }
 
+  const EQUIPE = ['moderateur', 'admin'];
   V.initTweaks({
     key: 'vysora-connexion-reglages',
     etats: [
-      { name: 'cx-ecran', legend: 'Écran', options: [['identifiants', 'Identifiants'], ['deux-facteurs', 'Double authentification'], ['documents', 'Nouvelles conditions'], ['oubli', 'Mot de passe oublié'], ['oubli-envoye', 'Lien envoyé'], ['nouveau-mdp', 'Nouveau mot de passe'], ['lien-expire', 'Lien expiré'], ['succes', 'Connexion réussie']] },
+      { name: 'cx-ecran', legend: 'Écran', options: [['identifiants', 'Identifiants'], ['deux-facteurs', 'Double authentification'], ['deux-facteurs-config', 'Activation de la double authentification'], ['deux-facteurs-secours', 'Codes de secours'], ['documents', 'Nouvelles conditions'], ['oubli', 'Mot de passe oublié'], ['oubli-envoye', 'Lien envoyé'], ['nouveau-mdp', 'Nouveau mot de passe'], ['nouveau-ok', 'Mot de passe enregistré'], ['lien-expire', 'Lien expiré'], ['succes', 'Connexion réussie']] },
       { name: 'cx-compte', legend: 'Compte qui se connecte', options: [['membre', 'Membre'], ['moderateur', 'Modérateur'], ['admin', 'Administrateur'], ['email', 'E-mail à vérifier'], ['conditions', 'Conditions à accepter'], ['suspendu', 'Suspendu'], ['suppression', 'Suppression demandée']] },
+      { name: 'cx-deux-facteurs', legend: 'Double authentification', si: (etat, valeurs) => EQUIPE.includes(valeurs['cx-compte']), options: [['verifier', 'Déjà activée'], ['configurer', 'À activer (première connexion)']] },
+      { name: 'cx-lien', legend: 'Lien reçu par e-mail', options: [['reinitialisation', 'Réinitialisation du mot de passe'], ['activation', 'Activation d’un compte de l’équipe']] },
       { name: 'cx-resultat', legend: 'Résultat', options: [['succes', 'Réussite'], ['identifiants', 'Identifiants incorrects'], ['limite', 'Trop de tentatives'], ['code', 'Code de vérification refusé'], ['service-lie', 'Adresse déjà liée'], ['service-inconnu', 'Aucun compte associé'], ['indisponible', 'Service indisponible']] },
       { name: 'cx-contexte', legend: 'Arrivée depuis', options: [['aucun', 'Sans page d’origine'], ['enregistrer', 'Enregistrer une création'], ['essai', 'Déclarer un essai'], ['bon-reflexe', 'Cas Bon réflexe'], ['defi', 'Défi en cours'], ['sujet', 'Sujet du forum'], ['publier', 'Nouvelle création']] }
     ],
     apparence: Au.APPARENCE,
-    defaults: { 'cx-ecran': 'identifiants', 'cx-compte': 'membre', 'cx-resultat': 'succes', 'cx-contexte': 'aucun', ...Au.APPARENCE_DEFAUTS },
+    defaults: { 'cx-ecran': 'identifiants', 'cx-compte': 'membre', 'cx-deux-facteurs': 'verifier', 'cx-lien': 'reinitialisation', 'cx-resultat': 'succes', 'cx-contexte': 'aucun', ...Au.APPARENCE_DEFAUTS },
     onChange: (change, valeurs) => {
       reglages = valeurs;
       if (Au.REGLAGES_FOND.includes(change) || change === 'init') fond.maj();
       if (change === 'init') return;
       if (change === 'cx-contexte' || change === 'reset') { contexteSimule = change === 'reset' ? null : valeurs['cx-contexte']; rendreContexte(); if (vues.actuelle() === 'deja') rendreDeja(); }
       if (change === 'cx-resultat' || change === 'reset') { libererAttente(); $$('[data-alerte]', conteneur).forEach(el => Au.alerte(el)); }
+      if (change === 'cx-lien' || change === 'reset') rendreLien();
+      if (change === 'cx-compte' && vues.actuelle().startsWith('deux-facteurs') && EQUIPE.includes(valeurs['cx-compte'])) aller(vues.actuelle());
       if (change === 'cx-ecran' && valeurs['cx-ecran'] !== vues.actuelle()) aller(valeurs['cx-ecran']);
       if (change === 'reset') aller('identifiants');
     }
   });
 
+  if (jeton !== null && (jeton.startsWith('activation') !== (reglages['cx-lien'] === 'activation'))) V.regler('cx-lien', jeton.startsWith('activation') ? 'activation' : 'reinitialisation');
+  rendreLien();
   V.fixTypography(document.body);
   rendreContexte();
   Au.demarrer();

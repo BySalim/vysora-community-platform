@@ -1134,26 +1134,46 @@
       else if (opt.offsetTop + opt.offsetHeight > liste.scrollTop + liste.clientHeight) liste.scrollTop = opt.offsetTop + opt.offsetHeight - liste.clientHeight + 8;
     }
   }
+  /* Écran tactile (téléphone, tablette) : on n'y donne pas le focus à un champ que la
+     personne n'a pas touché, le clavier s'ouvrirait et recouvrirait la page. */
+  const ecranTactile = () => matchMedia('(pointer: coarse)').matches;
+  /* Sur téléphone, le clavier réduit la partie visible de la page (visualViewport) et la fait
+     défiler : la liste se place dans ce qui reste visible au lieu de se refermer. */
+  let largeurFenetre = innerWidth;
   function placerPop() {
     if (!popBouton || !popBouton.isConnected) { fermerPop(); return; }
     const r = popBouton.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > innerHeight) { fermerPop(); return; }
+    const haut = window.visualViewport?.offsetTop ?? 0;
+    const bas = haut + (window.visualViewport?.height ?? innerHeight);
     const largeur = Math.min(300, innerWidth - 24);
     el.pop.style.width = `${largeur}px`;
     el.pop.style.left = `${Math.max(12, Math.min(r.left, innerWidth - largeur - 12))}px`;
-    const bas = innerHeight - r.bottom;
-    if (bas < 320 && r.top > bas) { el.pop.style.top = ''; el.pop.style.bottom = `${innerHeight - r.top + 6}px`; } else { el.pop.style.bottom = ''; el.pop.style.top = `${r.bottom + 6}px`; }
+    el.pop.style.bottom = '';
+    if (r.bottom < haut || r.top > bas) {
+      // Bouton sorti de la vue : on referme, sauf pendant la saisie (le clavier l'a recouvert).
+      if (!document.activeElement?.matches('[data-pop-q]')) { fermerPop(); return; }
+      el.pop.style.maxHeight = `${Math.max(160, bas - haut - 16)}px`;
+      el.pop.style.top = `${haut + 8}px`;
+      return;
+    }
+    const dessous = bas - r.bottom - 14;
+    const dessus = r.top - haut - 14;
+    const versLeHaut = dessous < 320 && dessus > dessous;
+    el.pop.style.maxHeight = `${Math.max(160, Math.min(400, versLeHaut ? dessus : dessous))}px`;
+    el.pop.style.top = versLeHaut ? `${Math.max(haut + 8, r.top - 6 - el.pop.offsetHeight)}px` : `${r.bottom + 6}px`;
   }
   function ouvrirPop(bouton, bloc) {
     popBloc = bloc;
     popBouton = bouton;
     popActif = 0;
+    largeurFenetre = innerWidth;
     el.pop.innerHTML = `<div class="pub-pop-tete">${icon('search')}<label class="sr-only" for="pub-pop-q">Rechercher un outil</label><input id="pub-pop-q" type="text" role="combobox" aria-expanded="true" aria-controls="pub-pop-liste" aria-autocomplete="list" placeholder="Rechercher un outil" autocomplete="off" data-pop-q></div><div class="pub-pop-liste" id="pub-pop-liste" role="listbox" aria-label="Outils d’IA" data-pop-liste></div>`;
     el.pop.hidden = false;
-    placerPop();
     bouton.setAttribute('aria-expanded', 'true');
     rendrePop();
-    $('[data-pop-q]', el.pop).focus();
+    placerPop();
+    // Sur écran tactile, le clavier ne s'ouvre qu'à la demande : la liste reste lisible.
+    if (!ecranTactile()) $('[data-pop-q]', el.pop).focus();
   }
   function fermerPop(rendreFocus = false) {
     if (el.pop.hidden) return;
@@ -1172,8 +1192,18 @@
     modifieMaintenant();
     rendre(`o:${x.id}`);
   }
-  addEventListener('resize', () => { if (el.apercu.open) placerApercu(); if (!el.pop.hidden) fermerPop(); });
-  addEventListener('scroll', () => { if (!el.pop.hidden) placerPop(); }, { passive: true });
+  /* Seul un changement de largeur (rotation, fenêtre redimensionnée) referme la liste : le
+     clavier et la barre d'adresse des téléphones ne changent que la hauteur. */
+  addEventListener('resize', () => {
+    if (el.apercu.open) placerApercu();
+    if (el.pop.hidden) return;
+    if (innerWidth !== largeurFenetre) fermerPop();
+    else placerPop();
+  });
+  const suivrePop = () => { if (!el.pop.hidden) placerPop(); };
+  addEventListener('scroll', suivrePop, { passive: true });
+  window.visualViewport?.addEventListener('resize', suivrePop);
+  window.visualViewport?.addEventListener('scroll', suivrePop);
 
   /* Aperçu : la fiche de création elle-même, chargée avec le brouillon. */
   let ecran = null;
@@ -1353,6 +1383,11 @@
 
   /* Événements --------------------------------------------------------- */
 
+  /* Fermeture au toucher hors de la liste : sur iPhone, toucher un texte inerte n'envoie pas
+     toujours de « click » jusqu'au document. */
+  document.addEventListener('pointerdown', e => {
+    if (!el.pop.hidden && !el.pop.contains(e.target) && !e.target.closest('[data-action="outil"]')) fermerPop();
+  });
   document.addEventListener('click', e => {
     if (!el.pop.hidden && !el.pop.contains(e.target) && !e.target.closest('[data-action="outil"]')) fermerPop();
     const b = e.target.closest('[data-action]');
@@ -1375,7 +1410,11 @@
       if (touches.has(cle) || tentative) majChamp(cle, err);
       return;
     }
-    if (e.target.matches('[data-pop-q]')) { popActif = 0; rendrePop(e.target.value); }
+    if (e.target.matches('[data-pop-q]')) {
+      popActif = 0;
+      rendrePop(e.target.value);
+      placerPop(); // ouverte vers le haut, la liste filtrée reste collée au bouton
+    }
   });
 
   /* En quittant un champ rempli : erreur éventuelle et données sensibles. */

@@ -619,7 +619,9 @@
   function rubCas() {
     const levels = [0, 1, 2, 3];
     const list = cases.filter(c => !state.level || c.level === state.level);
-    return `${rubHeadHTML(RUB['bon-reflexe'])}<div class="container ap-rub">
+    // APP-03 : un membre Expert ou plus, ou l'équipe de modération, propose ses cas (RG-70).
+    const proposer = V.etats.peut('proposer-cas') ? `<a class="btn btn-secondary btn-sm" href="bon-reflexe-nouveau.html">${icon('plus')}Proposer un cas</a>` : '';
+    return `${rubHeadHTML(RUB['bon-reflexe'], proposer)}<div class="container ap-rub">
       <div class="ap-chips" role="group" aria-label="Filtrer par niveau">${levels.map(l => `<button class="ap-chip" type="button" aria-pressed="${state.level === l}" data-ap-level="${l}">${l ? t(M.LEVELS[l]) : 'Tous les niveaux'}<span>${l ? cases.filter(c => c.level === l).length : cases.length}</span></button>`).join('')}</div>
       <ul class="ap-caselist">${list.map(caseRowHTML).join('')}</ul>
     </div>`;
@@ -1081,6 +1083,11 @@
   V.fixTypography(document.querySelector('.site-footer'));
   readURL();
   show({ focus: false, hash: location.hash });
+  // Message laissé par la page précédente (« Cas soumis à validation… »), lu une seule fois.
+  try {
+    const message = sessionStorage.getItem('vysora-message-suivant');
+    if (message) { sessionStorage.removeItem('vysora-message-suivant'); toast(message); }
+  } catch { /* stockage indisponible */ }
   const fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
   Promise.race([fontsReady, new Promise(resolve => setTimeout(resolve, 900))]).then(() => requestAnimationFrame(() => document.body.classList.add('is-ready')));
 })();

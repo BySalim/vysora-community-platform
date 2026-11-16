@@ -7,8 +7,8 @@
 <meta name="description" content="Connectez-vous à Vysora pour retrouver vos créations, vos essais et votre progression.">
 <link rel="icon" href="assets/logos/vysora%20logo%20bleu.png">
 <link rel="stylesheet" href="assets/fonts/fonts.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="commun.css">
-<link rel="stylesheet" href="etats.css"><script src="etats.js"></script><link rel="stylesheet" href="auth.css">
-<script src="data.js" defer></script><script src="auth-data.js" defer></script><script src="commun.js" defer></script><script src="auth.js" defer></script><script src="connexion.js" defer></script>
+<link rel="stylesheet" href="etats.css"><script src="etats.js"></script><link rel="stylesheet" href="auth.css"><link rel="stylesheet" href="auth-complements.css">
+<script src="data.js" defer></script><script src="auth-data.js" defer></script><script src="connexion-data.js" defer></script><script src="commun.js" defer></script><script src="auth.js" defer></script><script src="connexion.js" defer></script>
 </head>
 <body class="auth" data-page="connexion" data-sans-garde>
 <svg class="sprite" aria-hidden="true" focusable="false">
@@ -37,6 +37,9 @@
   <symbol id="i-replay" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
   <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 12h8"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.5v12M7 11l5 5 5-5"/><path d="M4 17.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4.5"/><path d="m11.2 11.8 9.3-9.3M17 6l2.5 2.5M14.5 8.5l2 2"/></symbol>
 </svg>
 <a class="skip-link" href="#contenu">Aller au formulaire</a>
 <div class="fond" data-fond aria-hidden="true"></div>
@@ -107,7 +110,61 @@
             </div>
             <button class="action action-principale" type="submit"><span class="action-libelle">Vérifier</span></button>
           </form>
-          <p class="liens"><button class="lien" type="button" data-basculer-code>Utiliser un code de secours</button><button class="lien" type="button" data-aller="identifiants">Changer de compte</button></p>
+          <p class="liens"><button class="lien" type="button" data-basculer-code>Utiliser un code de secours</button><button class="lien" type="button" data-autre-compte>Changer de compte</button></p>
+        </section>
+
+        <section class="auth-vue" data-vue="deux-facteurs-config" aria-labelledby="t-config" hidden>
+          <p class="auth-repere"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span data-role-libelle>Compte de modération</span></p>
+          <h1 id="t-config" tabindex="-1">Activez la vérification en deux étapes</h1>
+          <p class="auth-intro" data-config-intro>Votre compte donne accès à la modération. À chaque connexion, un code de votre application d’authentification vous sera demandé.</p>
+          <ol class="df-etapes">
+            <li>
+              <b>Ajoutez Vysora à votre application</b>
+              <span>Scannez ce code avec Google Authenticator, Microsoft Authenticator, 1Password ou une application équivalente.</span>
+              <div class="df-qr" role="img" aria-label="Code QR de la clé" data-qr></div>
+              <details class="df-cle">
+                <summary><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg>Saisir la clé à la main</summary>
+                <p><code data-cle></code><button class="lien" type="button" data-copier-cle>Copier la clé</button></p>
+              </details>
+            </li>
+            <li>
+              <b>Saisissez le code affiché</b>
+              <form class="auth-bloc" id="form-activation" novalidate>
+                <div class="champ">
+                  <label for="cx-activation">Code à six chiffres</label>
+                  <div class="otp" data-otp>
+                    <input id="cx-activation" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" spellcheck="false" aria-describedby="cx-activation-erreur">
+                    <div class="otp-cases" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                  </div>
+                  <p class="message is-erreur" id="cx-activation-erreur" hidden></p>
+                </div>
+                <div class="alerte" role="alert" data-alerte hidden></div>
+                <button class="action action-principale" type="submit"><span class="action-libelle">Activer</span></button>
+              </form>
+            </li>
+          </ol>
+          <p class="liens"><button class="lien" type="button" data-autre-compte>Changer de compte</button></p>
+        </section>
+
+        <section class="auth-vue" data-vue="deux-facteurs-secours" aria-labelledby="t-secours" hidden>
+          <p class="auth-repere is-ok"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span>Vérification en deux étapes activée</span></p>
+          <h1 id="t-secours" tabindex="-1">Gardez vos codes de secours</h1>
+          <p class="auth-intro">Sans votre application, chaque code permet une connexion, une seule fois. Ils ne seront plus affichés : copiez-les ou téléchargez-les maintenant.</p>
+          <ul class="df-codes" data-codes></ul>
+          <p class="df-outils">
+            <button class="action action-secondaire" type="button" data-copier-codes><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="action-libelle">Copier</span></button>
+            <button class="action action-secondaire" type="button" data-telecharger-codes><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span class="action-libelle">Télécharger</span></button>
+          </p>
+          <form class="auth-bloc" id="form-codes" novalidate>
+            <div class="case-champ">
+              <div class="case">
+                <input type="checkbox" id="cx-codes-gardes" name="gardes" aria-describedby="cx-codes-gardes-erreur">
+                <label for="cx-codes-gardes">J’ai mis ces codes en lieu sûr.</label>
+              </div>
+              <p class="message is-erreur" id="cx-codes-gardes-erreur" hidden></p>
+            </div>
+            <button class="action action-principale" type="submit"><span class="action-libelle">Continuer</span></button>
+          </form>
         </section>
 
         <section class="auth-vue" data-vue="documents" aria-labelledby="t-documents" hidden>
@@ -152,8 +209,8 @@
         </section>
 
         <section class="auth-vue" data-vue="nouveau-mdp" aria-labelledby="t-nouveau" hidden>
-          <h1 id="t-nouveau" tabindex="-1">Nouveau mot de passe</h1>
-          <p class="auth-intro">Pour <b>c•••••@gmail.com</b></p>
+          <h1 id="t-nouveau" tabindex="-1" data-nouveau-titre>Nouveau mot de passe</h1>
+          <p class="auth-intro">Pour <b data-nouveau-email>c•••••@gmail.com</b></p>
           <form class="auth-bloc" id="form-nouveau" novalidate>
             <input class="sr-only" type="email" name="username" autocomplete="username" value="clarisse.mendy@gmail.com" tabindex="-1" aria-hidden="true" readonly>
             <div class="champ">
@@ -172,19 +229,20 @@
             </div>
             <button class="action action-principale" type="submit"><span class="action-libelle">Enregistrer</span></button>
           </form>
+          <p class="consentement" data-consentement-activation hidden>En activant votre compte, vous acceptez les <a href="cgu.html" data-document="cgu">conditions d’utilisation</a> et la <a href="charte-communautaire.html" data-document="charte">charte communautaire</a>. La <a href="confidentialite.html" data-document="confidentialite">politique de confidentialité</a> explique comment vos données sont traitées.</p>
         </section>
 
         <section class="auth-vue" data-vue="nouveau-ok" aria-labelledby="t-nouveau-ok" hidden>
           <span class="picto" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="dessin" pathLength="1" d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
-          <h1 id="t-nouveau-ok" tabindex="-1">Mot de passe modifié</h1>
-          <p class="auth-intro">Connectez-vous avec votre nouveau mot de passe.</p>
+          <h1 id="t-nouveau-ok" tabindex="-1" data-nouveau-ok-titre>Mot de passe modifié</h1>
+          <p class="auth-intro" data-nouveau-ok-texte>Connectez-vous avec votre nouveau mot de passe.</p>
           <button class="action action-principale" type="button" data-aller="identifiants"><span class="action-libelle">Se connecter</span></button>
         </section>
 
         <section class="auth-vue" data-vue="lien-expire" aria-labelledby="t-expire" hidden>
           <span class="picto is-attente" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="dessin" pathLength="1" d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 4v5l3 2"/></svg></span>
           <h1 id="t-expire" tabindex="-1">Lien expiré</h1>
-          <p class="auth-intro">Les liens de réinitialisation restent valables une heure.</p>
+          <p class="auth-intro" data-expire-texte>Les liens de réinitialisation restent valables une heure.</p>
           <button class="action action-principale" type="button" data-aller="oubli"><span class="action-libelle">Recevoir un nouveau lien</span></button>
           <p class="liens"><button class="lien" type="button" data-aller="identifiants">Retour à la connexion</button></p>
         </section>

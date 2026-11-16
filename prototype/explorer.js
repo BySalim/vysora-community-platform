@@ -501,7 +501,7 @@
         <div class="ex-guide-actions">
           <a class="btn btn-primary" href="nouvelle-creation.html">Publier mon parcours</a>
           <button class="btn btn-secondary" type="button" data-copy-link>${icon('external')}Copier le lien du guide</button>
-          <p class="ex-authors"><span class="ex-avatars" aria-hidden="true">${g.authors.map(name => avatar(name, 28)).join('')}</span>${t(g.authors.length > 2 ? `${g.authors.slice(0, 2).map(firstName).join(', ')} et ${g.authors.length - 2} autres membres` : g.authors.map(firstName).join(' et '))}</p>
+          <p class="ex-authors"><span class="ex-avatars" aria-hidden="true">${g.authors.map(name => avatar(name, 28)).join('')}</span>${t(g.authors.length > 2 ? `${g.authors.slice(0, 2).map(firstName).join(', ')} et ${plural(g.authors.length - 2, 'autre membre', 'autres membres')}` : g.authors.map(firstName).join(' et '))}</p>
         </div>
         ${essentialsHTML(g)}
       </header>
