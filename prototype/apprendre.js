@@ -10,6 +10,9 @@
   const X = window.VYSORA_EXPLORER;
   if (!V || !M || !A || !X) return;
   const { D, $, $$, esc, t, plural, icon, store, logo, avatar, mediaHTML, dateLabel, toast } = V;
+  /* Écran tactile (téléphone, tablette) : on n'y donne pas le focus à un champ que la
+     personne n'a pas touché, le clavier s'ouvrirait et recouvrirait la page. */
+  const ecranTactile = () => matchMedia('(pointer: coarse)').matches;
 
   /* ------------------------------------------------------------------ */
   /* Modèle                                                               */
@@ -944,7 +947,13 @@
     if (target.closest('[data-ap-search-open]')) { event.preventDefault(); const panel = $('[data-ap-search]'); if (panel.hidden) openSearch(); else closeSearch(); return; }
     if (target.closest('[data-ap-search-close]')) { closeSearch(); return; }
     const tryWord = target.closest('[data-ap-search-try]');
-    if (tryWord) { const input = $('[data-ap-search-input]'); input.value = tryWord.dataset.apSearchTry; renderSearch(); input.focus(); return; }
+    if (tryWord) {
+      const input = $('[data-ap-search-input]');
+      input.value = tryWord.dataset.apSearchTry;
+      renderSearch();
+      if (!ecranTactile()) input.focus(); // au doigt, le clavier cacherait les résultats
+      return;
+    }
     if (target.closest('[data-open-tools]')) { openTools(); return; }
 
     const stop = target.closest('[data-ap-stop]');

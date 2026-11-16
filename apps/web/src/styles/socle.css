@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Ajouts du socle, absents du prototype : rien ici ne change le rendu d'une page portée.
-   Les styles repris du prototype restent dans leurs fichiers d'origine, inchangés.
+   Ajouts du socle (prototype : copie identique, chargée par etats.js) : rien ici ne change le
+   rendu d'une page portée. Les styles repris du prototype restent dans leurs fichiers d'origine.
    ========================================================================== */
 
 /* Champ piège des formulaires publics : invisible et hors du parcours au clavier. */

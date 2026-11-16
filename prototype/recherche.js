@@ -646,21 +646,28 @@ window.VysoraRecherche = (() => {
     if (garde >= 0 && elements.length) activer(Math.min(garde, elements.length - 1), { glisser: false });
     annoncer(`« ${terme} » retiré de l’historique.`);
   }
+  /* Écran tactile (téléphone, tablette) : on n'y donne pas le focus à un champ que la
+     personne n'a pas touché, le clavier s'ouvrirait et recouvrirait la page. */
+  const ecranTactile = () => matchMedia('(pointer: coarse)').matches;
+  /* Rend le focus au champ, sauf sur écran tactile : le clavier recouvrirait les résultats demandés. */
+  function revenirASaisie() {
+    if (saisie && !ecranTactile()) saisie.focus();
+  }
   function executer(o) {
     if (o.kind === 'terme') {
       saisie.value = o.terme;
       etat.exact = false;
       rendre({ neuf: true });
-      saisie.focus();
+      revenirASaisie();
       saisie.setSelectionRange(saisie.value.length, saisie.value.length);
     } else if (o.kind === 'portee') {
       etat.portee = o.portee;
       rendre({ neuf: true });
-      saisie.focus();
+      revenirASaisie();
     } else if (o.kind === 'effacer') {
       store.set(CLE_RECENTES, []);
       rendre();
-      saisie.focus();
+      revenirASaisie();
       annoncer('Historique de recherche effacé.');
     }
   }
@@ -846,14 +853,14 @@ window.VysoraRecherche = (() => {
     dialogue.addEventListener('click', event => {
       if (event.target.closest('[data-rch-fermer]')) { fermer(); return; }
       const exact = event.target.closest('[data-rch-exact]');
-      if (exact) { etat.exact = true; rendre({ neuf: true }); saisie.focus(); }
+      if (exact) { etat.exact = true; rendre({ neuf: true }); revenirASaisie(); }
     });
     filtres.addEventListener('click', event => {
       const bouton = event.target.closest('[data-rch-portee]');
       if (!bouton) return;
       etat.portee = bouton.dataset.rchPortee;
       rendre({ neuf: true });
-      if (event.detail) saisie.focus();
+      if (event.detail) revenirASaisie();
       else $(`[data-rch-portee="${etat.portee}"]`, filtres)?.focus();
     });
     filtres.addEventListener('keydown', event => {

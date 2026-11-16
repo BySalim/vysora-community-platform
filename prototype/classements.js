@@ -719,7 +719,6 @@
     if (target.closest('[data-cl-tool-btn]')) { $('[data-cl-tool-list]').hidden ? openTools() : closeTools(); return; }
     const opt = target.closest('[data-cl-tool]');
     if (opt) { setTool(opt.dataset.clTool); return; }
-    if (!target.closest('[data-cl-tool-picker]')) closeTools(false);
     if (target.closest('[data-cl-clear-tool]')) { setTool(''); return; }
     const tab = target.closest('[data-cl-table-tab]');
     if (tab) { selectTable(tab.dataset.clTableTab); return; }
@@ -750,6 +749,12 @@
       const title = el.querySelector('h2');
       if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
     }
+  });
+
+  // pointerdown plutôt que click : sur iPhone, toucher un texte inerte n'envoie pas toujours de
+  // « click » jusqu'au document, et la liste resterait ouverte.
+  document.addEventListener('pointerdown', event => {
+    if (!event.target.closest('[data-cl-tool-picker]')) closeTools(false);
   });
 
   function selectTable(kind, focus = false) {

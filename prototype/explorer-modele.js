@@ -174,6 +174,10 @@ window.VysoraGuides = (() => {
   const getMyTools = () => myTools;
   const setMyTools = list => { myTools = new Set(list); store.set('vysora-mes-outils', [...myTools]); };
 
+  /* Écran tactile (téléphone, tablette) : on n'y donne pas le focus à un champ que la
+     personne n'a pas touché, le clavier s'ouvrirait et recouvrirait la page. */
+  const ecranTactile = () => matchMedia('(pointer: coarse)').matches;
+
   // Fenêtre de sélection : renvoie la fonction d'ouverture.
   function initToolsDialog(onSave) {
     const { $ } = V;
@@ -196,7 +200,8 @@ window.VysoraGuides = (() => {
       filter.value = '';
       render();
       dialog.showModal();
-      filter.focus();
+      // Sur téléphone, le clavier recouvrirait la grille : le focus reste sur « Fermer ».
+      if (!ecranTactile()) filter.focus();
     }
     list.addEventListener('click', event => {
       const button = event.target.closest('[data-tool]');

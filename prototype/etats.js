@@ -98,7 +98,8 @@ window.VysoraEtats = (() => {
 
   appliquer();
 
-  /* Ce que le gabarit du site rend sur toutes les pages, accueil compris : barre de défilement
+  /* Ce que le gabarit du site rend sur toutes les pages, accueil compris : ajouts du socle
+     (socle.css : règle d'un badge au doigt, « Mes outils » sur téléphone…), barre de défilement
      superposée sur les écrans à barres classiques (UI-01) et fenêtre des cookies (LEG-03). Les
      barres classiques (Windows, Linux) se repèrent avant le premier affichage, comme dans le
      gabarit du site, sauf en contraste élevé. */
@@ -110,7 +111,7 @@ window.VysoraEtats = (() => {
     root.removeChild(sonde);
     if (classiques && !matchMedia('(forced-colors: active)').matches) root.classList.add('barres-classiques');
     const tete = document.head || root;
-    ['defilement.css', 'cookies.css'].forEach(href => {
+    ['socle.css', 'defilement.css', 'cookies.css'].forEach(href => {
       const lien = document.createElement('link');
       lien.rel = 'stylesheet';
       lien.href = href;

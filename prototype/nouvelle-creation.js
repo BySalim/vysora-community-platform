@@ -1376,7 +1376,12 @@
     },
     conserver: b => { const s = sensibles().find(k => k.id === b.dataset.id); d.decisions[b.dataset.id] = 1; modifie(); rendre(s ? s.cle : undefined); },
     'proposer-categorie': () => { d.categorie = categorieProposee(); modifie(); rendreCote('categorie'); },
-    'retirer-etiquette': b => { d.etiquettes = d.etiquettes.filter(e => e !== b.dataset.v); modifie(); rendreCote('etiquette-saisie'); },
+    'retirer-etiquette': b => {
+      d.etiquettes = d.etiquettes.filter(e => e !== b.dataset.v);
+      modifie();
+      // Au doigt, revenir au champ ouvrirait le clavier : le focus n'est rendu qu'au clavier.
+      rendreCote(ecranTactile() ? undefined : 'etiquette-saisie');
+    },
     'copier-lien': async () => { const url = new URL(FICHE, location.href).href; try { await navigator.clipboard.writeText(url); V.toast('Lien de la fiche copié.', 'copy'); } catch { V.toast(`Copie indisponible. Lien : ${url}`, 'copy'); } },
     'continuer-modifier': () => { vueFin = false; appliquerEtat(); scrollTo({ top: 0, behavior: 'auto' }); $('#f-titre')?.focus({ preventScroll: true }); }
   };
@@ -1408,6 +1413,17 @@
       modifie();
       const err = majPanneau();
       if (touches.has(cle) || tentative) majChamp(cle, err);
+      return;
+    }
+    if (e.target.matches('[data-etiquette]')) {
+      // La virgule sépare les étiquettes. Le clavier d'Android ne la donne pas à keydown
+      // (touche « Unidentified ») et elle peut être collée : on la traite ici aussi.
+      if (!e.target.value.includes(',')) return;
+      const morceaux = e.target.value.split(',');
+      const reste = morceaux.pop();
+      morceaux.forEach(morceau => ajouterEtiquette(morceau));
+      const saisie = $('[data-etiquette]');
+      if (saisie) saisie.value = reste.trimStart();
       return;
     }
     if (e.target.matches('[data-pop-q]')) {
