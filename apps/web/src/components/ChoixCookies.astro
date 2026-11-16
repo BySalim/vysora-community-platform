@@ -1,9 +1,9 @@
 ---
-/* LEG-03 : choix sur les cookies. Le bandeau s'affiche tant qu'aucun choix de la version en cours
-   n'est retenu (cookie vysora_consentement) ; il ne bloque pas la page, et refuser y est aussi simple
-   qu'accepter. Le dialogue « Gérer les cookies » s'ouvre par « Personnaliser » et par le lien du pied
-   de page. Écrans sans maquette dans le prototype : style du dialogue d'accès (etats.css) et de
-   l'interrupteur de la page Cookies. Branchés par scripts/commun/cookies.ts. */
+/* LEG-03 : choix sur les cookies. Le bandeau, une barre discrète en bas de l'écran, s'affiche tant
+   qu'aucun choix de la version en cours n'est retenu (cookie vysora_consentement) ; il ne bloque pas
+   la page, et refuser y est aussi simple qu'accepter (deux boutons identiques). Le dialogue « Gérer
+   les cookies » s'ouvre par « Personnaliser » et par le lien du pied de page. Écrans sans maquette
+   dans le prototype : style du dialogue d'accès (etats.css). Branchés par scripts/commun/cookies.ts. */
 import { choixCookiesAttendu } from '@vysora/shared';
 import { ROUTES } from '../lib/navigation';
 import { typo } from '../lib/texte';
@@ -13,26 +13,25 @@ const attendu = choixCookiesAttendu(Astro.request.headers.get('cookie'));
 ---
 
 {attendu && (
-  <section class="ck-bandeau" aria-labelledby="ck-bandeau-titre" data-ck-bandeau>
-    <h2 class="ck-bandeau-titre" id="ck-bandeau-titre">
-      Vos choix sur les cookies
-    </h2>
-    <p class="ck-bandeau-texte">
-      {typo(
-        'Vysora dépose les cookies indispensables à votre connexion et compte les visites de façon anonyme. Avec votre accord, nous suivons aussi le parcours de vos visites, sans lien avec votre compte, pour améliorer le site et corriger ses problèmes.',
-      )}{' '}
-      <a href={ROUTES.cookies}>En savoir plus</a>
-    </p>
-    <div class="ck-actions">
-      <button class="btn btn-secondary btn-sm" type="button" data-ck-action="refuser">
-        Tout refuser
-      </button>
-      <button class="btn btn-quiet btn-sm" type="button" data-ck-action="personnaliser">
-        Personnaliser
-      </button>
-      <button class="btn btn-secondary btn-sm" type="button" data-ck-action="accepter">
-        Tout accepter
-      </button>
+  <section class="ck-bandeau" aria-label="Choix sur les cookies" data-ck-bandeau>
+    <div class="container ck-bandeau-in">
+      <p class="ck-bandeau-texte">
+        {typo(
+          'Nous utilisons des cookies indispensables et mesurons l’audience de façon anonyme. Avec votre accord, nous suivons aussi le parcours de vos visites pour améliorer Vysora.',
+        )}{' '}
+        <a href={ROUTES.cookies}>En savoir plus</a>
+      </p>
+      <div class="ck-bandeau-actions">
+        <button class="ck-lien" type="button" data-ck-action="personnaliser">
+          Personnaliser
+        </button>
+        <button class="btn btn-secondary btn-sm" type="button" data-ck-action="refuser">
+          Tout refuser
+        </button>
+        <button class="btn btn-secondary btn-sm" type="button" data-ck-action="accepter">
+          Tout accepter
+        </button>
+      </div>
     </div>
   </section>
 )}
@@ -45,23 +44,19 @@ const attendu = choixCookiesAttendu(Astro.request.headers.get('cookie'));
   </button>
   <h2 id="ck-dialogue-titre">Gérer les cookies</h2>
   <p class="ck-dialogue-intro">
-    {typo(
-      'Choisissez ce que Vysora mesure pendant vos visites. Vous pouvez changer d’avis à tout moment avec le lien « Gérer les cookies », en bas de chaque page.',
-    )}
+    {typo('Choisissez ce que Vysora peut mesurer. Vous pourrez changer d’avis à tout moment.')}{' '}
+    <a href={ROUTES.cookies}>En savoir plus</a>
   </p>
   <FinalitesCookies prefixe="ck-dialogue" />
-  <div class="ck-actions ck-dialogue-actions">
-    <button class="btn btn-secondary" type="button" data-ck-action="refuser">
+  <div class="ck-dialogue-actions">
+    <button class="btn btn-secondary btn-sm" type="button" data-ck-action="refuser">
       Tout refuser
     </button>
-    <button class="btn btn-secondary" type="button" data-ck-action="accepter">
+    <button class="btn btn-secondary btn-sm" type="button" data-ck-action="accepter">
       Tout accepter
     </button>
-    <button class="btn btn-primary" type="button" data-ck-action="enregistrer">
-      Enregistrer mes choix
+    <button class="btn btn-primary btn-sm" type="button" data-ck-action="enregistrer">
+      Enregistrer
     </button>
   </div>
-  <p class="ck-dialogue-lien">
-    <a href={ROUTES.cookies}>Politique relative aux cookies</a>
-  </p>
 </dialog>

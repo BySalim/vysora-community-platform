@@ -2,7 +2,7 @@
 /* LEG-03 : finalités des cookies et de la mesure, avec leurs interrupteurs. Reprise par le dialogue
    « Gérer les cookies » (choix enregistré par son bouton) et par la page Cookies (choix enregistré à
    chaque changement). L'état vient du cookie du choix ; scripts/commun/cookies.ts le met à jour. */
-import { DELAIS, audienceRefusee, parcoursAccepte } from '@vysora/shared';
+import { audienceRefusee, parcoursAccepte } from '@vysora/shared';
 import { typo } from '../lib/texte';
 
 interface Props {
@@ -16,13 +16,13 @@ const FINALITES = [
   {
     cle: 'audience',
     titre: 'Mesure d’audience',
-    aide: 'Compter les pages vues, la provenance des visites, le type d’appareil et les erreurs du site, de façon anonyme et sans cookie.',
+    aide: 'Pages vues, provenance et erreurs, comptées de façon anonyme, sans cookie.',
     actif: !audienceRefusee(entete),
   },
   {
     cle: 'parcours',
     titre: 'Parcours des visites',
-    aide: `Relier les pages et les actions d’une même visite (inscription, publication, erreur rencontrée), sans lien avec votre compte, pour voir où le site vous freine. Un cookie de visite est déposé ; il s’efface après ${DELAIS.inactiviteParcoursMinutes} minutes sans activité.`,
+    aide: 'Pages et actions d’une même visite, sans lien avec votre compte.',
     actif: parcoursAccepte(entete),
   },
 ] as const;
@@ -32,9 +32,7 @@ const FINALITES = [
   <li class="ck-finalite">
     <div class="ck-finalite-texte">
       <p class="ck-finalite-titre">Indispensables</p>
-      <p class="ck-finalite-aide">
-        {typo('Garder votre connexion, vous connecter avec GitHub ou Google et retenir vos choix.')}
-      </p>
+      <p class="ck-finalite-aide">{typo('Votre connexion et la mémorisation de vos choix.')}</p>
     </div>
     <span class="ck-toujours">Toujours actifs</span>
   </li>
