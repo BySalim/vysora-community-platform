@@ -70,7 +70,7 @@ const basculer = (bouton: HTMLButtonElement) =>
 /* Panneau du choix ------------------------------------------------------------------------------ */
 
 type Vue = 'consentement' | 'details' | 'apropos';
-const panneau = $('[data-ck-panneau]');
+const panneau = $<HTMLDialogElement>('[data-ck-panneau]');
 const onglets = panneau ? $$<HTMLButtonElement>('[data-ck-onglet]', panneau) : [];
 
 function afficherVue(vue: Vue, { focus = false } = {}): void {
@@ -94,11 +94,27 @@ function afficherVue(vue: Vue, { focus = false } = {}): void {
 }
 
 function fermerPanneau(): void {
-  if (!panneau || panneau.hidden) return;
-  const avaitLeFocus = panneau.contains(document.activeElement);
-  panneau.hidden = true;
-  if (avaitLeFocus) $('#contenu')?.focus({ preventScroll: true });
+  if (!panneau?.open) return;
+  panneau.close();
 }
+
+// Fenêtre fermée : le focus revient où il était (lien « Gérer les cookies »), sinon au contenu.
+panneau?.addEventListener('close', () => {
+  if (document.activeElement === document.body) $('#contenu')?.focus({ preventScroll: true });
+});
+
+// Échap ne ferme que la fenêtre rouverte depuis le pied de page : la première attend un choix. La
+// touche est retenue dès keydown, car Chrome ignore le refus de « cancel » avant tout clic sur la page.
+const premiere = () => Boolean(panneau && $('[data-ck-fermer]', panneau)?.hidden);
+panneau?.addEventListener('keydown', (evenement) => {
+  if (evenement.key === 'Escape' && premiere()) evenement.preventDefault();
+});
+panneau?.addEventListener('cancel', (evenement) => {
+  if (premiere()) evenement.preventDefault();
+});
+
+// Aucun choix retenu pour la version en cours : la fenêtre s'ouvre, la page derrière est inerte.
+if (panneau?.hasAttribute('data-ck-attendu')) panneau.showModal();
 
 function choisir(choix: Choix): void {
   retenirChoix(choix);
@@ -112,7 +128,7 @@ export function ouvrirGestionCookies(): void {
   poser(panneau, choixActuel());
   const fermer = $('[data-ck-fermer]', panneau);
   if (fermer) fermer.hidden = false;
-  panneau.hidden = false;
+  if (!panneau.open) panneau.showModal();
   afficherVue('details', { focus: true });
 }
 
@@ -144,12 +160,8 @@ document.addEventListener('click', (evenement) => {
   else if (action === 'enregistrer' && panneau) choisir(lire(panneau));
 });
 
-// Onglets au clavier (flèches, début, fin) ; Échap ferme le panneau rouvert depuis le pied de page.
+// Onglets au clavier (flèches, début, fin).
 panneau?.addEventListener('keydown', (evenement) => {
-  if (evenement.key === 'Escape' && !$('[data-ck-fermer]', panneau)?.hidden) {
-    fermerPanneau();
-    return;
-  }
   const actuel = onglets.indexOf(evenement.target as HTMLButtonElement);
   if (actuel < 0) return;
   const suivant =

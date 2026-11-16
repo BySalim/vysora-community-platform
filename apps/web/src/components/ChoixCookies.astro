@@ -1,18 +1,23 @@
 ---
-/* LEG-03 : choix sur les cookies, sur le modèle des outils de consentement courants. Un panneau en
-   bas de l'écran, en trois onglets : « Consentement » (le message), « Détails » (les catégories et
-   leurs interrupteurs), « À propos des cookies ». Trois boutons de même taille : « Tout refuser »,
-   « Personnaliser » (ouvre « Détails », puis devient « Enregistrer mes choix ») et « Tout accepter ».
-   Le panneau s'affiche tant qu'aucun choix de la version en cours n'est retenu (cookie
-   vysora_consentement), sans bloquer la page ; le lien « Gérer les cookies » du pied de page le
-   rouvre sur « Détails », avec un bouton de fermeture. Écran sans maquette dans le prototype, dans
-   le style des onglets et des cartes du site. Branché par scripts/commun/cookies.ts. */
+/* LEG-03 : choix sur les cookies, sur le modèle des outils de consentement courants. Une fenêtre au
+   centre de l'écran, page assombrie et figée derrière, en trois onglets : « Consentement » (le
+   message), « Détails » (les catégories et leurs interrupteurs), « À propos des cookies ». Trois
+   boutons de même taille : « Tout refuser », « Personnaliser » (ouvre « Détails », puis devient
+   « Enregistrer mes choix ») et « Tout accepter ». La fenêtre s'ouvre tant qu'aucun choix de la
+   version en cours n'est retenu (cookie vysora_consentement, `data-ck-attendu`) ; le lien « Gérer
+   les cookies » du pied de page la rouvre sur « Détails », avec un bouton de fermeture. Écran sans
+   maquette dans le prototype, dans le style des onglets et des cartes du site. Ouverte par
+   scripts/commun/cookies.ts (showModal). */
 import { choixCookiesAttendu } from '@vysora/shared';
 import { ROUTES } from '../lib/navigation';
 import { typo } from '../lib/texte';
 import FinalitesCookies from './FinalitesCookies.astro';
 
-const attendu = choixCookiesAttendu(Astro.request.headers.get('cookie'));
+// La fenêtre bloque la page : elle ne s'ouvre pas d'elle-même sur les deux pages vers lesquelles
+// elle renvoie, qui doivent rester lisibles (la page Cookies a ses propres réglages).
+const PAGES_LUES: string[] = [ROUTES.cookies, ROUTES.confidentialite];
+const pageLue = PAGES_LUES.includes(Astro.url.pathname.replace(/\/+$/, ''));
+const attendu = choixCookiesAttendu(Astro.request.headers.get('cookie')) && !pageLue;
 const ONGLETS = [
   { cle: 'consentement', libelle: 'Consentement' },
   { cle: 'details', libelle: 'Détails' },
@@ -20,12 +25,12 @@ const ONGLETS = [
 ] as const;
 ---
 
-<section
+<dialog
   class="ck-panneau"
   aria-labelledby="ck-titre"
   data-ck-panneau
   data-ck-vue="consentement"
-  hidden={!attendu}
+  data-ck-attendu={attendu ? '' : undefined}
 >
   <div class="ck-marque">
     <img
@@ -132,4 +137,4 @@ const ONGLETS = [
       Tout accepter
     </button>
   </div>
-</section>
+</dialog>

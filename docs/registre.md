@@ -428,6 +428,12 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 
 ## Journal
 
+### 2026-11-16 — Mise en ligne de LEG-02, S-13 et LEG-03 ; fenêtre des cookies centrée
+
+- Préproduction passée de `89fb7f2` à `1ef3e1b` par le script de mise à jour : `Caddyfile` et `compose.yml` récupérés par `git pull` (le dépôt est public), migration `0017` jouée, copie de la base prise juste avant. Vérifié en ligne : pages de l’équipe introuvables pour un visiteur, mentions légales et politique de confidentialité qui nomment Systalink, plus aucune mention d’OVH, fenêtre des cookies, choix retenu.
+- Demande du porteur du projet après la mise en ligne : la fenêtre des cookies s’ouvre au centre de l’écran, page assombrie et figée derrière. `ChoixCookies` devient un `<dialog>` ouvert par `showModal()` (page inerte, focus gardé dans la fenêtre), voile `::backdrop`, défilement bloqué (`html:has(.ck-panneau[open])`). La première fenêtre ne se ferme qu’en choisissant : Échap est retenu dès `keydown`, Chrome ignorant le refus de `cancel` avant tout clic sur la page. Rouverte par « Gérer les cookies », elle se ferme par la croix ou Échap, et le focus revient au lien. Elle ne s’ouvre pas d’elle-même sur la page Cookies ni sur la politique de confidentialité, vers lesquelles elle renvoie et qui doivent rester lisibles. Vérifié à 1280 et 375 px.
+- Reste : publier la nouvelle version de la politique de confidentialité (LEG-02, S-13 et LEG-03 ensemble), sans acceptation.
+
 ### 2026-11-16 — Consentement aux cookies et mesure d’audience (LEG-03)
 
 - Départ : LEG-02 dans `main`. Conception soumise au porteur du projet (règles de la CNIL, trois voies comparées) ; choix : mesure interne à l’API, avec parcours (voir « Décisions prises »). Branche reprise sur `main` après S-13 et le recentrage du guide de travail, sans conflit.
