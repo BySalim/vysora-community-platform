@@ -128,7 +128,7 @@ Personne inscrite sur Vysora, quel que soit son rôle.
 | `email_verifie_utilisateur` | Indique si l'e-mail a été vérifié | B | Oui | Faux à l'inscription par e-mail (RG-02) |
 | `role_utilisateur` | Rôle sur la plateforme | E | Oui | MEMBRE, MODERATEUR, ADMINISTRATEUR ; défaut MEMBRE |
 | `statut_compte_utilisateur` | Statut du compte | E | Oui | ACTIF, EN_SUPPRESSION, SUPPRIME, BANNI (CV-07) |
-| `avatar_utilisateur` | Image de profil | F | Non | Image, mêmes formats et taille que RG-16 |
+| `avatar_utilisateur` | Image de profil | F | Non | Image, mêmes formats et taille que RG-16 ; à défaut, avatar choisi dans la liste proposée (RG-07) |
 | `biographie_utilisateur` | Présentation libre | T(500) | Non |  |
 | `url_site_utilisateur` | Lien personnel | URL | Non | HTTPS |
 | `langue_interface_utilisateur` | Langue d'interface | E | Oui | FR, EN ; défaut FR (D-06) |

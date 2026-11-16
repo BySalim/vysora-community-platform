@@ -208,8 +208,11 @@ Un compte suspendu garde les droits d'un visiteur, plus l'accès à ses paramèt
 
 **Critères d'acceptation**
 - Étant donné un profil, alors il affiche : pseudo, avatar, biographie, lien personnel, niveau, réputation, badges, statistiques publiques (F-73), créations publiées et dernières contributions publiques.
-- Étant donné un membre, lorsqu'il modifie son avatar, sa biographie (500 caractères max.) ou son lien personnel, alors le profil est mis à jour.
+- Étant donné un membre, lorsqu'il modifie son avatar, son nom, sa biographie (500 caractères max.) ou son lien personnel, alors le profil est mis à jour.
 - Étant donné un visiteur, alors il ne voit ni l'e-mail ni les statistiques privées du membre.
+
+**Règles :**
+- **RG-07** — L'image de profil est la photo importée par le membre ; à défaut, l'avatar qu'il a choisi parmi ceux que propose la plateforme. Un avatar est tiré au hasard à la création du compte ; le membre le change à l'inscription ou depuis son profil. Retirer la photo fait revenir l'avatar.
 
 #### F-06 — Paramètres du compte · Must
 
