@@ -15,12 +15,14 @@ const entete = Astro.request.headers.get('cookie');
 const FINALITES = [
   {
     cle: 'audience',
+    icone: 'chart',
     titre: 'Mesure d’audience',
     aide: 'Nous aident à comprendre la fréquentation du site, de façon anonyme.',
     actif: !audienceRefusee(entete),
   },
   {
     cle: 'parcours',
+    icone: 'route',
     titre: 'Parcours des visites',
     aide: 'Nous aident à repérer ce qui vous freine pour améliorer le site.',
     actif: parcoursAccepte(entete),
@@ -30,6 +32,11 @@ const FINALITES = [
 
 <ul class="ck-finalites">
   <li class="ck-finalite">
+    <span class="ck-finalite-icone" aria-hidden="true">
+      <svg class="icon icon-sm">
+        <use href="#i-lock"></use>
+      </svg>
+    </span>
     <div class="ck-finalite-texte">
       <p class="ck-finalite-titre">Indispensables</p>
       <p class="ck-finalite-aide">{typo('Nécessaires au bon fonctionnement du site.')}</p>
@@ -38,6 +45,11 @@ const FINALITES = [
   </li>
   {FINALITES.map((finalite) => (
     <li class="ck-finalite">
+      <span class="ck-finalite-icone" aria-hidden="true">
+        <svg class="icon icon-sm">
+          <use href={`#i-${finalite.icone}`} />
+        </svg>
+      </span>
       <div class="ck-finalite-texte">
         <p class="ck-finalite-titre" id={`${prefixe}-${finalite.cle}`}>
           {typo(finalite.titre)}

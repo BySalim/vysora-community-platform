@@ -27,23 +27,15 @@ const ONGLETS = [
   data-ck-vue="consentement"
   hidden={!attendu}
 >
-  <div class="ck-panneau-tete">
-    <div class="ck-onglets" role="tablist" aria-label="Choix sur les cookies">
-      {ONGLETS.map((onglet, i) => (
-        <button
-          type="button"
-          role="tab"
-          id={`ck-onglet-${onglet.cle}`}
-          aria-controls={`ck-vue-${onglet.cle}`}
-          aria-selected={i === 0 ? 'true' : 'false'}
-          tabindex={i === 0 ? 0 : -1}
-          data-ck-onglet={onglet.cle}
-        >
-          {typo(onglet.libelle)}
-          {'complement' in onglet && <span class="ck-complement">{onglet.complement}</span>}
-        </button>
-      ))}
-    </div>
+  <div class="ck-marque">
+    <img
+      class="ck-logo"
+      src="/assets/logos/vysora%20Bleu-Black.png"
+      alt="Vysora"
+      width="337"
+      height="122"
+      loading="lazy"
+    />
     <button class="icon-btn ck-fermer" type="button" aria-label="Fermer" data-ck-fermer hidden>
       <svg class="icon" aria-hidden="true">
         <use href="#i-close"></use>
@@ -51,21 +43,45 @@ const ONGLETS = [
     </button>
   </div>
 
+  <div class="ck-onglets" role="tablist" aria-label="Choix sur les cookies">
+    {ONGLETS.map((onglet, i) => (
+      <button
+        type="button"
+        role="tab"
+        id={`ck-onglet-${onglet.cle}`}
+        aria-controls={`ck-vue-${onglet.cle}`}
+        aria-selected={i === 0 ? 'true' : 'false'}
+        tabindex={i === 0 ? 0 : -1}
+        data-ck-onglet={onglet.cle}
+      >
+        {typo(onglet.libelle)}
+        {'complement' in onglet && <span class="ck-complement">{onglet.complement}</span>}
+      </button>
+    ))}
+  </div>
+
   <div class="ck-vues">
     <div
-      class="ck-vue"
+      class="ck-vue ck-vue-message"
       id="ck-vue-consentement"
       role="tabpanel"
       aria-labelledby="ck-onglet-consentement"
     >
-      <h2 class="ck-titre" id="ck-titre">
-        Ce site utilise des cookies
-      </h2>
-      <p>
-        {typo(
-          'Nous utilisons des cookies pour faire fonctionner Vysora, mesurer son audience de façon anonyme et, avec votre accord, comprendre le parcours de vos visites afin d’améliorer le site. Vous pouvez changer d’avis à tout moment avec le lien « Gérer les cookies », en bas de chaque page.',
-        )}
-      </p>
+      <span class="ck-vue-icone" aria-hidden="true">
+        <svg class="icon">
+          <use href="#i-shield"></use>
+        </svg>
+      </span>
+      <div>
+        <h2 class="ck-titre" id="ck-titre">
+          Ce site utilise des cookies
+        </h2>
+        <p>
+          {typo(
+            'Nous utilisons des cookies pour faire fonctionner Vysora, mesurer son audience de façon anonyme et, avec votre accord, comprendre le parcours de vos visites afin d’améliorer le site. Vous pouvez changer d’avis à tout moment avec le lien « Gérer les cookies », en bas de chaque page.',
+          )}
+        </p>
+      </div>
     </div>
     <div
       class="ck-vue"
@@ -77,21 +93,28 @@ const ONGLETS = [
       <FinalitesCookies prefixe="ck-panneau" />
     </div>
     <div
-      class="ck-vue"
+      class="ck-vue ck-vue-message"
       id="ck-vue-apropos"
       role="tabpanel"
       aria-labelledby="ck-onglet-apropos"
       hidden
     >
-      <p>
-        {typo(
-          'Un cookie est un petit fichier enregistré par votre navigateur. Certains sont indispensables : ils gardent votre connexion et retiennent vos choix. Les autres ne sont déposés qu’avec votre accord. Vysora ne dépose aucun cookie publicitaire et ne confie rien à des tiers.',
-        )}
-      </p>
-      <p class="ck-liens">
-        <a href={ROUTES.cookies}>Politique relative aux cookies</a>
-        <a href={ROUTES.confidentialite}>Politique de confidentialité</a>
-      </p>
+      <span class="ck-vue-icone" aria-hidden="true">
+        <svg class="icon">
+          <use href="#i-doc"></use>
+        </svg>
+      </span>
+      <div>
+        <p>
+          {typo(
+            'Un cookie est un petit fichier enregistré par votre navigateur. Certains sont indispensables : ils gardent votre connexion et retiennent vos choix. Les autres ne sont déposés qu’avec votre accord. Vysora ne dépose aucun cookie publicitaire et ne confie rien à des tiers.',
+          )}
+        </p>
+        <p class="ck-liens">
+          <a href={ROUTES.cookies}>Politique relative aux cookies</a>
+          <a href={ROUTES.confidentialite}>Politique de confidentialité</a>
+        </p>
+      </div>
     </div>
   </div>
 
@@ -101,6 +124,9 @@ const ONGLETS = [
     </button>
     <button class="btn btn-secondary ck-personnaliser" type="button" data-ck-action="personnaliser">
       <span data-ck-libelle>Personnaliser</span>
+      <svg class="icon icon-sm ck-chevron" aria-hidden="true">
+        <use href="#i-chevron-right"></use>
+      </svg>
     </button>
     <button class="btn btn-primary" type="button" data-ck-action="accepter">
       Tout accepter
