@@ -8,7 +8,7 @@
      de l'équipe en lecture seule (e-mail, conditions, suspension) lit la raison (bloc d'accès) ;
      sinon rendre() dessine la page. Rejoué à chaque changement d'état (panneau Tweaks).
    - EQ.ongletsModeration(actif, nombres) et EQ.ongletsAdministration(actif) : barre d'onglets.
-   - EQ.confirmer({ titre, texte, libelle, action }) : fenêtre de confirmation avant un changement.
+   - EQ.confirmer({ titre, texte, libelle, annuler, action }) : fenêtre de confirmation avant un changement.
    - Dates et durées : EQ.dateCourte, EQ.dateLongue, EQ.dateHeure, EQ.anciennete, EQ.pluriel. */
 
 window.Equipe = (() => {
@@ -21,14 +21,14 @@ window.Equipe = (() => {
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
   const versDate = valeur => (valeur instanceof Date ? valeur : new Date(valeur));
-  const jour = d => (d.getDate() === 1 ? '1er' : String(d.getDate()));
-  const annee = (d, maintenant = new Date()) => (d.getFullYear() !== maintenant.getFullYear() ? ` ${d.getFullYear()}` : '');
-  /** « 12 nov. », avec l'année si elle n'est pas l'année en cours. */
-  const dateCourte = valeur => { const d = versDate(valeur); return `${jour(d)} ${MOIS_COURTS[d.getMonth()]}${annee(d)}`; };
+  /* Comme lib/texte.ts du site : dates lues en temps universel, année toujours donnée. */
+  const jour = d => (d.getUTCDate() === 1 ? '1er' : String(d.getUTCDate()));
+  /** « 12 oct. 2026 ». */
+  const dateCourte = valeur => { const d = versDate(valeur); return `${jour(d)} ${MOIS_COURTS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
   /** « 12 novembre 2026 ». */
-  const dateLongue = valeur => { const d = versDate(valeur); return `${jour(d)} ${MOIS[d.getMonth()]} ${d.getFullYear()}`; };
-  /** « 12 nov. à 14 h 05 ». */
-  const dateHeure = valeur => { const d = versDate(valeur); return `${dateCourte(d)} à ${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`; };
+  const dateLongue = valeur => { const d = versDate(valeur); return `${jour(d)} ${MOIS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+  /** « 12 oct. 2026 à 14 h 05 ». */
+  const dateHeure = valeur => { const d = versDate(valeur); return `${dateCourte(d)} à ${d.getUTCHours()} h ${String(d.getUTCMinutes()).padStart(2, '0')}`; };
   const pluriel = (n, un, plusieurs) => `${fmt(n)} ${n > 1 ? plusieurs : un}`;
   /** Temps écoulé : « 25 min », « 5 h », « 3 jours » (lib/moderation.ts, anciennete). */
   function anciennete(depuis, maintenant = new Date()) {
@@ -119,7 +119,7 @@ window.Equipe = (() => {
           <h2 id="eq-dialogue-titre" data-eq-dialogue-titre></h2>
           <p id="eq-dialogue-texte" data-eq-dialogue-texte></p>
           <div class="md-dialogue-actions">
-            <button class="btn btn-secondary" type="submit" value="annuler">Annuler</button>
+            <button class="btn btn-secondary" type="submit" value="annuler" data-eq-annuler>Annuler</button>
             <button class="btn btn-primary" type="button" data-eq-confirmer>Confirmer</button>
           </div>
         </form>
@@ -133,9 +133,12 @@ window.Equipe = (() => {
     });
     return d;
   }
-  /** Fenêtre de confirmation ; « Confirmer » (ou le libellé donné) lance l'action. */
-  function confirmer({ titre, texte, libelle = 'Confirmer', action }) {
+  /** Fenêtre de confirmation ; « Confirmer » (ou le libellé donné) lance l'action. `annuler` :
+      libellé du bouton qui referme sans rien faire (« Revenir » dans la plupart des écrans
+      d'administration du site, « Annuler » dans la modération, les rôles et le dossier d'un membre). */
+  function confirmer({ titre, texte, libelle = 'Confirmer', annuler = 'Annuler', action }) {
     const d = dialogue();
+    $('[data-eq-annuler]', d).textContent = annuler;
     $('[data-eq-dialogue-titre]', d).textContent = V.typo(titre);
     $('[data-eq-dialogue-texte]', d).textContent = V.typo(texte);
     $('[data-eq-confirmer]', d).textContent = V.typo(libelle);
