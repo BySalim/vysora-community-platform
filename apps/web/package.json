@@ -2,6 +2,7 @@
   "name": "@vysora/web",
   "version": "0.1.0",
   "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE",
   "description": "Site de Vysora (Astro, rendu serveur) : reproduction fidèle du prototype, alimentée par l'API.",
   "type": "module",
   "scripts": {

@@ -2,6 +2,7 @@
   "name": "@vysora/shared",
   "version": "0.1.0",
   "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE",
   "description": "Vocabulaire et règles de Vysora partagés par l'API et le site : énumérations, règles de gestion, droits, schémas de validation.",
   "type": "module",
   "exports": {

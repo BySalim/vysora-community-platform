@@ -239,6 +239,7 @@ Depuis le 31 octobre, priorité du porteur du projet : **un site présentable au
 
 | Date | Sujet | Décision |
 |---|---|---|
+| 2026-11-17 | Licence du dépôt (ADR-0012) | Choix du porteur du projet : un modèle reconnu en anglais, **PolyForm Strict 1.0.0** (usage non commercial seulement, ni modification ni redistribution), plutôt que MIT, AGPL-3.0 ou PolyForm Noncommercial, au nom de Salim et Kine, équipe 3kS_ItUs de HaTlaCha, avec les liens de leurs comptes GitHub. Raison : une licence libre ne se reprend pas pour les versions publiées, alors qu'on peut ouvrir le code plus tard. |
 | 2026-11-16 | Défis refondus (S-17) | Démo validée par le porteur du projet : page Défis (règles en cases, principes jugés, premier du classement seul, partage, six participations puis la suite, rangs), participations distinctes des créations et jouables dans un cadre isolé, administration complète (dates modifiables à tout moment, clôture et ouverture anticipées, pause, réouverture), modèles en saisie libre remontés à l'administration. **RG-73 assouplie** : l'administration change les dates d'un défi publié même commencé, et le clôture avant sa fin. Proposé, à confirmer : un seul défi à la fois. Portage commencé par l'administration (modifier, clôturer avant la fin). |
 | 2026-11-17 | Participer depuis la page Défis seulement (S-17) | Demandé par le porteur du projet : la case « Participer au défi » quitte l'éditeur ; une participation n'est plus une création et ne s'ouvre plus comme une publication, mais dans le lecteur de la page Défis ; un participant dépose son jeu et chacun peut y jouer. Les jeux sont isolés du site (ADR-0011). La taille d'un jeu suit la démo (200 000 caractères) et l'idée en une phrase y est obligatoire (20 caractères au moins). |
 | 2026-11-16 | Une seule recherche (S-16) | Demande du porteur du projet : les champs de recherche des pages ne font plus leur propre recherche, ils ouvrent celle de l'en-tête, « plus complète et mieux conçue » ; depuis une page précise (Explorer, forum, Apprendre), elle s'ouvre directement sur l'onglet de cette page, l'accueil et la loupe restant sur « Tout ». Démo validée en deux temps (renvoi vers l'en-tête, puis onglet de la page), telle que proposée. Les filtres qui trient une liste affichée (défis, « Mes contenus », outils, étiquettes, notions, administration) restent en place |
@@ -460,6 +461,12 @@ Depuis le 16 novembre 2026, le prototype montre ce que le site avait ajouté : f
 - Toutes les fenêtres modales figent la page derrière elles (le prototype ne le faisait que pour la recherche, avec `scrollbar-gutter: stable` et la classe `rch-gouttiere`, non reprise : l’emplacement réservé restait blanc, hors du voile).
 
 ## Journal
+
+### 2026-11-17 — Licence du dépôt (ADR-0012)
+
+- Demande du porteur du projet : poser une licence sur le dépôt public, avec un modèle prêt à l'emploi en anglais. Choix : PolyForm Strict 1.0.0, au nom de Salim ([@BySalim](https://github.com/BySalim)) et Kine ([@kinnnisss](https://github.com/kinnnisss)), équipe 3kS_ItUs de HaTlaCha.
+- Fait : `LICENSE` (texte officiel inchangé, version `1.0.0` du dépôt `polyformproject/polyform-licenses`, précédé de la ligne `Required Notice:` et d'une note sur les éléments tiers), section « Licence » du README, `"license": "SEE LICENSE IN …"` dans les quatre `package.json` (pas d'identifiant SPDX pour ce modèle), ADR-0012.
+- Les éléments tiers, déjà crédités, gardent leur licence : polices (OFL), logos des outils d'IA (Lobe Icons, MIT), photographies (Unsplash), dépendances.
 
 ### 2026-11-17 — Participations jouables, distinctes des créations (S-17)
 

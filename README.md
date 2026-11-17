@@ -58,3 +58,7 @@ pnpm verifier
 ## Pour contribuer
 
 Lire [`AGENTS.md`](AGENTS.md) (guide de travail) puis [`docs/registre.md`](docs/registre.md) (ce qui est fait, ce qui vient ensuite).
+
+## Licence
+
+© 2026 Salim ([@BySalim](https://github.com/BySalim)) et Kine ([@kinnnisss](https://github.com/kinnnisss)), équipe 3kS_ItUs de HaTlaCha. Le dépôt est publié sous [PolyForm Strict 1.0.0](https://polyformproject.org/licenses/strict/1.0.0) ([`LICENSE`](LICENSE)) : il peut être consulté, étudié et lancé à des fins non commerciales, mais ni modifié, ni redistribué, ni exploité commercialement sans notre accord. Le nom Vysora et ses logos ne sont pas concédés. Les polices, les logos des outils d’IA et les photographies gardent leur propre licence.

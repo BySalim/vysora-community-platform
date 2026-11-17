@@ -2,6 +2,7 @@
   "name": "@vysora/api",
   "version": "0.1.0",
   "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE",
   "description": "API de Vysora (NestJS) : seule porte d'accès aux données et seule autorité sur les règles de gestion.",
   "type": "module",
   "scripts": {
