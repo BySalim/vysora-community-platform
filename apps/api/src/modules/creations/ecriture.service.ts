@@ -94,8 +94,8 @@ export class EcritureCreationsService {
     const id = await this.db.transaction(async (tx) => {
       await this.verifierBrouillons(tx, auteur.id);
       const licenceId = await licenceDe(tx, saisie.licenceId);
-      if (saisie.defiId && !(await defiPublic(tx, saisie.defiId)))
-        throw erreurValidation({ defiId: MESSAGES_PARTICIPATION.introuvable });
+      // S-17 : on participe depuis la page Défis ; une nouvelle création n'est rattachée à aucun défi.
+      if (saisie.defiId) throw erreurValidation({ defiId: MESSAGES_PARTICIPATION.pageDefis });
       const [ligne] = await tx
         .insert(contenu)
         .values({ typeContenu: 'CREATION', auteurId: auteur.id, dateCreation: maintenant })
@@ -259,6 +259,8 @@ export class EcritureCreationsService {
     maintenant: Date,
   ): Promise<string | null> {
     if (defiId === undefined || defiId === existante.defiId) return null;
+    // S-17 : rattacher une création à un défi n'est plus possible ; la retirer d'un défi d'avant, si.
+    if (defiId !== null) return MESSAGES_PARTICIPATION.pageDefis;
     if (existante.statut !== 'PUBLIEE' || !existante.datePublication) {
       if (defiId !== null && !(await defiPublic(tx, defiId)))
         return MESSAGES_PARTICIPATION.introuvable;

@@ -19,6 +19,7 @@ export * from './schemas/creations';
 export * from './schemas/notifications';
 export * from './schemas/moderation';
 export * from './schemas/administration';
+export * from './schemas/participations';
 export * from './schemas/forum';
 export * from './schemas/bon-reflexe';
 export * from './schemas/parametres';

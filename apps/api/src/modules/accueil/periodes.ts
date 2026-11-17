@@ -25,8 +25,14 @@ export function joursDeLaCourbe(maintenant: Date): string[] {
 }
 
 /** Contraintes d'un défi, une par ligne, sans leur puce Markdown. */
-export const reglesDuDefi = (contraintes: string | null): string[] =>
-  (contraintes ?? '')
-    .split('\n')
-    .map((ligne) => ligne.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').trim())
-    .filter(Boolean);
+/** Règles d'un défi en lignes : ses règles en cases (S-17), sinon ses contraintes, une par ligne. */
+export const reglesDuDefi = (
+  contraintes: string | null,
+  cases: { chiffre: string; intitule: string }[] = [],
+): string[] =>
+  cases.length
+    ? cases.map((c) => `${c.chiffre} ${c.intitule}`)
+    : (contraintes ?? '')
+        .split('\n')
+        .map((ligne) => ligne.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').trim())
+        .filter(Boolean);

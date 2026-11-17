@@ -12,6 +12,8 @@ export interface DefiPublic {
   statut: StatutDefi;
   dateDebut: Date;
   dateFin: Date;
+  /** S-17 : participations suspendues par l'administration. */
+  enPause: boolean;
 }
 
 /** Défi présenté au public (jamais un brouillon), verrouillé jusqu'à la fin de la transaction : les
@@ -23,8 +25,9 @@ export async function defiPublic(tx: Transaction, defiId: number): Promise<DefiP
     statut: StatutDefi;
     date_debut: Date | string;
     date_fin: Date | string;
+    en_pause: boolean;
   }>(sql`
-    select id, titre, statut, date_debut, date_fin from defi
+    select id, titre, statut, date_debut, date_fin, pause_depuis is not null as en_pause from defi
     where id = ${defiId} and statut <> 'BROUILLON' for update`);
   const d = rows[0];
   return d
@@ -34,6 +37,7 @@ export async function defiPublic(tx: Transaction, defiId: number): Promise<DefiP
         statut: d.statut,
         dateDebut: new Date(d.date_debut),
         dateFin: new Date(d.date_fin),
+        enPause: d.en_pause,
       }
     : null;
 }
@@ -55,6 +59,8 @@ export async function refusParticipation(
   if (!d) return MESSAGES_PARTICIPATION.introuvable;
   if (!participationsOuvertes(d.statut, d.dateDebut, d.dateFin, p.maintenant))
     return MESSAGES_PARTICIPATION.fermees;
+  // S-17 : en pause, le défi n'accepte aucune nouvelle participation.
+  if (d.enPause) return MESSAGES_PARTICIPATION.pause;
   if (p.datePublication < d.dateDebut || p.datePublication > d.dateFin)
     return MESSAGES_PARTICIPATION.periode;
   // Une participation est une création publiée ; un brouillon rattaché au défi n'en est pas encore une.
@@ -66,3 +72,19 @@ export async function refusParticipation(
   const autre = rows[0];
   return autre ? MESSAGES_PARTICIPATION.unique(autre.titre) : null;
 }
+
+/** Participations visibles des défis (S-17) : les participations publiées depuis la page Défis et,
+    pour les défis d'avant, les créations d'Explorer inscrites. Colonnes : id (du contenu), defi_id,
+    auteur_id, date_publication, nature ('CREATION' ou 'PARTICIPATION'), titre, slug (vide pour une
+    participation), type_creation, rang (figé à la clôture). */
+export const PARTICIPATIONS_VISIBLES = sql`(
+  select cr.id, cr.defi_id, c.auteur_id, cr.date_publication, 'CREATION'::text as nature, cr.titre,
+    cr.slug, cr.type_creation::text as type_creation, cr.rang_final_participation as rang
+  from creation cr join contenu c on c.id = cr.id
+  where cr.defi_id is not null and c.statut = 'VISIBLE' and cr.statut_publication = 'PUBLIEE'
+  union all
+  select p.id, p.defi_id, c.auteur_id, p.date_publication, 'PARTICIPATION'::text, p.titre, ''::text,
+    'UN_PROMPT'::text, p.rang_final
+  from participation p join contenu c on c.id = p.id
+  where c.statut = 'VISIBLE'
+)`;

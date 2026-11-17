@@ -13,6 +13,7 @@ import { sql } from 'drizzle-orm';
 import {
   check,
   index,
+  jsonb,
   pgTable,
   smallint,
   text,
@@ -42,6 +43,24 @@ export const defi = pgTable(
     slug: varchar({ length: 170 }).notNull(),
     enonce: text().notNull(),
     contraintes: text(),
+    /** S-17 : le thème expliqué, en encadré sous le titre. */
+    definition: text(),
+    /** S-17 : règles en cases (chiffre, intitulé, précision). */
+    cases: jsonb()
+      .$type<{ chiffre: string; intitule: string; precision: string | null }[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /** S-17 : principes les plus jugés (icône, libellé) et autres principes jugés. */
+    criteres: jsonb()
+      .$type<{ icone: string; libelle: string }[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    criteresCommuns: jsonb()
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    /** S-17 : participations suspendues par l'administration depuis cette date. */
+    pauseDepuis: horodatage(),
     dateDebut: horodatage().notNull(),
     dateFin: horodatage().notNull(),
     statut: text({ enum: STATUTS_DEFI }).notNull().default('BROUILLON'),
@@ -290,5 +309,41 @@ export const reproduction = pgTable(
       'reproduction_retour_check',
       sql`${t.resultat} = 'SUCCES' or char_length(coalesce(${t.retour}, '')) >= 20`,
     ),
+  ],
+);
+
+/* S-17 : participation à un défi, distincte des créations d'Explorer (jamais listée dans Explorer).
+   Sous-type de contenu : votes « Utile », signalements et masquage passent par les mêmes tables.
+   Une par personne et par défi (contrôlée par l'API, défi verrouillé). Son jeu (fichier HTML) est
+   servi à part, dans un cadre isolé et sans réseau (GET /api/v1/participations/:id/jeu, ADR-0011) ;
+   sa couverture est un média rattaché au contenu. */
+export const participation = pgTable(
+  'participation',
+  {
+    ...colonnesSousType('PARTICIPATION'),
+    defiId: reference()
+      .notNull()
+      .references(() => defi.id, { onDelete: 'cascade' }),
+    titre: varchar({ length: 100 }).notNull(),
+    idee: varchar({ length: 300 }),
+    outilId: reference().references(() => outil.id),
+    /** RG-14 : modèle choisi dans le référentiel ou écrit librement. */
+    modele: varchar({ length: 100 }),
+    /** Les prompts envoyés, dans l'ordre. */
+    prompts: jsonb().$type<string[]>().notNull(),
+    essais: smallint().notNull().default(1),
+    moment: varchar({ length: 600 }),
+    /** Le jeu : code HTML (1,5 Mo au plus) et nom du fichier. */
+    jeu: text(),
+    jeuNom: varchar({ length: 120 }),
+    datePublication: horodatage().notNull().defaultNow(),
+    /** RG-75 : rang figé à la clôture ; null avant. */
+    rangFinal: smallint(),
+  },
+  (t) => [
+    ...contraintesSousType('participation', t, 'PARTICIPATION'),
+    index('participation_defi_idx').on(t.defiId),
+    check('participation_essais_check', sql`${t.essais} between 1 and 50`),
+    check('participation_jeu_check', sql`${t.jeu} is null or length(${t.jeu}) <= 200000`),
   ],
 );

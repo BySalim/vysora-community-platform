@@ -8,18 +8,20 @@ import {
   type DefisApi,
   type DefiTermineApi,
   type EtatDefi,
+  type OutilResumeApi,
   type ParticipationDefiApi,
   type TypeCreation,
 } from '@vysora/shared';
-import { sql } from 'drizzle-orm';
+import { inArray, sql } from 'drizzle-orm';
 import { conflit, introuvable } from '../../commun/erreurs.js';
 import { BASE } from '../../db/base-de-donnees.module.js';
 import type { BaseDeDonnees } from '../../db/client.js';
+import { outil } from '../../db/schema/index.js';
 import { reglesDuDefi } from '../accueil/periodes.js';
 import { apercusDesCreations } from '../creations/apercus.js';
 import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
-import { refusParticipation } from './participation.js';
+import { PARTICIPATIONS_VISIBLES } from './participation.js';
 
 const TERMINES = 6;
 
@@ -29,6 +31,11 @@ type LigneDefi = {
   titre: string;
   enonce: string;
   contraintes: string | null;
+  definition: string | null;
+  cases: DefiApi['cases'];
+  criteres: DefiApi['criteres'];
+  criteres_communs: string[];
+  pause_depuis: Date | string | null;
   date_debut: Date | string;
   date_fin: Date | string;
   statut: 'BROUILLON' | 'PUBLIE' | 'CLOTURE' | 'ANNULE';
@@ -39,6 +46,7 @@ type LigneParticipation = {
   id: string;
   defi_id: string;
   auteur_id: string;
+  nature: 'CREATION' | 'PARTICIPATION';
   slug: string;
   titre: string;
   type_creation: TypeCreation;
@@ -46,6 +54,14 @@ type LigneParticipation = {
   utiles: number;
   rang: number | null;
   mon_vote: boolean;
+  idee: string | null;
+  modele: string | null;
+  prompts: string[] | null;
+  essais: number | null;
+  moment: string | null;
+  a_jeu: boolean | null;
+  jeu_nom: string | null;
+  outil_id: string | null;
 };
 
 const iso = (d: Date | string) => new Date(d).toISOString();
@@ -55,10 +71,9 @@ const etatDe = (l: LigneDefi, maintenant: Date): EtatDefi =>
 
 /** Défis présentés au public : publiés, clôturés ou annulés (jamais un brouillon, F-63). */
 const DEFIS_PUBLICS = sql`
-  select d.id, d.slug, d.titre, d.enonce, d.contraintes, d.date_debut, d.date_fin, d.statut,
-    (select count(*) from creation cr join contenu c on c.id = cr.id
-      where cr.defi_id = d.id and c.statut = 'VISIBLE' and cr.statut_publication = 'PUBLIEE')::int
-      as participations
+  select d.id, d.slug, d.titre, d.enonce, d.contraintes, d.definition, d.cases, d.criteres,
+    d.criteres_communs, d.pause_depuis, d.date_debut, d.date_fin, d.statut,
+    (select count(*) from ${PARTICIPATIONS_VISIBLES} pv where pv.defi_id = d.id)::int as participations
   from defi d where d.statut <> 'BROUILLON'`;
 
 /* Défis (S-07, F-63 à F-65, RG-73 à RG-75) : le défi en cours et ses participations, classées par
@@ -89,26 +104,65 @@ export class DefisService {
 
     const ids = [...new Set([...(choisi ? [choisi.id] : []), ...clotures.map((l) => l.id)])];
     const participations = ids.length ? await this.participations(ids.map(Number), lecteurId) : [];
-    const [membres, apercus] = await Promise.all([
+    const idsOutils = [
+      ...new Set(participations.flatMap((p) => (p.outil_id ? [Number(p.outil_id)] : []))),
+    ];
+    const [membres, apercus, outilsParId] = await Promise.all([
       resumerMembres(
         this.db,
         this.stockage,
         participations.map((p) => Number(p.auteur_id)),
       ),
+      // Aperçu des créations (outils, couverture) ; pour une participation, sa couverture seule.
       apercusDesCreations(
         this.db,
         this.stockage,
         participations.map((p) => ({ id: Number(p.id), type: p.type_creation })),
       ),
+      idsOutils.length
+        ? this.db
+            .select({
+              id: outil.id,
+              nom: outil.nom,
+              slug: outil.slug,
+              logo: outil.logo,
+              logoMonochrome: outil.logoMonochrome,
+            })
+            .from(outil)
+            .where(inArray(outil.id, idsOutils))
+            .then((lignes) => new Map(lignes.map((o) => [o.id, o])))
+        : Promise.resolve(new Map<number, OutilResumeApi>()),
     ]);
-    const creation = (p: LigneParticipation): CreationPalmaresApi => ({
-      id: Number(p.id),
-      slug: p.slug,
-      titre: p.titre,
-      type: p.type_creation,
-      outils: apercus.get(Number(p.id))?.outils ?? [],
-      couverture: apercus.get(Number(p.id))?.couverture ?? null,
-    });
+    const creation = (p: LigneParticipation): CreationPalmaresApi => {
+      const o = p.outil_id ? outilsParId.get(Number(p.outil_id)) : undefined;
+      return {
+        id: Number(p.id),
+        slug: p.slug,
+        titre: p.titre,
+        type: p.type_creation,
+        outils:
+          p.nature === 'PARTICIPATION'
+            ? o
+              ? [{ outil: o, modeles: p.modele ? [p.modele] : [] }]
+              : []
+            : (apercus.get(Number(p.id))?.outils ?? []),
+        couverture: apercus.get(Number(p.id))?.couverture ?? null,
+      };
+    };
+    const detail = (p: LigneParticipation): ParticipationDefiApi['detail'] =>
+      p.nature === 'PARTICIPATION'
+        ? {
+            idee: p.idee,
+            modele: p.modele,
+            prompts: p.prompts ?? [],
+            essais: p.essais ?? 1,
+            moment: p.moment,
+            jeu: Boolean(p.a_jeu),
+            jeuNom: p.jeu_nom,
+            mienne: lecteurId !== null && Number(p.auteur_id) === lecteurId,
+            outilId: p.outil_id ? Number(p.outil_id) : null,
+          }
+        : null;
     const auteur = (p: LigneParticipation) => {
       const m = membres.get(Number(p.auteur_id));
       if (!m) throw new Error(`Membre introuvable : ${p.auteur_id}`);
@@ -120,6 +174,8 @@ export class DefisService {
       defi: choisi ? this.presenter(choisi, maintenant) : null,
       participations: choisi
         ? de(choisi.id).map((p): ParticipationDefiApi => ({
+            nature: p.nature,
+            detail: detail(p),
             creation: creation(p),
             auteur: auteur(p),
             datePublication: iso(p.date_publication),
@@ -132,7 +188,7 @@ export class DefisService {
         id: Number(l.id),
         slug: l.slug,
         titre: l.titre,
-        regles: reglesDuDefi(l.contraintes),
+        regles: reglesDuDefi(l.contraintes, l.cases ?? []),
         dateDebut: iso(l.date_debut),
         dateFin: iso(l.date_fin),
         participations: l.participations,
@@ -150,39 +206,9 @@ export class DefisService {
     };
   }
 
-  /** F-64, RG-74 : inscrire une de ses créations, publiée pendant le défi en cours. */
-  async participer(membreId: number, defiId: number, creationId: number): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      const { rows: creations } = await tx.execute<{
-        auteur_id: string;
-        defi_id: string | null;
-        date_publication: Date | string;
-        visible: boolean;
-      }>(sql`
-        select c.auteur_id, cr.defi_id, cr.date_publication, c.statut = 'VISIBLE' as visible
-        from creation cr join contenu c on c.id = cr.id
-        where cr.id = ${creationId} and cr.statut_publication = 'PUBLIEE'
-        for update of cr`);
-      const c = creations[0];
-      if (!c || Number(c.auteur_id) !== membreId || !c.visible)
-        throw introuvable('Cette création est introuvable parmi vos créations publiées.');
-      if (c.defi_id !== null)
-        throw conflit(
-          Number(c.defi_id) === defiId
-            ? 'Cette création participe déjà au défi.'
-            : 'Une création participe à un seul défi.',
-        );
-      const refus = await refusParticipation(tx, {
-        auteurId: membreId,
-        creationId,
-        defiId,
-        datePublication: new Date(c.date_publication),
-        maintenant: new Date(),
-      });
-      if (refus === MESSAGES_PARTICIPATION.introuvable) throw introuvable(refus);
-      if (refus) throw conflit(refus);
-      await tx.execute(sql`update creation set defi_id = ${defiId} where id = ${creationId}`);
-    });
+  /** S-17 : une création ne s'inscrit plus à un défi ; on participe depuis la page Défis. */
+  participer(): never {
+    throw conflit(MESSAGES_PARTICIPATION.pageDefis);
   }
 
   /** Retirer sa participation tant que le défi est en cours. */
@@ -207,7 +233,12 @@ export class DefisService {
       slug: l.slug,
       titre: l.titre,
       enonce: l.enonce,
-      regles: reglesDuDefi(l.contraintes),
+      regles: reglesDuDefi(l.contraintes, l.cases ?? []),
+      definition: l.definition,
+      cases: l.cases ?? [],
+      criteres: l.criteres ?? [],
+      criteresCommuns: l.criteres_communs ?? [],
+      enPause: l.pause_depuis !== null && etatDe(l, maintenant) === 'EN_COURS',
       dateDebut: iso(l.date_debut),
       dateFin: iso(l.date_fin),
       etat: etatDe(l, maintenant),
@@ -215,28 +246,30 @@ export class DefisService {
     };
   }
 
-  /** Participations visibles : rang figé, sinon votes « Utile » de la période puis date (RG-75). */
+  /** Participations visibles (S-17 : participations et créations des défis d'avant) : rang figé,
+      sinon votes « Utile » de la période puis date (RG-75). */
   private async participations(defiIds: number[], lecteurId: number | null) {
     const { rows } = await this.db.execute<LigneParticipation>(sql`
-      select cr.id, cr.defi_id, c.auteur_id, cr.slug, cr.titre, cr.type_creation, cr.date_publication,
-        (select count(*) from vote v where v.contenu_id = cr.id and v.type_vote_code = 'UTILE'
+      select pv.id, pv.defi_id, pv.auteur_id, pv.nature, pv.slug, pv.titre, pv.type_creation,
+        pv.date_publication, pv.rang,
+        (select count(*) from vote v where v.contenu_id = pv.id and v.type_vote_code = 'UTILE'
           and v.date_vote >= d.date_debut and v.date_vote <= d.date_fin)::int as utiles,
-        cr.rang_final_participation as rang,
         ${
           lecteurId === null
             ? sql`false`
-            : sql`exists (select 1 from vote v where v.contenu_id = cr.id
+            : sql`exists (select 1 from vote v where v.contenu_id = pv.id
                 and v.type_vote_code = 'UTILE' and v.votant_id = ${lecteurId})`
-        } as mon_vote
-      from creation cr
-      join contenu c on c.id = cr.id
-      join defi d on d.id = cr.defi_id
-      where cr.defi_id in (${sql.join(
+        } as mon_vote,
+        p.idee, p.modele, p.prompts, p.essais, p.moment, p.jeu is not null as a_jeu, p.jeu_nom,
+        p.outil_id
+      from ${PARTICIPATIONS_VISIBLES} pv
+      join defi d on d.id = pv.defi_id
+      left join participation p on p.id = pv.id
+      where pv.defi_id in (${sql.join(
         defiIds.map((id) => sql`${id}`),
         sql`, `,
-      )}) and c.statut = 'VISIBLE' and cr.statut_publication = 'PUBLIEE'
-      order by cr.defi_id, cr.rang_final_participation nulls last, utiles desc,
-        cr.date_publication asc, cr.id asc`);
+      )})
+      order by pv.defi_id, pv.rang nulls last, utiles desc, pv.date_publication asc, pv.id asc`);
     return rows.map((r) => ({ ...r, defi_id: String(r.defi_id) }));
   }
 
@@ -247,23 +280,16 @@ export class DefisService {
     participations: LigneParticipation[],
   ): Promise<DefisApi['moi']> {
     if (!defi) return { participation: null, eligibles: [] };
+    // S-17 : plus de création à inscrire ; la participation se publie depuis la page Défis.
+    void maintenant;
     const mienne = participations.find(
       (p) => p.defi_id === defi.id && Number(p.auteur_id) === membreId,
     );
-    if (mienne || etatDe(defi, maintenant) !== 'EN_COURS' || defi.statut !== 'PUBLIE')
-      return {
-        participation: mienne ? { id: Number(mienne.id), titre: mienne.titre } : null,
-        eligibles: [],
-      };
-    const { rows } = await this.db.execute<{ id: string; titre: string }>(sql`
-      select cr.id, cr.titre from creation cr join contenu c on c.id = cr.id
-      where c.auteur_id = ${membreId} and c.statut = 'VISIBLE' and cr.statut_publication = 'PUBLIEE'
-        and cr.defi_id is null and cr.date_publication >= ${new Date(defi.date_debut)}
-        and cr.date_publication <= ${new Date(defi.date_fin)}
-      order by cr.date_publication desc`);
     return {
-      participation: null,
-      eligibles: rows.map((r) => ({ id: Number(r.id), titre: r.titre })),
+      participation: mienne
+        ? { id: Number(mienne.id), titre: mienne.titre, nature: mienne.nature }
+        : null,
+      eligibles: [],
     };
   }
 }

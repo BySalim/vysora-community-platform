@@ -61,6 +61,13 @@ export async function activiteRecente(
       left join defi d on d.id = cr.defi_id
       where c.statut = 'VISIBLE' and cr.statut_publication = 'PUBLIEE'
       union all
+      select 'participation', c.id, p.date_publication, c.auteur_id, d.titre, d.id, d.slug,
+        'UN_PROMPT', null, null, null::bigint, null, null, null, null::boolean, null
+      from participation p
+      join contenu c on c.id = p.id
+      join defi d on d.id = p.defi_id
+      where c.statut = 'VISIBLE'
+      union all
       select 'reproduction', rc.id, rc.date_creation, rc.auteur_id, cr.titre, cr.id, cr.slug,
         cr.type_creation, null, r.resultat, o.id, o.nom, o.slug, o.logo, o.logo_monochrome,
         coalesce(m.nom_court, r.modele_non_reference)

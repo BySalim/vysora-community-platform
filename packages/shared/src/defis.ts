@@ -30,10 +30,15 @@ export const participationsOuvertes = (
 export const MESSAGES_PARTICIPATION = {
   introuvable: 'Ce défi est introuvable.',
   fermees: 'Les participations à ce défi sont fermées.',
+  pause: 'Les participations à ce défi sont en pause : elles reprendront dès que possible.',
   periode: 'La création doit être publiée pendant la période du défi.',
   unique: (titre: string | null) =>
     titre
       ? `Vous participez déjà à ce défi avec « ${titre} » : une création par personne.`
       : 'Vous participez déjà à ce défi : une création par personne.',
   conservee: 'Le défi n’est plus en cours : la participation est conservée.',
+  /** S-17 : on participe depuis la page Défis, plus en rattachant une création. */
+  pageDefis: 'On participe à un défi depuis sa page, avec le formulaire de participation.',
+  uniqueParticipation: (titre: string) =>
+    `Vous participez déjà à ce défi avec « ${titre} » : une participation par personne. Modifiez-la plutôt.`,
 } as const;

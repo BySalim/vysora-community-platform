@@ -22,7 +22,8 @@ export interface SignalementEnregistreApi {
 /** Page du site où se lit un contenu : la création (un commentaire ou une reproduction y ont leur
     ancre), le sujet (une réponse y a la sienne) ou le cas. */
 export interface PageDuContenuApi {
-  genre: 'CREATION' | 'SUJET' | 'CAS';
+  /** DEFI (S-17) : la page du défi, `ancre` donnant l'identifiant de la participation. */
+  genre: 'CREATION' | 'SUJET' | 'CAS' | 'DEFI';
   id: number;
   slug: string | null;
   /** Identifiant de l'élément dans la page (« commentaire-12 ») ; null pour le contenu lui-même. */

@@ -27,6 +27,7 @@ import { Stockage } from '../medias/stockage.js';
 import { resumerMembres } from '../membres/resumes.js';
 import { activiteRecente } from './activite.js';
 import { creationsDeLAccueil } from './cartes.js';
+import { PARTICIPATIONS_VISIBLES } from '../defis/participation.js';
 import { JOUR_MS, joursDeLaCourbe, lundiUtc, reglesDuDefi } from './periodes.js';
 
 /** Colonnes de l'outil et du modèle d'un sujet (alias « o » et « m »). */
@@ -394,9 +395,10 @@ export class AccueilService {
       slug: string;
       titre: string;
       contraintes: string | null;
+      cases: { chiffre: string; intitule: string }[] | null;
       date_fin: Date | string;
     }>(sql`
-      select id, slug, titre, contraintes, date_fin from defi
+      select id, slug, titre, contraintes, cases, date_fin from defi
       where statut = 'PUBLIE' and date_debut <= ${maintenant} and date_fin > ${maintenant}
       order by date_fin asc, id asc
       limit 1`);
@@ -409,12 +411,12 @@ export class AccueilService {
       date_publication: Date | string;
       utiles: number;
     }>(sql`
-      select c.id, c.auteur_id, cr.type_creation as type, cr.date_publication,
-        (select count(*) from vote v where v.contenu_id = c.id and v.type_vote_code = 'UTILE')::int
+      select pv.id, pv.auteur_id, pv.type_creation as type, pv.date_publication,
+        (select count(*) from vote v where v.contenu_id = pv.id and v.type_vote_code = 'UTILE')::int
           as utiles
-      from creation cr join contenu c on c.id = cr.id
-      where cr.defi_id = ${ligne.id} and c.statut = 'VISIBLE' and cr.statut_publication = 'PUBLIEE'
-      order by cr.date_publication desc, c.id desc`);
+      from ${PARTICIPATIONS_VISIBLES} pv
+      where pv.defi_id = ${ligne.id}
+      order by pv.date_publication desc, pv.id desc`);
     const participants = [...new Set(participations.map((p) => Number(p.auteur_id)))].slice(0, 5);
     const parUtilite = participations.toSorted((a, b) => b.utiles - a.utiles);
     const [membre, apercus] = await Promise.all([
@@ -431,7 +433,7 @@ export class AccueilService {
       id: Number(ligne.id),
       slug: ligne.slug,
       titre: ligne.titre,
-      regles: reglesDuDefi(ligne.contraintes),
+      regles: reglesDuDefi(ligne.contraintes, ligne.cases ?? []),
       dateFin: new Date(ligne.date_fin).toISOString(),
       participations: participations.length,
       participants: participants.map(membre),

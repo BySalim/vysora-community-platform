@@ -12,7 +12,9 @@ import {
   commentaire,
   contenu,
   creation,
+  defi,
   message,
+  participation,
   reproduction,
   sujet,
 } from '../../db/schema/index.js';
@@ -37,6 +39,7 @@ const SANS_TITRE: Record<TypeContenu, string> = {
   SUJET: 'Sujet',
   MESSAGE: 'Réponse',
   CAS_BON_REFLEXE: 'Cas Bon réflexe',
+  PARTICIPATION: 'Participation à un défi',
 };
 
 /** Contenus tels que la modération les présente : intitulé, page où ils se lisent, auteur. */
@@ -63,6 +66,8 @@ export async function presenterContenus(
       commentaire: { corps: commentaire.corps },
       reproduction: { retour: reproduction.retour },
       message: { corps: message.corps },
+      participation: { titre: participation.titre },
+      defi: { id: defi.id, slug: defi.slug },
       parente: { id: parente.id, slug: parente.slug },
       sujetParent: { id: sujetParent.id, slug: sujetParent.slug },
     })
@@ -73,6 +78,8 @@ export async function presenterContenus(
     .leftJoin(commentaire, eq(commentaire.id, contenu.id))
     .leftJoin(reproduction, eq(reproduction.id, contenu.id))
     .leftJoin(message, eq(message.id, contenu.id))
+    .leftJoin(participation, eq(participation.id, contenu.id))
+    .leftJoin(defi, eq(defi.id, participation.defiId))
     .leftJoin(
       parente,
       or(eq(parente.id, commentaire.creationId), eq(parente.id, reproduction.creationId)),
@@ -94,13 +101,15 @@ export async function presenterContenus(
             ? l.sujet?.titre
             : l.type === 'CAS_BON_REFLEXE'
               ? l.cas?.titre
-              : extrait(
-                  l.type === 'COMMENTAIRE'
-                    ? (l.commentaire?.corps ?? null)
-                    : l.type === 'MESSAGE'
-                      ? (l.message?.corps ?? null)
-                      : (l.reproduction?.retour ?? null),
-                );
+              : l.type === 'PARTICIPATION'
+                ? l.participation?.titre
+                : extrait(
+                    l.type === 'COMMENTAIRE'
+                      ? (l.commentaire?.corps ?? null)
+                      : l.type === 'MESSAGE'
+                        ? (l.message?.corps ?? null)
+                        : (l.reproduction?.retour ?? null),
+                  );
       const page: PageDuContenuApi | null =
         l.type === 'CREATION'
           ? { genre: 'CREATION', id: l.id, slug: l.creation?.slug ?? null, ancre: null }
@@ -108,19 +117,21 @@ export async function presenterContenus(
             ? { genre: 'SUJET', id: l.id, slug: l.sujet?.slug ?? null, ancre: null }
             : l.type === 'CAS_BON_REFLEXE'
               ? { genre: 'CAS', id: l.id, slug: l.cas?.slug ?? null, ancre: null }
-              : l.type === 'MESSAGE'
-                ? l.sujetParent && {
-                    genre: 'SUJET',
-                    id: l.sujetParent.id,
-                    slug: l.sujetParent.slug,
-                    ancre: `reponse-${l.id}`,
-                  }
-                : l.parente && {
-                    genre: 'CREATION',
-                    id: l.parente.id,
-                    slug: l.parente.slug,
-                    ancre: l.type === 'COMMENTAIRE' ? `commentaire-${l.id}` : 'reproductions',
-                  };
+              : l.type === 'PARTICIPATION'
+                ? l.defi && { genre: 'DEFI', id: l.defi.id, slug: l.defi.slug, ancre: String(l.id) }
+                : l.type === 'MESSAGE'
+                  ? l.sujetParent && {
+                      genre: 'SUJET',
+                      id: l.sujetParent.id,
+                      slug: l.sujetParent.slug,
+                      ancre: `reponse-${l.id}`,
+                    }
+                  : l.parente && {
+                      genre: 'CREATION',
+                      id: l.parente.id,
+                      slug: l.parente.slug,
+                      ancre: l.type === 'COMMENTAIRE' ? `commentaire-${l.id}` : 'reproductions',
+                    };
       const auteur = auteurs.get(l.auteurId);
       if (!auteur) throw new Error(`Membre introuvable : ${l.auteurId}`);
       return [

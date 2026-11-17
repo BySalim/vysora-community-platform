@@ -55,6 +55,7 @@ import {
   niveau,
   notification,
   outil,
+  participation,
   preferenceNotification,
   reproduction,
   sujet,
@@ -950,6 +951,35 @@ export class NotificationsService implements OnModuleInit {
         publiee: c.statut === 'VISIBLE',
         ferme: ligne.dateFermeture !== null,
         messageAccepteId: ligne.messageAccepteId,
+        outil: null,
+        modele: null,
+      });
+    }
+    // S-17 : une participation se lit dans la page de son défi.
+    const participations = await this.db
+      .select({
+        id: participation.id,
+        titre: participation.titre,
+        defiId: defi.id,
+        defiSlug: defi.slug,
+      })
+      .from(participation)
+      .innerJoin(defi, eq(defi.id, participation.defiId))
+      .where(inArray(participation.id, uniques));
+    for (const ligne of participations) {
+      const c = contenus.get(ligne.id);
+      if (!c || !this.visible(c, membreId)) continue;
+      resultat.set(ligne.id, {
+        api: {
+          ...base(c),
+          nature: 'DEFI',
+          id: ligne.defiId,
+          slug: ligne.defiSlug,
+          titre: ligne.titre,
+        },
+        publiee: c.statut === 'VISIBLE',
+        ferme: false,
+        messageAccepteId: null,
         outil: null,
         modele: null,
       });

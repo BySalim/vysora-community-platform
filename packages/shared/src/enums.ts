@@ -88,6 +88,7 @@ export const TYPES_CONTENU = valeurs(
   'COMMENTAIRE',
   'REPRODUCTION',
   'CAS_BON_REFLEXE',
+  'PARTICIPATION',
 );
 export type TypeContenu = (typeof TYPES_CONTENU)[number];
 
@@ -176,6 +177,26 @@ export type TypeLienExterne = (typeof TYPES_LIEN_EXTERNE)[number];
 /** CV-05 */
 export const STATUTS_DEFI = valeurs('BROUILLON', 'PUBLIE', 'CLOTURE', 'ANNULE');
 export type StatutDefi = (typeof STATUTS_DEFI)[number];
+/** Icônes des principes jugés d'un défi (S-17), noms du jeu d'icônes du site. */
+export const ICONES_CRITERES_DEFI = valeurs(
+  'user',
+  'keyboard',
+  'smile',
+  'trend-up',
+  'image',
+  'pen',
+  'globe',
+  'grid',
+  'route',
+  'shield',
+  'check-circle',
+  'code',
+  'repeat',
+  'award',
+  'bulb',
+  'play',
+);
+export type IconeCritereDefi = (typeof ICONES_CRITERES_DEFI)[number];
 
 /* Forum et Bon réflexe ------------------------------------------------------ */
 

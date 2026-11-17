@@ -18,6 +18,7 @@ import { niveau } from '../../db/schema/index.js';
 import { apercusDesCreations } from '../creations/apercus.js';
 import { Stockage } from '../medias/stockage.js';
 import { souventCherches, tauxDeReussite } from './chiffres-guides.js';
+import { PARTICIPATIONS_VISIBLES } from '../defis/participation.js';
 
 /** Bornes de l'index : au-delà, la recherche du site passera par l'API (registre, R-02). */
 const CREATIONS = 500;
@@ -357,11 +358,11 @@ export class IndexRechercheService {
       id: string;
       type: TypeCreation;
     }>(sql`
-      select c.id, cr.type_creation as type
-      from creation cr join contenu c on c.id = cr.id
-      where cr.defi_id = ${ligne.id} and c.statut = 'VISIBLE' and cr.statut_publication = 'PUBLIEE'
-      order by (select count(*) from vote v where v.contenu_id = c.id
-        and v.type_vote_code = 'UTILE') desc, c.id desc`);
+      select pv.id, pv.type_creation as type
+      from ${PARTICIPATIONS_VISIBLES} pv
+      where pv.defi_id = ${ligne.id}
+      order by (select count(*) from vote v where v.contenu_id = pv.id
+        and v.type_vote_code = 'UTILE') desc, pv.id desc`);
     const apercus = await apercusDesCreations(
       this.db,
       this.stockage,

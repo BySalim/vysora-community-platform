@@ -57,6 +57,7 @@ import {
   optionReponse,
   outil,
   outilModele,
+  participation,
   rechercheDocument,
   reproduction,
   signalementObsolescence,
@@ -80,6 +81,7 @@ import type {
   CreationDemo,
   GuideDemo,
   ImageDemo,
+  ParticipationDemo,
   SujetDemo,
 } from './types.js';
 
@@ -176,6 +178,7 @@ export async function chargerDemo(db: BaseDeDonnees, options: OptionsDemo): Prom
     for (const c of CAS) await chargerCas(ctx, c);
     await chargerEnregistrements(ctx);
     await chargerImages(ctx, options.stockage);
+    await chargerParticipations(ctx, options.stockage);
     await completerResultats(ctx);
     await completerFidelite(ctx);
     await chargerCommentaires(ctx);
@@ -252,7 +255,7 @@ interface Contexte {
   licences: Map<string, number>;
   badges: Map<string, number>;
   etiquettes: Map<string, number>;
-  defis: Map<string, { id: number; fin: Date }>;
+  defis: Map<string, { id: number; debut: Date; fin: Date }>;
   creations: Map<string, number>;
   sujets: Map<string, number>;
   cas: Map<string, number>;
@@ -724,7 +727,7 @@ async function chargerDefis(ctx: Contexte): Promise<void> {
   const organisateur = membre(ctx, 'administration-demo');
   for (const d of DEFIS) {
     const [existant] = await ctx.tx
-      .select({ id: defi.id, fin: defi.dateFin })
+      .select({ id: defi.id, debut: defi.dateDebut, fin: defi.dateFin })
       .from(defi)
       .where(eq(defi.slug, d.slug));
     if (existant) {
@@ -739,14 +742,88 @@ async function chargerDefis(ctx: Contexte): Promise<void> {
         slug: d.slug,
         enonce: d.enonce,
         contraintes: d.contraintes,
+        definition: d.definition ?? null,
+        cases: d.cases ?? [],
+        criteres: d.criteres ?? [],
+        criteresCommuns: d.criteresCommuns ?? [],
         dateDebut: dater(ctx, d.debut, true),
         dateFin: dater(ctx, d.fin, true),
         statut: d.statut,
       })
-      .returning({ id: defi.id, fin: defi.dateFin });
+      .returning({ id: defi.id, debut: defi.dateDebut, fin: defi.dateFin });
     if (!ligne) throw new Error(`Défi non créé : ${d.slug}`);
     ctx.defis.set(d.slug, ligne);
     ctx.bilan.defis += 1;
+  }
+}
+
+/* Participations aux défis (S-17) -------------------------------------------- */
+
+/** Participations des défis : jeu (HTML du prototype), couverture et votes « Utile », une seule
+    fois. Une participation existante (même titre, même défi) est laissée telle quelle ; il ne lui
+    est rendu que sa couverture si elle n'en a plus (base chargée avant l'arrivée des images). */
+async function chargerParticipations(ctx: Contexte, stockage: Stockage): Promise<void> {
+  const jeux = join(dossierAssets(), 'jeux');
+  const couvrir = async (id: number, auteurId: number, p: ParticipationDemo) => {
+    const fichier = join(jeux, `${p.jeu}.webp`);
+    if (!existsSync(fichier)) return;
+    await enregistrerImage(ctx.tx, stockage, await preparerImage(await readFile(fichier)), {
+      contenuId: id,
+      televerseurId: auteurId,
+      ordre: 0,
+      texteAlternatif: `Écran du jeu « ${p.titre} »`,
+      legende: null,
+    });
+    ctx.bilan.images += 1;
+  };
+  for (const d of DEFIS) {
+    const lie = ctx.defis.get(d.slug);
+    if (!lie || !d.participations?.length) continue;
+    for (const p of d.participations) {
+      const auteur = membre(ctx, p.auteur);
+      const [existante] = await ctx.tx
+        .select({ id: participation.id })
+        .from(participation)
+        .where(and(eq(participation.defiId, lie.id), eq(participation.titre, p.titre)));
+      if (existante) {
+        if (!(await ctx.tx.$count(media, eq(media.contenuId, existante.id))))
+          await couvrir(existante.id, auteur.id, p);
+        continue;
+      }
+      const [o] = await ctx.tx.select({ id: outil.id }).from(outil).where(eq(outil.slug, p.outil));
+      if (!o) throw new Error(`Outil inconnu : ${p.outil}`);
+      // Publiée pendant le défi, au plus tard maintenant.
+      const publication = plusTot(
+        plusTard(dater(ctx, p.publication), new Date(lie.debut.getTime() + MINUTE)),
+        new Date(ctx.maintenant.getTime() - MINUTE),
+      );
+      const id = await nouveauContenu(ctx, 'PARTICIPATION', auteur.id, publication);
+      await ctx.tx.insert(participation).values({
+        id,
+        defiId: lie.id,
+        titre: p.titre,
+        idee: p.idee,
+        outilId: o.id,
+        modele: p.modele,
+        prompts: p.prompts,
+        essais: p.essais,
+        moment: p.moment ?? null,
+        jeu: await readFile(join(jeux, `${p.jeu}.html`), 'utf8'),
+        jeuNom: `${p.jeu}.html`,
+        datePublication: publication,
+      });
+      await couvrir(id, auteur.id, p);
+      voter(
+        ctx,
+        { id, auteurId: auteur.id, graine: `participation:${p.titre}` },
+        'UTILE',
+        p.utiles,
+        {
+          debut: publication,
+          fin: plusTot(ctx.maintenant, lie.fin),
+        },
+      );
+    }
   }
 }
 

@@ -39,7 +39,9 @@ export class InteractionsService {
       // RG-41 : « Utile » sur les créations, sujets, réponses et cas ; « Testé » sur les astuces.
       const permis =
         type === 'UTILE'
-          ? ['CREATION', 'SUJET', 'MESSAGE', 'CAS_BON_REFLEXE'].includes(cible.type)
+          ? ['CREATION', 'SUJET', 'MESSAGE', 'CAS_BON_REFLEXE', 'PARTICIPATION'].includes(
+              cible.type,
+            )
           : cible.type === 'SUJET' && cible.typeSujet === 'ASTUCE';
       if (!permis)
         throw conflit(
@@ -62,7 +64,7 @@ export class InteractionsService {
           points:
             type === 'TESTE_OK'
               ? BAREME_REPUTATION.voteTesteSurAstuce
-              : cible.type === 'CREATION'
+              : cible.type === 'CREATION' || cible.type === 'PARTICIPATION'
                 ? BAREME_REPUTATION.voteUtileSurCreation
                 : BAREME_REPUTATION.voteUtileSurAutreContenu,
         });

@@ -26,6 +26,7 @@ const DESIGNATIONS: Record<TypeContenu, { nom: string; feminin: boolean }> = {
   SUJET: { nom: 'sujet', feminin: false },
   MESSAGE: { nom: 'réponse', feminin: true },
   CAS_BON_REFLEXE: { nom: 'cas Bon réflexe', feminin: false },
+  PARTICIPATION: { nom: 'participation à un défi', feminin: true },
 };
 
 /** Référence d'une décision, à rappeler dans une contestation (« Décision n° 12 »). */

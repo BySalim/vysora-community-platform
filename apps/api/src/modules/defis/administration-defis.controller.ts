@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { schemaDefi, type DefiAdministreApi, type SaisieDefi } from '@vysora/shared';
 import { ValidationZod } from '../../commun/http/validation-zod.pipe.js';
 import { Exige, SessionCourante } from '../auth/droits.js';
@@ -27,6 +37,27 @@ export class AdministrationDefisController {
     return this.defis.creer(session.utilisateur.id, saisie);
   }
 
+  /** PATCH /api/v1/admin/defis/:id : titre, énoncé, contraintes et dates d'un défi en brouillon ou
+      publié, même commencé (décision du 2026-11-16). */
+  @Patch(':id')
+  modifier(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationZod(schemaDefi)) saisie: SaisieDefi,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<DefiAdministreApi> {
+    return this.defis.modifier(session.utilisateur.id, id, saisie);
+  }
+
+  /** DELETE /api/v1/admin/defis/:id : supprimer un brouillon (S-17). */
+  @Delete(':id')
+  @HttpCode(204)
+  supprimer(
+    @Param('id', ParseIntPipe) id: number,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<void> {
+    return this.defis.supprimer(session.utilisateur.id, id);
+  }
+
   /** POST /api/v1/admin/defis/:id/publication | annulation | cloture (RG-73, F-65). */
   @Post(':id/publication')
   @HttpCode(200)
@@ -44,6 +75,43 @@ export class AdministrationDefisController {
     @SessionCourante() session: SessionOuverte,
   ): Promise<DefiAdministreApi> {
     return this.defis.annuler(session.utilisateur.id, id);
+  }
+
+  /** S-17 : rétablir un défi annulé, ouvrir maintenant un défi à venir, mettre en pause et reprendre. */
+  @Post(':id/retablissement')
+  @HttpCode(200)
+  retablir(
+    @Param('id', ParseIntPipe) id: number,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<DefiAdministreApi> {
+    return this.defis.retablir(session.utilisateur.id, id);
+  }
+
+  @Post(':id/ouverture')
+  @HttpCode(200)
+  ouvrir(
+    @Param('id', ParseIntPipe) id: number,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<DefiAdministreApi> {
+    return this.defis.ouvrir(session.utilisateur.id, id);
+  }
+
+  @Post(':id/pause')
+  @HttpCode(200)
+  mettreEnPause(
+    @Param('id', ParseIntPipe) id: number,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<DefiAdministreApi> {
+    return this.defis.pause(session.utilisateur.id, id, false);
+  }
+
+  @Delete(':id/pause')
+  @HttpCode(200)
+  reprendre(
+    @Param('id', ParseIntPipe) id: number,
+    @SessionCourante() session: SessionOuverte,
+  ): Promise<DefiAdministreApi> {
+    return this.defis.pause(session.utilisateur.id, id, true);
   }
 
   @Post(':id/cloture')

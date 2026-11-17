@@ -206,11 +206,37 @@ export interface CasDemo {
 export interface DefiDemo {
   slug: string;
   titre: string;
+  /** S-17 : le thème expliqué, les règles en cases, les principes jugés. */
+  definition?: string;
   enonce: string;
   contraintes: string;
+  cases?: { chiffre: string; intitule: string; precision: string | null }[];
+  criteres?: { icone: string; libelle: string }[];
+  criteresCommuns?: string[];
   debut: string;
   fin: string;
   statut: 'PUBLIE' | 'CLOTURE';
+  /** S-17 : participations publiées depuis la page Défis (jeu et couverture du prototype). */
+  participations?: ParticipationDemo[];
+}
+
+/** Participation à un défi (S-17) : le jeu est prototype/assets/jeux/<jeu>.html, sa couverture
+    prototype/assets/jeux/<jeu>.webp. */
+export interface ParticipationDemo {
+  /** Pseudo de l'auteur. */
+  auteur: string;
+  titre: string;
+  idee: string;
+  /** Slug de l'outil. */
+  outil: string;
+  modele: string;
+  prompts: string[];
+  essais: number;
+  moment?: string;
+  jeu: string;
+  publication: string;
+  /** Votes « Utile » reçus (prototype : n). */
+  utiles: number;
 }
 
 /** Guide d'Explorer (prototype : objectives). Créations, sujets et cas sont désignés par leur clé. */

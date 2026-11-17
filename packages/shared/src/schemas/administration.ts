@@ -3,6 +3,7 @@ import { DOMAINES_AUDIT } from '../audit';
 import {
   ACTIONS_DECISION,
   FAMILLES_OUTIL,
+  ICONES_CRITERES_DEFI,
   ROLES,
   TYPES_DOCUMENT_LEGAL,
   TYPES_OUTIL,
@@ -126,6 +127,62 @@ export const schemaDefi = z
       .transform((valeur) => valeur || null),
     dateDebut: dateHeure('Indiquez la date de début.'),
     dateFin: dateHeure('Indiquez la date de fin.'),
+    /** S-17 : le thème expliqué en une phrase, en encadré sous le titre. */
+    definition: z
+      .string()
+      .trim()
+      .max(300, { error: 'Le thème expliqué compte 300 caractères au plus.' })
+      .nullish()
+      .transform((valeur) => valeur || null),
+    /** S-17 : les règles en cases (un chiffre, un intitulé court, une précision). */
+    cases: z
+      .array(
+        z.object({
+          chiffre: z
+            .string({ error: 'Indiquez le chiffre de la règle.' })
+            .trim()
+            .min(1, { error: 'Indiquez le chiffre de la règle.' })
+            .max(4, { error: 'Le chiffre compte 4 caractères au plus.' }),
+          intitule: z
+            .string({ error: 'Indiquez l’intitulé de la règle.' })
+            .trim()
+            .min(1, { error: 'Indiquez l’intitulé de la règle.' })
+            .max(30, { error: 'L’intitulé compte 30 caractères au plus.' }),
+          precision: z
+            .string()
+            .trim()
+            .max(40, { error: 'La précision compte 40 caractères au plus.' })
+            .nullish()
+            .transform((valeur) => valeur || null),
+        }),
+      )
+      .max(4, { error: 'Un défi compte 4 règles au plus.' })
+      .default([]),
+    /** S-17 : les principes les plus jugés, chacun avec son icône. */
+    criteres: z
+      .array(
+        z.object({
+          icone: z.enum(ICONES_CRITERES_DEFI, { error: 'Choisissez l’icône du principe.' }),
+          libelle: z
+            .string({ error: 'Indiquez le principe jugé.' })
+            .trim()
+            .min(1, { error: 'Indiquez le principe jugé.' })
+            .max(30, { error: 'Un principe compte 30 caractères au plus.' }),
+        }),
+      )
+      .max(4, { error: 'Un défi compte 4 principes jugés au plus.' })
+      .default([]),
+    /** S-17 : les autres principes jugés, en étiquettes. */
+    criteresCommuns: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1, { error: 'Une étiquette ne peut pas être vide.' })
+          .max(30, { error: 'Une étiquette compte 30 caractères au plus.' }),
+      )
+      .max(6, { error: 'Six étiquettes au plus.' })
+      .default([]),
   })
   .superRefine((d, ctx) => {
     const jours = (d.dateFin.getTime() - d.dateDebut.getTime()) / MS_JOUR;

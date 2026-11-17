@@ -11,6 +11,7 @@ import type {
 import type { MembreResumeApi } from './creations';
 import type { DecisionApi } from './moderation';
 import type { BadgeObtenuApi } from './profil';
+import type { CritereDefiApi, RegleDefiApi } from './defis';
 
 /** Membre tel que l'administration le présente pour gérer son rôle (EC-23, F-96). */
 export interface MembreAdministreApi {
@@ -120,8 +121,15 @@ export interface DefiAdministreApi {
   dateFin: string;
   statut: 'BROUILLON' | 'PUBLIE' | 'CLOTURE' | 'ANNULE';
   participations: number;
-  /** Actions possibles dans l'état du défi (RG-73). */
-  actions: ('publier' | 'annuler' | 'cloturer')[];
+  /** S-17 : thème expliqué, règles en cases, principes jugés. */
+  definition: string | null;
+  cases: RegleDefiApi[];
+  criteres: CritereDefiApi[];
+  criteresCommuns: string[];
+  /** S-17 : participations suspendues par l'administration depuis cette date ; null sinon. */
+  pauseDepuis: string | null;
+  /** Actions possibles dans l'état du défi (RG-73, S-17). */
+  actions: ('publier' | 'annuler' | 'cloturer' | 'pause' | 'reprendre' | 'ouvrir' | 'retablir')[];
 }
 
 /** Éditeur d'outils et de modèles d'IA tel que l'administration le gère (EC-22, F-95, RG-110). */
