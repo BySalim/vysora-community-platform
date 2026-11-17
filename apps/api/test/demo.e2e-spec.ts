@@ -27,6 +27,7 @@ import {
 import { CAS } from '../src/db/demo/donnees/bon-reflexe.js';
 import { CREATIONS } from '../src/db/demo/donnees/creations.js';
 import { COMPLEMENTS_SAVOIRS } from '../src/db/demo/donnees/apprendre.js';
+import { DEFIS } from '../src/db/demo/donnees/defis.js';
 import { DEMANDES, GUIDES } from '../src/db/demo/donnees/guides.js';
 import { MEMBRES } from '../src/db/demo/donnees/membres.js';
 import { MOT_DE_PASSE_DEMO } from '../src/db/demo/identifiants.js';
@@ -82,13 +83,16 @@ const TABLES = [
 ] as const;
 
 /** Images du prototype attendues : résultats des créations et images jointes aux échanges. */
-const IMAGES_ATTENDUES = CREATIONS.reduce(
-  (total, c) =>
-    total +
-    (c.images?.length ?? 0) +
-    c.etapes.reduce((n, e) => n + e.echanges.reduce((m, x) => m + (x.images?.length ?? 0), 0), 0),
-  0,
-);
+/** Participations jouables des défis (S-17), chacune avec sa couverture. */
+const PARTICIPATIONS_ATTENDUES = DEFIS.reduce((n, d) => n + (d.participations?.length ?? 0), 0);
+const IMAGES_ATTENDUES =
+  CREATIONS.reduce(
+    (total, c) =>
+      total +
+      (c.images?.length ?? 0) +
+      c.etapes.reduce((n, e) => n + e.echanges.reduce((m, x) => m + (x.images?.length ?? 0), 0), 0),
+    0,
+  ) + PARTICIPATIONS_ATTENDUES;
 const AVATARS_ATTENDUS = MEMBRES.filter((m) => m.avatar).length;
 /** Commentaires des créations publiées, réponses comprises. */
 const COMMENTAIRES_ATTENDUS = CREATIONS.filter((c) => c.publication).reduce(
@@ -161,7 +165,7 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
     it('charge les membres, les créations, le forum, les cas et les défis du prototype', () => {
       expect(bilan).toMatchObject({
         membres: 53,
-        defis: 3,
+        defis: DEFIS.length,
         creations: 50,
         commentaires: COMMENTAIRES_ATTENDUS,
         sujets: 17,
@@ -181,6 +185,39 @@ describe('Données de démonstration (DEMO-01 à DEMO-03, pnpm db:demo)', () => 
       expect(bilan.reproductions).toBeGreaterThan(250);
       expect(bilan.votes).toBeGreaterThan(1500);
       expect(decrireBilan(bilan)).toContain('53 membres');
+    });
+
+    it('charge Deploy Friday et ses trois jeux du prototype, avec couverture et votes (S-17)', async () => {
+      expect(PARTICIPATIONS_ATTENDUES).toBe(3);
+      const lignes = (
+        await contexte.db.execute<{
+          titre: string;
+          jeu: number;
+          couvertures: number;
+          utiles: number;
+          dans_le_defi: boolean;
+        }>(sql`select p.titre, length(p.jeu) as jeu,
+            (select count(*)::int from media m where m.contenu_id = p.id) as couvertures,
+            (select count(*)::int from vote v where v.contenu_id = p.id and v.type_vote_code = 'UTILE'
+              and v.date_vote between d.date_debut and d.date_fin) as utiles,
+            p.date_publication between d.date_debut and now() as dans_le_defi
+          from participation p join defi d on d.id = p.defi_id
+          where d.slug = 'deploy-friday'`)
+      ).rows.toSorted((a, b) => a.titre.localeCompare(b.titre, 'fr'));
+      expect(lignes.map((l) => [l.titre, l.couvertures, l.utiles, l.dans_le_defi])).toEqual([
+        ['git push vendredi', 1, 9, true],
+        ['Hotfix Hero', 1, 14, true],
+        ['L’ascenseur est en panne', 1, 11, true],
+      ]);
+      for (const l of lignes) expect(Number(l.jeu)).toBeGreaterThan(10_000);
+      const page = (await request(contexte.app.getHttpServer()).get('/api/v1/defis').expect(200))
+        .body as { defi: { titre: string } | null; participations: { nature: string }[] };
+      expect(page.defi?.titre).toBe('Deploy Friday');
+      expect(page.participations.map((p) => p.nature)).toEqual([
+        'PARTICIPATION',
+        'PARTICIPATION',
+        'PARTICIPATION',
+      ]);
     });
 
     it('crée des comptes vérifiés, en example.test, hachés en Argon2id, documents en vigueur acceptés', async () => {

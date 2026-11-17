@@ -14,8 +14,10 @@ import {
   contenu,
   creation,
   decisionModeration,
+  defi,
   mouvementReputation,
   notification,
+  outil,
   signalement,
   utilisateur,
 } from '../src/db/schema/index.js';
@@ -681,6 +683,65 @@ describe('Signalements et décisions (MOD-01)', () => {
       actions: ['AUCUNE', 'RETABLIR', 'SUPPRIMER', 'AVERTIR', 'SUSPENDRE'],
     });
     expect(dossier.decisions[0]?.intituleContenu).toBe('Le prompt ne donne pas le format attendu.');
+  });
+
+  describe('participations aux défis (S-17)', () => {
+    it('modère un jeu signalé : la file l’ouvre dans la page du défi ; masqué, il n’est plus joué', async () => {
+      const [o] = await contexte.db.select({ id: outil.id }).from(outil).limit(1);
+      const [d] = await contexte.db
+        .insert(defi)
+        .values({
+          organisateurId: moderateurId,
+          titre: 'Deploy Friday',
+          slug: 'deploy-friday',
+          enonce: 'Faites-en un jeu, en un seul prompt.',
+          dateDebut: new Date(Date.now() - 86_400_000),
+          dateFin: new Date(Date.now() + 3 * 86_400_000),
+          statut: 'PUBLIE',
+        })
+        .returning({ id: defi.id });
+      const auteur = await lea();
+      const { id } = (
+        await auteur
+          .post(`/api/v1/defis/${d!.id}/participations`)
+          .set('Origin', ORIGINE_SITE)
+          .send({
+            titre: 'Hotfix Hero',
+            idee: 'Un runner en pixel art où l’horloge sert de niveau.',
+            outilId: o!.id,
+            prompts: ['Écris un runner complet dans un seul fichier HTML.'],
+            jeu: { nom: 'jeu.html', html: '<body><canvas></canvas></body>' },
+          })
+          .expect(201)
+      ).body as { id: number };
+      await signaler(await awa(), id, { motif: 'SPAM' }).expect(201);
+
+      const moderation = await thomas();
+      const file = (await moderation.get('/api/v1/moderation/file').expect(200))
+        .body as FileModerationApi;
+      expect(file.elements[0]?.contenu).toMatchObject({
+        type: 'PARTICIPATION',
+        intitule: 'Hotfix Hero',
+        page: { genre: 'DEFI', id: d!.id, slug: 'deploy-friday', ancre: String(id) },
+        auteur: { pseudo: 'lea-martin' },
+      });
+      await moderation.get(`/api/v1/moderation/contenus/${id}`).expect(200);
+      await decider(moderation, id, {
+        action: 'MASQUER',
+        motif: 'Le jeu affiche un faux écran de connexion.',
+      }).expect(201);
+      expect(contexte.emails[0]?.sujet).toBe(
+        'Votre participation à un défi a été masquée par la modération',
+      );
+      await request(serveur())
+        .get(`/api/v1/participations/${id}/jeu`)
+        .set('Sec-Fetch-Dest', 'iframe')
+        .expect(404);
+      const page = (await request(serveur()).get('/api/v1/defis').expect(200)).body as {
+        participations: unknown[];
+      };
+      expect(page.participations).toEqual([]);
+    });
   });
 
   describe('masquage automatique au seuil de signalements (F-93, RG-101)', () => {
