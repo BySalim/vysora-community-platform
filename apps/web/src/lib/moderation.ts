@@ -24,6 +24,7 @@ export const LIBELLES_TYPE_CONTENU: Record<TypeContenu, string> = {
   SUJET: 'Sujet du forum',
   MESSAGE: 'Réponse du forum',
   CAS_BON_REFLEXE: 'Cas Bon réflexe',
+  PARTICIPATION: 'Participation à un défi',
 };
 
 export const ICONES_TYPE_CONTENU: Record<TypeContenu, string> = {
@@ -33,6 +34,7 @@ export const ICONES_TYPE_CONTENU: Record<TypeContenu, string> = {
   SUJET: 'help',
   MESSAGE: 'reply',
   CAS_BON_REFLEXE: 'bulb',
+  PARTICIPATION: 'trophy',
 };
 
 /** Titre du dossier d'un contenu sans titre propre, dont le texte entier suit (le début du texte
@@ -53,12 +55,16 @@ export const TITRES_TEXTE: Partial<Record<TypeContenu, string>> = {
 
 /** Page où le contenu se lit ; null tant que cette page n'est pas portée (forum, cas). */
 export function adresseDuContenu(page: PageDuContenuApi | null): string | null {
+  // S-17 : une participation s'ouvre dans la page de son défi.
+  if (page?.genre === 'DEFI')
+    return `${ROUTES.defi(page.id, page.slug)}?participation=${page.ancre ?? ''}`;
   if (page?.genre !== 'CREATION') return null;
   return `${ROUTES.creation(page.id, page.slug)}${page.ancre ? `#${page.ancre}` : ''}`;
 }
 
 /** Libellé du lien vers la page du contenu. */
 export function lienDuContenu(type: TypeContenu): string {
+  if (type === 'PARTICIPATION') return 'Voir la participation';
   return type === 'CREATION' ? 'Voir la création' : 'Voir sur la fiche de la création';
 }
 

@@ -12,6 +12,8 @@ const ENTETES_TRANSMIS = [
   'cookie',
   'origin',
   'referer',
+  // Destination de la requête : le jeu d'un membre ne se sert que dans un cadre (S-17).
+  'sec-fetch-dest',
   'user-agent',
 ];
 const ENTETES_RETIRES = ['content-encoding', 'content-length', 'transfer-encoding', 'connection'];

@@ -1,8 +1,21 @@
-/* Compléments de defis.css (gardée identique au prototype) : texte de survol de l'aperçu (mal
-   encodé dans l'original), fenêtre d'inscription d'une création au défi (RG-74). */
+/* Compléments de defis.css (gardée identique au prototype) : participations du site, qui sont des
+   créations (couverture en image, lien vers le parcours), règles d'un défi d'avant S-17 (texte
+   seul), fenêtre d'inscription d'une création au défi (RG-74). */
 
-.df-preview::after { content: "Voir le parcours ↗"; }
-a.df-preview, a.df-title-button { color: inherit; text-decoration: none; }
+a.df-first, a.df-game-cover, a.df-row-media, a.df-title-button { color: inherit; text-decoration: none; }
+a.df-first { color: white; }
+.df-game-cover > img, .df-row-media > img, .df-first-media > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.df-game-cover > img { transition: transform 900ms var(--ease); }
+.df-game-cover:hover > img { transform: scale(1.03); }
+.df-first:hover .df-first-media > img { transform: scale(1.04); }
+.df-first-media > img { transition: transform 900ms var(--ease); }
+.df-grid.is-image .df-game-cover { background: var(--night); }
+.df-brief.is-seul { grid-template-columns: minmax(0, 1fr); }
+.df-rule-cards li.is-texte { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+.df-rule-cards li.is-texte .df-rule-name { align-self: center; }
+.df-game-tries .type-tag { font-size: inherit; }
+
+.df-dialog-inscription { width: min(560px, calc(100vw - 32px)); }
 .df-participer { display: grid; gap: 14px; padding: 4px 28px 28px; }
 .df-participer h2 { margin: 0; font: 700 1.5rem/1.2 var(--font-heading); letter-spacing: -0.02em; }
 .df-participer p { margin: 0; color: var(--text-body); }
@@ -12,3 +25,5 @@ a.df-preview, a.df-title-button { color: inherit; text-decoration: none; }
 .df-choix input { accent-color: var(--accent); }
 .df-erreur { color: var(--red-700) !important; font-weight: 600; }
 .df-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+/* Premier du classement sans couverture : le titre n'apparaît qu'une fois, dans le bas de la carte. */
+.df-first .df-cover-type :is(b, small) { display: none; }

@@ -8,7 +8,6 @@
 import {
   LIMITES,
   LONGUEURS,
-  MESSAGES_PARTICIPATION,
   schemaContenuCreation,
   slugifier,
   TYPES_LIEN_EXTERNE,
@@ -149,11 +148,6 @@ function editeur(donnees: DonneesPage): void {
   let d: Brouillon = donnees.creation
     ? depuisFiche(donnees.creation, refs)
     : nouveauBrouillon(licenceParDefaut);
-  /* Ouverture depuis la page d'un défi (?defi=, prototype) : la case « Participer au défi » est
-     cochée, sauf si l'auteur y participe déjà avec une autre création. */
-  const defiDemande = Number(new URLSearchParams(location.search).get('defi'));
-  if (!donnees.creation && donnees.defi?.id === defiDemande && !donnees.participation)
-    d.defiId = defiDemande;
 
   /* Passages sensibles conservés en connaissance de cause (F-18) : retenus sur l'appareil, par création. */
   const cleDecisions = (id: number) => `vysora-decisions-${id}`;
@@ -694,32 +688,6 @@ function editeur(donnees: DonneesPage): void {
       : `${icon('route')}<span>Le type de création se déduit de votre chemin parcouru.</span>`;
   }
 
-  /** Case « Participer au défi » (F-64, RG-74) : le défi en cours, ou celui de la création. */
-  function defiHTML(err: Map<string, ErreurChamp>): string {
-    const contexte = contexteCourant();
-    if (!contexte) return '';
-    const { defi, participe, autre } = contexte;
-    const coche = d.defiId === defi.id;
-    const message = erreurVisible(err, 'defi');
-    // Défi terminé : la participation reste ; une seule création par personne.
-    const conservee = participe && !defi.ouvert;
-    const bloquee = conservee || (!coche && (Boolean(autre) || !defi.ouvert));
-    const aide = conservee
-      ? MESSAGES_PARTICIPATION.conservee
-      : !defi.ouvert
-        ? coche
-          ? 'Décochez la case pour publier votre création.'
-          : MESSAGES_PARTICIPATION.fermees
-        : autre && !coche
-          ? MESSAGES_PARTICIPATION.unique(autre.titre)
-          : `Jusqu’au ${jourEtHeure(defi.dateFin)}, heure UTC.`;
-    return `<div class="pub-champ${message ? ' is-erreur' : ''}" data-champ="defi">
-          <div class="pub-case"><input type="checkbox" id="f-defi" data-defi-choix data-k="defi"${coche ? ' checked' : ''}${bloquee ? ' disabled' : ''}${message ? ' aria-invalid="true"' : ''}${decrit('f-defi-aide', message ? 'f-defi-err' : '')}><label for="f-defi">Participer au défi « ${t(defi.titre)} »</label></div>
-          <p class="pub-aide pub-aide-case" id="f-defi-aide">${t(aide)} <a href="${esc(ROUTES.defi(defi.id, defi.slug))}">Voir les règles</a></p>
-          <div class="pub-sous">${erreurHTML('f-defi', message)}</div>
-        </div>`;
-  }
-
   function coteHTML(err: Map<string, ErreurChamp>): string {
     const publiee = d.statut === 'publiee';
     const msgCat = erreurVisible(err, 'categorie');
@@ -754,7 +722,6 @@ function editeur(donnees: DonneesPage): void {
           <div class="pub-select"><select class="pub-input" id="f-licence" data-licence data-k="licence" aria-describedby="f-licence-aide">${refs.licences.map((l) => `<option value="${l.id}"${licence?.id === l.id ? ' selected' : ''}>${esc(l.libelle)}</option>`).join('')}</select>${icon('chevron-down')}</div>
           <p class="pub-aide" id="f-licence-aide">${licence?.resume ? `${t(licence.resume)}.` : ''}</p>
         </div>
-        ${defiHTML(err)}
         ${
           outilAgentPresent(d, outils) || d.agentModeration
             ? `<div class="pub-champ">

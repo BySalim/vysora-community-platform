@@ -30,6 +30,7 @@ import {
   t,
 } from '../explorer/elements';
 import { embleme } from '../accueil/elements';
+import { adresseParticipation } from '../defis';
 import { ROUTES } from '../navigation';
 import { jourEtHeure, typo } from '../texte';
 
@@ -641,7 +642,7 @@ export function defiHTML(donnees: ClassementsApi, moiId: number | null): string 
   const podium = participations
     .slice(0, 3)
     .map((p, i) => {
-      const href = esc(ROUTES.creation(p.creation.id, p.creation.slug));
+      const href = esc(adresseParticipation(p, defi));
       const visuel = p.creation.couverture
         ? `<div class="cl-poster">${image(p.creation.couverture, '(min-width: 1100px) 360px, 92vw', false)}</div>`
         : `<div class="cl-pod-vide">${icone(iconeType(p.creation.type), '')}</div>`;
@@ -659,7 +660,7 @@ export function defiHTML(donnees: ClassementsApi, moiId: number | null): string 
     ? `<ol class="cl-defi-rest">${reste
         .map(
           (p, i) =>
-            `<li><span class="cl-rank">${rang(p, i + 3)}</span>${membreHTML(p.auteur, 28, moiId)}<span class="cl-row-proof"><a class="cl-proof" href="${esc(ROUTES.creation(p.creation.id, p.creation.slug))}">${icone(iconeType(p.creation.type))}<span>${t(p.creation.titre)}</span></a></span><span class="cl-row-metric">${metriqueDefi(p, i + 3, cloture)}</span></li>`,
+            `<li><span class="cl-rank">${rang(p, i + 3)}</span>${membreHTML(p.auteur, 28, moiId)}<span class="cl-row-proof"><a class="cl-proof" href="${esc(adresseParticipation(p, defi))}">${icone(iconeType(p.creation.type))}<span>${t(p.creation.titre)}</span></a></span><span class="cl-row-metric">${metriqueDefi(p, i + 3, cloture)}</span></li>`,
         )
         .join('')}</ol>`
     : '';

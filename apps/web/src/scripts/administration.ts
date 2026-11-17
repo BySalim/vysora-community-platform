@@ -8,7 +8,6 @@ import {
   erreursParChamp,
   schemaAjoutEquipe,
   schemaCreationInvitations,
-  schemaDefi,
   schemaVersionDocumentLegal,
   type MembreAdministreApi,
   type Role,
@@ -228,84 +227,7 @@ document.addEventListener('click', (evenement) => {
   );
 });
 
-/* Défis (EC-24) ------------------------------------------------------------------------ */
-
-const QUESTIONS_DEFI = {
-  publier: [
-    'Publier ce défi ?',
-    'il apparaît sur la page Défis et, pendant sa période, sur l’accueil.',
-    'Publier',
-  ],
-  annuler: [
-    'Annuler ce défi ?',
-    'les participations sont fermées et le défi ne sera pas classé. Cette action est définitive.',
-    'Annuler le défi',
-  ],
-  cloturer: [
-    'Clôturer ce défi ?',
-    'le classement est figé, les points de participation et du podium sont crédités et chaque participant est prévenu. Cette action est définitive.',
-    'Clôturer',
-  ],
-} as const;
-const CHEMINS_DEFI = {
-  publier: 'publication',
-  annuler: 'annulation',
-  cloturer: 'cloture',
-} as const;
-const MESSAGES_DEFI = {
-  publier: 'Défi publié.',
-  annuler: 'Défi annulé.',
-  cloturer: 'Défi clôturé : le classement est publié.',
-} as const;
-
-for (const bouton of $$<HTMLButtonElement>('[data-ad-defi-action]')) {
-  bouton.addEventListener('click', () => {
-    const quoi = bouton.dataset.adDefiAction as keyof typeof QUESTIONS_DEFI;
-    const [titre, texte, libelle] = QUESTIONS_DEFI[quoi];
-    confirmer(titre, `« ${bouton.dataset.titre ?? ''} » : ${texte}`, libelle, async () => {
-      bouton.disabled = true;
-      const reponse = await api(
-        'POST',
-        `/api/v1/admin/defis/${bouton.dataset.adDefi}/${CHEMINS_DEFI[quoi]}`,
-        {},
-      );
-      bouton.disabled = false;
-      if (!reponse.ok) return signalerRefus(reponse.probleme);
-      messageApresChargement(MESSAGES_DEFI[quoi]);
-      window.location.reload();
-    });
-  });
-}
-
-const formDefi = $<HTMLFormElement>('[data-ad-defi-form]');
-formDefi?.addEventListener('submit', async (evenement) => {
-  evenement.preventDefault();
-  const valeur = (nom: string) =>
-    $<HTMLInputElement | HTMLTextAreaElement>(`[name="${nom}"]`, formDefi)?.value.trim() ?? '';
-  const saisie = {
-    titre: valeur('titre'),
-    enonce: valeur('enonce'),
-    contraintes: valeur('contraintes') || null,
-    dateDebut: valeur('dateDebut'),
-    dateFin: valeur('dateFin'),
-  };
-  const afficher = (erreurs: Record<string, string>) => afficherErreurs(formDefi, erreurs);
-  const resultat = schemaDefi.safeParse(saisie);
-  if (!resultat.success) return afficher(erreursParChamp(resultat.error));
-  afficher({});
-  const envoyer = $<HTMLButtonElement>('button[type="submit"]', formDefi);
-  if (envoyer) envoyer.disabled = true;
-  const reponse = await api('POST', '/api/v1/admin/defis', saisie);
-  if (envoyer) envoyer.disabled = false;
-  if (!reponse.ok)
-    return afficher(
-      reponse.probleme.erreurs ?? {
-        general: 'Le défi n’a pas été créé. Réessayez dans un instant.',
-      },
-    );
-  messageApresChargement('Brouillon du défi créé. Publiez-le quand il est prêt.');
-  window.location.reload();
-});
+/* Défis (EC-24, S-17) : voir scripts/administration-defis.ts. */
 
 /* Documents légaux (EC-25, RG-112) ---------------------------------------------------------- */
 
