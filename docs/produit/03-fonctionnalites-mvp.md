@@ -602,7 +602,7 @@ Un compte suspendu garde les droits d'un visiteur, plus l'accès à ses paramèt
 - Étant donné un défi publié dont la période est en cours, alors il apparaît sur l'accueil (F-21).
 
 **Règles :**
-- **RG-73** — Un défi dure de 1 à 30 jours (fin > début). Statuts : BROUILLON → PUBLIE → CLOTURE ; BROUILLON ou PUBLIE → ANNULE. Un défi publié ne peut plus changer de dates une fois commencé.
+- **RG-73** — Un défi dure de 1 à 30 jours (fin > début). Statuts : BROUILLON → PUBLIE → CLOTURE ; BROUILLON ou PUBLIE → ANNULE. L'administration peut modifier les dates d'un défi publié, même commencé, et le clôturer avant sa fin (décision du 2026-11-16) ; un défi clôturé ou annulé ne se modifie plus.
 
 #### F-64 — Participer à un défi · Should
 

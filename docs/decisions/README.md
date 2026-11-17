@@ -14,6 +14,7 @@ Une décision structurante = une note courte : contexte, décision, conséquence
 | [0008](0008-hebergement.md) | Hébergement : un serveur en Europe, Docker Compose | Proposée |
 | [0009](0009-oauth-openid-client.md) | Connexion avec GitHub et Google par `openid-client` (remplace `arctic`) | Acceptée |
 | [0010](0010-demo-prototype-avant-les-vues.md) | Une démo dans le prototype avant toute évolution d'une vue | Acceptée |
+| [0011](0011-jeux-des-membres-isoles.md) | Les jeux des membres s'exécutent dans un cadre isolé, servi par l'API | Acceptée |
 
 Modèle :
 

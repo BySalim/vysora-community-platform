@@ -74,7 +74,8 @@
 | `lien_externe` | LIEN_EXTERNE (REFERENCER) | HTTPS uniquement |
 | `commentaire` | COMMENTAIRE (COMMENTER, REPONDRE_COMMENTAIRE, ANCRER_*) | sous-type ; un seul ancrage (étape ou échange) ; parent ≠ soi |
 | `reproduction` | REPRODUCTION (REPRODUIRE, REPRODUIRE_AVEC_*) | sous-type ; modèle exclusif ; retour ≥ 20 caractères si PARTIEL ou ECHEC (RG-42) |
-| `defi` | DEFI (ORGANISER) | durée de 1 à 30 jours (RG-73) ; `slug` |
+| `defi` | DEFI (ORGANISER) | durée de 1 à 30 jours (RG-73) ; `slug` ; S-17 : `definition` (thème expliqué), `cases` (règles en cases, jsonb : chiffre, intitulé, précision), `criteres` (principes jugés, jsonb : icône, libellé), `criteres_communs` (jsonb), `pause_depuis` (participations suspendues, null sinon) |
+| `participation` | PARTICIPATION (PARTICIPER, S-17) | sous-type de `contenu` (`type_contenu` PARTICIPATION), distinct des créations : `defi_id` (cascade), `titre`, `idee`, `outil_id` et `modele` (texte libre, RG-14), `prompts` (jsonb, 1 à 10), `essais` (1 à 50), `moment`, `jeu` (code HTML, 200 000 caractères au plus) et `jeu_nom`, `date_publication`, `rang_final` (figé à la clôture) ; couverture : un `media` rattaché au contenu ; une par personne et par défi, une création inscrite avant S-17 comptant aussi (contrôle de l'API, défi verrouillé) ; jeu servi isolé (ADR-0011) |
 
 ### Forum et Bon réflexe
 
