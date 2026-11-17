@@ -138,7 +138,7 @@
       modifie: (etat.dates[id] && etat.dates[id].modifie) || ex.modifie,
       publie: (etat.dates[id] && etat.dates[id].publie) || (statutBase === 'publiee' ? ex.publie : null),
       depubliee: statutBase === 'publiee' && statut === 'brouillon',
-      defi: !!ex.defi,
+      defi: false,
       apercu: (ex.chemin.find(x => x.kind === 'prompt' && len(x.prompt)) || ex.chemin.find(x => x.kind === 'etape') || {}).prompt || (ex.chemin.find(x => x.kind === 'etape') || {}).texte || '',
       utile: s[0], essais: s[1], reussis: s[2], vues: s[3],
       commentaires: statutBase === 'publiee' ? (MC.commentaires[id] || 0) : 0

@@ -384,7 +384,7 @@ window.VysoraRecherche = (() => {
       ['apprendre', 'Apprendre', 'apprendre.html', 'bulb', 'Bases, notions, règles et astuces', 'apprendre savoirs bases notions regles astuces cours debuter tutoriel', 0.8],
       ['bon-reflexe', 'Bon réflexe', 'apprendre.html?rubrique=bon-reflexe', 'scale', 'Juger une vraie réponse d’IA, puis comparer avec l’analyse', 'bon reflexe cas entrainement exercice juger', 0.7],
       ['classements', 'Classements', 'classements.html', 'trophy', 'Palmarès de la semaine et classement des membres', 'classements palmares points reputation niveaux badges', 0.7],
-      ['defis', 'Défi de la semaine', 'defis.html', 'flag', 'Une affiche touristique en trois échanges', 'defi defis concours participer affiche semaine', 0.7],
+      ['defis', 'Défi de la semaine', 'defis.html', 'flag', 'Deploy Friday : un jeu en un seul prompt', 'defi defis concours participer jeu runner plateforme deploy friday semaine', 0.7],
       ['publier', 'Publier une création', 'nouvelle-creation.html', 'plus', 'Partager un résultat et le chemin parcouru', 'publier partager nouvelle creation poster ajouter', 0.8],
       ...(membre ? [
         ['profil', 'Mon profil', `profil.html?pseudo=${E.MOI.pseudo}`, 'user', 'Votre réputation, vos créations et vos badges', 'profil moi compte reputation badges', 0.6],
@@ -528,7 +528,7 @@ window.VysoraRecherche = (() => {
     const parId = Object.fromEntries(pages().map(p => [p.id, p]));
     const rapides = E.membre() ? ['mes-contenus', 'notifications', 'poser', 'publier'] : ['poser', 'bon-reflexe', 'publier', 'inscription'];
     html += groupeHTML('rapides', 'Accès rapide', [
-      optionHTML({ cle: 'rapide:defi', href: 'defis.html', cls: 'est-defi', vignette: image('goree'), sur: 'Défi de la semaine', titre: t('Une affiche touristique en trois échanges'), meta: ['87 participations'] }),
+      optionHTML({ cle: 'rapide:defi', href: 'defis.html', cls: 'est-defi', vignette: '<img src="assets/jeux/hotfix-hero.webp" alt="" loading="lazy" decoding="async">', sur: 'Défi de la semaine', titre: t('Deploy Friday'), meta: ['Un jeu en un seul prompt · 3 participations'] }),
       ...rapides.map(id => parId[id]).filter(Boolean).map(p => optionHTML({ cle: `rapide:${p.id}`, href: p.href, vignette: ic(p.icone), titre: t(p.titre), meta: [t(p.texte)] }))
     ].join(''), { colonne: 2 });
     return html;

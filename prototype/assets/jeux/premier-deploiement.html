@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Premier déploiement</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #dbeafe; overflow: hidden; }
+  body { display: grid; place-items: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="jeu" aria-label="Premier déploiement : un runner à un seul bouton"></canvas>
+<script>
+(() => {
+  const L = 960, H = 540, SOL = 440;
+  const canvas = document.getElementById('jeu');
+  const ctx = canvas.getContext('2d');
+  let echelle = 1;
+  function ajuster() {
+    const r = Math.min(innerWidth / L, innerHeight / H);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.width = Math.floor(L * r) + 'px';
+    canvas.style.height = Math.floor(H * r) + 'px';
+    canvas.width = Math.floor(L * r * dpr);
+    canvas.height = Math.floor(H * r * dpr);
+    echelle = r * dpr;
+  }
+  addEventListener('resize', ajuster);
+  ajuster();
+
+  let audio = null, muet = false;
+  function son(freq, duree, type = 'square', vol = 0.06, glisse = 0) {
+    if (!audio || muet) return;
+    const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (glisse) o.frequency.exponentialRampToValueAtTime(freq * glisse, t + duree);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + duree);
+  }
+
+  const etat = { ecran: 'titre', meilleur: null };
+  let j, obstacles, cafes, fichiers, vitesse, temps, prochain, prochainCafe, decor, particules, pause = false;
+  function nouvellePartie() {
+    j = { x: 170, y: SOL, vy: 0, sol: true, pas: 0, ecrase: 0, cafe: 0 };
+    obstacles = []; cafes = []; particules = [];
+    fichiers = 0; vitesse = 400; temps = 0; prochain = 1.2; prochainCafe = 4; decor = 0;
+    etat.ecran = 'jeu';
+  }
+
+  function sauter() {
+    if (!j.sol) return;
+    j.vy = j.cafe > 0 ? -1080 : -860;
+    if (j.cafe > 0) { j.cafe -= 1; son(520, 0.25, 'triangle', 0.07, 2); } else son(380, 0.14, 'square', 0.05, 1.8);
+    j.sol = false; j.ecrase = -0.25;
+  }
+  function action() {
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; } }
+    if (pause) { pause = false; return; }
+    if (etat.ecran === 'jeu') sauter(); else nouvellePartie();
+  }
+  addEventListener('keydown', e => {
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+    if (e.repeat) return;
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter') action();
+    if (e.code === 'KeyM') muet = !muet;
+    if (e.code === 'KeyR') nouvellePartie();
+    if ((e.code === 'KeyP' || e.code === 'Escape') && etat.ecran === 'jeu') pause = !pause;
+  });
+  addEventListener('pointerdown', e => { e.preventDefault(); action(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && etat.ecran === 'jeu') pause = true; });
+
+  function maj(dt) {
+    decor += dt * (etat.ecran === 'jeu' ? vitesse : 120);
+    if (etat.ecran !== 'jeu' || pause) { if (etat.ecran === 'titre') j && (j.pas += dt * 9); return; }
+    temps += dt;
+    vitesse = 400 + fichiers * 3.2;
+    j.vy += 2500 * dt; j.y += j.vy * dt;
+    if (j.y >= SOL) { if (!j.sol) { j.ecrase = 0.3; son(140, 0.06, 'triangle', 0.04); } j.y = SOL; j.vy = 0; j.sol = true; }
+    j.pas += dt * (j.sol ? vitesse / 34 : 0);
+    j.ecrase *= Math.pow(0.0005, dt);
+    prochain -= dt; prochainCafe -= dt;
+    if (prochain <= 0) {
+      obstacles.push({ x: L + 40, w: 44, h: 30, passe: false, patte: Math.random() * 6 });
+      if (fichiers > 40 && Math.random() < 0.3) obstacles.push({ x: L + 92, w: 44, h: 30, passe: false, patte: 2 });
+      prochain = Math.max(0.62, 1.55 - fichiers * 0.008) * (0.75 + Math.random() * 0.6);
+    }
+    if (prochainCafe <= 0) { cafes.push({ x: L + 30, y: SOL - 150 - Math.random() * 60, pris: false }); prochainCafe = 5 + Math.random() * 4; }
+    for (const o of obstacles) {
+      o.x -= vitesse * dt; o.patte += dt * 18;
+      if (!o.passe && o.x + o.w < j.x - 30) { o.passe = true; fichiers = Math.min(100, fichiers + 4); son(880, 0.05, 'square', 0.025); }
+      if (o.x < j.x + 30 && o.x + o.w > j.x - 30 && j.y > SOL - o.h - 4) { perdre(); return; }
+    }
+    for (const c of cafes) {
+      c.x -= vitesse * dt;
+      if (!c.pris && Math.abs(c.x - j.x) < 42 && Math.abs(c.y - (j.y - 40)) < 52) {
+        c.pris = true; j.cafe = Math.min(3, j.cafe + 1); son(660, 0.12, 'sine', 0.08, 1.5);
+        for (let i = 0; i < 10; i++) particules.push({ x: c.x, y: c.y, vx: (Math.random() - 0.5) * 300, vy: -Math.random() * 300, v: 0.6 });
+      }
+    }
+    obstacles = obstacles.filter(o => o.x > -80); cafes = cafes.filter(c => c.x > -60 && !c.pris);
+    for (const p of particules) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.v -= dt; }
+    particules = particules.filter(p => p.v > 0);
+    if (fichiers >= 100) gagner();
+  }
+  function perdre() {
+    etat.ecran = 'perdu'; son(220, 0.4, 'sawtooth', 0.06, 0.4);
+  }
+  function gagner() {
+    etat.ecran = 'gagne';
+    if (etat.meilleur === null || temps < etat.meilleur) etat.meilleur = temps;
+    [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => son(f, 0.18, 'triangle', 0.07), i * 120));
+  }
+
+  const duree = s => { const m = Math.floor(s / 60), r = Math.round(s % 60); return m ? `${m} min ${String(r).padStart(2, '0')} s` : `${r} s`; };
+  function texte(t, x, y, taille, couleur = '#0f172a', poids = 700, align = 'center') {
+    ctx.font = `${poids} ${taille}px system-ui, sans-serif`; ctx.fillStyle = couleur; ctx.textAlign = align; ctx.fillText(t, x, y);
+  }
+  function arrondi(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+  function dessinerDecor() {
+    ctx.fillStyle = '#dbeafe'; ctx.fillRect(0, 0, L, H);
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 5; i++) { const x = ((i * 260 - decor * 0.15) % 1300 + 1300) % 1300 - 160; arrondi(x, 70 + (i % 2) * 40, 120, 26, 13); ctx.fill(); arrondi(x + 30, 56 + (i % 2) * 40, 60, 26, 13); ctx.fill(); }
+    ctx.fillStyle = '#bfdbfe';
+    for (let i = 0; i < 9; i++) { const x = ((i * 130 - decor * 0.35) % 1170 + 1170) % 1170 - 120; const h = 90 + (i * 47) % 110; ctx.fillRect(x, SOL - h, 96, h); }
+    ctx.fillStyle = '#93c5fd';
+    for (let i = 0; i < 9; i++) { const x = ((i * 130 - decor * 0.35) % 1170 + 1170) % 1170 - 120; const h = 90 + (i * 47) % 110; for (let k = 0; k < 3; k++) for (let l = 0; l < Math.floor(h / 30); l++) ctx.fillRect(x + 14 + k * 26, SOL - h + 14 + l * 30, 12, 14); }
+    ctx.fillStyle = '#2563eb'; ctx.fillRect(0, SOL, L, H - SOL);
+    ctx.fillStyle = '#1d4ed8';
+    for (let i = 0; i < 16; i++) { const x = ((i * 70 - decor) % 1120 + 1120) % 1120 - 80; ctx.fillRect(x, SOL + 22, 34, 6); }
+  }
+  function dessinerJoueur(x, y, pas, ecrase, cafe) {
+    const s = 1 + ecrase * 0.5;
+    ctx.save(); ctx.translate(x, y); ctx.scale(1 / s, s);
+    const jambe = Math.sin(pas) * 12;
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-14, -26); ctx.lineTo(-14 + jambe, -2); ctx.moveTo(14, -26); ctx.lineTo(14 - jambe, -2); ctx.stroke();
+    ctx.fillStyle = '#0f172a'; arrondi(-40, -34, 80, 10, 4); ctx.fill();
+    ctx.fillStyle = cafe > 0 ? '#1d4ed8' : '#334155'; arrondi(-34, -86, 68, 52, 6); ctx.fill();
+    ctx.fillStyle = '#ffffff'; arrondi(-28, -80, 56, 40, 4); ctx.fill();
+    ctx.fillStyle = '#0f172a'; ctx.beginPath(); ctx.arc(-10, -62, 4, 0, 7); ctx.arc(10, -62, 4, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, -56, 9, 0.2, Math.PI - 0.2); ctx.stroke();
+    ctx.restore();
+  }
+  function dessinerBug(o) {
+    const y = SOL - 4;
+    ctx.strokeStyle = '#7f1d1d'; ctx.lineWidth = 3;
+    for (let k = 0; k < 3; k++) { const p = Math.sin(o.patte + k) * 5; ctx.beginPath(); ctx.moveTo(o.x + 10 + k * 12, y - 10); ctx.lineTo(o.x + 4 + k * 12 + p, y + 2); ctx.stroke(); }
+    ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, y - 14, o.w / 2, o.h / 2, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#7f1d1d'; ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, y - 28); ctx.lineTo(o.x + o.w / 2, y); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(o.x + 8, y - 18, 4, 0, 7); ctx.fill();
+  }
+  function dessinerCafe(c) {
+    ctx.fillStyle = '#ffffff'; arrondi(c.x - 16, c.y - 18, 32, 36, 6); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(c.x + 18, c.y, 9, -1.3, 1.3); ctx.stroke();
+    ctx.fillStyle = '#92400e'; ctx.fillRect(c.x - 12, c.y - 14, 24, 8);
+    ctx.strokeStyle = '#ffffffaa'; ctx.lineWidth = 3;
+    for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(c.x + k * 8, c.y - 26); ctx.quadraticCurveTo(c.x + k * 8 + 6, c.y - 34, c.x + k * 8, c.y - 42); ctx.stroke(); }
+  }
+  function dessinerInterface() {
+    ctx.fillStyle = '#ffffffd9'; arrondi(24, 22, 420, 54, 12); ctx.fill();
+    texte('Déploiement', 44, 46, 16, '#1e3a8a', 700, 'left');
+    texte(`${fichiers} / 100 fichiers`, 424, 46, 16, '#0f172a', 700, 'right');
+    ctx.fillStyle = '#dbeafe'; arrondi(44, 56, 380, 10, 5); ctx.fill();
+    ctx.fillStyle = '#2563eb'; arrondi(44, 56, Math.max(10, 380 * fichiers / 100), 10, 5); ctx.fill();
+    ctx.fillStyle = '#ffffffd9'; arrondi(L - 214, 22, 190, 54, 12); ctx.fill();
+    texte('Cafés', L - 194, 54, 16, '#1e3a8a', 700, 'left');
+    for (let k = 0; k < 3; k++) { ctx.fillStyle = k < j.cafe ? '#92400e' : '#cbd5e1'; ctx.beginPath(); ctx.arc(L - 110 + k * 30, 49, 9, 0, 7); ctx.fill(); }
+  }
+  function panneau(titre, lignes) {
+    ctx.fillStyle = '#0f172acc'; ctx.fillRect(0, 0, L, H);
+    ctx.fillStyle = '#ffffff'; arrondi(L / 2 - 300, H / 2 - 130, 600, 260, 20); ctx.fill();
+    texte(titre, L / 2, H / 2 - 52, 44, '#1d4ed8');
+    lignes.forEach((l, i) => texte(l, L / 2, H / 2 + 6 + i * 36, 22, '#0f172a', i ? 500 : 700));
+  }
+  function dessiner(t) {
+    ctx.setTransform(echelle, 0, 0, echelle, 0, 0);
+    dessinerDecor();
+    if (etat.ecran === 'titre') {
+      dessinerJoueur(240, SOL, t * 9, 0, 0);
+      texte('Premier déploiement', L / 2 + 90, 220, 64, '#0f172a', 800);
+      texte('Cent fichiers à mettre en ligne avant le week-end.', L / 2 + 90, 270, 24, '#1e3a8a', 500);
+      ctx.fillStyle = '#2563eb'; arrondi(L / 2 - 90, 310, 360, 56, 28); ctx.fill();
+      texte('Espace, clic ou toucher pour sauter', L / 2 + 90, 345, 20, '#ffffff', 700);
+      return;
+    }
+    for (const c of cafes) dessinerCafe(c);
+    for (const o of obstacles) dessinerBug(o);
+    for (const p of particules) { ctx.globalAlpha = Math.max(0, p.v / 0.6); ctx.fillStyle = '#92400e'; ctx.fillRect(p.x, p.y, 6, 6); ctx.globalAlpha = 1; }
+    dessinerJoueur(j.x, j.y, j.pas, j.ecrase, j.cafe);
+    dessinerInterface();
+    if (pause) panneau('Pause', ['Le déploiement attend.', 'Espace pour reprendre']);
+    if (etat.ecran === 'perdu') panneau('Retour arrière', [`Un bug est passé en production à ${fichiers} fichiers.`, 'Espace ou toucher pour réessayer']);
+    if (etat.ecran === 'gagne') panneau('En ligne !', [`Déployé en ${duree(temps)}. Bon week-end.`, `Meilleur temps : ${duree(etat.meilleur)} · Espace pour rejouer`]);
+  }
+
+  j = { x: 170, y: SOL, vy: 0, sol: true, pas: 0, ecrase: 0, cafe: 0 }; obstacles = []; cafes = []; particules = []; fichiers = 0; decor = 0;
+  let avant = performance.now();
+  function boucle(maintenant) {
+    let dt = Math.min(0.05, (maintenant - avant) / 1000); avant = maintenant;
+    while (dt > 0) { const pas = Math.min(dt, 1 / 120); maj(pas); dt -= pas; }
+    dessiner(maintenant / 1000);
+    requestAnimationFrame(boucle);
+  }
+  requestAnimationFrame(boucle);
+})();
+</script>
+</body>
+</html>

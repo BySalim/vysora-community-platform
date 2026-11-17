@@ -182,7 +182,7 @@ window.VYSORA_ADMINISTRATION_EQUIPE = (() => {
     entree(5 * J + 9, 'DEUX_FACTEURS_REINITIALISEE', 'sophie-laurent', { membre: 'ibrahima-sow' }),
     entree(5 * J + 2, 'ROLE_MODIFIE', 'clarisse-mendy', { membre: 'julien-moreau' }, { avant: 'MEMBRE', apres: 'MODERATEUR' }),
     entree(4 * J + 7, 'DOCUMENT_LEGAL_PUBLIE', 'clarisse-mendy', { type: 'document_legal' }, { type: 'CGU', version: '2026-12-01' }),
-    entree(3 * J + 5, 'DEFI_PUBLIE', 'sophie-laurent', { type: 'defi', nom: 'Une affiche touristique en trois échanges' }),
+    entree(3 * J + 5, 'DEFI_PUBLIE', 'sophie-laurent', { type: 'defi', nom: 'Deploy Friday' }),
     entree(3 * J + 1, 'MEMBRE_EQUIPE_AJOUTE', 'sophie-laurent', { membre: 'fanta-camara' }, { role: 'MODERATEUR' }),
     entree(2 * J + 3, 'INVITATIONS_CREEES', 'sophie-laurent', null, { nombre: 8, joursValidite: 30 }),
     entree(J + 2, 'ACTIVATION_RENVOYEE', 'clarisse-mendy', { membre: 'fanta-camara' }, { role: 'MODERATEUR' }),

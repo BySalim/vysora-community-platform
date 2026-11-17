@@ -46,7 +46,7 @@ window.VYSORA_NOTIFICATIONS = (() => {
       outil: 'ChatGPT', modele: 'GPT-5', resultat: 'partiel',
       texte: 'La simulation fonctionne, mais les photos reçues par WhatsApp n’ont pas de date de prise de vue : le script les laisse toutes de côté.' },
     { id: 'n-ibrahima', type: 'commentaire', at: '2026-10-12T20:15', niveaux: PUBLIENT, par: 'Ibrahima Sow', creation: 'iteration',
-      texte: 'Le titre reste lisible même en vignette. Vous la proposez au défi de la semaine ?' },
+      texte: 'Le titre reste lisible même en vignette, ce qui est rare pour une affiche générée.' },
     { id: 'n-fatoumata', type: 'reproduction', at: '2026-10-12T19:20', niveaux: PUBLIENT, par: 'Fatoumata Coulibaly', creation: 'iteration',
       outil: 'ChatGPT', modele: 'GPT Image 1', resultat: 'reussi', points: 5,
       texte: 'Même rendu pour Ségou, en trois échanges. J’ai seulement remplacé le fromager par un baobab.' },

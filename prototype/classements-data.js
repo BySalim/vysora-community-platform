@@ -348,3 +348,14 @@
     ]
   };
 })();
+
+/* Défi en cours (page Défis) : la section « Défi de la semaine » de la semaine en cours le montre. */
+window.VYSORA_CLASSEMENTS.defiEnCours = {
+  title: 'Deploy Friday', theme: 'La mise en production du vendredi soir, en jeu', start: '2026-11-17', end: '2026-11-23', closed: false, count: 3,
+  rules: ['Un seul prompt, sans retouche du jeu', 'Un fichier HTML, jouable dans le navigateur', 'Ni bibliothèque ni image en ligne'],
+  entries: [
+    { m: 'Awa Sarr', n: 14, title: 'Hotfix Hero', tool: 'Claude', model: 'Sonnet 4.5', lien: 'defis.html?participation=hotfix-hero', visual: { kind: 'jeu', src: 'hotfix-hero', alt: 'Écran titre de Hotfix Hero, un runner en pixel art' } },
+    { m: 'Kofi Mensah', n: 11, title: 'L’ascenseur est en panne', tool: 'ChatGPT', model: 'GPT-5', lien: 'defis.html?participation=ascenseur-en-panne', visual: { kind: 'jeu', src: 'ascenseur-en-panne', alt: 'Écran titre de L’ascenseur est en panne, un jeu de plateforme vertical' } },
+    { m: 'Moussa Diallo', n: 9, title: 'git push vendredi', tool: 'Gemini', model: '2.5 Pro', lien: 'defis.html?participation=git-push-vendredi', visual: { kind: 'jeu', src: 'pipeline', alt: 'Écran titre de git push vendredi, un jeu en caractères de terminal' } }
+  ]
+};

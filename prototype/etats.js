@@ -102,8 +102,11 @@ window.VysoraEtats = (() => {
      (socle.css : règle d'un badge au doigt, « Mes outils » sur téléphone…), barre de défilement
      superposée sur les écrans à barres classiques (UI-01) et fenêtre des cookies (LEG-03). Les
      barres classiques (Windows, Linux) se repèrent avant le premier affichage, comme dans le
-     gabarit du site, sauf en contraste élevé. */
+     gabarit du site, sauf en contraste élevé. La classe « js » se pose ici, comme dans le
+     gabarit du site : sans elle, cookies.css masque la fenêtre des cookies, qui s'ouvrirait
+     pourtant en fenêtre modale et figerait la page (défilement et clics bloqués). */
   (() => {
+    root.classList.add('js');
     const sonde = document.createElement('div');
     sonde.style.cssText = 'position:absolute;top:-99px;width:60px;height:60px;overflow:scroll;scrollbar-width:thin';
     root.appendChild(sonde);

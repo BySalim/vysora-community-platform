@@ -288,6 +288,11 @@ a.cl-pod-visual:hover { transform: translateY(var(--lift)); box-shadow: var(--sh
 .cl-pod-votes { color: var(--d-muted); }
 :is([data-bande="sombre"], [data-bande="bleue"]) .cl-defi .tool-logo.is-mono { filter: brightness(0) invert(1); }
 
+.cl-jeu { position: absolute; inset: 0; display: grid; place-items: center; background: var(--night); }
+.cl-jeu img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; transition: transform 900ms var(--ease); }
+a.cl-pod-visual:hover .cl-jeu img { transform: scale(1.04); }
+.cl-jeu-play { position: absolute; left: 50%; bottom: 9%; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px 7px 9px; border-radius: 999px; background: var(--white); color: var(--ink); font: 650 0.75rem/1 var(--font-body); transform: translateX(-50%); }
+.cl-jeu-play .icon { width: 13px; height: 13px; fill: currentColor; stroke-width: 1; }
 .cl-poster { position: absolute; inset: 0; }
 .cl-poster img { width: 100%; height: 100%; object-fit: cover; transition: transform 900ms var(--ease); }
 a.cl-pod-visual:hover .cl-poster img, .cl-pod-visual:hover .cl-poster img { transform: scale(var(--zoom)); }

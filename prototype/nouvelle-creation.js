@@ -345,7 +345,6 @@
     });
 
     if (!d.categorie) add('categorie', 'categorie', 'Choisissez une catégorie.');
-    if (d.defi === P.defi.id && ps.length > P.defi.maxEchanges) add('defi', 'defi', `Le défi admet ${P.defi.maxEchanges} prompts au plus ; votre chemin en compte ${ps.length}.`);
     return err;
   }
 
@@ -714,7 +713,6 @@
   function coteHTML(err) {
     const type = typeDe();
     const publiee = d.statut === 'publiee';
-    const msgDefi = erreurVisible(err, 'defi');
     const msgCat = erreurVisible(err, 'categorie');
     const proposee = !d.categorie && categorieProposee();
     const lim = limiteCreations();
@@ -747,11 +745,6 @@
           <label class="pub-label" for="f-licence">Licence</label>
           <div class="pub-select"><select class="pub-input" id="f-licence" data-licence data-k="licence" aria-describedby="f-licence-aide">${P.licences.map(l => `<option value="${esc(l.code)}"${d.licence === l.code ? ' selected' : ''}>${esc(l.code)}</option>`).join('')}</select>${icon('chevron-down')}</div>
           <p class="pub-aide" id="f-licence-aide">${t((P.licences.find(l => l.code === d.licence) || P.licences[0]).sens)}.</p>
-        </div>
-        <div class="pub-champ${msgDefi ? ' is-erreur' : ''}" data-champ="defi">
-          <div class="pub-case"><input type="checkbox" id="f-defi" data-defi-choix data-k="defi"${d.defi === P.defi.id ? ' checked' : ''}${decrit('f-defi-aide', msgDefi ? 'f-defi-err' : '')}><label for="f-defi">Participer au défi « ${t(P.defi.titre)} »</label></div>
-          <p class="pub-aide pub-aide-case" id="f-defi-aide">Jusqu’au ${t(P.defi.finLabel)}. <a href="classements.html#defi">Voir les règles</a></p>
-          <div class="pub-sous">${erreurHTML('f-defi', msgDefi)}</div>
         </div>
         ${outilAgentPresent() ? `<div class="pub-champ">
           <div class="pub-case"><input type="checkbox" id="f-agent" data-agent-flag data-k="agent"${agentActif() ? ' checked' : ''} aria-describedby="f-agent-aide"><label for="f-agent">Signaler des instructions pour un agent</label></div>
@@ -902,11 +895,9 @@
   }
   function finHTML({ premiere }) {
     const g = guide();
-    const defi = d.defi === P.defi.id;
     const complet = typeDe() === 'projet' && etapesChemin().length >= 3 && d.chemin.some(momentNote);
     const suites = [
       g ? [icon('compass'), `Votre création rejoint le guide « ${t(g.title)} »`, 'Ses moments clés enrichissent les étapes et les pièges du guide.', `<a class="link-arrow" href="${g.href}">Voir le guide${icon('arrow')}</a>`] : null,
-      defi ? [icon('trophy'), `Participation au défi « ${t(P.defi.titre)} »`, `Classement selon les votes « Utile » reçus jusqu’au ${t(P.defi.finLabel)}.`, `<a class="link-arrow" href="classements.html#defi">Voir le défi${icon('arrow')}</a>`] : null,
       premiere ? [emblemeHTML('pen'), 'Badge « Première création »', 'Il apparaît sur votre profil.', ''] : null,
       complet ? [emblemeHTML('route'), 'Badge « Parcours complet »', 'Un projet d’au moins trois étapes, avec ses moments clés.', ''] : null
     ].filter(Boolean);
@@ -1516,7 +1507,6 @@
       { name: 'exemple', legend: 'Brouillon d’exemple', options: [['prompt', 'Script, 1 prompt'], ['iteration', 'Affiche, itération'], ['projet', 'Application, projet']], si: (e, s) => membre(e) && s.contenu !== 'vide' },
       { name: 'donnees', legend: 'Données sensibles', options: [['aucune', 'Aucune'], ['reperees', 'Repérées']], si: (e, s) => membre(e) && s.contenu !== 'vide' },
       { name: 'agent', legend: 'Instructions pour agent', options: [['aucune', 'Aucune'], ['reperees', 'Repérées']], si: (e, s) => membre(e) && s.contenu !== 'vide' && s.exemple === 'projet' },
-      { name: 'defi', legend: 'Défi en cours', options: [['sans', 'Sans participation'], ['affiche', 'Participation']], si: membre },
       { name: 'quota', legend: 'Publications des dernières 24 heures', options: [['disponible', 'Sous la limite'], ['atteint', 'Limite atteinte']], si: e => membre(e) && Number.isFinite(E.limite('creations', e)) }
     ],
     apparence: [
@@ -1524,16 +1514,16 @@
       { name: 'largeur', legend: 'Largeur du formulaire', options: [['standard', 'Standard'], ['large', 'Large']] },
       'accent', 'density', 'radius', 'effects', 'motion'
     ],
-    defaults: { contenu: 'vide', exemple: 'iteration', donnees: 'aucune', agent: 'aucune', defi: 'sans', quota: 'disponible', indications: 'visibles', largeur: 'standard' },
+    defaults: { contenu: 'vide', exemple: 'iteration', donnees: 'aucune', agent: 'aucune', quota: 'disponible', indications: 'visibles', largeur: 'standard' },
     onChange: (changed, settings) => {
       S = { ...settings };
       if (depuisUI || !d || changed === 'init') return;
       if (['contenu', 'exemple', 'donnees', 'agent', 'reset'].includes(changed)) {
-        if (cleScenario(S) === d.scenario) { d.defi = S.defi === 'affiche' ? P.defi.id : null; if (!el.editeur.hidden) rendreTout(); return; }
+        if (cleScenario(S) === d.scenario) { d.defi = null; if (!el.editeur.hidden) rendreTout(); return; }
         chargerScenario();
         return;
       }
-      if (changed === 'defi') { d.defi = S.defi === 'affiche' ? P.defi.id : null; modifie(); if (!el.editeur.hidden) rendreCote(); return; }
+      if (changed === 'defi') { d.defi = null; modifie(); if (!el.editeur.hidden) rendreCote(); return; }
       if (changed === 'quota' && !el.editeur.hidden) rendreCote();
     }
   });
@@ -1555,7 +1545,7 @@
   function chargerScenario() {
     fermerFenetres();
     d = construire(S);
-    d.defi = S.defi === 'affiche' ? P.defi.id : null;
+    d.defi = null;
     reinitialiserVue();
     reprise = S.contenu === 'brouillon';
     sauver();
@@ -1566,7 +1556,6 @@
 
   async function demarrer() {
     const idParam = params.get('id');
-    const defiParam = params.get('defi');
     /* Ouverture depuis Mes contenus : ?brouillon=… reprend un brouillon, ?modifier=… une création publiée. */
     const exempleParam = params.get('brouillon') || params.get('modifier');
     if (idParam) {
@@ -1576,7 +1565,6 @@
       const s = { ...S, contenu: params.has('modifier') ? 'publiee' : 'brouillon', exemple: exempleParam };
       const sauve = await lire();
       d = sauve && sauve.v === 3 && sauve.scenario === cleScenario(s) ? sauve : construire(s);
-      if (s.contenu === 'brouillon' && P.exemples[exempleParam].defi && !d.defi) d.defi = P.defi.id;
       reprise = s.contenu === 'brouillon';
     } else {
       const sauve = await lire();
@@ -1587,8 +1575,7 @@
         d = construire(S);
         reprise = S.contenu === 'brouillon';
       }
-      if (defiParam && (defiParam === P.defi.id || defiParam === P.defi.titre)) reglerDepuisUI('defi', 'affiche');
-      d.defi = S.defi === 'affiche' ? P.defi.id : null;
+      d.defi = null;
     }
     appliquerEtat();
     if (!idParam) sauver();

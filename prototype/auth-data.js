@@ -45,7 +45,7 @@ window.VYSORA_AUTH = {
     'defis.html': 'Retour aux défis'
   },
 
-  defi: { titre: 'Une affiche touristique en trois échanges' },
+  defi: { titre: 'Deploy Friday' },
 
   sujets: {
     'sujet-1': { titre: 'Mon personnage change de visage à chaque nouvelle image' }

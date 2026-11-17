@@ -2,7 +2,7 @@
 
 window.VYSORA_DATA = {
   today: '2026-10-13',
-  challengeEnd: '2026-10-19T23:59:00',
+  challengeEnd: '2026-11-23T23:59:00Z',
 
   avatars: {
     'Léa Martin': 'lea-martin',
@@ -205,7 +205,7 @@ window.VYSORA_DATA = {
     { icon: 'alert', who: 'Ousmane Sy', text: 'a signalé qu’une astuce ne fonctionne plus avec Midjourney v6', tag: 'Obsolescence' },
     { icon: 'message', who: 'Mariam Diop', text: 'a ouvert une clinique : « Mon résumé invente des chiffres »', tag: 'Clinique' },
     { icon: 'award', who: 'Sébastien Roy', text: 'a obtenu le badge Premier essai', tag: 'Badge' },
-    { icon: 'flag', who: 'Ibrahima Sow', text: 'participe au défi « Une affiche touristique en trois échanges »', tag: 'Défi' },
+    { icon: 'flag', who: 'Moussa Diallo', text: 'participe au défi « Deploy Friday »', tag: 'Défi' },
     { icon: 'repeat', who: 'Claire Dubois', text: 'a reproduit « Prise de rendez-vous pour un salon de coiffure » avec GPT-5', tag: 'Succès' },
     { icon: 'check-circle', who: 'Kofi Mensah', text: 'a aidé à résoudre « Mon personnage change de visage à chaque image »', tag: '+15 points' }
   ],

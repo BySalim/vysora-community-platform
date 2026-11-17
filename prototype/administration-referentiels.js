@@ -25,7 +25,7 @@ window.AdminReferentiels = (() => {
   const CLE = 'vysora-admin-referentiels';
   const depart = () => JSON.parse(JSON.stringify({
     version: D.version, editeurs: D.editeurs, outils: D.outils, modeles: D.modeles, categories: D.categories,
-    licences: D.licences, etiquettes: D.etiquettes, badges: D.badges, documents: D.documents
+    licences: D.licences, etiquettes: D.etiquettes, badges: D.badges, documents: D.documents, saisies: D.saisiesLibres || []
   }));
   function lire() {
     try {
@@ -267,11 +267,30 @@ window.AdminReferentiels = (() => {
         </details>
       </li>`;
 
+    /* Modèles écrits en texte libre par les membres (RG-14) : on les ajoute à leur outil pour les
+       proposer à tous, ou on ignore une faute de frappe. */
+    const saisies = (etat.saisies || []).slice().sort((a, b) => b.contenus - a.contenus);
+    const saisiesHTML = saisies.length ? `<section class="ad-famille ad-saisies" id="saisies" aria-labelledby="ad-saisies-titre">
+        <h2 id="ad-saisies-titre">Modèles saisis par les membres<span class="ad-famille-nb">${fmt(saisies.length)}</span></h2>
+        <p class="ad-famille-aide">${t('Absents du référentiel, ils ont été écrits en texte libre. Ajoutez un modèle à son outil pour le proposer à tous, ou ignorez une faute de frappe : les contenus l’affichent toujours tel qu’il a été saisi.')}</p>
+        <table class="ad-table">
+          <caption class="sr-only">Modèles saisis par les membres</caption>
+          <thead><tr><th scope="col">Saisie</th><th scope="col">Outil</th><th scope="col">Contenus</th><th scope="col">Dernière saisie</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>${saisies.map(x => `<tr id="saisie-${x.id}">
+            <td><b>${t(`« ${x.texte} »`)}</b></td>
+            <td data-libelle="Outil">${t(x.outil)}</td>
+            <td data-libelle="Contenus">${fmt(x.contenus)}</td>
+            <td data-libelle="Dernière saisie">${dateCourte(x.derniere)}</td>
+            <td class="ad-cellule-action"><div class="ad-actions-defi"><button class="btn btn-secondary btn-sm" type="button" data-ad-saisie-ajouter="${x.id}">${plus}Ajouter à ${t(x.outil)}</button><button class="btn btn-quiet btn-sm" type="button" data-ad-saisie-ignorer="${x.id}" data-nom="${esc(x.texte)}">Ignorer</button></div></td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </section>` : '';
     page().innerHTML = gabarit('outils', statutHTML([
       `<span class="is-fort">${pluriel(outils.length - archives, 'outil proposé', 'outils proposés')}</span>`,
       archives ? `<span>${pluriel(archives, 'outil archivé', 'outils archivés')}</span>` : '',
+      saisies.length ? `<a class="ad-lien" href="#saisies">${t(pluriel(saisies.length, 'modèle saisi par les membres', 'modèles saisis par les membres'))}</a>` : '',
       `<span>${t('Un outil ou un modèle déjà cité ne se supprime pas : archivé ou retiré, il reste affiché sur les contenus existants.')}</span>`
-    ]), `<form class="ad-defi" novalidate data-ad-outil-form>
+    ]), `${saisiesHTML}<form class="ad-defi" novalidate data-ad-outil-form>
         <h2>Nouvel outil</h2>
         <div class="ad-outils">
           <div class="ad-champ is-large">
@@ -369,9 +388,37 @@ window.AdminReferentiels = (() => {
         if (m && o.modeles.includes(m.id)) return { erreurs: { general: 'Ce modèle est déjà proposé avec cet outil.' } };
         if (!m) { m = { id: suivant(etat.modeles), editeurId: o.editeurId, ...saisie, statut: 'DISPONIBLE' }; etat.modeles.push(m); }
         o.modeles.push(m.id);
+        // La saisie libre d'origine, et toute saisie identique pour cet outil, quittent la liste.
+        const memes = [saisie.nom, saisie.nomCourt].map(n => n.toLowerCase());
+        etat.saisies = (etat.saisies || []).filter(x => String(x.id) !== form.dataset.saisie && !(x.outil === o.nom && memes.includes(x.texte.toLowerCase())));
         return o;
       });
       if (outil) rechargerSur(`outil-${outilId}`, `Modèle « ${saisie.nom} » ajouté à ${outil.nom}.`);
+    }));
+
+    /* Ajouter une saisie libre : le formulaire du modèle s'ouvre dans son outil, prérempli. */
+    $$('[data-ad-saisie-ajouter]').forEach(bouton => bouton.addEventListener('click', () => {
+      const x = etat.saisies.find(y => y.id === Number(bouton.dataset.adSaisieAjouter));
+      const o = etat.outils.find(y => y.nom === x.outil);
+      const form = o && $(`[data-ad-modele-form="${o.id}"]`);
+      if (!o || !form || form.hidden) { V.toast(`L’outil « ${x.outil} » est archivé : proposez-le de nouveau d’abord.`, 'alert'); return; }
+      const details = document.getElementById(`outil-${o.id}`);
+      details.open = true;
+      form.dataset.saisie = String(x.id);
+      // Nom court proposé : la saisie sans le nom de l'outil (« Gemini 3 Flash » → « 3 Flash »).
+      const court = x.texte.toLowerCase().startsWith(`${o.nom.toLowerCase()} `) ? x.texte.slice(o.nom.length + 1) : x.texte;
+      $(`#ad-modele-nom-${o.id}`).value = x.texte;
+      $(`#ad-modele-court-${o.id}`).value = court;
+      form.scrollIntoView({ block: 'center', behavior: V.motion.full() ? 'smooth' : 'auto' });
+      $(`#ad-modele-nom-${o.id}`).focus({ preventScroll: true });
+      V.toast('Vérifiez le nom complet et le nom court, puis ajoutez le modèle.');
+    }));
+    $$('[data-ad-saisie-ignorer]').forEach(bouton => bouton.addEventListener('click', () => {
+      const nom = bouton.dataset.nom;
+      confirmer(`Ignorer « ${nom} » ?`, 'La saisie quitte cette liste. Les contenus qui la citent l’affichent toujours telle qu’elle a été écrite.', 'Ignorer', async () => {
+        const fait = await changer(bouton, () => { etat.saisies = etat.saisies.filter(y => y.id !== Number(bouton.dataset.adSaisieIgnorer)); return null; });
+        if (fait) rechargerSur(etat.saisies.length ? 'saisies' : 'outils', `« ${nom} » est ignoré.`);
+      });
     }));
 
     $$('[data-ad-outil-statut]').forEach(bouton => bouton.addEventListener('click', () => {

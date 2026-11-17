@@ -8,6 +8,8 @@
   const C = window.VYSORA_CLASSEMENTS;
   const X = window.VYSORA_EXPLORER;
   if (!V || !C || !X) return;
+  /* La semaine en cours montre le défi en cours de la page Défis. */
+  if (C.defiEnCours && C.weeks[0] && !C.weeks[0].defi.closed) C.weeks[0] = { ...C.weeks[0], defi: C.defiEnCours };
   const { D, $, $$, esc, t, typo, fmt, plural, icon, logo, mediaHTML, mockHTML, typeTag, dateLabel, toast, root } = V;
   const avatar = (name, size = 28) => V.avatar(name, size).replace(/^<(img|span) /, `<$1 style="width:${size}px;height:${size}px" `);
 
@@ -269,6 +271,7 @@
   };
   function defiVisual(v, e) {
     if (!v) return '';
+    if (v.kind === 'jeu') return `<div class="cl-jeu"><img src="assets/jeux/${v.src}.webp" width="960" height="540" alt="${esc(typo(v.alt))}" loading="lazy" decoding="async"><span class="cl-jeu-play" aria-hidden="true">${icon('play')}Jouer</span></div>`;
     if (v.kind === 'poster') return `<div class="cl-poster"><img src="assets/images/${v.src}-720.webp" width="720" height="960" alt="${esc(typo(v.alt))}" loading="lazy" decoding="async"><p class="cl-poster-text" aria-hidden="true"><b>${t(v.place)}</b><span>${t(v.line)}</span></p></div>`;
     if (v.kind === 'logo') return `<div class="cl-logo-card" role="img" aria-label="${esc(typo(`${e.title} : ${v.name}`))}">${LOGOS[v.mark]}<b>${t(v.name)}</b><small>${t(v.line)}</small></div>`;
     return `<div class="mock cl-pod-mock" role="img" aria-label="${esc(typo(e.title))}">${mockHTML(v.mock)}</div>`;
@@ -280,11 +283,12 @@
     const top = list.slice(0, 3);
     const rest = list.slice(3);
     const end = d.closed ? `Clos le ${t(longDay(d.end))} à 23:59 UTC` : `Jusqu’au ${t(longDay(d.end))} à 23:59 UTC`;
+    const lienDe = e => e.lien || (e.c ? creationHref(e.c) : '');
     const podium = top.map((e, i) => `<li class="cl-pod" data-place="${i + 1}" style="--i:${i}">
-        ${e.c ? `<a class="cl-pod-visual" href="${creationHref(e.c)}" tabindex="-1" aria-hidden="true">${defiVisual(e.visual, e)}</a>` : `<div class="cl-pod-visual">${defiVisual(e.visual, e)}</div>`}
+        ${lienDe(e) ? `<a class="cl-pod-visual" href="${lienDe(e)}" tabindex="-1" aria-hidden="true">${defiVisual(e.visual, e)}</a>` : `<div class="cl-pod-visual">${defiVisual(e.visual, e)}</div>`}
         <div class="cl-pod-base">
           <span class="cl-pod-rank" aria-label="${esc(ordinalText(i + 1))}">${i + 1}</span>
-          <div class="cl-pod-copy"><p class="cl-pod-title">${e.c ? `<a href="${creationHref(e.c)}">${t(e.title)}</a>` : t(e.title)}</p>${memberBtn(e.m, 28)}<p class="cl-pod-meta">${toolPair(e.tool, e.model)}<span class="cl-pod-votes">${metricOf('defi', e, w)}</span></p></div>
+          <div class="cl-pod-copy"><p class="cl-pod-title">${lienDe(e) ? `<a href="${lienDe(e)}">${t(e.title)}</a>` : t(e.title)}</p>${memberBtn(e.m, 28)}<p class="cl-pod-meta">${toolPair(e.tool, e.model)}<span class="cl-pod-votes">${metricOf('defi', e, w)}</span></p></div>
         </div>
       </li>`).join('');
     return `<section class="cl-defi cl-reveal" id="defi" aria-labelledby="cl-defi-title">
@@ -300,7 +304,7 @@
         ${list.length ? `<ol class="cl-podium">${podium}</ol>${rest.length ? `<ol class="cl-defi-rest">${rest.map((e, i) => `<li><span class="cl-rank">${i + 4}</span>${memberBtn(e.m, 28)}<span class="cl-row-proof">${proofOf('defi', e)}</span><span class="cl-row-metric">${metricOf('defi', e, w)}</span></li>`).join('')}</ol>` : ''}` : `<div class="cl-empty"><p>${t(`Aucune participation avec ${state.tool} dans ce défi.`)}</p><button class="link-btn" type="button" data-cl-clear-tool>Voir tous les outils</button></div>`}
         <div class="cl-defi-foot">
           <p>${d.closed ? 'Rangs figés à la clôture, selon les votes « Utile » reçus pendant le défi. Le podium a reçu 50, 30 et 20 points, chaque participation 5 points.' : 'Participations classées par votes « Utile » reçus depuis l’ouverture. Les rangs seront figés à la clôture : 50, 30 et 20 points pour le podium, 5 points par participation.'}</p>
-          ${d.closed ? '' : `<a class="btn btn-sm cl-defi-cta" href="nouvelle-creation.html?defi=${encodeURIComponent(d.title)}">Participer au défi${icon('arrow')}</a>`}
+          ${d.closed ? '' : `<a class="btn btn-sm cl-defi-cta" href="defis.html">Participer au défi${icon('arrow')}</a>`}
         </div>
       </div>
     </section>`;

@@ -390,3 +390,6 @@
   .ad-etape { grid-template-columns: 64px minmax(0, 1fr); }
   .ad-etape-texte { grid-column: 1 / -1; }
 }
+
+/* Modèles saisis par les membres (RG-14) : à ajouter au référentiel ou à ignorer */
+.ad-saisies td { vertical-align: middle; }
